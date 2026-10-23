@@ -4,7 +4,7 @@ A portrait mobile browser prototype of the single-character Animal Factory Tacti
 
 Free exploration transitions to player and guard turns when contact begins. Movement uses continuous world coordinates: AP pays for the actual distance accepted by collision, including diagonals and wall slides. The animal can stop anywhere. Initial tuning is 2 AP/m walking, 1 AP/m running and 3 AP/m sneaking; kneeling doubles those costs and prone multiplies them by four. Running and sneaking also affect speed and stamina.
 
-The portrait controls follow the supplied sketch: zoom arrows at upper left, an expandable map at upper right, a lower central thumbstick, movement and stance controls at lower left, and equipment and menu controls at lower right. Tap visible guards to choose aim and fire. Tap ground to travel there; during combat, confirm the route and its distance/AP estimate. WASD and arrow keys also move; Space ends the turn.
+The portrait controls follow the supplied sketch: zoom arrows at upper left, an expandable map at upper right, a lower central thumbstick, movement and stance controls at lower left, and End Turn directly above Menu at lower right. Health/AP stays visible. The menu holds inventory, weapon swapping, reloads, treatment, mission details, recent events and detailed combat actions. Tap visible guards to open their aiming and firing options in the menu. Tap ground to travel there; during combat, confirm the route and its distance/AP estimate in the menu. WASD and arrow keys also move; Space ends the turn.
 
 ## Run and check
 

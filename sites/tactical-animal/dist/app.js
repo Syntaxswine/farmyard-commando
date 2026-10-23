@@ -17,23 +17,34 @@ function renderPrep(){const p=ANIMALS.find(a=>a.id===build.animal),stats=buildSt
   const skill=['hmg','rpg','flamethrower'].includes(build.primary)?'heavyWeapons':'firearms';$('primary-summary').textContent=`${skill==='firearms'?'FIREARMS':'HEAVY WEAPONS'} ${p.stats[skill]}`;$('equipment-note').textContent=`${Core.WEAPONS[build.primary].name}. ${p.name}'s ${skill==='firearms'?'firearms':'heavy weapons'} skill: ${p.stats[skill]}/100. Movement spends AP by distance, with no tile snapping.`;$('build-summary').textContent=`${p.name} / ${speciesLabel(p.species)} · ${short(build.primary)} + ${short(build.secondary)}`;
   $('resume').hidden=!storage.read();try{localStorage.setItem(BUILD,JSON.stringify(build));}catch{}
 }
-function showDialog(html,actions=[]){paused=true;resetStick();keys.clear();$('overlay-content').innerHTML=html;const row=document.createElement('div');row.className='dialog-actions';for(const [label,fn,cls] of actions){const b=document.createElement('button');b.textContent=label;b.className=cls||'';b.onclick=()=>{closeDialog();fn();};row.append(b);}$('overlay-content').append(row);if(!overlay.open)overlay.showModal();}
+function showDialog(html,actions=[],{context=false}={}){
+  paused=true;resetStick();keys.clear();
+  $('overlay-content').innerHTML=html;
+  $('context').hidden=!context;
+  const row=$('overlay-actions');row.replaceChildren();
+  for(const [label,fn,cls,disabled=false] of actions){
+    const b=document.createElement('button');b.textContent=label;b.className=cls||'';b.disabled=disabled;
+    b.onclick=()=>{closeDialog();fn();};row.append(b);
+  }
+  if(context){contextKey='';renderContext();}
+  if(!overlay.open)overlay.showModal();
+}
 function closeDialog(){overlay.close();paused=false;lastTime=performance.now();}
 overlay.addEventListener('cancel',()=>{paused=false;lastTime=performance.now();});
 function start(s){try{view?.dispose();$('loading').textContent='Preparing the field…';$('loading').hidden=false;state=s;selected=null;contextKey='';resultShown=false;$('prep').hidden=true;$('battle').hidden=false;document.body.classList.add('in-battle');active=true;paused=false;view=new FieldView($('viewport'),{onPick:pick,onLoading:busy=>{$('loading').hidden=!busy;},onError:message=>{$('loading').hidden=false;$('loading').textContent='Animal artwork could not load. '+message;}});view.setGame(state);lastPhase=state.phase;lastTime=performance.now();lastUI=0;renderBattle();storage.write();}catch(error){active=false;view?.dispose();view=null;$('prep').hidden=false;$('battle').hidden=true;document.body.classList.remove('in-battle');toast('Cannot start 3D view: '+error.message);}}
 function backToPrep(){storage.write();active=false;resetStick();view?.dispose();view=null;$('battle').hidden=true;$('prep').hidden=false;document.body.classList.remove('in-battle');renderPrep();}
 $('deploy').onclick=()=>start(createSoloGame(build));$('resume').onclick=()=>{try{const s=decodeSave(storage.read());if(s.solo.status!=='active'){toast('That operation has ended. Deploy a new animal to begin again.');return;}start(s);}catch{toast('This saved operation is from an older prototype. Deploy a new animal.');}};
 function act(fn){if(!state||paused)return;resetStick();keys.clear();fn();contextKey='';renderBattle();storage.write();}
-function pick(p){if(!state||paused||state.phase==='enemy'||state.solo.status!=='active')return;resetStick();if(p.unitId!==undefined){if(p.unitId===0){equipment();return;}const target=state.units.find(u=>u.id===p.unitId);if(!state.detected.has(target?.id))return;Core.stop(state);Core.turnTo(state,hero(state),Core.headingTo(hero(state),target));selected={targetId:target.id};aim='hip';zone='torso';burst=false;}
+function pick(p){if(!state||paused||state.phase==='enemy'||state.solo.status!=='active')return;resetStick();if(p.unitId!==undefined){if(p.unitId===0){operationMenu();return;}const target=state.units.find(u=>u.id===p.unitId);if(!state.detected.has(target?.id))return;Core.stop(state);Core.turnTo(state,hero(state),Core.headingTo(hero(state),target));selected={targetId:target.id};aim='hip';zone='torso';burst=false;}
   else{const path=Core.navigationPath(state,hero(state),p.x,p.y);if(!path){toast('No clear route to that point.');return;}view.route([hero(state),...path]);if(state.phase==='player')selected={point:p,path};else{Core.move(state,hero(state),p.x,p.y);selected=null;view.center();}}
-  contextKey='';renderBattle();
+  contextKey='';renderBattle();if(selected)operationMenu();
 }
 function renderContext(){if(!state)return;const u=hero(state),near=interaction(state),target=selected?.targetId!==undefined?state.units.find(v=>v.id===selected.targetId):null;
   if(target&&(!Core.alive(target)||!state.detected.has(target.id)))selected=null;
   const p=target&&selected?Core.previewAttack(state,u,target,burst,zone,null,aim):null;
   const sig=JSON.stringify([selected,near,aim,zone,burst,p,u.ap.toFixed(2),u.weapon,state.phase,[...state.detected],Math.round(u.x*10),Math.round(u.y*10),target?.hp]);if(sig===contextKey)return;contextKey=sig;const root=$('context');root.replaceChildren();
   if(state.phase==='enemy')return;
-  function content(title,detail,label,fn,disabled=false){const copy=document.createElement('div');copy.className='context-copy';const h=document.createElement('strong');h.textContent=title;const small=document.createElement('small');small.textContent=detail;copy.append(h,small);root.append(copy);const b=document.createElement('button');b.textContent=label;b.disabled=disabled;b.onclick=()=>act(fn);root.append(b);return copy;}
+  function content(title,detail,label,fn,disabled=false){const copy=document.createElement('div');copy.className='context-copy';const h=document.createElement('strong');h.textContent=title;const small=document.createElement('small');small.textContent=detail;copy.append(h,small);root.append(copy);const b=document.createElement('button');b.textContent=label;b.disabled=disabled;b.onclick=()=>{closeDialog();act(fn);};root.append(b);return copy;}
   if(p){const copy=content(`${target.name} · ${speciesLabel(target.species)} · ${Math.ceil(target.hp)} HP`,`${p.distance?.toFixed(1)||distance(u,target).toFixed(1)} m · ${p.chance||0}% · ${p.cost||Core.WEAPONS[u.weapon].cost} AP${p.reason?' · '+p.reason:''}${Core.WEAPONS[u.weapon].blast?' · BLAST CAN HURT YOU':''}`,burst?'Fire burst':'Fire',()=>{Core.attack(state,u,target,burst,false,zone,false,aim);},!p.ok||!Core.canControl(state,u));
     const opts=document.createElement('div');opts.className='target-options';for(const [values,current,change,label] of [[{hip:'Quick shot',aimed:'Aimed',full:'Full aim'},aim,v=>aim=v,'Aim'],[{torso:'Torso',head:'Head',weapon:'Weapon',legs:'Legs'},zone,v=>zone=v,'Target zone']]){const select=document.createElement('select');select.setAttribute('aria-label',label);for(const [value,text] of Object.entries(values))select.add(new Option(text,value,false,value===current));select.onchange=()=>{change(select.value);contextKey='';renderContext();};opts.append(select);}if(Core.WEAPONS[u.weapon].burstRounds){const b=document.createElement('button');b.textContent=burst?'Burst ✓':'Burst';b.className='burst-toggle';b.onclick=()=>{burst=!burst;contextKey='';renderContext();};opts.append(b);}copy.append(opts);
   }else if(selected?.point){const path=Core.navigationPath(state,u,selected.point.x,selected.point.y),cost=path?.reduce((n,p)=>n+p.cost,0)||0,d=cost/Core.movementRate(u);content('Move to this point',`${d.toFixed(1)} m · ${cost.toFixed(1)} AP${cost>u.ap?' · stops when AP runs out':''}`,'Move',()=>{Core.move(state,u,selected.point.x,selected.point.y);selected=null;view.center();},!path||u.ap<.01);
@@ -41,24 +52,64 @@ function renderContext(){if(!state)return;const u=hero(state),near=interaction(s
   else if(state.detected.size){const guard=[...state.detected].map(id=>state.units.find(v=>v.id===id)).sort((a,b)=>distance(u,a)-distance(u,b))[0];content('Visible contact',`${guard.name} · ${distance(u,guard).toFixed(1)} m`,'Target',()=>pick({unitId:guard.id}));}
   if(selected){const cancel=document.createElement('button');cancel.className='cancel-context';cancel.textContent='×';cancel.setAttribute('aria-label','Cancel selection');cancel.onclick=()=>{selected=null;view.route([]);contextKey='';renderContext();};root.append(cancel);}
 }
-function renderBattle(){if(!state)return;const u=hero(state),w=Core.WEAPONS[u.weapon],combat=state.phase==='player'||state.phase==='enemy',can=Core.canControl(state,u);$('phase').textContent=state.phase==='enemy'?'GUARD TURN':state.phase==='player'?`YOUR TURN / ${state.round}`:'REAL-TIME EXPLORATION';$('phase').classList.toggle('combat',combat);$('battle-name').textContent=u.name;$('battle-species').textContent=speciesLabel(u.species);$('hp-label').textContent=`${Math.ceil(u.hp)} / ${u.maxHp} HP`;$('hp-bar').style.width=`${u.hp/u.maxHp*100}%`;$('ap').textContent=combat?Math.max(0,u.ap).toFixed(1):'∞';$('ap-label').textContent=combat?'AP':'FREE MOVE';$('objective').textContent=state.solo.ledger?'Return to extraction':'Secure the wage ledger';const dest=state.solo.ledger?BRIEF.extraction:BRIEF.objective;$('objective-distance').textContent=`${distance(u,dest).toFixed(1)} m to ${state.solo.ledger?'extraction':'the records office'}`;$('notice').textContent=state.log[0]||'';
-  const other=u.weapon===state.solo.build.primary?state.solo.build.secondary:state.solo.build.primary;$('swap').textContent='↔ '+short(other);$('swap').disabled=!can;$('reload').textContent=w.mag?`Reload ${u.ammo[u.weapon]??0}/${w.mag}`:'Melee';$('reload').disabled=!can||!w.mag||u.ammo[u.weapon]>=w.mag||!(u.ammoPouch[u.weapon]>0)||Core.combatCosts(state)&&u.ap<3;
-  $('use-utility').textContent=state.solo.build.utility==='dressing'?`Dressings ×${state.solo.dressings}`:`Grenade ×${u.ammo.grenade||0}`;$('use-utility').disabled=!can||(state.solo.build.utility==='dressing'?(state.solo.dressings===0||u.hp===u.maxHp||Core.combatCosts(state)&&u.ap<3):u.ammo.grenade===0);$('end-turn').disabled=state.phase!=='player';$('end-turn').textContent=state.phase==='enemy'?'Guard turn…':'End turn →';$('joystick').classList.toggle('unavailable',!can);$('equipped-label').textContent=short(u.weapon);$('equipment-portrait').src=`aft/assets/characters/armed/${u.species}-rifle.png`;
+function renderBattle(){if(!state)return;const u=hero(state),combat=state.phase==='player'||state.phase==='enemy',can=Core.canControl(state,u);
+  $('battle-name').textContent=u.name;$('battle-species').textContent=speciesLabel(u.species);
+  $('hp-label').textContent=`${Math.ceil(u.hp)} / ${u.maxHp} HP`;$('hp-bar').style.width=`${u.hp/u.maxHp*100}%`;
+  $('ap').textContent=combat?Math.max(0,u.ap).toFixed(1):'∞';$('ap-label').textContent=combat?'AP':'FREE MOVE';
+  $('end-turn').disabled=state.phase!=='player';
+  $('end-turn').setAttribute('aria-label',state.phase==='enemy'?'Guards are acting':'End turn');
+  $('turn-label').innerHTML=state.phase==='enemy'?'GUARD<br>TURN':'END<br>TURN';
+  $('joystick').classList.toggle('unavailable',!can);
   for(const b of document.querySelectorAll('[data-mode]')){b.setAttribute('aria-pressed',String(b.dataset.mode===Core.movementModeOf(u)));b.disabled=!can;}
   for(const b of document.querySelectorAll('[data-stance]')){b.setAttribute('aria-pressed',String(b.dataset.stance===u.stance));b.disabled=!can;}
   drawMinimap($('minimap'),state);renderContext();
   if(state.solo.status!=='active'&&!resultShown){resultShown=true;storage.write();const win=state.solo.status==='extracted';showDialog(`<p class="eyebrow">OPERATION ${win?'COMPLETE':'LOST'}</p><h2>${win?'The books are open.':'One worker down.'}</h2><p>${win?`${u.name} returned with the wage ledger. ${Math.round(state.solo.distance)} metres travelled; ${state.round} combat rounds.`:'The factory kept its secrets this time. Try another animal, another loadout, or a quieter route.'}</p>`,[['Choose your next animal',backToPrep,'primary'],['Replay this loadout',()=>start(createSoloGame(state.solo.build))]]);}
 }
-$('swap').onclick=()=>act(()=>{const u=hero(state);Core.equip(state,u,u.weapon===state.solo.build.primary?state.solo.build.secondary:state.solo.build.primary);});$('reload').onclick=()=>act(()=>Core.reload(state,hero(state)));$('end-turn').onclick=()=>act(()=>{selected=null;Core.endTurn(state);});$('use-utility').onclick=()=>act(()=>{if(state.solo.build.utility==='dressing')dressing(state);else Core.equip(state,hero(state),'grenade');});
+$('end-turn').onclick=()=>act(()=>{selected=null;Core.endTurn(state);});
 const poses={standing:'M12 4a3 3 0 1 0 0 .1M12 10v13m0-9-6 5m6-5 6 5m-6 4-5 11m5-11 6 11',kneeling:'M12 5a3 3 0 1 0 0 .1M12 11l1 10 9 1m-9-1-6 6h13m-8-12 9 3m-9-3-4 5',prone:'M5 20a3 3 0 1 0 0 .1M9 23h15l7 4m-7-4 8-2M9 23l6-6h8'};
 for(const b of document.querySelectorAll('[data-stance]')){b.innerHTML=`<svg viewBox="0 0 36 38" aria-hidden="true"><path d="${poses[b.dataset.stance]}"/></svg>`;b.onclick=()=>act(()=>Core.setStance(state,hero(state),b.dataset.stance));}
 for(const b of document.querySelectorAll('[data-mode]'))b.onclick=()=>act(()=>Core.setMovementMode(state,hero(state),b.dataset.mode));
 $('zoom-in').onclick=()=>view?.zoom(.83);$('zoom-out').onclick=()=>view?.zoom(1.2);$('center').onclick=()=>view?.center();
-function equipment(){const u=hero(state);showDialog(`<p class="eyebrow">${u.name.toUpperCase()} / FIELD EQUIPMENT</p><h2>What you carry.</h2><p>Walk: 2 AP/m. Run: 1 AP/m and more stamina. Sneak: 3 AP/m. Kneeling doubles movement cost; prone multiplies it by four.</p><p>${Math.round(u.stamina)} / ${u.maxStamina} stamina · ${u.ap.toFixed(1)} AP remaining.</p>`,[...u.pack.map(i=>[`${Core.WEAPONS[i.kind].name}${Core.WEAPONS[i.kind].mag?' · '+(u.ammo[i.kind]??0)+' loaded / '+(u.ammoPouch[i.kind]||0)+' reserve':''}${u.weapon===i.kind?' · equipped':''}`,()=>{Core.equip(state,u,i.kind);contextKey='';renderBattle();}]),['Return to operation',()=>{},'primary']]);}
-$('equipment').onclick=equipment;
-$('menu').onclick=()=>{storage.write();showDialog('<p class="eyebrow">OPERATION PAUSED</p><h2>Take a breath.</h2><p>Your operation is saved on this device. Exploring and enemy actions pause while this menu is open.</p>',[['Continue operation',()=>{},'primary'],['Controls',help],['Choose animal & loadout',backToPrep],['Restart this operation',()=>start(createSoloGame(state.solo.build))]]);};
-function help(){showDialog('<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br>Your decisions.</h2><ul><li>Use the center thumbstick to move freely in any direction. W A S D and arrow keys also work.</li><li>During combat, movement spends AP by the exact distance covered. Stop anywhere. End your turn to let guards act.</li><li>Tap a visible guard, choose your aim, then Fire. Higher aim spends more AP.</li><li>Drag the world to look around. Use the arrows to zoom; tap RECENTER to follow your animal.</li><li>The left controls select run, sneak, and posture. The animal on the right opens equipment.</li><li>Reach the ledger marker, collect it, then return to extraction. Killing every guard is optional.</li></ul>',[['Back to the field',()=>{},'primary']]);}
-$('help').onclick=help;
+function weaponSwapCost(u,kind){return Core.combatCosts(state)?u.slots.includes(kind)?2:3:0;}
+function equipment(){
+  const u=hero(state),can=Core.canControl(state,u);
+  showDialog(`<p class="eyebrow">${u.name.toUpperCase()} / INVENTORY</p><h2>Equipment.</h2><p>${Math.round(u.stamina)} / ${u.maxStamina} stamina · ${u.ap.toFixed(1)} AP remaining.</p>`,[
+    ...u.pack.map(i=>{
+      const cost=weaponSwapCost(u,i.kind);
+      const label=`${Core.WEAPONS[i.kind].name}${Core.WEAPONS[i.kind].mag?' · '+(u.ammo[i.kind]??0)+' loaded / '+(u.ammoPouch[i.kind]||0)+' reserve':''}${u.weapon===i.kind?' · equipped':cost?' · '+cost+' AP':''}`;
+      return [label,()=>act(()=>Core.equip(state,u,i.kind)),'',!can||u.weapon===i.kind||u.ap<cost];
+    }),
+    ['Back to menu',operationMenu],['Return to operation',()=>{},'primary']
+  ]);
+}
+function operationMenu(){
+  if(!state)return;
+  storage.write();
+  const u=hero(state),w=Core.WEAPONS[u.weapon],can=Core.canControl(state,u),costs=Core.combatCosts(state);
+  const other=u.weapon===state.solo.build.primary?state.solo.build.secondary:state.solo.build.primary;
+  const swapCost=weaponSwapCost(u,other),actionCost=costs?' · 3 AP':'';
+  const phase=state.phase==='enemy'?'Guard turn':state.phase==='player'?`Your turn · round ${state.round}`:'Real-time exploration';
+  const utility=state.solo.build.utility==='dressing';
+  showDialog(`<p class="eyebrow">OPERATION PAUSED</p><h2>Field menu.</h2><p class="menu-summary">${phase}<br>${u.name} · ${short(u.weapon)} · ${u.ap.toFixed(1)} AP</p>`,[
+    ['Continue operation',()=>{},'primary'],
+    ['Inventory & weapons',equipment],
+    [`Switch to ${short(other)}${swapCost?' · '+swapCost+' AP':''}`,()=>act(()=>Core.equip(state,u,other)),'',!can||u.ap<swapCost],
+    [`Reload ${short(u.weapon)} · ${u.ammo[u.weapon]??0}/${w.mag}${actionCost}`,()=>act(()=>Core.reload(state,u)),'',!can||!w.mag||u.ammo[u.weapon]>=w.mag||!(u.ammoPouch[u.weapon]>0)||costs&&u.ap<3],
+    [utility?`Use field dressing ×${state.solo.dressings}${actionCost}`:`Equip grenade ×${u.ammo.grenade||0}${costs?' · '+weaponSwapCost(u,'grenade')+' AP':''}`,()=>act(()=>utility?dressing(state):Core.equip(state,u,'grenade')),'',!can||(utility?(state.solo.dressings===0||u.hp===u.maxHp||costs&&u.ap<3):u.ammo.grenade===0||u.weapon==='grenade'||u.ap<weaponSwapCost(u,'grenade'))],
+    ['Mission & combat log',mission],['Controls',help],['Choose animal & loadout',backToPrep],['Restart this operation',()=>start(createSoloGame(state.solo.build))]
+  ],{context:true});
+}
+function mission(){
+  const u=hero(state),near=interaction(state),dest=state.solo.ledger?BRIEF.extraction:BRIEF.objective;
+  const safe=text=>String(text).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+  const objective=state.solo.ledger?'Return to extraction with the ledger.':'Reach the records office and secure the wage ledger.';
+  showDialog(`<p class="eyebrow">MILL 04 / THE NIGHT LEDGER</p><h2>Your assignment.</h2><p>${objective}<br>${distance(u,dest).toFixed(1)} m to ${state.solo.ledger?'extraction':'the records office'}.</p><p class="menu-log-title">RECENT EVENTS</p><ol class="menu-log">${state.log.slice(0,8).map(line=>`<li>${safe(line)}</li>`).join('')}</ol>`,[
+    ...(near?[[`${near.label}${near.cost?' · '+near.cost+' AP':''}`,()=>act(()=>interact(state)),'primary',!near.ok]]:[]),
+    ['Back to menu',operationMenu],['Return to operation',()=>{}]
+  ]);
+}
+$('menu').onclick=operationMenu;
+function help(){showDialog('<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br>Your decisions.</h2><ul><li>Use the center thumbstick to move freely in any direction. W A S D and arrow keys also work.</li><li>During combat, movement spends AP by the exact distance covered. Stop anywhere. End Turn is directly above Menu on the right.</li><li>Tap a visible guard to open the menu with aiming and firing options. Higher aim spends more AP.</li><li>Drag the world to look around. Use the arrows to zoom; tap RECENTER to follow your animal.</li><li>The left controls select run, sneak, and posture. Menu holds inventory, weapon changes, reloads and treatment.</li><li>Find your objective and recent events under Mission & combat log. Collect the ledger through the menu, then return to extraction.</li></ul>',[['Back to menu',operationMenu],['Return to operation',()=>{},'primary']]);}
 $('minimap-button').onclick=()=>{showDialog('<p class="eyebrow">MILL 04 / TACTICAL MAP</p><h2>Find your way.</h2><canvas id="large-map" width="760" height="560" style="width:100%;height:auto;border:1px solid #535b46"></canvas><p>Cream: your animal. Orange: the objective and visible guards. Dark areas remain unexplored.</p>',[['Return to operation',()=>{},'primary']]);drawMinimap($('large-map'),state);};
 function resetStick(){stick={x:0,y:0};$('stick-knob').style.transform='translate(-50%,-50%)';}
 function updateStick(e){const r=$('joystick').getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,limit=r.width*.3,n=Math.hypot(dx,dy),scale=Math.min(1,limit/Math.max(1,n));stick=n<9?{x:0,y:0}:{x:dx*scale/limit,y:dy*scale/limit};$('stick-knob').style.transform=`translate(calc(-50% + ${stick.x*limit}px),calc(-50% + ${stick.y*limit}px))`;view?.center();}

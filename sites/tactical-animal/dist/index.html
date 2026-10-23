@@ -35,7 +35,11 @@
         <button id="stance-cycle" class="square-control cycle-control" aria-label="Stance: standing. Tap to cycle; hold for choices." aria-haspopup="dialog" aria-controls="control-picker" aria-expanded="false"><span class="cycle-mark" aria-hidden="true">↕</span><span id="stance-icon" class="control-icon" aria-hidden="true"></span><span id="stance-label" class="control-caption">STAND</span></button>
       </div>
       <div class="stick-column"><div id="joystick" role="group" aria-label="Movement thumbstick. Drag from the center to move. Keyboard: W A S D or arrow keys."><div class="stick-ring"></div><span class="stick-north">▲</span><div id="stick-knob"></div></div><span class="stick-caption">MOVE</span></div>
-      <div class="right-controls"><button id="end-turn" class="end-turn" aria-label="End turn" disabled><span class="turn-arrow" aria-hidden="true">↗</span><strong id="turn-label">END<br>TURN</strong></button><button id="menu" aria-label="Open operation menu">☰<span>MENU</span></button></div>
+      <div class="right-controls">
+        <button id="end-turn" class="square-control end-turn" aria-label="End turn" disabled><strong id="turn-label">END<br>TURN</strong></button>
+        <button id="grenade" class="square-control" aria-label="Aim grenade" aria-pressed="false" disabled><span id="grenade-count" class="grenade-count" aria-hidden="true">0</span><svg class="grenade-icon" viewBox="0 0 36 38" aria-hidden="true"><path d="m15 10 2-5h7l-1 5m-9 0h11l2 7q6 5 3 13-2 6-10 6T10 27q-1-6 4-10zM24 5l6 7-2 8M13 23h14m-14 6h14M18 18v15m6-15v15"/></svg><span class="control-caption">GRENADE</span><small id="grenade-cost">5 AP</small></button>
+        <button id="menu" class="square-control" aria-label="Open options">☰<span>OPTIONS</span></button>
+      </div>
     </div></div>
   </section>
   <dialog id="control-picker" class="control-picker" aria-labelledby="control-picker-title"><div class="picker-heading"><strong id="control-picker-title"></strong><span>FREE SWITCH · 0 AP</span><button id="close-picker" aria-label="Close choices">×</button></div><div id="control-choices" class="control-choices"></div><p id="control-picker-hint"></p></dialog>

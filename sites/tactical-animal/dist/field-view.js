@@ -24,6 +24,7 @@ export class FieldView {
     this.actors=new Map();this.data=new Map();this.pending=new Map();this.failed=new Set();this.generation=0;this.samples=new Map();this.effects=[];
     this.loader=new T.TextureLoader();this.loader.setPath(new URL('./aft/tactics/',import.meta.url).href);this.pointers=new Map();this.disposables=[];
     this.marker=new T.Mesh(new T.RingGeometry(.32,.4,32),new T.MeshBasicMaterial({color:0xf2c56a,side:T.DoubleSide}));this.marker.rotation.x=-Math.PI/2;this.marker.position.y=.025;this.marker.visible=false;this.scene.add(this.marker);
+    const blast=Core.WEAPONS.grenade.blast;this.blastMarker=new T.Mesh(new T.RingGeometry(blast-.04,blast,64),new T.MeshBasicMaterial({color:0xf4a568,side:T.DoubleSide,transparent:true,opacity:.85,depthWrite:false}));this.blastMarker.rotation.x=-Math.PI/2;this.blastMarker.visible=false;this.scene.add(this.blastMarker);
     this.pathLine=new T.Line(new T.BufferGeometry(),new T.LineBasicMaterial({color:0xe6b464,transparent:true,opacity:.85}));this.scene.add(this.pathLine);
     this.pointerDown=e=>this.down(e);this.pointerMove=e=>this.drag(e);this.pointerUp=e=>this.up(e);
     container.addEventListener('pointerdown',this.pointerDown);container.addEventListener('pointermove',this.pointerMove);container.addEventListener('pointerup',this.pointerUp);container.addEventListener('pointercancel',this.pointerUp);
@@ -73,7 +74,8 @@ export class FieldView {
     for(let x=3;x<37;x+=3){const mark=new T.Mesh(new T.PlaneGeometry(1.2,.06),new T.MeshBasicMaterial({color:0xb0a475,transparent:true,opacity:.16}));mark.rotation.x=-Math.PI/2;mark.position.set(x,.003,26.8);this.environment.add(mark);}
   }
   makePin(point,color){const group=new T.Group();group.position.set(point.x,0,point.y);const mat=new T.MeshBasicMaterial({color,transparent:true,opacity:.8,side:T.DoubleSide});const ring=new T.Mesh(new T.RingGeometry(.36,.45,32),mat);ring.rotation.x=-Math.PI/2;ring.position.y=.035;group.add(ring);const shaft=new T.Mesh(new T.CylinderGeometry(.017,.017,1.6,6),mat.clone());shaft.position.y=.8;group.add(shaft);const flag=new T.Mesh(new T.OctahedronGeometry(.14),mat.clone());flag.position.y=1.65;group.add(flag);this.environment.add(group);return group;}
-  route(path=[]){this.pathLine.geometry.dispose();this.pathLine.geometry=new T.BufferGeometry().setFromPoints(path.map(p=>V(p.x,.06,p.y)));const end=path.at(-1);this.marker.visible=!!end;if(end)this.marker.position.set(end.x,.035,end.y);}
+  route(path=[]){this.blastMarker.visible=false;this.pathLine.geometry.dispose();this.pathLine.geometry=new T.BufferGeometry().setFromPoints(path.map(p=>V(p.x,.06,p.y)));const end=path.at(-1);this.marker.visible=!!end;if(end)this.marker.position.set(end.x,.035,end.y);}
+  previewGrenade(point){this.route([hero(this.state),point]);this.blastMarker.position.set(point.x,.05,point.y);this.blastMarker.visible=true;}
   async actor(u){
     if(this.actors.has(u.id)||this.pending.has(u.id)||this.failed.has(u.id))return;
     const generation=this.generation,profile=ANIMAL_MOTION_CATALOG.find(p=>p.id===u.species);this.pending.set(u.id,generation);this.onLoading(true);
@@ -106,11 +108,15 @@ export class FieldView {
       for(const p of this.walls){p.wall.visible=s.seen.has(Core.key(p.x,p.y))||s.seen.has(Core.key(p.x+(p.axis==='e'?1:0),p.y+(p.axis==='s'?1:0)));p.wall.material.transparent=true;p.wall.material.opacity=p.y>u.y&&p.y<u.y+4&&Math.abs(p.x-u.x)<4?.28:1;}
       for(const p of this.crates)p.group.visible=s.seen.has(Core.key(p.x,p.y));this.objectivePin.visible=!s.solo.ledger;this.extractionPin.visible=true;
     }
-    if(s.effect&&s.effect!==this.lastEffect){this.lastEffect=s.effect;for(const event of s.effect.sequence||[s.effect]){const line=new T.Line(new T.BufferGeometry().setFromPoints([V(event.ax,1.1,event.ay),V(event.bx,.9,event.by)]),new T.LineBasicMaterial({color:event.incendiary?0xff7835:0xf6d68c,transparent:true,opacity:.9}));this.scene.add(line);this.effects.push({line,at:now});}}
-    this.effects=this.effects.filter(e=>{if(now-e.at<240){e.line.material.opacity=1-(now-e.at)/240;return true;}this.scene.remove(e.line);e.line.geometry.dispose();e.line.material.dispose();return false;});
+    if(s.effect&&s.effect!==this.lastEffect){this.lastEffect=s.effect;for(const event of s.effect.sequence||[s.effect]){
+      const thrown=event.weapon==='grenade',points=thrown?Array.from({length:17},(_,i)=>{const t=i/16;return V(event.ax+(event.bx-event.ax)*t,1.1*(1-t)+.08*t+Math.sin(t*Math.PI)*2.5,event.ay+(event.by-event.ay)*t);}):[V(event.ax,1.1,event.ay),V(event.bx,.9,event.by)];
+      const line=new T.Line(new T.BufferGeometry().setFromPoints(points),new T.LineBasicMaterial({color:event.incendiary?0xff7835:0xf6d68c,transparent:true,opacity:.9}));this.scene.add(line);this.effects.push({line,at:now,ttl:thrown?700:240});
+      if(thrown){const ring=new T.Mesh(new T.RingGeometry(event.blast-.07,event.blast,64),new T.MeshBasicMaterial({color:0xf4a568,side:T.DoubleSide,transparent:true,opacity:.8,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.set(event.bx,.07,event.by);this.scene.add(ring);this.effects.push({line:ring,at:now,ttl:700});}
+    }}
+    this.effects=this.effects.filter(e=>{if(now-e.at<e.ttl){e.line.material.opacity=1-(now-e.at)/e.ttl;return true;}this.scene.remove(e.line);e.line.geometry.dispose();e.line.material.dispose();return false;});
     this.marker.rotation.z=now*.0005;this.renderer.render(this.scene,this.camera);
   }
-  dispose(){this.generation++;this.resizeObserver.disconnect();this.container.removeEventListener('pointerdown',this.pointerDown);this.container.removeEventListener('pointermove',this.pointerMove);this.container.removeEventListener('pointerup',this.pointerUp);this.container.removeEventListener('pointercancel',this.pointerUp);this.container.removeEventListener('wheel',this.wheel);for(const a of this.actors.values())this.disposeActor(a);this.actors.clear();this.clearEnvironment();for(const e of this.effects){e.line.geometry.dispose();e.line.material.dispose();}this.marker.geometry.dispose();this.marker.material.dispose();this.pathLine.geometry.dispose();this.pathLine.material.dispose();this.renderer.dispose();this.renderer.domElement.remove();}
+  dispose(){this.generation++;this.resizeObserver.disconnect();this.container.removeEventListener('pointerdown',this.pointerDown);this.container.removeEventListener('pointermove',this.pointerMove);this.container.removeEventListener('pointerup',this.pointerUp);this.container.removeEventListener('pointercancel',this.pointerUp);this.container.removeEventListener('wheel',this.wheel);for(const a of this.actors.values())this.disposeActor(a);this.actors.clear();this.clearEnvironment();for(const e of this.effects){e.line.geometry.dispose();e.line.material.dispose();}this.marker.geometry.dispose();this.marker.material.dispose();this.blastMarker.geometry.dispose();this.blastMarker.material.dispose();this.pathLine.geometry.dispose();this.pathLine.material.dispose();this.renderer.dispose();this.renderer.domElement.remove();}
 }
 
 export function drawMinimap(canvas,s){const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;ctx.fillStyle='#1b2219';ctx.fillRect(0,0,w,h);const scale=Math.min((w-12)/38,(h-12)/28),ox=(w-38*scale)/2,oy=(h-28*scale)/2;

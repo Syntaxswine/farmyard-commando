@@ -4,7 +4,9 @@ A portrait mobile browser prototype of the single-character Animal Factory Tacti
 
 Free exploration transitions to player and guard turns when contact begins. Movement uses continuous world coordinates: AP pays for the actual distance accepted by collision, including diagonals and wall slides. The animal can stop anywhere. Initial tuning is 2 AP/m walking, 1 AP/m running and 3 AP/m sneaking; kneeling doubles those costs and prone multiplies them by four. Running and sneaking also affect speed and stamina.
 
-The portrait controls follow the supplied sketch: zoom arrows at upper left, an expandable map at upper right, a lower central thumbstick, square controls at lower left, and End Turn directly above Menu at lower right. One stance button bounces standing → kneeling → prone → kneeling → standing. One movement button bounces run ↔ off / walk ↔ sneak. Both switches are free, including at zero AP. Hold either button for an expanded horizontal menu with large direct choices; keyboard users can press the down arrow on the focused button. Movement still costs AP by distance and posture.
+The portrait controls follow the supplied sketch: zoom arrows at upper left, an expandable map at upper right, a lower central thumbstick, square controls at lower left, and three square buttons at lower right: End Turn, Grenade, Options. One stance button bounces standing → kneeling → prone → kneeling → standing. One movement button bounces run ↔ off / walk ↔ sneak. Both switches are free, including at zero AP. Hold either button for an expanded horizontal menu with large direct choices; keyboard users can press the down arrow on the focused button. Movement still costs AP by distance and posture.
+
+Choose frag grenades in the loadout to carry three. Tap Grenade, then a guard or ground to choose an explored landing point and review the throw. Grenades cost 5 AP, reduced to exactly 2.5 AP while a pistol or SMG is equipped. Carrying a stowed pistol does not reduce the cost. Throws use one grenade, keep the current weapon equipped and consume none of its ammunition; there is no extra weapon-swap charge. Grenades have 10 m range and a 5 m blast radius, respect walls when applying blast damage, and can hurt the animal. The preview flags self exposure. Throw effects show the arc and blast boundary. Tap Grenade again, cancel the preview, move or press Escape to leave aiming.
 
 The eye above movement displays the number of currently visible living opponents. Each tap centers and follows the next opponent, starting with nearby clear contacts, with sight acuity and cover informing the order. After the final, farthest or hardest-to-see contact, the next tap recenters on the animal; another tap starts again at the first opponent. There is no separate Recenter button. With no visible opponents, the eye still recenters after panning. Camera inspection costs no AP and does not turn, target or attack with the animal. Pan or move to leave inspection; losing sight of a focused opponent returns the camera to the animal.
 
@@ -22,7 +24,7 @@ npm run build
 
 Open `http://127.0.0.1:4495`. The preview server retires after 30 minutes and also honors `artifacts/preview/STOP`.
 
-The checks cover every animal/primary combination, fractional positions, distance/AP accounting, diagonal equivalence, collision and tunnelling, path smoothing, contact, finite ammunition, treatment, save/resume, free stance switching, back-and-forth cycles, opponent visibility/order, turn ownership, and a complete legal mission through extraction.
+The checks cover every animal/primary combination, fractional positions, distance/AP accounting, diagonal equivalence, collision and tunnelling, path smoothing, contact, finite ammunition, treatment, save/resume, free stance switching, back-and-forth cycles, opponent visibility/order, grenade AP discounts and stock, blast damage and walls, turn ownership, and a complete legal mission through extraction.
 
 ## Source and scope
 

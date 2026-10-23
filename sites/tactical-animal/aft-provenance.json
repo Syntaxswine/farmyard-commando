@@ -1,0 +1,428 @@
+{
+  "source": "AnimalFactory3D/game/dist",
+  "sourceCommit": "04cdcaa3764544c85332f16eb8612192aac5cbb8",
+  "snapshotAt": "2026-10-23T04:50:25.434Z",
+  "files": [
+    {
+      "path": "tactics/core/perception.js",
+      "sha256": "e8b488f1bd4a5561aef1cb70608b39982705e7f1994e85b2eda73c6ca7f2aeec",
+      "bytes": 2447
+    },
+    {
+      "path": "tactics/aim-levels.js",
+      "sha256": "ff8a4d44dd96bd5341a1971afe4d9207ce85ad37e07edf1592688cec30c8563d",
+      "bytes": 575
+    },
+    {
+      "path": "tactics/quickplay-presets.js",
+      "sha256": "3881e97a4d90b0cb3f40007112f939d6e831d290e589511d6a7d2778c1763050",
+      "bytes": 3002
+    },
+    {
+      "path": "tactics/character-stats.js",
+      "sha256": "e7984801b7d9578f8e246fbf06daba5f8cdbc117278e7c307a78587ad6b6fa88",
+      "bytes": 4383
+    },
+    {
+      "path": "tactics/animal-motion-catalog.js",
+      "sha256": "b8215ef64b97009e59030316de996e610c2b73dec92aa3c5ce69e239025f53cd",
+      "bytes": 4242
+    },
+    {
+      "path": "tactics/horse-light-model.js",
+      "sha256": "b0d4e65cc070357d778e8ba5260f590e4e15dc71a3dc8000003ec8465d23cbf0",
+      "bytes": 25451
+    },
+    {
+      "path": "tactics/vendor/three.module.js",
+      "sha256": "96cc39e18fde90e5a3896252775a71e8f3d3e946da0035ee27f3ecce09c60e8c",
+      "bytes": 621667
+    },
+    {
+      "path": "tactics/vendor/three.core.js",
+      "sha256": "496aa42d1d47b9a40d16eab2864177cb94368a165a7c3e79345c43ad0109e093",
+      "bytes": 1462227
+    },
+    {
+      "path": "tactics/horse-grip-hand.js",
+      "sha256": "f557f598246ff246c8a8497fc86acbe732d0c83d0b480857e74b0ed4d8b56a3d",
+      "bytes": 3428
+    },
+    {
+      "path": "tactics/horse-grip-hand-data.js",
+      "sha256": "85d4bdd8346b96a710f8b0baed04cc0cf7c843d305b94989eca9956cbfc35728",
+      "bytes": 36327
+    },
+    {
+      "path": "tactics/horse-rifle.js",
+      "sha256": "ebc8cfe99fc85b0daec29be3441f951e8e52feecb4e78eec0a4d5195b1a407cf",
+      "bytes": 2727
+    },
+    {
+      "path": "tactics/horse-graphic-paint.js",
+      "sha256": "43bc4fee3b074f7a7fccfbf8377fc3057adfc0aaa1155c8136dc5ea6427afa51",
+      "bytes": 4353
+    },
+    {
+      "path": "tactics/goat-worker.js",
+      "sha256": "4bb669374a539443b96b1c79a2a2097978958fd7e219cb21df9413675dc32d9c",
+      "bytes": 827
+    },
+    {
+      "path": "tactics/bull-worker.js",
+      "sha256": "5c9f3b3bc1c14e9ebb595055d2c25176f9d1190aca1564f839a46e30c57df473",
+      "bytes": 827
+    },
+    {
+      "path": "tactics/cow-worker.js",
+      "sha256": "d45c38a5f276247365aa84bbf5d63aa02090e1e2e2b29ef8e1bbce09199a3645",
+      "bytes": 859
+    },
+    {
+      "path": "tactics/donkey-worker.js",
+      "sha256": "4160be473958cfed502a158f7efefa897286069f354dd388f62e770db000d1f9",
+      "bytes": 878
+    },
+    {
+      "path": "tactics/sheep-worker.js",
+      "sha256": "2a7c72cc1e5ddaa92535267c87582e7378a599f24f63c837b4e14344dd9b6b76",
+      "bytes": 875
+    },
+    {
+      "path": "tactics/skunk-worker.js",
+      "sha256": "76d3f9bcd53354f41da3d948486c485a62df489b8f87c38e050d659a5dc9d52f",
+      "bytes": 2715
+    },
+    {
+      "path": "tactics/horse-model-paint.js",
+      "sha256": "db8450b6981dd6e6bff05633d1db487f3ab415fc9ea31415740a91798c525ac4",
+      "bytes": 47623
+    },
+    {
+      "path": "tactics/pig-foreman.js",
+      "sha256": "d40aae4b5356c511d1dee5f9d11b232dc21c4c0b8b0c6feabf164744d8ef9e5d",
+      "bytes": 1001
+    },
+    {
+      "path": "tactics/pig-director.js",
+      "sha256": "ebf780f646519bc39ce06dcde65f0459626876bc13930955a0bfbadde5c5fcbb",
+      "bytes": 1393
+    },
+    {
+      "path": "tactics/rabbit-worker.js",
+      "sha256": "e50c887e54a63037e234e8d4f945c587a94334f4608729940afc75594ea6edbe",
+      "bytes": 966
+    },
+    {
+      "path": "tactics/dog-guard.js",
+      "sha256": "fe073971d408af77ae09e36dc47b3e811a23b95887998091257a63d83e3b272e",
+      "bytes": 999
+    },
+    {
+      "path": "tactics/hen-worker.js",
+      "sha256": "ed62ba0884b3ecfbd6d38fa3f652d12d39e77630b790df72a2eadb457d4450ec",
+      "bytes": 4049
+    },
+    {
+      "path": "tactics/animal-motion-paint.js",
+      "sha256": "84e2515a48dff3eae55cc37d5515a346e0e4032ce31d3156d0b535a91786b274",
+      "bytes": 3513
+    },
+    {
+      "path": "tactics/donkey-straw-hat.js",
+      "sha256": "5b69892761c849d439f869d3b7abf91e9a5a5e485bba34f01e97b76946d4a8d9",
+      "bytes": 2942
+    },
+    {
+      "path": "tactics/donkey-hawaiian.js",
+      "sha256": "3413bcb0d7334d60657f56bd86e3d03045ddc185e3fd6162aa1119ef78bc652d",
+      "bytes": 2375
+    },
+    {
+      "path": "tactics/cow-neck-paint.js",
+      "sha256": "62a681f84cce9caf83b4dc0ed3c487491a55d488304c4834092bfa87de318835",
+      "bytes": 3221
+    },
+    {
+      "path": "tactics/rabbit-paint-layers.js",
+      "sha256": "3b1a1357d957c007cd92703cc642439f1cfdc9ebf397cfa93bef9e4c141a3221",
+      "bytes": 3023
+    },
+    {
+      "path": "tactics/dog-motion-paint.js",
+      "sha256": "75c6a82a2a9b268d42ab51fba51a989f76e8843d023da737c6e63c6d14742a10",
+      "bytes": 727
+    },
+    {
+      "path": "tactics/dog-paint-layers.js",
+      "sha256": "4c2f95b034c4f7364a921edb7a3821133e1314c7718c1d5902490e861e817b40",
+      "bytes": 4042
+    },
+    {
+      "path": "tactics/sheep-paint-layers.js",
+      "sha256": "8989c394dbca0e7c1222d3a1a72d45dcff6e8ff2a9433be953d552e8170f6d46",
+      "bytes": 4598
+    },
+    {
+      "path": "tactics/hen-paint-layers.js",
+      "sha256": "27bc747c722b3a60f9b647910246e750860c8f8cf7bd7f30b0c941cde03630eb",
+      "bytes": 5396
+    },
+    {
+      "path": "tactics/animal-motion-repair-paint.js",
+      "sha256": "99565e955fef383e539b4041547dcedd993da83f908e9454953d66c107ed6a8f",
+      "bytes": 4918
+    },
+    {
+      "path": "tactics/red-hat-uniform.js",
+      "sha256": "5faf3d40656536b698fe7f383dfab33f7621e2b476b343e4e02e8d7b3d60dcb7",
+      "bytes": 6069
+    },
+    {
+      "path": "tactics/red-hat-tailored-paint.js",
+      "sha256": "e7cf7be5cf40187da8d626fb9ecb624b16713d3daa6406eaf4d0d6f29e832f49",
+      "bytes": 5638
+    },
+    {
+      "path": "tactics/weapon-models.js",
+      "sha256": "9827dacd81d430a6f92123ce9592d7f79c73e4e707462287a49abcb8529933a3",
+      "bytes": 19315
+    },
+    {
+      "path": "tactics/one-handed.js",
+      "sha256": "7d0e87cbff4694b2cc53fa81d0e49d9b5f3b6111dc3e03fc77882299f4700884",
+      "bytes": 1569
+    },
+    {
+      "path": "tactics/grenade-model.js",
+      "sha256": "33f21372ccf3481bc7aac4b7477fbf356cef1c68407fc07dcbc0fa529be6bdd5",
+      "bytes": 5706
+    },
+    {
+      "path": "tactics/worker-locomotion.js",
+      "sha256": "7316b2dde70672a7fbfc7ff7708d5db9e2bdea5fff2e7215d3ef3a3d839336b0",
+      "bytes": 3755
+    },
+    {
+      "path": "tactics/hen-motion.js",
+      "sha256": "1234eee6c06f04ef2cb3999b3e0c7378143fee8dc46cbb43149ddfed6e617154",
+      "bytes": 6310
+    },
+    {
+      "path": "tactics/dog-motion.js",
+      "sha256": "cb813ff8952ea197703d73118ebf35ec415381e67626c97b10c6e36318bb7201",
+      "bytes": 11096
+    },
+    {
+      "path": "tactics/clothing-weights.js",
+      "sha256": "a70f99e17ce5cfe233f81e13219e432781a59f87beb97257bbdc3d76c47fb471",
+      "bytes": 1202
+    },
+    {
+      "path": "tactics/roof-mantle-equipment.js",
+      "sha256": "66b8263bf339dfb374fbd81271fb0326b0a1be6190bef955e0377dbc046aecd6",
+      "bytes": 3386
+    },
+    {
+      "path": "tactics/battle-posture.js",
+      "sha256": "c7509bdc313a5574b3e836202b0fe0545fa2b07a4f87937668b28922a9301422",
+      "bytes": 11335
+    },
+    {
+      "path": "tactics/tower-tail-tuck.js",
+      "sha256": "cf4c25d09fb1e2929f35f650fd7cea47776da413477c36f9603231ace8be5495",
+      "bytes": 1858
+    },
+    {
+      "path": "tactics/casualty-pose.js",
+      "sha256": "6b8397fd591c89471631acb18ef3cb79574d4e89ed1125d2a416eb010de7a65b",
+      "bytes": 8649
+    },
+    {
+      "path": "tactics/vendor/THREE-LICENSE.txt",
+      "sha256": "df2a91696186fe58c92518a25d48bc59c8ee2edc7cac9ca6d19a5a0d599a2a05",
+      "bytes": 1102
+    },
+    {
+      "path": "tactics/solo-weapon-data.js",
+      "sha256": "d9de4d8cde50262e1889a4e19a457da1a39e32e2eb21b8e97d38fa097ae93bb5",
+      "bytes": 1757,
+      "source": "tactics/core/engine.js: WEAPONS and AIM_ZONES"
+    },
+    {
+      "path": "tactics/horse-10k-data.json",
+      "sha256": "5b2b0c0aa62fdf592af4d638c97dd4916ed1a7638f2c3b53815ae4d681305271",
+      "bytes": 419191
+    },
+    {
+      "path": "assets/characters/armed/horse-rifle.png",
+      "sha256": "42fdd7a21312bc723083efb029c65db472f8d52d0fa03bead63d539342620e82",
+      "bytes": 54908
+    },
+    {
+      "path": "tactics/goat-10k-data.json",
+      "sha256": "d81f129021f43058b4ec55f08651713f37b585a82b6b2d712837c6c865c7f25d",
+      "bytes": 410862
+    },
+    {
+      "path": "assets/characters/armed/goat-rifle.png",
+      "sha256": "73ec568bad3e17abac85ed6151995497f6a4cd4ec40ef1a7c3664b64cf95d55b",
+      "bytes": 53294
+    },
+    {
+      "path": "tactics/donkey-10k-data.json",
+      "sha256": "5ba3bc38971fa92dac50b9232623383de41e3338879fccf3d669baf896a33566",
+      "bytes": 804202
+    },
+    {
+      "path": "assets/characters/armed/donkey-rifle.png",
+      "sha256": "b0ca1abe5d573effbd1d21a03c36bdcc119727271bd2871a5765432a306b25e2",
+      "bytes": 47056
+    },
+    {
+      "path": "tactics/sheep-10k-data.json",
+      "sha256": "c299886b93848d9cf3f0a3c27d45d18b8badedeaac3f4c758db16ce3faf16fd6",
+      "bytes": 427643
+    },
+    {
+      "path": "assets/characters/armed/sheep-rifle.png",
+      "sha256": "a3b3d6005de76952b3ec9fffb35e13071c77c7ed5acbcb1d0a71eba938774495",
+      "bytes": 69174
+    },
+    {
+      "path": "tactics/cow-10k-data.json",
+      "sha256": "ab40e8592c80ca98b1d96ff2ab5fbda07cb011b1f08414ce2143dcb522515392",
+      "bytes": 417330
+    },
+    {
+      "path": "assets/characters/armed/cow-rifle.png",
+      "sha256": "90348f8acedcc06ba979cb707c94093ffa5fe4f323919149730a0a644c44cfed",
+      "bytes": 70222
+    },
+    {
+      "path": "tactics/skunk-10k-data.json",
+      "sha256": "c1176d473c045f08f6a5cfa3eeb210b10c3e0e7585a80ac1f4852460a9765c5f",
+      "bytes": 410101
+    },
+    {
+      "path": "assets/characters/armed/skunk-rifle.png",
+      "sha256": "762deb3561051faeff4246b05a087787107bfae5c146eea2f18a4814973512cd",
+      "bytes": 70590
+    },
+    {
+      "path": "tactics/pig-foreman-10k-data.json",
+      "sha256": "4e63017607f7ef4d90b6dba384ce4852436a0cd66e48aed8646be95c7892f7a8",
+      "bytes": 701072
+    },
+    {
+      "path": "assets/characters/armed/pig-foreman-rifle.png",
+      "sha256": "33b4930b720a6e3aa5b9ee20bb085d83502119c535e9eeef5309ea5c10fd8afe",
+      "bytes": 67626
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/horse-worker-light-atlas.png",
+      "sha256": "a69ccd8c8153f04fc835cef004f83695accc638f949ba8b6fb1b0ec40922ac31",
+      "bytes": 2628783
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/goat-worker-model-paint-v1.png",
+      "sha256": "50e63428f990f31cdb2f6df0bee6a9ccb678860bf12dbc95a3fd6e87db73afea",
+      "bytes": 1622867
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/bull-worker-model-paint-v2.png",
+      "sha256": "cbc60de5fa7480514b43366cbaacc1e1f440a8ce363a95d20733ac746b5f3ffe",
+      "bytes": 1754992
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/cow-woman-model-paint-v1.png",
+      "sha256": "d4eb3b14dc58c56031a7b484b46c5992efe092071ffc07ba012dafe35e2c38f9",
+      "bytes": 1578818
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/donkey-worker-model-paint-v1.png",
+      "sha256": "671f63654e5afcb1bb8a61e6267086c3fb8839c78d59dc4750c53f56b8d9968b",
+      "bytes": 1570318
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/sheep-worker-model-paint-v1.png",
+      "sha256": "aa53d798023f60b5f5bce479c083976027b7278c2309f7ab8363ead6581515cd",
+      "bytes": 1676286
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/skunk-worker-model-paint-v1.png",
+      "sha256": "e3386b3bcbda0cc212459e9f7053367c29559ac0fe95e79db58014aa3edb2c4b",
+      "bytes": 1449769
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/skunk-tail-paint-v1.png",
+      "sha256": "4a3f2f72cd4c4c7f0904042799f43558b5bbe6da0f5500750294c622db800568",
+      "bytes": 2980778
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/horse-worker-model-paint-v1.png",
+      "sha256": "468ce2d133019dfbcf9ee69439ecb0eb92fecdc20c1306b83536d2a440329b89",
+      "bytes": 1590294
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/pig-foreman-model-paint-v1.png",
+      "sha256": "56479f68339bf21321e9c3a7cfedb5b7e49eac77b3169c24cd559d25b51fc2a4",
+      "bytes": 1635690
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/pig-director-model-paint-v1.png",
+      "sha256": "7846de001d3806c34ff541d86f2baf21aeb3083f680be07e05ccb05d0f4dc67b",
+      "bytes": 1463634
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/rabbit-woman-model-paint-v1.png",
+      "sha256": "499d29fcecc54b12e834a12068ff7f7810ab11fbfb07fd9c8004b1023cc2d7df",
+      "bytes": 1602119
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/dog-woman-model-paint-v1.png",
+      "sha256": "ec678213ace42f648b91748537cc7c0c9df506a34077be5777125de69e97614a",
+      "bytes": 1495961
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/hen-model-paint-v1.png",
+      "sha256": "e2d9f186f01e71c703f11bd449fb2978a28e343dd407fab0c82c6aee1d0a5cb6",
+      "bytes": 1504562
+    },
+    {
+      "path": "assets/characters/model-references/pig-foreman-turnaround-v2.png",
+      "sha256": "6939d5237f72046c7d29b38ed93ed7210ed34ec9e9764c1aca82b273e23dbb50",
+      "bytes": 1793173
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/cow-neck-detail-v1.png",
+      "sha256": "e7f2822161ecb8dbe7fe9f97ea8a4119a35d955770afb58c50d4380f4bc6cc26",
+      "bytes": 2123401
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/rabbit-eye-detail-v1.png",
+      "sha256": "415ba0f8335e49c17eed42edc31750c163ae0c61fdf36be16176a467293c28af",
+      "bytes": 2805844
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/dog-eye-detail-v1.png",
+      "sha256": "3855a833879dcb9d6c2e3717cb349d61c9cea16a9dd667b46dbdefd067758626",
+      "bytes": 2715407
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/red-hat-uniform-paint-v1.png",
+      "sha256": "5d3ac2732e688709ac2039120af8fa91abac31e4ea525b16e7d461596e5e0b42",
+      "bytes": 1702037
+    },
+    {
+      "path": "assets/equipment/painted-ui/grenade-surface.png",
+      "sha256": "f74ea371f9f2f575ca775791f7cb6163a19be717ab2d1b924b9a8efb6ac4ce36",
+      "bytes": 2338079
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/sheep-underlay-paint-v1.png",
+      "sha256": "6abcf22d785e5b45b937e464c64f4d1fc52074181a9ef1df81d7158797868f5e",
+      "bytes": 1297801
+    }
+  ]
+}

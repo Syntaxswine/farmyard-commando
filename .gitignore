@@ -1,0 +1,7 @@
+artifacts/
+outputs/
+.sites-artifacts/
+node_modules/
+.openai/*.local.*
+*.tar.gz
+*.tgz

@@ -1,5 +1,5 @@
 /* Keep the field open; detailed actions belong to the lower-right menu. */
-@media(max-width:650px){.intro-copy{display:none}}
+@media(max-width:650px){.intro-copy{display:none}.intro h1{font-size:clamp(62px,20vw,85px)}}
 
 #battle .view-controls{top:max(15px,env(safe-area-inset-top));left:14px;right:auto;gap:2px;align-items:center}
 #battle .view-controls button{width:43px;height:35px;font-size:17px;background:#20271de8}

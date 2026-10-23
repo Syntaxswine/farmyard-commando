@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {cycleStep,bindPressHold} from '../dist/mobile-controls.js';
+import {cycleStep,nextCameraFocus,bindPressHold} from '../dist/mobile-controls.js';
 
 test('stance taps reverse at each end, always passing through kneeling',()=>{
   let value='standing',direction=1;const sequence=[value];
@@ -12,6 +12,16 @@ test('run and sneak taps always pass through off, including after a direct choic
   for(let i=0;i<5;i++){({value,direction}=cycleStep(values,value,direction));sequence.push(value);}
   assert.deepEqual(sequence,['walk','run','walk','sneak','walk','run']);
   assert.equal(cycleStep(values,'sneak',1).value,'walk');assert.equal(cycleStep(values,'run',-1).value,'walk');
+});
+
+test('the camera advances through every ranked opponent, then the animal, before starting again',()=>{
+  const contacts=[{id:3},{id:1},{id:2}],sequence=[];let focusedId=null;
+  for(let i=0;i<8;i++){focusedId=nextCameraFocus(contacts,focusedId)?.id??null;sequence.push(focusedId);}
+  assert.deepEqual(sequence,[3,1,2,null,3,1,2,null]);
+});
+test('the eye recenters with no visible opponents and restarts after a focused contact disappears',()=>{
+  assert.equal(nextCameraFocus([],null),null);assert.equal(nextCameraFocus([],1),null);
+  assert.equal(nextCameraFocus([{id:2}],1).id,2);assert.equal(nextCameraFocus([{id:2}],2),null);
 });
 
 class Control extends EventTarget{setPointerCapture(){}}

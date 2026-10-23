@@ -1,6 +1,6 @@
 import {ANIMALS,PRIMARY,SECONDARY,DEFAULT_BUILD,BRIEF,Core,normalizeBuild,buildStats,createSoloGame,hero,interaction,interact,dressing,tick,encodeSave,decodeSave,distance} from './solo-game.js';
 import {FieldView,drawMinimap} from './field-view.js';
-import {cycleStep,bindPressHold} from './mobile-controls.js';
+import {cycleStep,nextCameraFocus,bindPressHold} from './mobile-controls.js';
 const $=id=>document.getElementById(id),SAVE='tactical-animal-operation-v2',BUILD='tactical-animal-build-v1';
 let build={...DEFAULT_BUILD},state=null,view=null,active=false,paused=false,selected=null,aim='hip',zone='torso',burst=false,contextKey='',lastTime=0,lastUI=0,lastSave=0,lastPhase='',stick={x:0,y:0},stickPointer=null,resultShown=false;
 const keys=new Set(),overlay=$('overlay');
@@ -73,9 +73,13 @@ function renderBattle(){if(!state)return;const u=hero(state),combat=state.phase=
   renderCycle('movement',mode,mode==='walk'?'OFF':mode.toUpperCase(),movementNames[mode],can);
   renderCycle('stance',u.stance,{standing:'STAND',kneeling:'KNEEL',prone:'CRAWL'}[u.stance],stanceNames[u.stance],can);
   const contacts=Core.visibleOpponents(state),focused=contacts.find(g=>g.id===view?.focusedId);
-  $('visible-count').textContent=contacts.length;$('look').disabled=!contacts.length||state.solo.status!=='active';
+  const nextFocus=nextCameraFocus(contacts,view?.focusedId);
+  $('visible-count').textContent=contacts.length;$('look').disabled=state.solo.status!=='active';
   $('look').classList.toggle('inspecting',!!focused);
-  $('look').setAttribute('aria-label',`${contacts.length} visible opponent${contacts.length===1?'':'s'}. Focus next opponent.${focused?' Viewing '+focused.name+'.':''}`);
+  const viewing=focused?'Viewing '+focused.name:view?.follow?'Viewing your animal':'Camera panned';
+  const nextAction=nextFocus?'View '+nextFocus.name:'Recenter on your animal';
+  $('look').setAttribute('aria-label',`${contacts.length} visible opponent${contacts.length===1?'':'s'}. ${viewing}. Next: ${nextAction}.`);
+  $('look').title=`${nextAction} · opponents, then your animal`;
   drawMinimap($('minimap'),state);renderContext();
   if(state.solo.status!=='active'&&!resultShown){resultShown=true;storage.write();const win=state.solo.status==='extracted';showDialog(`<p class="eyebrow">OPERATION ${win?'COMPLETE':'LOST'}</p><h2>${win?'The books are open.':'One worker down.'}</h2><p>${win?`${u.name} returned with the wage ledger. ${Math.round(state.solo.distance)} metres travelled; ${state.round} combat rounds.`:'The factory kept its secrets this time. Try another animal, another loadout, or a quieter route.'}</p>`,[['Choose your next animal',backToPrep,'primary'],['Replay this loadout',()=>start(createSoloGame(state.solo.build))]]);}
 }
@@ -121,11 +125,10 @@ for(const kind of ['stance','movement'])bindPressHold($(kind+'-cycle'),{
   tap:()=>cycleControl(kind),hold:()=>openPicker(kind)
 });
 $('look').onclick=()=>{
-  if(!state||paused)return;const contacts=Core.visibleOpponents(state);if(!contacts.length)return;
-  const index=(contacts.findIndex(g=>g.id===view.focusedId)+1)%contacts.length;
-  resetStick();keys.clear();Core.stop(state);view.focusOpponent(contacts[index].id);renderBattle();
+  if(!state||paused)return;const nextFocus=nextCameraFocus(Core.visibleOpponents(state),view.focusedId);
+  resetStick();keys.clear();Core.stop(state);if(nextFocus)view.focusOpponent(nextFocus.id);else view.center();renderBattle();
 };
-$('zoom-in').onclick=()=>view?.zoom(.83);$('zoom-out').onclick=()=>view?.zoom(1.2);$('center').onclick=()=>view?.center();
+$('zoom-in').onclick=()=>view?.zoom(.83);$('zoom-out').onclick=()=>view?.zoom(1.2);
 function weaponSwapCost(u,kind){return Core.combatCosts(state)?u.slots.includes(kind)?2:3:0;}
 function equipment(){
   const u=hero(state),can=Core.canControl(state,u);
@@ -165,7 +168,7 @@ function mission(){
   ]);
 }
 $('menu').onclick=operationMenu;
-function help(){showDialog('<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br>Your decisions.</h2><ul><li>Use the center thumbstick to move freely in any direction. W A S D and arrow keys also work.</li><li>During combat, movement spends AP by the exact distance covered. Stop anywhere. End Turn is directly above Menu on the right.</li><li>Tap a visible guard to open the menu with aiming and firing options. Higher aim spends more AP.</li><li>Drag the world to look around. Use the arrows to zoom; tap RECENTER to follow your animal.</li><li>Tap the stance button to go standing → kneeling → prone → kneeling → standing. Tap movement for run ↔ off / walk ↔ sneak. Both switches cost 0 AP, even when you have no AP left.</li><li>Hold either button for large direct choices. Keyboard: focus the button and press the down arrow to open choices.</li><li>The eye counts visible opponents. Tap it to inspect each one, starting with nearby, clearly visible contacts. This only moves the camera; RECENTER or the thumbstick returns to your animal.</li><li>Menu holds inventory, weapon changes, reloads and treatment. Find your objective and recent events under Mission & combat log. Collect the ledger through the menu, then return to extraction.</li></ul>',[['Back to menu',operationMenu],['Return to operation',()=>{},'primary']]);}
+function help(){showDialog('<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br>Your decisions.</h2><ul><li>Use the center thumbstick to move freely in any direction. W A S D and arrow keys also work.</li><li>During combat, movement spends AP by the exact distance covered. Stop anywhere. End Turn is directly above Menu on the right.</li><li>Tap a visible guard to open the menu with aiming and firing options. Higher aim spends more AP.</li><li>Drag the world to look around. Use the arrows to zoom.</li><li>Tap the stance button to go standing → kneeling → prone → kneeling → standing. Tap movement for run ↔ off / walk ↔ sneak. Both switches cost 0 AP, even when you have no AP left.</li><li>Hold either button for large direct choices. Keyboard: focus the button and press the down arrow to open choices.</li><li>The eye counts visible opponents. Each tap advances through them from nearby, clear contacts to farther, harder-to-see contacts, then recenters on your animal. The next tap starts the cycle again. With no visible opponents, it simply recenters. Camera inspection costs no AP; moving also returns to your animal.</li><li>Menu holds inventory, weapon changes, reloads and treatment. Find your objective and recent events under Mission & combat log. Collect the ledger through the menu, then return to extraction.</li></ul>',[['Back to menu',operationMenu],['Return to operation',()=>{},'primary']]);}
 $('minimap-button').onclick=()=>{showDialog('<p class="eyebrow">MILL 04 / TACTICAL MAP</p><h2>Find your way.</h2><canvas id="large-map" width="760" height="560" style="width:100%;height:auto;border:1px solid #535b46"></canvas><p>Cream: your animal. Orange: the objective and visible guards. Dark areas remain unexplored.</p>',[['Return to operation',()=>{},'primary']]);drawMinimap($('large-map'),state);};
 function resetStick(){stick={x:0,y:0};$('stick-knob').style.transform='translate(-50%,-50%)';}
 function updateStick(e){const r=$('joystick').getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,limit=r.width*.3,n=Math.hypot(dx,dy),scale=Math.min(1,limit/Math.max(1,n));stick=n<9?{x:0,y:0}:{x:dx*scale/limit,y:dy*scale/limit};$('stick-knob').style.transform=`translate(calc(-50% + ${stick.x*limit}px),calc(-50% + ${stick.y*limit}px))`;view?.center();}

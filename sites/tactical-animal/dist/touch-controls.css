@@ -38,7 +38,6 @@
 .control-choices button[aria-pressed=true]{border-color:#d3dd9d;background:#465237;color:var(--cream)}
 .control-picker>p{font:9px var(--mono);color:var(--muted);text-align:center;margin:10px 0 0}
 .stick-column{display:flex;flex-direction:column;align-items:center;position:relative}
-#center{font:8px var(--mono);letter-spacing:1px;padding:8px 9px;min-height:32px;margin-bottom:10px;color:var(--muted);background:#20271dad;border:1px solid #626b4d70}
 #joystick{width:155px;height:155px;border:1px solid #8f987185;border-radius:34%;background:radial-gradient(ellipse,#273021ae,#20271d66);position:relative;touch-action:none;user-select:none;box-shadow:inset 0 0 24px #0003}
 .stick-ring{position:absolute;width:112px;height:112px;border-radius:50%;border:1px solid #a4ae7466;left:50%;top:50%;transform:translate(-50%,-50%)}
 .stick-ring:before,.stick-ring:after{content:'';position:absolute;background:#a4ae7430;top:50%;left:0;width:100%;height:1px}
@@ -91,7 +90,7 @@ dialog .target-options .burst-toggle{min-height:44px;padding:5px 10px;font:10px 
   #battle .battle-bottom{width:min(500px,calc(100% - 40px));bottom:7px}
   #battle .thumb-layout{grid-template-columns:100px 1fr 90px}
   #joystick{width:92px;height:92px;border-radius:50%}.stick-ring{width:76px;height:76px}#stick-knob{width:44px;height:44px}
-  .stick-column #center{margin-bottom:4px;padding:4px;min-height:24px}.stick-caption{display:none}
+  .stick-caption{display:none}
   .left-controls{display:grid;grid-template-columns:44px 44px;gap:6px}
   #look{grid-column:1/3;justify-self:start}
   .square-control{width:44px;height:44px;padding:2px;gap:0}.control-icon{height:26px}.control-icon svg{height:26px;width:27px}.control-caption{font-size:6px;letter-spacing:.6px}

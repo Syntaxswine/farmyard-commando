@@ -7,6 +7,13 @@ export function cycleStep(values,current,direction=1){
   return {value:values[index+direction],direction};
 }
 
+// The animal is the final stop in this forward-only camera cycle. A null focus
+// means the next tap starts again at the first visible opponent.
+export function nextCameraFocus(contacts,focusedId){
+  const index=contacts.findIndex(contact=>contact.id===focusedId);
+  return contacts[index+1]??null;
+}
+
 // Let the native click handle taps and keyboard activation. A held or cancelled
 // pointer suppresses its following click so opening choices never changes state.
 export function bindPressHold(button,{tap,hold,canUse,press=()=>{},delay=450}){

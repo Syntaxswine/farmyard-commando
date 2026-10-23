@@ -33,12 +33,13 @@ export class FieldView {
   resize(){const w=this.container.clientWidth,h=this.container.clientHeight;if(!w||!h)return;this.renderer.setSize(w,h,false);this.camera.left=-this.span*w/h/2;this.camera.right=this.span*w/h/2;this.camera.top=this.span/2;this.camera.bottom=-this.span/2;this.camera.near=.1;this.camera.far=120;this.camera.updateProjectionMatrix();this.updateCamera();}
   updateCamera(){this.camera.position.copy(this.target).add(V(10,14,12));this.camera.lookAt(this.target);this.camera.updateMatrixWorld();}
   zoom(factor){this.span=T.MathUtils.clamp(this.span*factor,6,35);this.resize();}
-  center(){this.follow=true;if(this.state){const u=hero(this.state);this.target.set(u.x,0,u.y);this.updateCamera();}}
+  center(){this.focusedId=null;this.follow=true;if(this.state){const u=hero(this.state);this.target.set(u.x,0,u.y);this.updateCamera();}}
+  focusOpponent(id){const u=this.state?.units.find(v=>v.id===id&&v.team==='guard'&&Core.alive(v)&&this.state.detected.has(v.id));if(!u)return false;this.focusedId=id;this.follow=false;this.target.set(u.x,0,u.y);this.updateCamera();return true;}
   ground(clientX,clientY){const r=this.container.getBoundingClientRect();this.ray.setFromCamera(new T.Vector2((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1),this.camera);return this.ray.ray.intersectPlane(this.plane,V());}
   down(e){if(e.button!==0)return;this.container.setPointerCapture(e.pointerId);this.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(this.pointers.size===1)this.gesture={x:e.clientX,y:e.clientY,target:this.target.clone(),moved:false,at:performance.now()};if(this.pointers.size===2){const [a,b]=[...this.pointers.values()];this.pinch={distance:Math.hypot(a.x-b.x,a.y-b.y),span:this.span};this.gesture.moved=true;}}
   drag(e){const point=this.pointers.get(e.pointerId);if(!point)return;point.x=e.clientX;point.y=e.clientY;
     if(this.pointers.size===2&&this.pinch){const [a,b]=[...this.pointers.values()];this.span=T.MathUtils.clamp(this.pinch.span*this.pinch.distance/Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),6,35);this.resize();return;}
-    if(!this.gesture)return;const dx=e.clientX-this.gesture.x,dy=e.clientY-this.gesture.y;if(Math.hypot(dx,dy)<8&&!this.gesture.moved)return;this.gesture.moved=true;this.follow=false;
+    if(!this.gesture)return;const dx=e.clientX-this.gesture.x,dy=e.clientY-this.gesture.y;if(Math.hypot(dx,dy)<8&&!this.gesture.moved)return;this.gesture.moved=true;this.follow=false;this.focusedId=null;
     // Map screen displacement to the ground plane using the current camera basis.
     const right=V().setFromMatrixColumn(this.camera.matrixWorld,0),up=V().setFromMatrixColumn(this.camera.matrixWorld,1);up.y=0;up.normalize();
     this.target.copy(this.gesture.target).addScaledVector(right,-dx*this.span/this.container.clientHeight).addScaledVector(up,dy*this.span/this.container.clientHeight*1.65);this.updateCamera();
@@ -99,6 +100,7 @@ export class FieldView {
       if(a.signature!==signature){a.signature=signature;if(a.weapon!==v.weapon){const old=a.equipment;a.equipment=createWeaponModel(v.weapon);a.worker.equipWeapon(a.equipment);old.dispose();a.weapon=v.weapon;}
         a.root.position.set(0,0,0);a.locomotion.apply({...sample,blend:sample.pose?.prone||sample.pose?.down?0:sample.blend});a.posture.apply(sample);}
       a.root.position.set(sample.x,0,sample.y);a.root.updateMatrixWorld(true);a.worker.skeleton.update();}
+    if(this.focusedId!=null){const contact=s.units.find(v=>v.id===this.focusedId&&Core.alive(v)&&s.detected.has(v.id));if(contact){this.target.lerp(V(contact.x,0,contact.y),.18);this.updateCamera();}else this.center();}
     if(this.follow){this.target.lerp(V(u.x,0,u.y),.18);this.updateCamera();}
     if(s.revision!==this.lastRevision){this.lastRevision=s.revision;const color=new T.Color();for(const p of this.tileRecords){const k=Core.key(p.x,p.y),known=s.seen.has(k),lit=s.visible.has(k),inside=s.map[p.y][p.x]==='floor';const n=((p.x*43+p.y*19)%11)/6000;color.setRGB(...(known?(inside?[.13+n,.14+n,.105+n]:[.064+n,.092+n,.042+n]):[.025,.037,.021]));if(known&&!lit)color.multiplyScalar(.58);this.tiles.setColorAt(p.i,color);}this.tiles.instanceColor.needsUpdate=true;
       for(const p of this.walls){p.wall.visible=s.seen.has(Core.key(p.x,p.y))||s.seen.has(Core.key(p.x+(p.axis==='e'?1:0),p.y+(p.axis==='s'?1:0)));p.wall.material.transparent=true;p.wall.material.opacity=p.y>u.y&&p.y<u.y+4&&Math.abs(p.x-u.x)<4?.28:1;}

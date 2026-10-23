@@ -38,6 +38,21 @@ function intersectsBox(a,b,box){let lo=0,hi=1;for(const [k,min,max] of [['x',box
 export function lineClear(s,a,b){return !geometry(s).some(box=>(box.kind==='wall'||a.stance==='prone'&&b.stance==='prone')&&intersectsBox(a,b,box));}
 export function walkSegment(s,a,b,ignoreId=null){const d=distance(a,b),steps=Math.max(1,Math.ceil(d/.1));for(let i=1;i<=steps;i++)if(!freePoint(s,{x:a.x+(b.x-a.x)*i/steps,y:a.y+(b.y-a.y)*i/steps},ignoreId))return false;return true;}
 export function canSee(s,a,b){const d=distance(a,b),range=identifyRange(a,b,a.team==='squad'?35:26)*(b.sneaking?.7:1);return alive(a)&&d<=Math.max(1.5,range)&&lineClear(s,a,b);}
+export function visibleOpponents(s){
+  const u=hero(s);
+  if(!alive(u))return [];
+  // Prefer nearby contacts with clear silhouettes and strong sight acuity.
+  // Cover lowers clarity without hiding an already identified opponent's head.
+  return s.units.filter(g=>g.team==='guard'&&alive(g)&&s.detected.has(g.id)&&canSee(s,u,g)).map(g=>{
+    const d=distance(u,g),nx=-(g.y-u.y)/Math.max(d,EPS),ny=(g.x-u.x)/Math.max(d,EPS);
+    const exposed=[-RADIUS,-RADIUS/2,0,RADIUS/2,RADIUS].filter(offset=>{
+      const p={x:g.x+nx*offset,y:g.y+ny*offset};
+      return !geometry(s).some(box=>intersectsBox(u,p,box));
+    }).length/5;
+    const clarity=(.5+exposed*.5)*identifyRange(u,g,35)/35*(g.sneaking?.7:1);
+    return {unit:g,distance:d,score:d/Math.max(.01,clarity)};
+  }).sort((a,b)=>a.score-b.score||a.distance-b.distance||a.unit.id-b.unit.id).map(contact=>contact.unit);
+}
 function visibility(s){const u=hero(s);s.visible=new Set();for(let y=1;y<=28;y++)for(let x=1;x<=38;x++)if(distance(u,{x,y})<35&&lineClear(s,u,{x,y})){const k=key(x,y);s.visible.add(k);s.seen.add(k);}s.fogAt={x:u.x,y:u.y};}
 export function refresh(s,{forceFog=false}={}){const u=hero(s);s.detected=new Set(s.units.filter(g=>g.team==='guard'&&alive(g)&&canSee(s,u,g)).map(g=>g.id));for(const g of s.units.filter(g=>g.team==='guard'&&alive(g)))if(canSee(s,g,u)){g.alert=true;g.lastKnown={x:u.x,y:u.y};g.alertAge=0;}if(!s.fogAt||distance(u,s.fogAt)>.25||forceFog)visibility(s);if(!alive(u)){s.phase='lost';s.solo.status='lost';s.queue=[];u.isMoving=false;s.revision++;return;}const guards=s.units.filter(g=>g.team==='guard'&&alive(g));if(!guards.length){if(s.phase!=='won')s.queue=[];s.phase='won';}else if(s.phase!=='enemy'){const contact=s.engaged||guards.some(g=>g.alert&&distance(g,u)<=WEAPONS[g.weapon].range+g.maxAp);if(contact&&s.phase!=='player'){s.phase='player';s.round++;u.ap=u.maxAp;s.queue=[];u.isMoving=false;log(s,'Contact. Movement now spends AP by distance.');}else if(!contact&&s.phase==='player'){s.phase='explore';s.queue=[];u.isMoving=false;log(s,'Contact broken. Real-time exploration resumed.');}}s.revision++;}
 export function stop(s){s.queue=[];hero(s).isMoving=false;s.revision++;}
@@ -48,7 +63,7 @@ export function navigationPath(s,u,x,y){const end={x,y};if(!freePoint(s,end,u.id
 export function move(s,u,x,y){if(!canControl(s,u))return false;const path=navigationPath(s,u,x,y);if(!path?.length)return false;s.queue=path;s.revision++;return true;}
 export function turnTo(s,u,heading){if(!canControl(s,u)||!Number.isFinite(heading))return false;u.heading=heading;refresh(s);return true;}
 export function setMovementMode(s,u,mode){if(!canControl(s,u)||!['run','sneak','walk'].includes(mode))return false;stop(s);u.running=mode==='run';u.sneaking=mode==='sneak';s.revision++;return true;}
-export function setStance(s,u,stance){if(!canControl(s,u)||!['standing','kneeling','prone'].includes(stance)||u.stance===stance||combatCosts(s)&&u.ap<2)return false;stop(s);if(combatCosts(s))u.ap-=2;u.stance=stance;s.revision++;return true;}
+export function setStance(s,u,stance){if(!canControl(s,u)||!['standing','kneeling','prone'].includes(stance)||u.stance===stance)return false;stop(s);u.stance=stance;refresh(s,{forceFog:true});return true;}
 const random=s=>{s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296;};
 export function previewAttack(s,a,b,burst=false,zone='torso',token=null,aimLevel='hip'){if(!alive(a)||!alive(b)||a.team===b.team)return {ok:false,reason:'Choose a living opponent'};const w=WEAPONS[a.weapon],aim=shotAim(w,aimLevel,burst),cost=aim.cost,d=distance(a,b),rounds=burst&&w.burstRounds?w.burstRounds:1;let reason='';if(a.team==='squad'&&!s.detected.has(b.id))reason='Target is not visible';else if(!lineClear(s,a,b)&&!w.arc)reason='Blocked by a wall';else if(d>w.range+EPS)reason='Out of range';else if(w.mag&&(a.ammo[a.weapon]??0)<rounds)reason='Reload first';else if((combatCosts(s)||a.team==='guard')&&a.ap+EPS<cost)reason='Not enough AP';const cover=geometry(s).some(box=>box.kind==='crate'&&pointBoxDistance(b,box)<.9&&intersectsBox(a,b,{x0:box.x0-.3,x1:box.x1+.3,y0:box.y0-.3,y1:box.y1+.3}))?20:0;const chance=Math.max(5,Math.min(95,weaponAccuracy(a)+(w.accuracy||0)-(w.rangeLoss||0)*d/w.range+(aim.accuracy||0)+(AIM_ZONES[zone]?.accuracy||0)-cover+(a.stance==='kneeling'?5:a.stance==='prone'?10:0)));return {ok:!reason,reason,cost,chance:Math.round(chance),rounds,distance:d,cover};}
 function hurt(s,u,damage){u.hp=Math.max(0,u.hp-damageAfterResistance(u,damage));if(!u.hp){u.casualty='dead';u.isMoving=false;log(s,u.name+' is down.');}}
@@ -63,4 +78,4 @@ export function interact(s){const a=interaction(s);if(!a?.ok)return false;stop(s
 export function dressing(s){const u=hero(s),cost=combatCosts(s)?3:0;if(!canControl(s,u)||s.solo.dressings<1||u.hp>=u.maxHp||u.ap+EPS<cost)return false;stop(s);u.ap-=cost;u.hp=Math.min(u.maxHp,u.hp+35);s.solo.dressings--;log(s,u.name+' used a field dressing (+35 HP).');return true;}
 export function encodeSave(s){return JSON.stringify(s,(_,v)=>v instanceof Set?{$set:[...v]}:v);}
 export function decodeSave(text){const s=JSON.parse(text,(_,v)=>v&&Array.isArray(v.$set)?new Set(v.$set):v);if(s?.solo?.version!==2||!validBuild(s.solo.build)||s.units?.filter(u=>u.team==='squad').length!==1||!['active','extracted','lost'].includes(s.solo.status)||!Array.isArray(s.map)||s.map.length!==30||s.map.some(r=>!Array.isArray(r)||r.length!==40)||!['visible','seen','detected'].every(k=>s[k] instanceof Set)||s.units.some(u=>!Number.isFinite(u.x)||!Number.isFinite(u.y)||!Number.isFinite(u.hp)||!Number.isFinite(u.ap)))throw Error('Unsupported solo save.');return s;}
-export const Core={WEAPONS,AIM_ZONES,key,alive,movementModeOf,movementRate,movementSpeed,combatCosts,canControl,canSee,refresh,log,stop,travel,navigationPath,move,turnTo,setMovementMode,setStance,previewAttack,attack,equip,reload,endTurn,headingTo};
+export const Core={WEAPONS,AIM_ZONES,key,alive,movementModeOf,movementRate,movementSpeed,combatCosts,canControl,canSee,visibleOpponents,refresh,log,stop,travel,navigationPath,move,turnTo,setMovementMode,setStance,previewAttack,attack,equip,reload,endTurn,headingTo};

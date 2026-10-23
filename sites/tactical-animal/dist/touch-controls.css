@@ -17,14 +17,26 @@
 
 #battle .battle-bottom{background:transparent;border:0;padding:0;width:min(540px,calc(100% - 24px));bottom:max(12px,env(safe-area-inset-bottom))}
 #battle .thumb-layout{display:grid;grid-template-columns:85px 1fr 75px;align-items:end;gap:10px}
-.left-controls{display:flex;flex-direction:column;gap:9px}
-.movement-modes{background:#20271de8;border:1px solid #626b4d;display:flex;flex-direction:column;padding:4px}
-.movement-modes button{background:transparent;color:var(--muted);min-height:31px;font:9px var(--mono);border:1px solid transparent;text-align:left;padding:4px 10px;letter-spacing:1px}
-.movement-modes button[aria-pressed=true]{background:#434b32;border:1px solid #8f9a65;color:var(--cream)}
-.stances{border:1px solid #626b4d;background:#20271de8;display:flex;align-items:center;justify-content:center;padding:3px;gap:1px;min-height:66px}
-.stances button{width:26px;min-height:50px;padding:0;background:transparent;border:1px solid transparent;color:var(--muted)}
-.stances svg{width:25px;height:35px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.stances button[aria-pressed=true]{color:var(--cream);background:#434b32;border-color:#8f9a65}
+.left-controls{display:flex;flex-direction:column;align-items:flex-start;gap:7px}
+.square-control{width:60px;height:60px;flex:none;border:1px solid #727c57;background:#20271de8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px;position:relative;user-select:none;-webkit-touch-callout:none;touch-action:none}
+.square-control:disabled{opacity:.5}
+.control-icon{height:35px;display:block}
+.control-icon svg,.control-choices svg{width:34px;height:35px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.control-caption{font:8px var(--mono);letter-spacing:1.1px}
+.cycle-mark{position:absolute;right:4px;top:3px;font:10px var(--mono);color:var(--muted)}
+.eye-symbol{display:block;width:49px;height:32px;position:relative}
+.eye-symbol svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2.5}
+.eye-symbol strong{position:absolute;inset:0;display:grid;place-items:center;font:600 17px var(--mono)}
+#look.inspecting{border-color:var(--rust);color:var(--cream);background:#493c29ee}
+.control-picker{position:fixed;top:auto;left:12px;right:12px;width:min(480px,calc(100% - 24px));max-height:calc(100dvh - 28px);margin:0 auto;padding:12px;background:#20271df8;overflow:auto;box-shadow:0 12px 50px #0008}
+.control-picker::backdrop{background:#0b130b55;backdrop-filter:blur(1px)}
+.picker-heading{display:flex;align-items:center;gap:10px;margin-bottom:10px;font:10px var(--mono);letter-spacing:1px}
+.picker-heading>span{font-size:8px;color:var(--muted);margin-left:auto;letter-spacing:0}
+.picker-heading>button{padding:0;width:32px;min-height:32px;background:transparent;font-size:22px;flex:none}
+.control-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.control-choices button{min-height:85px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;font:11px var(--mono);background:#2c3526;border:1px solid #626b4d}
+.control-choices button[aria-pressed=true]{border-color:#d3dd9d;background:#465237;color:var(--cream)}
+.control-picker>p{font:9px var(--mono);color:var(--muted);text-align:center;margin:10px 0 0}
 .stick-column{display:flex;flex-direction:column;align-items:center;position:relative}
 #center{font:8px var(--mono);letter-spacing:1px;padding:8px 9px;min-height:32px;margin-bottom:10px;color:var(--muted);background:#20271dad;border:1px solid #626b4d70}
 #joystick{width:155px;height:155px;border:1px solid #8f987185;border-radius:34%;background:radial-gradient(ellipse,#273021ae,#20271d66);position:relative;touch-action:none;user-select:none;box-shadow:inset 0 0 24px #0003}
@@ -63,7 +75,7 @@ dialog .target-options .burst-toggle{min-height:44px;padding:5px 10px;font:10px 
   #battle>.hero-strip{left:calc(50% - 150px);right:calc(50% - 150px)}
   #minimap-button{width:150px;height:127px}#minimap{height:93px}
   #battle .thumb-layout{grid-template-columns:95px 1fr 85px}
-  #joystick{width:160px;height:160px}.stances button{width:29px}.stances svg{width:28px}.movement-modes button{min-height:30px}
+  #joystick{width:160px;height:160px}
 }
 @media(max-width:380px){
   #battle>.hero-strip{left:69px;right:111px;gap:7px;padding:8px 6px}
@@ -72,7 +84,7 @@ dialog .target-options .burst-toggle{min-height:44px;padding:5px 10px;font:10px 
   #minimap-button{right:10px;width:92px}
   #battle .thumb-layout{grid-template-columns:75px 1fr 66px;gap:7px}
   #joystick{width:138px;height:138px}.stick-ring{width:100px;height:100px}#stick-knob{width:59px;height:59px}
-  .stances{min-height:60px}.stances button{width:23px}.stances svg{width:22px}.movement-modes button{padding-left:8px}
+  .square-control{width:58px;height:58px}
   .right-controls{gap:9px}#menu{height:60px}#end-turn{height:119px}#end-turn strong{font-size:22px}
 }
 @media(max-height:580px) and (min-width:600px){
@@ -80,8 +92,10 @@ dialog .target-options .burst-toggle{min-height:44px;padding:5px 10px;font:10px 
   #battle .thumb-layout{grid-template-columns:100px 1fr 90px}
   #joystick{width:92px;height:92px;border-radius:50%}.stick-ring{width:76px;height:76px}#stick-knob{width:44px;height:44px}
   .stick-column #center{margin-bottom:4px;padding:4px;min-height:24px}.stick-caption{display:none}
-  .movement-modes{flex-direction:row;padding:2px}.movement-modes button{font-size:7px;padding:3px;min-height:28px;letter-spacing:0}
-  .left-controls{gap:5px}.stances{min-height:42px}.stances button{min-height:35px;width:29px}.stances svg{height:30px}
+  .left-controls{display:grid;grid-template-columns:44px 44px;gap:6px}
+  #look{grid-column:1/3;justify-self:start}
+  .square-control{width:44px;height:44px;padding:2px;gap:0}.control-icon{height:26px}.control-icon svg{height:26px;width:27px}.control-caption{font-size:6px;letter-spacing:.6px}
+  .eye-symbol{width:34px;height:25px}.eye-symbol strong{font-size:13px}.cycle-mark{font-size:8px;top:1px;right:2px}
   .right-controls{gap:4px;flex-direction:row;align-items:flex-end}
   #end-turn{height:83px;width:44px;flex:1;gap:6px;padding:6px 2px}#end-turn .turn-arrow{font-size:20px}#end-turn strong{font-size:16px;letter-spacing:0}
   #menu{width:43px;height:51px;font-size:17px}#menu span{font-size:7px}

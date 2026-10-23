@@ -4,7 +4,11 @@ A portrait mobile browser prototype of the single-character Animal Factory Tacti
 
 Free exploration transitions to player and guard turns when contact begins. Movement uses continuous world coordinates: AP pays for the actual distance accepted by collision, including diagonals and wall slides. The animal can stop anywhere. Initial tuning is 2 AP/m walking, 1 AP/m running and 3 AP/m sneaking; kneeling doubles those costs and prone multiplies them by four. Running and sneaking also affect speed and stamina.
 
-The portrait controls follow the supplied sketch: zoom arrows at upper left, an expandable map at upper right, a lower central thumbstick, movement and stance controls at lower left, and End Turn directly above Menu at lower right. Health/AP stays visible. The menu holds inventory, weapon swapping, reloads, treatment, mission details, recent events and detailed combat actions. Tap visible guards to open their aiming and firing options in the menu. Tap ground to travel there; during combat, confirm the route and its distance/AP estimate in the menu. WASD and arrow keys also move; Space ends the turn.
+The portrait controls follow the supplied sketch: zoom arrows at upper left, an expandable map at upper right, a lower central thumbstick, square controls at lower left, and End Turn directly above Menu at lower right. One stance button bounces standing → kneeling → prone → kneeling → standing. One movement button bounces run ↔ off / walk ↔ sneak. Both switches are free, including at zero AP. Hold either button for an expanded horizontal menu with large direct choices; keyboard users can press the down arrow on the focused button. Movement still costs AP by distance and posture.
+
+The eye above movement displays the number of currently visible living opponents. Each tap centers and follows the next opponent, starting with nearby clear contacts, with sight acuity and cover informing the order. Camera inspection costs no AP and does not turn, target or attack with the animal. Recenter, pan or move to leave inspection; losing sight of a focused opponent returns the camera to the animal.
+
+Health/AP stays visible. The lower-right menu holds inventory, weapon swapping, reloads, treatment, mission details, recent events and detailed combat actions. Tap visible guards to open their aiming and firing options in the menu. Tap ground to travel there; during combat, confirm the route and its distance/AP estimate in the menu. WASD and arrow keys also move; Space ends the turn.
 
 ## Run and check
 
@@ -18,7 +22,7 @@ npm run build
 
 Open `http://127.0.0.1:4495`. The preview server retires after 30 minutes and also honors `artifacts/preview/STOP`.
 
-The checks cover every animal/primary combination, fractional positions, distance/AP accounting, diagonal equivalence, collision and tunnelling, path smoothing, contact, finite ammunition, treatment, save/resume, turn ownership, and a complete legal mission through extraction.
+The checks cover every animal/primary combination, fractional positions, distance/AP accounting, diagonal equivalence, collision and tunnelling, path smoothing, contact, finite ammunition, treatment, save/resume, free stance switching, back-and-forth cycles, opponent visibility/order, turn ownership, and a complete legal mission through extraction.
 
 ## Source and scope
 

@@ -1,4 +1,6 @@
-# Tactical Animal
+# Farmyard Commando
+
+**[Play Farmyard Commando](https://syntaxswine.github.io/farmyard-commando/)** in your browser. No installation or sign-in required. Designed for portrait mobile play; desktop controls are included.
 
 A portrait mobile browser prototype of the single-character Animal Factory Tactics idea. Pick one of the six original quickplay animals, choose an independent primary weapon, sidearm and utility, and retrieve the wage ledger from a small factory compound.
 
@@ -34,4 +36,8 @@ The solo simulation, swept-disc collision, continuous navigation, mission rules,
 
 This first slice has one mission, three guards, local device saves, and provisional metre-based weapon ranges. Body-zone modifiers currently change accuracy/damage; detailed limb injuries, disarming, original campaign logistics, multi-level traversal, persistent fire and advanced original AI remain future work. This is a browser prototype; native mobile packaging and physical-device performance have not been verified.
 
-Sites hosting is owner-private. `npm run build` copies the authored static application to the ignored root `dist/` directory required by the hosting packager. The root `.openai/hosting.json` points at that output. The local server is disposable and is stopped after verification; the deployed version does not need it.
+## Publishing
+
+The public repository is [Syntaxswine/farmyard-commando](https://github.com/Syntaxswine/farmyard-commando). Pushes to `main` run the game checks, build the static output and deploy to GitHub Pages through [.github/workflows/pages.yml](.github/workflows/pages.yml). The workflow uses GitHub's built-in deployment token; no personal token is stored in the repository. It can also be run manually from the Actions tab.
+
+`npm run build` copies the authored static application to the ignored root `dist/` directory. Asset and module URLs are relative, so the game works under the `/farmyard-commando/` Pages path. The existing owner-private Sites preview retains its `.openai/hosting.json` configuration and points at the same build output. Local preview servers are disposable and stop after verification; the published game does not need them.

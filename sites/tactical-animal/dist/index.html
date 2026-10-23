@@ -4,23 +4,23 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#171b17">
-  <meta name="description" content="One animal. Your loadout. A solo tactical operation in the world of Animal Factory.">
-  <title>Tactical Animal — Solo Operations</title>
+  <meta name="description" content="Farmyard Commando: choose your animal and loadout, explore freely, and fight tactical battles in this mobile browser game.">
+  <title>Farmyard Commando</title>
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="touch-controls.css">
 </head>
 <body>
   <main id="prep">
-    <header class="masthead"><a class="brand" href="./" aria-label="Tactical Animal home"><span class="brand-mark">TA</span><span>ANIMAL FACTORY<br><b>SOLO OPERATIONS</b></span></a><span class="edition"><i></i> FIELD PROTOTYPE / 01</span></header>
-    <section class="intro"><div><p class="eyebrow">ONE WORKER. ONE WAY OUT.</p><h1>TACTICAL<br><span>ANIMAL.</span></h1></div><p class="intro-copy">Choose your animal.<br>Make the loadout yours.<br>Bring something back.</p></section>
+    <header class="masthead"><a class="brand" href="./" aria-label="Farmyard Commando home"><span class="brand-mark">FC</span><span>FARMYARD<br><b>COMMANDO</b></span></a><span class="edition"><i></i> FIELD PROTOTYPE / 01</span></header>
+    <section class="intro"><div><p class="eyebrow">ONE WORKER. ONE WAY OUT.</p><h1>FARMYARD<br><span>COMMANDO.</span></h1></div><p class="intro-copy">Choose your animal.<br>Make the loadout yours.<br>Bring something back.</p></section>
     <div class="preparation">
       <section class="operative-panel" aria-labelledby="animal-heading"><div class="section-label"><span>01 / THE OPERATIVE</span><span>6 AVAILABLE</span></div><div class="portrait-stage"><span class="portrait-rule">WORKER IDENTIFICATION</span><span class="portrait-number" aria-hidden="true">01</span><img id="hero-portrait" alt=""><div class="portrait-caption"><p id="hero-species"></p><h2 id="hero-name"></h2><span id="hero-role"></span></div><span class="portrait-stamp">CLEARED<br>FOR FIELD DUTY</span></div><div class="stats" id="stats"></div><h3 id="animal-heading" class="sr-only">Choose your animal</h3><div class="animal-grid" id="animals"></div></section>
       <section class="loadout-panel" aria-labelledby="loadout-heading"><div class="section-label"><span id="loadout-heading">02 / YOUR LOADOUT</span><span>ANY ANIMAL. ANY WEAPON.</span></div><div class="loadout-heading"><h2>Tools of the trade.</h2><p>Your animal brings the skills.<br>You choose what they carry.</p></div><fieldset><legend><span>PRIMARY WEAPON</span><span id="primary-summary"></span></legend><div id="primary" class="weapon-grid"></div></fieldset><div class="loadout-bottom"><fieldset><legend>SIDEARM</legend><div id="secondary" class="secondary-grid"></div></fieldset><fieldset><legend>UTILITY</legend><div id="utility" class="utility-grid"></div></fieldset></div><p class="equipment-note" id="equipment-note"></p></section>
       <section class="briefing-panel" aria-labelledby="mission-heading"><div class="section-label"><span>03 / THE ASSIGNMENT</span><span>OP. 001</span></div><div class="mission-map" aria-hidden="true"><div class="map-grid"></div><div class="map-room room-a"></div><div class="map-room room-b"></div><div class="map-route"></div><span class="map-start">E</span><span class="map-objective">+</span><span class="map-coordinate">38° N / MILL 04</span></div><p class="eyebrow">MILL 04 / RECORDS OFFICE</p><h2 id="mission-heading">The night<br>ledger.</h2><p class="brief-copy">The factory keeps two sets of books. Bring back the one the workers never get to see.</p><ol class="mission-steps"><li><b>01</b> Reach the records office.</li><li><b>02</b> Secure the wage ledger.</li><li><b>03</b> Return to extraction.</li></ol><div class="rhythm"><span class="rhythm-dot"></span><p>Explore in real time.<br><b>Make every turn count in combat.</b></p></div><button id="resume" class="resume" hidden>Resume your operation ↗</button></section>
     </div>
     <footer class="deploy-bar"><div><span class="eyebrow">DEPLOYMENT READY</span><p id="build-summary"></p></div><button id="deploy" class="deploy">DEPLOY SOLO <span>↗</span></button></footer>
-    <p class="source-note">A single-character reimagining of Animal Factory Tactics. Early playable study.</p>
+    <p class="source-note">Farmyard Commando · A single-character reimagining of Animal Factory Tactics. Early playable study.</p>
   </main>
   <section id="battle" hidden aria-label="Solo operation">
     <div id="viewport" role="application" aria-label="Tactical map. Tap ground to move. Drag to look around. Tap a visible guard to target."></div>

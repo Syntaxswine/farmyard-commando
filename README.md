@@ -13,6 +13,7 @@ Node.js 22+ is sufficient. No package installation or build step is needed.
 ```sh
 npm run serve
 npm run check
+npm run build
 ```
 
 Open `http://127.0.0.1:4495`. The preview server retires after 30 minutes and also honors `artifacts/preview/STOP`.
@@ -27,4 +28,4 @@ The solo simulation, swept-disc collision, continuous navigation, mission rules,
 
 This first slice has one mission, three guards, local device saves, and provisional metre-based weapon ranges. Body-zone modifiers currently change accuracy/damage; detailed limb injuries, disarming, original campaign logistics, multi-level traversal, persistent fire and advanced original AI remain future work. This is a browser prototype; native mobile packaging and physical-device performance have not been verified.
 
-Sites hosting is owner-private. The root `.openai/hosting.json` points at the static application. The local server is disposable and is stopped after verification; the deployed version does not need it.
+Sites hosting is owner-private. `npm run build` copies the authored static application to the ignored root `dist/` directory required by the hosting packager. The root `.openai/hosting.json` points at that output. The local server is disposable and is stopped after verification; the deployed version does not need it.

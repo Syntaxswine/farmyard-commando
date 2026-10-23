@@ -1,5 +1,6 @@
 artifacts/
 outputs/
+/dist/
 .sites-artifacts/
 node_modules/
 .openai/*.local.*

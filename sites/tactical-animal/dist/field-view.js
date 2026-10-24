@@ -11,6 +11,9 @@ import {FIELD_CAMERA,grenadeCameraFrame} from './grenade-controls.js';
 import {InteractionScenery} from './interaction-view.js';
 
 const V = (x=0,y=0,z=0) => new T.Vector3(x,y,z);
+// Distinct tracer pulses make each committed burst round readable. A shorter
+// lifetime than the interval prevents identical paths merging into one beam.
+const BURST_SHOT_INTERVAL=140,BURST_TRACER_DURATION=90;
 export class FieldView {
   constructor(container, {onPick, onLoading, onError, getAimViewport}) {
     this.container=container;this.onPick=onPick;this.onLoading=onLoading;this.onError=onError;this.getAimViewport=getAimViewport;
@@ -129,6 +132,32 @@ export class FieldView {
     finally{if(this.pending.get(u.id)===generation)this.pending.delete(u.id);if(generation===this.generation)this.reportLoading();}
   }
   disposeActor(a){this.scene.remove(a.root);a.locomotion.dispose();a.paint.dispose();a.equipment.dispose();a.worker.dispose();for(const o of [a.pick,a.ring,a.shadow]){o.geometry.dispose();o.material.dispose();}}
+  queueEffects(effect,now){
+    let previousRound=null;
+    for(const event of effect.sequence||[effect]){
+      const thrown=event.weapon==='grenade',burst=event.shots>1,at=now+(burst?event.shot*BURST_SHOT_INTERVAL:0);
+      const points=thrown?Core.grenadeTrajectory({x:event.ax,y:event.ay},{x:event.bx,y:event.by}).map(p=>V(p.x,p.z,p.y)):[V(event.ax,1.1,event.ay),V(event.bx,.9,event.by)];
+      const line=new T.Line(new T.BufferGeometry().setFromPoints(points),new T.LineBasicMaterial({color:event.incendiary?0xff7835:0xf6d68c,transparent:true,opacity:.9}));
+      const visual={line,at,ttl:thrown?700:burst?BURST_TRACER_DURATION:240,started:!burst,previous:burst?previousRound:null};
+      line.visible=at<=now;this.scene.add(line);this.effects.push(visual);if(burst)previousRound=visual;
+      if(thrown){const ring=new T.Mesh(new T.RingGeometry(event.blast-.07,event.blast,64),new T.MeshBasicMaterial({color:0xf4a568,side:T.DoubleSide,transparent:true,opacity:.8,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.set(event.bx,.07,event.by);this.scene.add(ring);this.effects.push({line:ring,at,ttl:700});}
+    }
+  }
+  animateEffects(now){
+    this.effects=this.effects.filter(effect=>{
+      // A slow frame must not expire an unseen round or start all the remaining
+      // rounds together. Rebase each pulse on the preceding round's real start.
+      if(effect.previous){
+        if(!effect.previous.started){effect.line.visible=false;return true;}
+        effect.at=Math.max(effect.at,effect.previous.at+BURST_SHOT_INTERVAL);
+      }
+      if(effect.started===false&&now>=effect.at){effect.at=now;effect.started=true;}
+      const age=now-effect.at;
+      if(age<0){effect.line.visible=false;return true;}
+      if(age<effect.ttl){effect.line.visible=true;effect.line.material.opacity=1-age/effect.ttl;return true;}
+      this.scene.remove(effect.line);effect.line.geometry.dispose();effect.line.material.dispose();return false;
+    });
+  }
   sync(s,now){this.state=s;const u=hero(s),visible=s.units.filter(v=>v.team==='squad'||(v.hp>0?s.detected.has(v.id):s.visible.has(Core.key(v.x,v.y))));
     for(const [id,a] of this.actors)a.root.visible=visible.some(v=>v.id===id);
     for(const v of visible){let a=this.actors.get(v.id);if(!a){this.actor(v);continue;}const old=this.samples.get(v.id)||{blend:0,pose:{kneel:0,prone:0,down:v.hp<=0?1:0,dead:v.hp<=0?1:0}},blend=old.blend+((v.isMoving?1:0)-old.blend)*.2,goal={kneel:v.stance==='kneeling'?1:0,prone:v.stance==='prone'?1:0,down:v.hp<=0?1:0,dead:v.hp<=0?1:0};const pose=Object.fromEntries(Object.entries(goal).map(([k,value])=>[k,Math.abs(value-old.pose[k])<.005?value:old.pose[k]+(value-old.pose[k])*.15]));const sample={...v,distance:v.travelled,blend:blend<.001?0:blend,pose};this.samples.set(v.id,sample);a.root.visible=true;a.pick.visible=true;a.ring.visible=v.hp>0;a.pick.scale.set(v.hp>0?1:1.6,v.hp>0?1:.2,v.hp>0?1:1.6);a.pick.position.y=v.hp>0?.9:.18;a.pick.userData.interactionId=v.hp<=0?'body:'+v.id:null;
@@ -143,12 +172,8 @@ export class FieldView {
     if(s.revision!==this.lastRevision){this.lastRevision=s.revision;this.art.update(s,u);this.interactionArt.update(s);
       this.objectivePin.visible=!s.solo.ledger;this.extractionPin.visible=true;
     }
-    if(s.effect&&s.effect!==this.lastEffect){this.lastEffect=s.effect;for(const event of s.effect.sequence||[s.effect]){
-      const thrown=event.weapon==='grenade',points=thrown?Core.grenadeTrajectory({x:event.ax,y:event.ay},{x:event.bx,y:event.by}).map(p=>V(p.x,p.z,p.y)):[V(event.ax,1.1,event.ay),V(event.bx,.9,event.by)];
-      const line=new T.Line(new T.BufferGeometry().setFromPoints(points),new T.LineBasicMaterial({color:event.incendiary?0xff7835:0xf6d68c,transparent:true,opacity:.9}));this.scene.add(line);this.effects.push({line,at:now,ttl:thrown?700:240});
-      if(thrown){const ring=new T.Mesh(new T.RingGeometry(event.blast-.07,event.blast,64),new T.MeshBasicMaterial({color:0xf4a568,side:T.DoubleSide,transparent:true,opacity:.8,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.set(event.bx,.07,event.by);this.scene.add(ring);this.effects.push({line:ring,at:now,ttl:700});}
-    }}
-    this.effects=this.effects.filter(e=>{if(now-e.at<e.ttl){e.line.material.opacity=1-(now-e.at)/e.ttl;return true;}this.scene.remove(e.line);e.line.geometry.dispose();e.line.material.dispose();return false;});
+    if(s.effect&&s.effect!==this.lastEffect){this.lastEffect=s.effect;this.queueEffects(s.effect,now);}
+    this.animateEffects(now);
     if(this.lastLightAt===undefined||now-this.lastLightAt>=200){this.daylight.update(480,this.camera,now,true);this.lastLightAt=now;}
     this.marker.rotation.z=now*.0005;this.renderer.render(this.scene,this.camera);
   }

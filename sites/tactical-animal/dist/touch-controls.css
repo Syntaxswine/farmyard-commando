@@ -70,6 +70,13 @@
 #menu{font-size:22px;gap:3px}
 #menu span{font:7px var(--mono);letter-spacing:.5px}
 dialog .danger-note{color:#ee9b6d}
+.interaction-hand{position:absolute;z-index:3;transform:translate(-50%,-100%);min-width:72px;min-height:64px;padding:7px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;background:#202d23f2;border:1px solid #c1b07c;box-shadow:0 4px 14px #0005;touch-action:none;user-select:none;-webkit-touch-callout:none}
+.interaction-hand strong{font:11px var(--mono)}
+.interaction-hand>#interaction-icon{display:block;width:50px;height:25px}
+.interaction-hand small{font:9px var(--mono);color:#d5ca9f}
+.interaction-hand:after{content:'';position:absolute;top:100%;left:calc(50% - 5px);border:5px solid transparent;border-top-color:#c1b07c}
+.interaction-hand.unaffordable{border-color:#b67e60}
+.loot-note{font:11px/1.6 var(--mono);color:var(--muted)}
 
 dialog .context-panel{border:1px solid #626b4d;background:#20271d;padding:13px;margin:16px 0 0;display:flex;flex-wrap:wrap;gap:9px}
 dialog .context-panel:empty{display:none}

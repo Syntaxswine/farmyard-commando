@@ -4,12 +4,15 @@ import {cycleStep,nextCameraFocus,bindPressHold} from './mobile-controls.js';
 import {GrenadeAim,screenToGround} from './grenade-controls.js';
 import {weaponArtwork} from './original-art.js';
 import {STANCE_ICONS} from './aft/tactics/battle-control-icons.js';
+import {selectInteractionTarget} from './interactions.js';
 const $=id=>document.getElementById(id),SAVE='tactical-animal-operation-v2',BUILD='tactical-animal-build-v1';
 let build={...DEFAULT_BUILD},state=null,view=null,active=false,paused=false,selected=null,aim='hip',zone='torso',burst=false,contextKey='',lastTime=0,lastUI=0,lastSave=0,lastPhase='',stick={x:0,y:0},stickPointer=null,resultShown=false,aimViewport=null;
 const grenadeAim=new GrenadeAim();
 const keys=new Set(),overlay=$('overlay');
 const picker=$('control-picker');
 let pickerTrigger=null,stanceDirection=1,movementDirection=-1;
+let interactionFocus=null,handTarget=null;
+const safe=text=>String(text).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
 const stanceValues=['standing','kneeling','prone'],movementValues=['run','walk','sneak'];
 const stanceNames={standing:'Standing',kneeling:'Kneeling',prone:'Prone / crawl'},movementNames={run:'Run',walk:'Off / walk',sneak:'Sneak'};
 const movementPoses={walk:'M18 4a3 3 0 1 0 0 .1M18 10l-2 12m2-9-8 7m8-7 7 6m-9 3-6 12m6-12 9 12',run:'M22 4a3 3 0 1 0 0 .1M21 10l-7 11m5-9-8-1-4 5m12-4 5 7 6-2M14 21l-7 5-4-4m11-1 9 5-2 8',sneak:'M17 9a3 3 0 1 0 0 .1M17 15l-3 7m2-5 10 3 3-3m-13 0-7 3M14 22l10 3-6 8m-4-11-7 8h8'};
@@ -28,15 +31,17 @@ function renderPrep(){const p=ANIMALS.find(a=>a.id===build.animal),stats=buildSt
   $('resume').hidden=!storage.read();try{localStorage.setItem(BUILD,JSON.stringify(build));}catch{}
 }
 $('grenade-art').append(weaponArtwork('grenade',32));
+$('interaction-icon').append(weaponArtwork('hands',25));
 function showDialog(html,actions=[],{context=false}={}){
   if(picker.open)closePicker();
   cancelGrenade();
-  paused=true;resetStick();keys.clear();
+  paused=true;resetStick();keys.clear();$('interaction-hand').hidden=true;
   $('overlay-content').innerHTML=html;
   $('context').hidden=!context;
   const row=$('overlay-actions');row.replaceChildren();
-  for(const [label,fn,cls,disabled=false] of actions){
+  for(const [label,fn,cls,disabled=false,id] of actions){
     const b=document.createElement('button');b.textContent=label;b.className=cls||'';b.disabled=disabled;
+    if(id)b.id=id;
     b.onclick=()=>{closeDialog();fn();};row.append(b);
   }
   if(context){contextKey='';renderContext();}
@@ -51,11 +56,69 @@ function grenadeViewport(){
   aimViewport={left:sidePanel?panel.right-r.left+12:16,right:r.width-16,top:top-r.top+12,bottom:Math.max(top-r.top+72,(sidePanel?controls.top:panel.top)-r.top-12)};
   return aimViewport;
 }
-function start(s){try{view?.dispose();$('loading').textContent='Preparing the field…';$('loading').hidden=false;state=s;selected=null;grenadeAim.cancel();aimViewport=null;contextKey='';resultShown=false;stanceDirection=1;movementDirection=-1;$('prep').hidden=true;$('battle').hidden=false;document.body.classList.add('in-battle');active=true;paused=false;view=new FieldView($('viewport'),{onPick:pick,getAimViewport:grenadeViewport,onLoading:busy=>{$('loading').hidden=!busy;},onError:message=>{$('loading').hidden=false;$('loading').textContent='Animal artwork could not load. '+message;}});view.setGame(state);lastPhase=state.phase;lastTime=performance.now();lastUI=0;renderBattle();storage.write();}catch(error){active=false;view?.dispose();view=null;$('prep').hidden=false;$('battle').hidden=true;document.body.classList.remove('in-battle');toast('Cannot start 3D view: '+error.message);}}
+function start(s){try{view?.dispose();$('loading').textContent='Preparing the field…';$('loading').hidden=false;state=s;selected=null;interactionFocus=null;handTarget=null;grenadeAim.cancel();aimViewport=null;contextKey='';resultShown=false;stanceDirection=1;movementDirection=-1;$('prep').hidden=true;$('battle').hidden=false;document.body.classList.add('in-battle');active=true;paused=false;view=new FieldView($('viewport'),{onPick:pick,getAimViewport:grenadeViewport,onLoading:busy=>{$('loading').hidden=!busy;},onError:message=>{$('loading').hidden=false;$('loading').textContent='Animal artwork could not load. '+message;}});view.setGame(state);lastPhase=state.phase;lastTime=performance.now();lastUI=0;renderBattle();storage.write();}catch(error){active=false;view?.dispose();view=null;$('prep').hidden=false;$('battle').hidden=true;document.body.classList.remove('in-battle');toast('Cannot start 3D view: '+error.message);}}
 function backToPrep(){storage.write();active=false;grenadeAim.cancel();resetStick();keys.clear();view?.dispose();view=null;$('battle').hidden=true;$('prep').hidden=false;document.body.classList.remove('in-battle');renderPrep();}
 $('deploy').onclick=()=>start(createSoloGame(build));$('resume').onclick=()=>{try{const s=decodeSave(storage.read());if(s.solo.status!=='active'){toast('That operation has ended. Deploy a new animal to begin again.');return;}start(s);}catch{toast('This saved operation is from an older prototype. Deploy a new animal.');}};
+function positionInteractionHand(){
+  const button=$('interaction-hand');
+  if(!handTarget||!active||paused||grenadeAim.active||!Core.canControl(state,hero(state))||!$('loading').hidden){button.hidden=true;return;}
+  const anchor=view.interactionAnchor(handTarget);button.hidden=!anchor.visible;
+  if(anchor.visible){button.style.left=anchor.x+'px';button.style.top=anchor.y+'px';}
+}
+function renderInteractionHand(){
+  if(!state)return;
+  handTarget=selectInteractionTarget(Core.nearbyInteractions(state),interactionFocus);interactionFocus=handTarget?.id||null;
+  if(handTarget){
+    const action=handTarget.actions[0],button=$('interaction-hand');
+    $('interaction-label').textContent=action.label;$('interaction-cost').textContent=action.cost+' AP';
+    button.setAttribute('aria-label',`${action.label} ${handTarget.name} · ${action.cost} AP. Hold for choices.`);
+    button.title=action.reason||handTarget.name+' · tap to '+action.label.toLowerCase()+', hold for choices';button.classList.toggle('unaffordable',!action.ok);
+  }
+  positionInteractionHand();
+}
+function focusInteraction(id){
+  if(!Core.nearbyInteractions(state).some(object=>object.id===id)){toast('Move within clear reach of the object.');return;}
+  resetStick();keys.clear();Core.stop(state);selected=null;view.route([]);interactionFocus=id;renderBattle();
+}
+function useInteraction(id,action,itemId=null){
+  if(!state||paused||grenadeAim.active)return;
+  resetStick();keys.clear();const result=Core.performInteraction(state,id,action,itemId);
+  if(!result.ok){toast(result.reason);renderBattle();return;}
+  selected=null;view.route([]);contextKey='';renderBattle();storage.write();
+  if(result.loot)lootWindow(id);
+}
+function interactionChoices(){
+  const object=Core.nearbyInteractions(state).find(object=>object.id===interactionFocus);if(!object)return;
+  const others=Core.nearbyInteractions(state).filter(other=>other.id!==object.id);
+  showDialog(`<p class="eyebrow">WITHIN REACH</p><h2>${safe(object.name)}</h2><p>Choose an action. Opening these choices costs 0 AP.</p>`,[
+    ...object.actions.map(action=>[`${action.label} · ${action.cost} AP`,()=>useInteraction(object.id,action.id),'',!action.ok]),
+    ...others.map(other=>[`Focus ${other.name}`,()=>focusInteraction(other.id)]),
+    ['Return to operation',()=>{}],
+  ]);
+}
+function itemLabel(item){
+  if(item.type==='ammo')return `${Core.WEAPONS[item.kind].short} ammunition ×${item.quantity}`;
+  if(item.type==='dressing')return `Field dressing ×${item.quantity}`;
+  if(item.type==='grenade')return `Frag grenade ×${item.quantity}`;
+  return `${Core.WEAPONS[item.kind].name} · ${item.rounds} loaded`;
+}
+function lootWindow(id){
+  const check=Core.previewInteraction(state,id,'loot'),object=check.object;if(!check.ok){toast(check.reason);return;}
+  const all=Core.previewInteraction(state,id,'take-all');
+  showDialog(`<p class="eyebrow">${object.kind==='body'?'BODY':'CHEST'} / LOOT</p><h2>${safe(object.name)}</h2><p>${object.inventory.length?'Take an item or collect everything.':'No items remain.'}</p><p class="loot-note">Transfers cost ${Core.combatCosts(state)?1:0} AP. Duplicate weapons contribute their loaded ammunition. Opening this window is free.</p>`,[
+    ['Take all · '+all.cost+' AP',()=>useInteraction(id,'take-all'),'primary',!all.ok,'take-all'],
+    ...object.inventory.map(item=>{const action=Core.previewInteraction(state,id,'take',item.id);return [`Take ${itemLabel(item)} · ${action.cost} AP`,()=>useInteraction(id,'take',item.id),'',!action.ok];}),
+    ...(object.kind==='chest'?[[`Close chest · ${Core.previewInteraction(state,id,'close').cost} AP`,()=>useInteraction(id,'close'),'',!Core.previewInteraction(state,id,'close').ok]]:[]),
+    ['Return to operation',()=>{}],
+  ]);
+}
+bindPressHold($('interaction-hand'),{
+  canUse:()=>!!handTarget&&!paused&&!grenadeAim.active&&Core.canControl(state,hero(state)),
+  press:()=>{resetStick();keys.clear();Core.stop(state);},
+  tap:()=>{if(handTarget)useInteraction(handTarget.id,handTarget.actions[0].id);},hold:interactionChoices,
+});
 function act(fn){if(!state||paused)return;resetStick();keys.clear();fn();contextKey='';renderBattle();storage.write();}
-function pick(p){if(!state||paused||grenadeAim.active||state.phase==='enemy'||state.solo.status!=='active')return;resetStick();if(p.unitId!==undefined){if(p.unitId===0){operationMenu();return;}const target=state.units.find(u=>u.id===p.unitId);if(!state.detected.has(target?.id))return;Core.stop(state);Core.turnTo(state,hero(state),Core.headingTo(hero(state),target));selected={targetId:target.id};aim='hip';zone='torso';burst=false;}
+function pick(p){if(!state||paused||grenadeAim.active||state.phase==='enemy'||state.solo.status!=='active')return;resetStick();if(p.interactionId){focusInteraction(p.interactionId);return;}if(p.unitId!==undefined){if(p.unitId===0){operationMenu();return;}const target=state.units.find(u=>u.id===p.unitId);if(target?.hp<=0){focusInteraction('body:'+target.id);return;}if(!state.detected.has(target?.id))return;Core.stop(state);Core.turnTo(state,hero(state),Core.headingTo(hero(state),target));selected={targetId:target.id};aim='hip';zone='torso';burst=false;}
   else{const path=Core.navigationPath(state,hero(state),p.x,p.y);if(!path){toast('No clear route to that point.');return;}view.route([hero(state),...path]);if(state.phase==='player')selected={point:p,path};else{Core.move(state,hero(state),p.x,p.y);selected=null;view.center();}}
   contextKey='';renderBattle();if(selected)operationMenu();
 }
@@ -92,7 +155,7 @@ function renderBattle(){if(!state)return;const u=hero(state),combat=state.phase=
   const nextAction=nextFocus?'View '+nextFocus.name:'Recenter on your animal';
   $('look').setAttribute('aria-label',`${contacts.length} visible opponent${contacts.length===1?'':'s'}. ${viewing}. Next: ${nextAction}.`);
   $('look').title=`${nextAction} · opponents, then your animal`;
-  drawMinimap($('minimap'),state);renderContext();
+  drawMinimap($('minimap'),state);renderContext();renderInteractionHand();
   if(state.solo.status!=='active'&&!resultShown){resultShown=true;storage.write();const win=state.solo.status==='extracted';showDialog(`<p class="eyebrow">OPERATION ${win?'COMPLETE':'LOST'}</p><h2>${win?'The books are open.':'One worker down.'}</h2><p>${win?`${u.name} returned with the wage ledger. ${Math.round(state.solo.distance)} metres travelled; ${state.round} combat rounds.`:'The factory kept its secrets this time. Try another animal, another loadout, or a quieter route.'}</p>`,[['Choose your next animal',backToPrep,'primary'],['Replay this loadout',()=>start(createSoloGame(state.solo.build))]]);}
 }
 $('end-turn').onclick=()=>act(()=>{selected=null;cancelGrenade();Core.endTurn(state);});
@@ -192,6 +255,7 @@ function equipment(){
       const label=`${Core.WEAPONS[i.kind].name}${Core.WEAPONS[i.kind].mag?' · '+(u.ammo[i.kind]??0)+' loaded / '+(u.ammoPouch[i.kind]||0)+' reserve':''}${u.weapon===i.kind?' · equipped':cost?' · '+cost+' AP':''}`;
       return [label,()=>act(()=>Core.equip(state,u,i.kind)),'',!can||u.weapon===i.kind||u.ap<cost];
     }),
+    [`Use field dressing ×${state.solo.dressings}${Core.combatCosts(state)?' · 3 AP':''}`,()=>act(()=>dressing(state)),'',!can||!state.solo.dressings||u.hp===u.maxHp||Core.combatCosts(state)&&u.ap<3],
     ['Back to menu',operationMenu],['Return to operation',()=>{},'primary']
   ]);
 }
@@ -202,13 +266,13 @@ function operationMenu(){
   const other=u.weapon===state.solo.build.primary?state.solo.build.secondary:state.solo.build.primary;
   const swapCost=weaponSwapCost(u,other),actionCost=costs?' · 3 AP':'';
   const phase=state.phase==='enemy'?'Guard turn':state.phase==='player'?`Your turn · round ${state.round}`:'Real-time exploration';
-  const utility=state.solo.build.utility==='dressing';
   showDialog(`<p class="eyebrow">OPERATION PAUSED</p><h2>Field menu.</h2><p class="menu-summary">${phase}<br>${u.name} · ${short(u.weapon)} · ${u.ap.toFixed(1)} AP</p>`,[
     ['Continue operation',()=>{},'primary'],
     ['Inventory & weapons',equipment],
     [`Switch to ${short(other)}${swapCost?' · '+swapCost+' AP':''}`,()=>act(()=>Core.equip(state,u,other)),'',!can||u.ap<swapCost],
     [`Reload ${short(u.weapon)} · ${u.ammo[u.weapon]??0}/${w.mag}${actionCost}`,()=>act(()=>Core.reload(state,u)),'',!can||!w.mag||u.ammo[u.weapon]>=w.mag||!(u.ammoPouch[u.weapon]>0)||costs&&u.ap<3],
-    [utility?`Use field dressing ×${state.solo.dressings}${actionCost}`:`Throw grenade ×${u.ammo.grenade||0} · ${Core.grenadeCost(u)} AP`,()=>utility?act(()=>dressing(state)):armGrenade(),'',!can||(utility?(state.solo.dressings===0||u.hp===u.maxHp||costs&&u.ap<3):!(u.ammo.grenade>0)||u.ap<Core.grenadeCost(u))],
+    [`Use field dressing ×${state.solo.dressings}${actionCost}`,()=>act(()=>dressing(state)),'',!can||!state.solo.dressings||u.hp===u.maxHp||costs&&u.ap<3],
+    [`Throw grenade ×${u.ammo.grenade||0} · ${Core.grenadeCost(u)} AP`,armGrenade,'',!can||!(u.ammo.grenade>0)||u.ap<Core.grenadeCost(u)],
     ['Mission & combat log',mission],['Controls',help],['Choose animal & loadout',backToPrep],['Title screen',()=>{storage.write();location.assign('./');}],['Restart this operation',()=>start(createSoloGame(state.solo.build))]
   ],{context:true});
 }
@@ -233,7 +297,9 @@ function help(){showDialog(`<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br
   <li>Tap the stance button to go standing → kneeling → prone → kneeling → standing. Tap movement for run ↔ off / walk ↔ sneak. Both switches cost 0 AP, even when you have no AP left.</li>
   <li>Hold either button for large direct choices. Keyboard: focus the button and press the down arrow to open choices.</li>
   <li>The eye counts visible opponents. Each tap advances through them from nearby, clear contacts to farther, harder-to-see contacts, then recenters on your animal. The next tap starts the cycle again. With no visible opponents, it simply recenters. Camera inspection costs no AP; moving also returns to your animal.</li>
-  <li>Options holds inventory, weapon changes, reloads and treatment. Find your objective and recent events under Mission & combat log. Collect the ledger through the menu, then return to extraction.</li>
+  <li>A hand appears above visible objects within clear reach. Tap its labelled action, or hold for choices. Tap another nearby object to focus it. Opening choices and loot windows is free; completing an action spends the shown AP in combat.</li>
+  <li>Chests and fallen guards share a loot window with individual Take buttons and Take all. Transfers cost 1 AP in combat, including a bulk transfer. Doors open or close for 1 AP; opening a chest or searching a body costs 2 AP. Exploration interactions are free. A blocked doorway cannot close on an animal.</li>
+  <li>Options holds inventory, weapon changes, reloads and treatment, including looted supplies. Find your objective and recent events under Mission & combat log. Use the hand to collect the ledger and extract.</li>
   </ul>`,[['Back to menu',operationMenu],['Return to operation',()=>{},'primary']]);}
 $('minimap-button').onclick=()=>{showDialog('<p class="eyebrow">MILL 04 / TACTICAL MAP</p><h2>Find your way.</h2><canvas id="large-map" width="760" height="560" style="width:100%;height:auto;border:1px solid #535b46"></canvas><p>Cream: your animal. Orange: the objective and visible guards. Dark areas remain unexplored.</p>',[['Return to operation',()=>{},'primary']]);drawMinimap($('large-map'),state);};
 function resetStick(){const pointer=stickPointer;stickPointer=null;if(pointer!==null&&$('joystick').hasPointerCapture(pointer))$('joystick').releasePointerCapture(pointer);stick={x:0,y:0};$('stick-knob').style.transform='translate(-50%,-50%)';}
@@ -270,6 +336,6 @@ function frame(now){
     if(state.phase!==lastPhase){resetStick();keys.clear();cancelGrenade();Core.stop(state);lastPhase=state.phase;contextKey='';}
     if(now-lastSave>2500){storage.write();lastSave=now;}
   }
-  view.sync(state,now);if(now-lastUI>100){renderBattle();lastUI=now;}
+  view.sync(state,now);positionInteractionHand();if(now-lastUI>100){renderBattle();lastUI=now;}
 }
 renderPrep();requestAnimationFrame(frame);

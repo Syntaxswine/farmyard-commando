@@ -8,6 +8,7 @@ import {DaylightRig} from './aft/tactics/daylight-rig.js';
 import {OriginalEnvironment} from './original-art.js';
 import {BRIEF, hero, Core} from './solo-game.js';
 import {FIELD_CAMERA,grenadeCameraFrame} from './grenade-controls.js';
+import {InteractionScenery} from './interaction-view.js';
 
 const V = (x=0,y=0,z=0) => new T.Vector3(x,y,z);
 export class FieldView {
@@ -40,6 +41,7 @@ export class FieldView {
   center(){if(this.grenadeCamera)this.endGrenadeAim();this.focusedId=null;this.follow=true;if(this.state){const u=hero(this.state);this.target.set(u.x,0,u.y);this.updateCamera();}}
   focusOpponent(id){const u=this.state?.units.find(v=>v.id===id&&v.team==='guard'&&Core.alive(v)&&this.state.detected.has(v.id));if(!u)return false;if(this.grenadeCamera)this.endGrenadeAim();this.focusedId=id;this.follow=false;this.target.set(u.x,0,u.y);this.updateCamera();return true;}
   ground(clientX,clientY){const r=this.container.getBoundingClientRect();this.ray.setFromCamera(new T.Vector2((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1),this.camera);return this.ray.ray.intersectPlane(this.plane,V());}
+  interactionAnchor(object){const height=object.kind==='door'?2.15:object.kind==='chest'?1.15:.7,point=V(object.x,height,object.y).project(this.camera);return {x:(point.x+1)*this.container.clientWidth/2,y:(1-point.y)*this.container.clientHeight/2,visible:Math.abs(point.x)<.95&&Math.abs(point.y)<.95&&Math.abs(point.z)<1};}
   down(e){if(e.button!==0||this.grenadeCamera)return;this.container.setPointerCapture(e.pointerId);this.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(this.pointers.size===1)this.gesture={x:e.clientX,y:e.clientY,target:this.target.clone(),moved:false,at:performance.now()};if(this.pointers.size===2){const [a,b]=[...this.pointers.values()];this.pinch={distance:Math.hypot(a.x-b.x,a.y-b.y),span:this.span};this.gesture.moved=true;}}
   drag(e){const point=this.pointers.get(e.pointerId);if(!point)return;point.x=e.clientX;point.y=e.clientY;
     if(this.pointers.size===2&&this.pinch){const [a,b]=[...this.pointers.values()];this.span=T.MathUtils.clamp(this.pinch.span*this.pinch.distance/Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),6,35);this.resize();return;}
@@ -51,19 +53,23 @@ export class FieldView {
   up(e){if(!this.pointers.has(e.pointerId))return;this.pointers.delete(e.pointerId);if(this.pointers.size){this.gesture.moved=true;return;}
     const g=this.gesture;this.gesture=null;this.pinch=null;if(!g||g.moved||e.type==='pointercancel')return;
     const point=this.ground(e.clientX,e.clientY);if(!point)return;
-    const picks=[...this.actors.values()].filter(a=>a.pick.visible).map(a=>a.pick);
+    const picks=[...this.actors.values()].filter(a=>a.root.visible&&a.pick.visible).map(a=>a.pick).concat(this.interactionArt?.picks||[]);
     const hit=this.ray.intersectObjects(picks,false)[0];
-    this.onPick(hit?{unitId:hit.object.userData.unitId}:{x:point.x,y:point.z});
+    this.onPick(hit?hit.object.userData.interactionId?{interactionId:hit.object.userData.interactionId}:{unitId:hit.object.userData.unitId}:{x:point.x,y:point.z});
   }
   setGame(s){this.generation++;this.state=s;this.samples.clear();this.failed.clear();for(const a of this.actors.values())this.disposeActor(a);this.actors.clear();this.pending.clear();this.clearEnvironment();this.buildEnvironment(s);this.center();this.lastRevision=-1;this.lastEffect=null;this.route([]);}
-  reportLoading(){this.onLoading(this.artBusy||this.pending.size>0||this.failed.size>0);}
-  clearEnvironment(){this.art?.dispose();this.art=null;this.environment.traverse(o=>{o.geometry?.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});this.environment.clear();for(const t of this.disposables)t.dispose();this.disposables=[];}
+  reportLoading(){this.onLoading(this.artBusy||this.propBusy||this.pending.size>0||this.failed.size>0);}
+  clearEnvironment(){this.interactionArt?.dispose();this.interactionArt=null;this.art?.dispose();this.art=null;this.environment.traverse(o=>{o.geometry?.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});this.environment.clear();for(const t of this.disposables)t.dispose();this.disposables=[];}
   buildEnvironment(s){
     const generation=this.generation;this.artBusy=true;
     this.art=new OriginalEnvironment(this.renderer,s,{
       onLoading:busy=>{if(generation===this.generation){this.artBusy=busy;this.reportLoading();}},
       onError:message=>{if(generation===this.generation){this.failed.add('environment');this.onError(message);}},
     });this.environment.add(this.art.root);
+    this.propBusy=true;this.interactionArt=new InteractionScenery(s,{
+      onLoading:busy=>{if(generation===this.generation){this.propBusy=busy;this.reportLoading();}},
+      onError:message=>{if(generation===this.generation){this.failed.add('interaction-art');this.onError(message);}},
+    });this.environment.add(this.interactionArt.root);
     this.objectivePin=this.makePin(BRIEF.objective,0xe16b3d);this.extractionPin=this.makePin(BRIEF.extraction,0xc4d29a);
     // Rail lines and loading-yard markings are scenery; the engine owns all collision.
     for(let x=3;x<37;x+=3){const mark=new T.Mesh(new T.PlaneGeometry(1.2,.06),new T.MeshBasicMaterial({color:0xb0a475,transparent:true,opacity:.16}));mark.rotation.x=-Math.PI/2;mark.position.set(x,.003,26.8);this.environment.add(mark);}
@@ -125,16 +131,16 @@ export class FieldView {
   disposeActor(a){this.scene.remove(a.root);a.locomotion.dispose();a.paint.dispose();a.equipment.dispose();a.worker.dispose();for(const o of [a.pick,a.ring,a.shadow]){o.geometry.dispose();o.material.dispose();}}
   sync(s,now){this.state=s;const u=hero(s),visible=s.units.filter(v=>v.team==='squad'||(v.hp>0?s.detected.has(v.id):s.visible.has(Core.key(v.x,v.y))));
     for(const [id,a] of this.actors)a.root.visible=visible.some(v=>v.id===id);
-    for(const v of visible){let a=this.actors.get(v.id);if(!a){this.actor(v);continue;}const old=this.samples.get(v.id)||{blend:0,pose:{kneel:0,prone:0,down:0}},blend=old.blend+((v.isMoving?1:0)-old.blend)*.2,goal={kneel:v.stance==='kneeling'?1:0,prone:v.stance==='prone'?1:0,down:v.hp<=0?1:0};const pose=Object.fromEntries(Object.entries(goal).map(([k,value])=>[k,Math.abs(value-old.pose[k])<.005?value:old.pose[k]+(value-old.pose[k])*.15]));const sample={...v,distance:v.travelled,blend:blend<.001?0:blend,pose};this.samples.set(v.id,sample);a.root.visible=true;a.pick.visible=v.hp>0;a.ring.visible=v.hp>0;
+    for(const v of visible){let a=this.actors.get(v.id);if(!a){this.actor(v);continue;}const old=this.samples.get(v.id)||{blend:0,pose:{kneel:0,prone:0,down:v.hp<=0?1:0,dead:v.hp<=0?1:0}},blend=old.blend+((v.isMoving?1:0)-old.blend)*.2,goal={kneel:v.stance==='kneeling'?1:0,prone:v.stance==='prone'?1:0,down:v.hp<=0?1:0,dead:v.hp<=0?1:0};const pose=Object.fromEntries(Object.entries(goal).map(([k,value])=>[k,Math.abs(value-old.pose[k])<.005?value:old.pose[k]+(value-old.pose[k])*.15]));const sample={...v,distance:v.travelled,blend:blend<.001?0:blend,pose};this.samples.set(v.id,sample);a.root.visible=true;a.pick.visible=true;a.ring.visible=v.hp>0;a.pick.scale.set(v.hp>0?1:1.6,v.hp>0?1:.2,v.hp>0?1:1.6);a.pick.position.y=v.hp>0?.9:.18;a.pick.userData.interactionId=v.hp<=0?'body:'+v.id:null;
       const signature=[v.weapon,sample.heading,sample.blend,sample.distance,JSON.stringify(sample.pose)].join(':');
       if(a.signature!==signature){a.signature=signature;if(a.weapon!==v.weapon){const old=a.equipment;a.equipment=createWeaponModel(v.weapon);a.worker.equipWeapon(a.equipment);old.dispose();a.weapon=v.weapon;}
-        a.root.position.set(0,0,0);a.locomotion.apply({...sample,blend:sample.pose?.prone||sample.pose?.down?0:sample.blend});a.posture.apply(sample);}
+        a.root.position.set(0,0,0);a.locomotion.apply({...sample,blend:sample.pose?.prone||sample.pose?.down?0:sample.blend});a.posture.apply(sample);if(sample.pose.down)a.posture.ground();}
       a.root.position.set(sample.x,0,sample.y);a.root.updateMatrixWorld(true);a.worker.skeleton.update();}
     if(this.grenadeCamera)this.trackGrenadeCamera(now);
     if(this.returnSpan!=null){this.span+=(this.returnSpan-this.span)*.14;if(Math.abs(this.returnSpan-this.span)<.01){this.span=this.returnSpan;this.returnSpan=null;}this.resize();}
     if(this.focusedId!=null){const contact=s.units.find(v=>v.id===this.focusedId&&Core.alive(v)&&s.detected.has(v.id));if(contact){this.target.lerp(V(contact.x,0,contact.y),.18);this.updateCamera();}else this.center();}
     if(this.follow){this.target.lerp(V(u.x,0,u.y),.18);this.updateCamera();}
-    if(s.revision!==this.lastRevision){this.lastRevision=s.revision;this.art.update(s,u);
+    if(s.revision!==this.lastRevision){this.lastRevision=s.revision;this.art.update(s,u);this.interactionArt.update(s);
       this.objectivePin.visible=!s.solo.ledger;this.extractionPin.visible=true;
     }
     if(s.effect&&s.effect!==this.lastEffect){this.lastEffect=s.effect;for(const event of s.effect.sequence||[s.effect]){
@@ -151,7 +157,7 @@ export class FieldView {
 
 export function drawMinimap(canvas,s){const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;ctx.fillStyle='#1b2219';ctx.fillRect(0,0,w,h);const scale=Math.min((w-12)/38,(h-12)/28),ox=(w-38*scale)/2,oy=(h-28*scale)/2;
   for(let y=1;y<=28;y++)for(let x=1;x<=38;x++){const known=s.seen.has(Core.key(x,y));if(!known)continue;ctx.fillStyle=s.map[y][x]==='crate'?'#746b4e':s.map[y][x]==='floor'?'#686d51':'#3e4b31';ctx.fillRect(ox+(x-1)*scale,oy+(y-1)*scale,scale+.2,scale+.2);}
-  ctx.strokeStyle='#acaa88';ctx.lineWidth=Math.max(1,scale*.14);ctx.beginPath();for(const edge of Object.keys(s.edges)){const [axis,xs,ys]=edge.split(':'),x=+xs,y=+ys;if(!s.seen.has(Core.key(x,y)))continue;if(axis==='e'){ctx.moveTo(ox+(x-.5)*scale,oy+(y-1.5)*scale);ctx.lineTo(ox+(x-.5)*scale,oy+(y-.5)*scale);}else{ctx.moveTo(ox+(x-1.5)*scale,oy+(y-.5)*scale);ctx.lineTo(ox+(x-.5)*scale,oy+(y-.5)*scale);}}ctx.stroke();
+  ctx.strokeStyle='#acaa88';ctx.lineWidth=Math.max(1,scale*.14);ctx.beginPath();for(const [edge,kind] of Object.entries(s.edges)){if(kind==='door')continue;const [axis,xs,ys]=edge.split(':'),x=+xs,y=+ys;if(!s.seen.has(Core.key(x,y)))continue;if(axis==='e'){ctx.moveTo(ox+(x-.5)*scale,oy+(y-1.5)*scale);ctx.lineTo(ox+(x-.5)*scale,oy+(y-.5)*scale);}else{ctx.moveTo(ox+(x-1.5)*scale,oy+(y-.5)*scale);ctx.lineTo(ox+(x-.5)*scale,oy+(y-.5)*scale);}}ctx.stroke();
   const dot=(p,color,r)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(ox+(p.x-1)*scale,oy+(p.y-1)*scale,r,0,Math.PI*2);ctx.fill();};
   dot(s.solo.ledger?BRIEF.extraction:BRIEF.objective,'#df613f',Math.max(2,scale*.45));for(const id of s.detected){const g=s.units.find(u=>u.id===id);if(g?.hp>0)dot(g,'#e16a47',Math.max(2,scale*.32));}
   const u=hero(s),x=ox+(u.x-1)*scale,y=oy+(u.y-1)*scale,heading=u.heading*Math.PI/180;ctx.save();ctx.translate(x,y);ctx.rotate(heading+Math.PI/2);ctx.fillStyle='#f3edd1';const r=Math.max(3,scale*.5);ctx.beginPath();ctx.moveTo(0,-r*1.5);ctx.lineTo(r,r);ctx.lineTo(0,r*.45);ctx.lineTo(-r,r);ctx.closePath();ctx.fill();ctx.restore();

@@ -2,7 +2,7 @@
   "source": "AnimalFactory3D/game/dist",
   "sourceCommit": "a20b343a0234b5d8b365a4e1668961ca1bf37653",
   "entry": "designer/a20b343a0234/tactics/editor-3d.html",
-  "snapshotAt": "2026-10-24T02:09:50.509Z",
+  "snapshotAt": "2026-10-24T02:57:35.450Z",
   "adaptations": [
     "Farmyard title navigation",
     "Designer page title",
@@ -491,6 +491,24 @@
       "bytes": 1504562
     },
     {
+      "path": "assets/characters/lowpoly-proof/hen-red-hat-paint-v1.png",
+      "sha256": "9a204b8303022a13ff4f09055f0c16c54469f70975a8aad396c15fa1e7038762",
+      "sourceSha256": "9a204b8303022a13ff4f09055f0c16c54469f70975a8aad396c15fa1e7038762",
+      "bytes": 1600266
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/hen-tail-paint-v1.png",
+      "sha256": "0719af6ae598dd2faf33de424393b85615c95cf2e5bde22a42f0210923316e98",
+      "sourceSha256": "0719af6ae598dd2faf33de424393b85615c95cf2e5bde22a42f0210923316e98",
+      "bytes": 1065601
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/hen-underlay-paint-v1.png",
+      "sha256": "c18596c32ace2ac9d8461c8e2c55f1c23ccdd0ac2249b61f1a1cd860fa691f25",
+      "sourceSha256": "c18596c32ace2ac9d8461c8e2c55f1c23ccdd0ac2249b61f1a1cd860fa691f25",
+      "bytes": 1348411
+    },
+    {
       "path": "assets/characters/lowpoly-proof/horse-worker-light-atlas.png",
       "sha256": "a69ccd8c8153f04fc835cef004f83695accc638f949ba8b6fb1b0ec40922ac31",
       "sourceSha256": "a69ccd8c8153f04fc835cef004f83695accc638f949ba8b6fb1b0ec40922ac31",
@@ -507,6 +525,12 @@
       "sha256": "7846de001d3806c34ff541d86f2baf21aeb3083f680be07e05ccb05d0f4dc67b",
       "sourceSha256": "7846de001d3806c34ff541d86f2baf21aeb3083f680be07e05ccb05d0f4dc67b",
       "bytes": 1463634
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/pig-director-red-hat-paint-v1.png",
+      "sha256": "c7f62a137b9647c2961a79570f6a544ae1064c3edab5378f2144193c237786d9",
+      "sourceSha256": "c7f62a137b9647c2961a79570f6a544ae1064c3edab5378f2144193c237786d9",
+      "bytes": 1588573
     },
     {
       "path": "assets/characters/lowpoly-proof/pig-foreman-model-paint-v1.png",
@@ -531,6 +555,12 @@
       "sha256": "5d3ac2732e688709ac2039120af8fa91abac31e4ea525b16e7d461596e5e0b42",
       "sourceSha256": "5d3ac2732e688709ac2039120af8fa91abac31e4ea525b16e7d461596e5e0b42",
       "bytes": 1702037
+    },
+    {
+      "path": "assets/characters/lowpoly-proof/sheep-underlay-paint-v1.png",
+      "sha256": "6abcf22d785e5b45b937e464c64f4d1fc52074181a9ef1df81d7158797868f5e",
+      "sourceSha256": "6abcf22d785e5b45b937e464c64f4d1fc52074181a9ef1df81d7158797868f5e",
+      "bytes": 1297801
     },
     {
       "path": "assets/characters/lowpoly-proof/sheep-worker-model-paint-v1.png",

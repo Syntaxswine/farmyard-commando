@@ -2,6 +2,8 @@ import {ANIMALS,PRIMARY,SECONDARY,DEFAULT_BUILD,BRIEF,Core,normalizeBuild,buildS
 import {FieldView,drawMinimap} from './field-view.js';
 import {cycleStep,nextCameraFocus,bindPressHold} from './mobile-controls.js';
 import {GrenadeAim,screenToGround} from './grenade-controls.js';
+import {weaponArtwork} from './original-art.js';
+import {STANCE_ICONS} from './aft/tactics/battle-control-icons.js';
 const $=id=>document.getElementById(id),SAVE='tactical-animal-operation-v2',BUILD='tactical-animal-build-v1';
 let build={...DEFAULT_BUILD},state=null,view=null,active=false,paused=false,selected=null,aim='hip',zone='torso',burst=false,contextKey='',lastTime=0,lastUI=0,lastSave=0,lastPhase='',stick={x:0,y:0},stickPointer=null,resultShown=false,aimViewport=null;
 const grenadeAim=new GrenadeAim();
@@ -10,23 +12,22 @@ const picker=$('control-picker');
 let pickerTrigger=null,stanceDirection=1,movementDirection=-1;
 const stanceValues=['standing','kneeling','prone'],movementValues=['run','walk','sneak'];
 const stanceNames={standing:'Standing',kneeling:'Kneeling',prone:'Prone / crawl'},movementNames={run:'Run',walk:'Off / walk',sneak:'Sneak'};
-const poses={standing:'M12 4a3 3 0 1 0 0 .1M12 10v13m0-9-6 5m6-5 6 5m-6 4-5 11m5-11 6 11',kneeling:'M12 5a3 3 0 1 0 0 .1M12 11l1 10 9 1m-9-1-6 6h13m-8-12 9 3m-9-3-4 5',prone:'M5 20a3 3 0 1 0 0 .1M9 23h15l7 4m-7-4 8-2M9 23l6-6h8'};
 const movementPoses={walk:'M18 4a3 3 0 1 0 0 .1M18 10l-2 12m2-9-8 7m8-7 7 6m-9 3-6 12m6-12 9 12',run:'M22 4a3 3 0 1 0 0 .1M21 10l-7 11m5-9-8-1-4 5m12-4 5 7 6-2M14 21l-7 5-4-4m11-1 9 5-2 8',sneak:'M17 9a3 3 0 1 0 0 .1M17 15l-3 7m2-5 10 3 3-3m-13 0-7 3M14 22l10 3-6 8m-4-11-7 8h8'};
-const poseIcon=value=>`<svg viewBox="0 0 36 38" aria-hidden="true"><path d="${poses[value]||movementPoses[value]}"/></svg>`;
+const poseIcon=value=>STANCE_ICONS[value]?.replace('<svg ','<svg class="original-stance" ')||`<svg viewBox="0 0 36 38" aria-hidden="true"><path d="${movementPoses[value]}"/></svg>`;
 try{build=normalizeBuild(JSON.parse(localStorage.getItem(BUILD)||'null'));}catch{}
 const storage={read(){try{return localStorage.getItem(SAVE);}catch{return null;}},write(){if(!state)return;try{localStorage.setItem(SAVE,encodeSave(state));}catch{toast('Device storage is full. Keep this tab open to retain the operation.');}}};
 const speciesLabel=s=>s.replaceAll('-',' '),short=k=>Core.WEAPONS[k].short;
-const gunIcon=k=>`<svg class="gun-icon" viewBox="0 0 100 30" aria-hidden="true"><path d="${k==='pistol'?'M18 9h54v8H47l-4 12H28l4-15H18z':k==='knife'?'M15 18h24l45-10-30 16H39v4H15z':k==='rpg'?'M5 13h65l12-6 13 9-13 9-12-6H45l-3 11h-9l2-11H5z':k==='flamethrower'?'M8 7h18v23H8zM26 24q15 2 18-8h43v5H59l-4 9h-8l2-14':`M6 12h33v-4h29v4h26v4H65l-3 13H51l-2-13H34l-8 8H6z${k==='sniper'?'M41 5h21M45 5v4M58 5v4':''}`}"/></svg>`;
 function button(parent,label,cls,pressed,onClick){const b=document.createElement('button');b.type='button';b.className=cls;b.innerHTML=label;b.setAttribute('aria-pressed',String(pressed));b.onclick=onClick;parent.append(b);return b;}
 function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,4000);}
 function renderPrep(){const p=ANIMALS.find(a=>a.id===build.animal),stats=buildStats(build);$('hero-portrait').src=`aft/assets/characters/armed/${p.species}-rifle.png`;$('hero-portrait').alt=`${p.name}, the ${speciesLabel(p.species)} worker`;$('hero-name').textContent=p.name;$('hero-species').textContent=speciesLabel(p.species);$('hero-role').textContent=p.label;document.querySelector('.portrait-number').textContent=String(ANIMALS.indexOf(p)+1).padStart(2,'0');$('stats').innerHTML=[['HEALTH',stats.maxHp],['ACTION POINTS',stats.maxAp],['PERCEPTION',stats.perception]].map(([label,value])=>`<div class="stat"><strong>${value}</strong><span>${label}</span></div>`).join('');
   $('animals').replaceChildren();for(const a of ANIMALS)button($('animals'),`<strong>${speciesLabel(a.species)}</strong><small>${a.name}</small>`,'animal-choice',a.id===build.animal,()=>{build.animal=a.id;renderPrep();});
-  $('primary').replaceChildren();for(const k of PRIMARY){const w=Core.WEAPONS[k];button($('primary'),`${gunIcon(k)}<strong>${w.short}</strong><small>${w.cost} AP / ${w.range} m / ${w.mag} rounds</small>`,'weapon-choice',k===build.primary,()=>{build.primary=k;renderPrep();}).setAttribute('aria-label',w.name);}
-  $('secondary').replaceChildren();for(const k of SECONDARY)button($('secondary'),`<span>${short(k)}</span><small>${k==='knife'?'MELEE':'8 ROUNDS'}</small>`,'small-choice',k===build.secondary,()=>{build.secondary=k;renderPrep();});
+  $('primary').replaceChildren();for(const k of PRIMARY){const w=Core.WEAPONS[k],choice=button($('primary'),`<strong>${w.short}</strong><small>${w.cost} AP / ${w.range} m / ${w.mag} rounds</small>`,'weapon-choice',k===build.primary,()=>{build.primary=k;renderPrep();});choice.setAttribute('aria-label',w.name);const art=weaponArtwork(k,35);art.classList.add('weapon-paint');choice.append(art);}
+  $('secondary').replaceChildren();for(const k of SECONDARY){const choice=button($('secondary'),`<span>${short(k)}</span><small>${k==='knife'?'MELEE':'8 ROUNDS'}</small>`,'small-choice',k===build.secondary,()=>{build.secondary=k;renderPrep();});const art=weaponArtwork(k,22);art.classList.add('sidearm-paint');choice.prepend(art);}
   $('utility').replaceChildren();for(const [k,label,detail] of [['dressing','Field dressing','×2'],['grenade','Frag grenades','×3']])button($('utility'),`<span>${label}</span><small>${detail}</small>`,'small-choice',k===build.utility,()=>{build.utility=k;renderPrep();});
   const skill=['hmg','rpg','flamethrower'].includes(build.primary)?'heavyWeapons':'firearms';$('primary-summary').textContent=`${skill==='firearms'?'FIREARMS':'HEAVY WEAPONS'} ${p.stats[skill]}`;$('equipment-note').textContent=`${Core.WEAPONS[build.primary].name}. ${p.name}'s ${skill==='firearms'?'firearms':'heavy weapons'} skill: ${p.stats[skill]}/100. Movement spends AP by distance, with no tile snapping.`;$('build-summary').textContent=`${p.name} / ${speciesLabel(p.species)} · ${short(build.primary)} + ${short(build.secondary)}`;
   $('resume').hidden=!storage.read();try{localStorage.setItem(BUILD,JSON.stringify(build));}catch{}
 }
+$('grenade-art').append(weaponArtwork('grenade',32));
 function showDialog(html,actions=[],{context=false}={}){
   if(picker.open)closePicker();
   cancelGrenade();

@@ -29,7 +29,7 @@ for(const file of modules){
 for(const file of fs.readdirSync(source).filter(file=>file.endsWith('.html'))){
   const entry=path.join(destination,file);
   let html=fs.readFileSync(entry,'utf8').replace('src="app.js"',`src="app.js?v=${moduleVersion}"`);
-  for(const asset of ['style.css','touch-controls.css','title-screen.css','icon.svg']){
+  for(const asset of ['style.css','touch-controls.css','original-art.css','title-screen.css','icon.svg']){
     const version=createHash('sha256').update(fs.readFileSync(path.join(destination,asset))).digest('hex').slice(0,12);
     html=html.replace(`href="${asset}"`,`href="${asset}?v=${version}"`);
   }

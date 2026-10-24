@@ -1,2 +1,4 @@
-# Keep the imported designer byte-for-byte for its provenance hashes on every OS.
+# Keep imported source bytes and line endings for provenance hashes on every OS.
 sites/tactical-animal/dist/designer/** -text -whitespace
+sites/tactical-animal/dist/aft/** -text -whitespace
+sites/tactical-animal/aft-provenance.json text eol=lf

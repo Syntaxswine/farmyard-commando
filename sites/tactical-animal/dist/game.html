@@ -3,16 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#171b17">
+  <meta name="theme-color" content="#e8dfc9">
   <meta name="description" content="Farmyard Commando: choose your animal and loadout, explore freely, and fight tactical battles in this mobile browser game.">
   <title>Farmyard Commando</title>
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="touch-controls.css">
+  <link rel="stylesheet" href="original-art.css">
 </head>
 <body>
   <main id="prep">
-    <header class="masthead"><a class="brand" href="./" aria-label="Farmyard Commando home"><span class="brand-mark">FC</span><span>FARMYARD<br><b>COMMANDO</b></span></a><span class="edition"><i></i> FIELD PROTOTYPE / 01</span></header>
+    <header class="masthead"><a class="brand" href="./" aria-label="Farmyard Commando home"><span class="brand-mark" aria-hidden="true">★</span><span>FARMYARD<br><b>COMMANDO</b></span></a><span class="edition"><i></i> SOLO OPERATIONS / 01</span></header>
     <section class="intro"><div><p class="eyebrow">ONE WORKER. ONE WAY OUT.</p><h1>FARMYARD<br><span>COMMANDO.</span></h1></div><p class="intro-copy">Choose your animal.<br>Make the loadout yours.<br>Bring something back.</p></section>
     <div class="preparation">
       <section class="operative-panel" aria-labelledby="animal-heading"><div class="section-label"><span>01 / THE OPERATIVE</span><span>6 AVAILABLE</span></div><div class="portrait-stage"><span class="portrait-rule">WORKER IDENTIFICATION</span><span class="portrait-number" aria-hidden="true">01</span><img id="hero-portrait" alt=""><div class="portrait-caption"><p id="hero-species"></p><h2 id="hero-name"></h2><span id="hero-role"></span></div><span class="portrait-stamp">CLEARED<br>FOR FIELD DUTY</span></div><div class="stats" id="stats"></div><h3 id="animal-heading" class="sr-only">Choose your animal</h3><div class="animal-grid" id="animals"></div></section>
@@ -44,7 +45,7 @@
       <div class="stick-column"><div id="joystick" role="group" aria-label="Movement thumbstick. Drag from the center to move. Keyboard: W A S D or arrow keys."><div class="stick-ring"></div><span class="stick-north">▲</span><div id="stick-knob"></div></div><span id="stick-caption" class="stick-caption">MOVE</span></div>
       <div class="right-controls">
         <button id="end-turn" class="square-control end-turn" aria-label="End turn" disabled><strong id="turn-label">END<br>TURN</strong></button>
-        <button id="grenade" class="square-control" aria-label="Aim grenade" aria-pressed="false" disabled><span id="grenade-count" class="grenade-count" aria-hidden="true">0</span><svg class="grenade-icon" viewBox="0 0 36 38" aria-hidden="true"><path d="m15 10 2-5h7l-1 5m-9 0h11l2 7q6 5 3 13-2 6-10 6T10 27q-1-6 4-10zM24 5l6 7-2 8M13 23h14m-14 6h14M18 18v15m6-15v15"/></svg><span id="grenade-label" class="control-caption">GRENADE</span><small id="grenade-cost">5 AP</small></button>
+        <button id="grenade" class="square-control" aria-label="Aim grenade" aria-pressed="false" disabled><span id="grenade-count" class="grenade-count" aria-hidden="true">0</span><span id="grenade-art" class="grenade-art" aria-hidden="true"></span><span id="grenade-label" class="control-caption">GRENADE</span><small id="grenade-cost">5 AP</small></button>
         <button id="menu" class="square-control" aria-label="Open options">☰<span>OPTIONS</span></button>
       </div>
     </div></div>

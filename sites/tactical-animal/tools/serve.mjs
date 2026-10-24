@@ -1,7 +1,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-const root=path.resolve('sites/tactical-animal/dist');
+const root=path.resolve(process.env.PREVIEW_BUILD==='1'?'dist':'sites/tactical-animal/dist');
 const port=Number(process.env.PORT||4495);
 const marker=path.resolve('artifacts/preview/STOP');
 const deadline=Date.now()+30*60*1000;

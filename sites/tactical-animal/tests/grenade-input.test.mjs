@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import * as game from '../dist/solo-game.js';
 import * as controls from '../dist/mobile-controls.js';
 import * as grenadeControls from '../dist/grenade-controls.js';
+import {STANCE_ICONS} from '../dist/aft/tactics/battle-control-icons.js';
 
 // Run the actual application input handlers with a lightweight DOM and renderer.
 // Simulation, AP, inventory, path validation, and save behavior remain real.
@@ -16,6 +17,7 @@ function app(){
     addEventListener(name,fn){if(!this.listeners.has(name))this.listeners.set(name,[]);this.listeners.get(name).push(fn);}
     replaceChildren(...children){this.children=children;}
     append(...children){this.children.push(...children);}
+    prepend(...children){this.children.unshift(...children);}
     closest(){return null;}
     getBoundingClientRect(){return {left:100,top:600,width:155,height:155,bottom:755};}
     setPointerCapture(id){this.captures.add(id);}
@@ -37,7 +39,7 @@ function app(){
     route(){} center(){} sync(){} dispose(){}
   }
   saved.set('tactical-animal-build-v1',JSON.stringify({...game.DEFAULT_BUILD,utility:'grenade'}));
-  const context={...game,...controls,...grenadeControls,FieldView,drawMinimap(){},document:doc,localStorage:{getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)},setTimeout,clearTimeout,performance:{now:()=>0},requestAnimationFrame:fn=>animation=fn,innerHeight:844,addEventListener:(name,fn)=>events.set(name,fn),console};
+  const context={...game,...controls,...grenadeControls,STANCE_ICONS,weaponArtwork:()=>new Element(),FieldView,drawMinimap(){},document:doc,localStorage:{getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)},setTimeout,clearTimeout,performance:{now:()=>0},requestAnimationFrame:fn=>animation=fn,innerHeight:844,addEventListener:(name,fn)=>events.set(name,fn),console};
   vm.runInNewContext(fs.readFileSync(new URL('../dist/app.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,''),context);
   el('deploy').click();const view=views.at(-1),s=view.state,u=game.hero(s);
   const key=(name,type='keydown')=>events.get(type)({key:name,target:{tagName:'BODY',closest:()=>null},preventDefault(){},repeat:false});

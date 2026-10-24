@@ -67,6 +67,9 @@ function include(relative){
 for(const entry of entries)include(entry);
 // Model filenames are constructed from catalog species names at runtime.
 for(const file of all)if(/^tactics\/[^/]+-10k-data\.json$/.test(file))include(file);
+// animal-motion-paint.js joins this directory with per-species layer names.
+// These paths are constructed at runtime rather than written as full literals.
+for(const file of all)if(/^assets\/characters\/lowpoly-proof\/[^/]+-(?:underlay|tail|red-hat)-paint-v1\.png$/.test(file))include(file);
 // The bundled preset loader constructs directory and variant paths at runtime.
 for(const file of all)if(file.startsWith('tactics/sector-library/')&&extensions.test(file))include(file);
 for(const file of all)if(file.startsWith('tactics/vendor/')&&/(?:license|notice)(?:\.[^/]*)?$/i.test(file))include(file);

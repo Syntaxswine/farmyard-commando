@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {Core,createSoloGame,DEFAULT_BUILD,hero,refresh,encodeSave,decodeSave} from '../dist/solo-game.js';
+import {WALL_DIMENSIONS} from '../dist/world-dimensions.js';
 function ready(primary='assault',secondary='pistol'){
   const s=createSoloGame({...DEFAULT_BUILD,primary,secondary,utility:'grenade'}),u=hero(s);
   for(const g of s.units.slice(1)){g.x=36;g.y=27;g.alert=true;}
@@ -58,8 +59,14 @@ test('a grenade already equipped in an older save uses the same finite throw rul
 });
 
 function explored(s){for(let y=1;y<=28;y++)for(let x=1;x<=38;x++)s.seen.add(Core.key(x,y));}
+test('a grenade below the inherited two-metre wall cannot pass through its visible face',()=>{
+  const s=ready(),u=hero(s);u.x=19;u.y=10;explored(s);const point={x:22,y:10},before=encodeSave(s);
+  assert.equal(WALL_DIMENSIONS.height,2);
+  const crossing=Core.grenadeTrajectory(u,point)[16];assert.equal(crossing.x,20.5);assert.ok(crossing.z>1.41&&crossing.z<WALL_DIMENSIONS.height);
+  assert.equal(Core.previewGrenade(s,u,point).reason,'Throw path is blocked');assert.equal(Core.throwGrenade(s,u,point),false);assert.equal(encodeSave(s),before);
+});
 test('a high lob clears a wall while its blast still respects wall protection',()=>{
-  const s=ready(),u=hero(s),g=s.units[1];u.x=19;u.y=10;g.x=23;g.y=10;explored(s);
+  const s=ready(),u=hero(s),g=s.units[1];u.x=18;u.y=10;g.x=23;g.y=10;explored(s);
   const point={x:23,y:10},p=Core.previewGrenade(s,u,point),hp=u.hp,guardHp=g.hp;
   assert.equal(p.ok,true);assert.equal(p.selfDanger,false);assert.equal(Core.throwGrenade(s,u,point),true);
   assert.equal(u.hp,hp);assert.ok(g.hp<guardHp);

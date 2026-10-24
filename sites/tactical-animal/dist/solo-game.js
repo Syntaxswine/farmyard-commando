@@ -3,6 +3,7 @@ import {initializeStats,weaponAccuracy,damageAfterResistance} from './aft/tactic
 import {QUICKPLAY_PRESETS} from './aft/tactics/quickplay-presets.js';
 import {identifyRange,headingTo} from './aft/tactics/core/perception.js';
 import {shotAim} from './aft/tactics/aim-levels.js';
+import {WALL_DIMENSIONS} from './world-dimensions.js';
 
 // Continuous positions are authoritative. Raster cells describe scenery and fog;
 // movement, AP, sightlines, and weapon range use actual world distances.
@@ -31,7 +32,16 @@ export function missionMap(){const m={name:BRIEF.name,terrain:Array.from({length
 function makeUnit(id,team,name,species,weapon,x,y,heading,stats){const u={id,team,name,species,weapon,x,y,z:0,heading,stance:'standing',running:false,sneaking:false,travelled:0,isMoving:false,alert:false,lastKnown:null,alertAge:0,slots:[weapon],pack:[],ammo:{[weapon]:WEAPONS[weapon].mag},ammoPouch:{[weapon]:WEAPONS[weapon].mag*3}};initializeStats(u,stats);return u;}
 export function createSoloGame(build=DEFAULT_BUILD,seed=1947){if(!validBuild(build))throw Error('Choose a valid animal and loadout.');const p=ANIMALS.find(a=>a.id===build.animal),m=missionMap(),u=makeUnit(0,'squad',p.name,p.species,build.primary,5,24,270,p.stats);u.slots=[build.primary,build.secondary];const kinds=[...u.slots,...(build.utility==='grenade'?['grenade']:[])];u.ammo=Object.fromEntries(kinds.map(k=>[k,WEAPONS[k].mag]));u.pack=kinds.map(kind=>({type:'weapon',kind,rounds:u.ammo[kind],condition:100}));if(build.secondary==='pistol')u.ammoPouch.pistol=24;const stats={strength:10,endurance:20,agility:22,firearms:35,perception:35,dexterity:35};const units=[u,makeUnit(1,'guard','Boris','pig-foreman','pistol',16,12,0,stats),makeUnit(2,'guard','Lev','pig-foreman','rifle',29,19,90,stats),makeUnit(3,'guard','Oleg','pig-foreman','pistol',30,5,0,stats)];const s={map:m.terrain,edges:m.edges,units,phase:'explore',round:0,selected:0,visible:new Set(),seen:new Set(),detected:new Set(),log:[],seed,revision:0,queue:[],enemyIndex:1,enemyDelay:0,elapsed:0,solo:{version:2,build:{...build},ledger:false,status:'active',dressings:build.utility==='dressing'?2:0,distance:0,apDistance:0}};refresh(s);log(s,'Reach the records office. Move freely; contact begins turn-based combat.');return s;}
 const geometryCache=new WeakMap();
-export function geometry(s){if(geometryCache.has(s))return geometryCache.get(s);const boxes=[];for(const [k,kind] of Object.entries(s.edges)){if(kind==='door')continue;const [axis,xs,ys]=k.split(':'),x=+xs,y=+ys;boxes.push({x0:x+(axis==='e'?.42:-.56),x1:x+(axis==='e'?.58:.56),y0:y+(axis==='s'?.42:-.56),y1:y+(axis==='s'?.58:.56),kind:'wall'});}for(let y=1;y<=28;y++)for(let x=1;x<=38;x++)if(s.map[y][x]==='crate')boxes.push({x0:x-.48,x1:x+.48,y0:y-.48,y1:y+.48,kind:'crate'});geometryCache.set(s,boxes);return boxes;}
+export function geometry(s){
+  if(geometryCache.has(s))return geometryCache.get(s);const boxes=[];
+  for(const [k,kind] of Object.entries(s.edges)){
+    if(kind==='door')continue;const [axis,xs,ys]=k.split(':'),x=+xs+(axis==='e'?.5:0),y=+ys+(axis==='s'?.5:0);
+    const hx=(axis==='e'?WALL_DIMENSIONS.thickness:WALL_DIMENSIONS.length)/2,hy=(axis==='s'?WALL_DIMENSIONS.thickness:WALL_DIMENSIONS.length)/2;
+    boxes.push({x0:x-hx,x1:x+hx,y0:y-hy,y1:y+hy,height:WALL_DIMENSIONS.height,kind:'wall'});
+  }
+  for(let y=1;y<=28;y++)for(let x=1;x<=38;x++)if(s.map[y][x]==='crate')boxes.push({x0:x-.48,x1:x+.48,y0:y-.48,y1:y+.48,height:.92,kind:'crate'});
+  geometryCache.set(s,boxes);return boxes;
+}
 const pointBoxDistance=(p,b)=>Math.hypot(Math.max(b.x0-p.x,0,p.x-b.x1),Math.max(b.y0-p.y,0,p.y-b.y1));
 export function freePoint(s,p,ignoreId=null,{units=true,radius=RADIUS}={}){if(!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x<.5+radius||p.x>38.5-radius||p.y<.5+radius||p.y>28.5-radius)return false;if(geometry(s).some(b=>pointBoxDistance(p,b)<radius-EPS))return false;return !units||!s.units.some(u=>alive(u)&&u.id!==ignoreId&&distance(u,p)<RADIUS+radius-EPS);}
 function boxInterval(a,b,box){let lo=0,hi=1;for(const [k,min,max] of [['x',box.x0,box.x1],['y',box.y0,box.y1]]){const d=b[k]-a[k];if(Math.abs(d)<EPS){if(a[k]<min||a[k]>max)return null;continue;}const t0=(min-a[k])/d,t1=(max-a[k])/d;lo=Math.max(lo,Math.min(t0,t1));hi=Math.min(hi,Math.max(t0,t1));if(lo>hi)return null;}return [lo,hi];}
@@ -73,7 +83,7 @@ export function grenadeTrajectory(a,b){
 }
 function grenadePathBlocked(s,path){
   return geometry(s).some(box=>{
-    const height=box.kind==='wall'?1.41:.92;
+    const height=box.height;
     for(let i=1;i<path.length;i++){
       const a=path[i-1],b=path[i],span=boxInterval(a,b,box);
       if(span&&Math.min(...span.map(t=>a.z+(b.z-a.z)*t))<=height)return true;

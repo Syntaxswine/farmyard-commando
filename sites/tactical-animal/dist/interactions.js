@@ -1,0 +1,164 @@
+import {WALL_DIMENSIONS} from './world-dimensions.js';
+
+export function missionInteractables({legacy=false}={}){
+  return [
+    {id:'warehouse-door',kind:'door',name:'Warehouse door',x:7.5,y:18,edge:'e:7:18',range:1.65,open:legacy,inventory:[]},
+    {id:'supply-chest',kind:'chest',name:'Supply chest',x:5.5,y:22.5,range:1.7,open:false,searched:false,inventory:[
+      {id:'assault-rounds',type:'ammo',kind:'assault',quantity:30},
+      {id:'field-dressing',type:'dressing',quantity:1},
+      {id:'frag-grenade',type:'grenade',quantity:1},
+    ]},
+  ];
+}
+
+// The open leaf stays solid, tucked along the inside of its doorway.
+export function doorFootprint(object,open=object.open){
+  const {length,thickness,height}=WALL_DIMENSIONS,half=length/2,t=thickness/2;
+  return open?{x0:object.x,x1:object.x+length,y0:object.y-half-t,y1:object.y-half+t,height}:
+    {x0:object.x-t,x1:object.x+t,y0:object.y-half,y1:object.y+half,height};
+}
+
+export function interactionFootprint(object){
+  if(object.kind==='door')return doorFootprint(object);
+  if(object.kind==='chest')return {x0:object.x-.45,x1:object.x+.45,y0:object.y-.4,y1:object.y+.4,height:.75};
+  return null;
+}
+
+// Keep a usable selection until it leaves reach. Explicit object taps override it.
+export function selectInteractionTarget(candidates,currentId=null){
+  return candidates.find(object=>object.id===currentId)||[...candidates].sort((a,b)=>a.distance-b.distance||a.id.localeCompare(b.id))[0]||null;
+}
+
+export function createInteractionSystem({hero,canControl,combatCosts,distance,geometry,pointBoxDistance,refresh,stop,log,clearGeometry,weapons,brief,radius}){
+  const epsilon=1e-7;
+  function registerBody(state,unit){
+    if(unit.team!=='guard'||unit.hp>0||state.interactables.some(object=>object.id==='body:'+unit.id))return;
+    const inventory=[{id:'weapon',type:'weapon',kind:unit.weapon,rounds:unit.ammo[unit.weapon]||0,condition:100}];
+    for(const [kind,quantity] of Object.entries(unit.ammoPouch||{}))if(quantity>0)inventory.push({id:'ammo:'+kind,type:'ammo',kind,quantity});
+    state.interactables.push({id:'body:'+unit.id,kind:'body',unitId:unit.id,name:unit.name+' · fallen guard',range:1.7,searched:false,inventory});
+  }
+  function objects(state){
+    const result=state.interactables.map(object=>{
+      if(object.kind!=='body')return object;
+      const unit=state.units.find(unit=>unit.id===object.unitId);
+      return unit&&unit.hp<=0?{...object,x:unit.x,y:unit.y}:null;
+    }).filter(Boolean);
+    result.push(state.solo.ledger?
+      {id:'extraction',kind:'extract',name:'Extraction point',...brief.extraction,range:.85,inventory:[]}:
+      {id:'ledger',kind:'ledger',name:'Wage ledger',...brief.objective,range:.85,inventory:[]});
+    return result;
+  }
+  function accessible(state,object){
+    const unit=hero(state);
+    if(!canControl(state,unit)||distance(unit,object)>object.range+epsilon)return false;
+    // Use the movement system's rounded clearance, including around corners.
+    // The target's own footprint is the only solid object we may reach into.
+    const blockers=geometry(state).filter(box=>box.interactionId!==object.id),steps=Math.max(1,Math.ceil(distance(unit,object)/.1));
+    for(let i=0;i<=steps;i++){
+      const point={x:unit.x+(object.x-unit.x)*i/steps,y:unit.y+(object.y-unit.y)*i/steps};
+      if(blockers.some(box=>pointBoxDistance(point,box)<radius-epsilon))return false;
+    }
+    return true;
+  }
+  function cost(state,base){return combatCosts(state)?base:0;}
+  function actions(state,object){
+    const action=(id,label,base)=>({id,label,cost:cost(state,base)});
+    if(object.kind==='door')return [action(object.open?'close':'open',object.open?'Close':'Open',1)];
+    if(object.kind==='chest')return object.open?
+      [action('loot','Loot',0),action('close','Close',1)]:[action('open','Open',2)];
+    if(object.kind==='body')return [action(object.searched?'loot':'search',object.searched?'Loot':'Search',object.searched?0:2)];
+    return [action(object.kind==='ledger'?'collect':'extract',object.kind==='ledger'?'Collect':'Extract',object.kind==='ledger'?2:0)];
+  }
+  function preview(state,id,actionId,itemId=null){
+    const object=objects(state).find(object=>object.id===id),unit=hero(state);
+    const available=object?actions(state,object):[];
+    let action=available.find(action=>action.id===actionId),reason='';
+    if(object&&['take','take-all'].includes(actionId)&&object.searched&&(object.kind==='body'||object.open))action={id:actionId,label:actionId==='take-all'?'Take all':'Take',cost:cost(state,1)};
+    if(!object||!action)reason='That action is no longer available.';
+    else if(!canControl(state,unit))reason='Wait for your turn.';
+    else if(!accessible(state,object))reason='Move within clear reach of the object.';
+    else if(['take','take-all'].includes(actionId)&&(!object.inventory.length||actionId==='take'&&!object.inventory.some(item=>item.id===itemId)))reason='There is nothing to take.';
+    else if(object.kind==='door'&&['open','close'].includes(actionId)&&state.units.some(other=>other.hp>0&&pointBoxDistance(other,doorFootprint(object,actionId==='open'))<radius+epsilon))reason='Someone is in the doorway.';
+    else if(unit.ap+epsilon<action.cost)reason='Not enough AP.';
+    return {ok:!reason,reason,cost:action?.cost||0,action,object};
+  }
+  function nearby(state){
+    return objects(state).filter(object=>accessible(state,object)).map(object=>({...object,distance:distance(hero(state),object),actions:actions(state,object).map(action=>({...action,...preview(state,object.id,action.id),object:undefined}))}));
+  }
+  function addItem(state,item){
+    const unit=hero(state);
+    if(item.type==='ammo')unit.ammoPouch[item.kind]=(unit.ammoPouch[item.kind]||0)+item.quantity;
+    else if(item.type==='dressing')state.solo.dressings+=item.quantity;
+    else if(item.type==='grenade'){
+      unit.ammo.grenade=(unit.ammo.grenade||0)+item.quantity;
+      if(!unit.pack.some(entry=>entry.kind==='grenade'))unit.pack.push({type:'weapon',kind:'grenade',rounds:0,condition:100});
+    }else if(unit.pack.some(entry=>entry.kind===item.kind))unit.ammoPouch[item.kind]=(unit.ammoPouch[item.kind]||0)+item.rounds;
+    else{
+      unit.pack.push({type:'weapon',kind:item.kind,rounds:item.rounds,condition:item.condition});
+      unit.ammo[item.kind]=item.rounds;
+    }
+  }
+  function perform(state,id,actionId,itemId=null){
+    const check=preview(state,id,actionId,itemId);
+    if(!check.ok)return {ok:false,reason:check.reason};
+    const object=check.object,stored=state.interactables.find(entry=>entry.id===id),unit=hero(state);
+    stop(state);unit.ap=Math.max(0,unit.ap-check.cost);
+    let loot=false;
+    if(object.kind==='door'){
+      stored.open=actionId==='open';state.edges[object.edge]=stored.open?'door':'closed-door';
+      log(state,`${stored.open?'Opened':'Closed'} the ${object.name.toLowerCase()} (${check.cost} AP).`);
+    }else if(actionId==='open'||actionId==='search'){
+      if(object.kind==='chest')stored.open=true;
+      stored.searched=true;loot=true;log(state,`${actionId==='open'?'Opened':'Searched'} ${object.name} (${check.cost} AP).`);
+    }else if(actionId==='close'){
+      stored.open=false;log(state,`Closed ${object.name} (${check.cost} AP).`);
+    }else if(actionId==='loot')loot=true;
+    else if(actionId==='take'||actionId==='take-all'){
+      const items=stored.inventory.filter(item=>actionId==='take-all'||item.id===itemId);
+      for(const item of items)addItem(state,item);
+      stored.inventory=stored.inventory.filter(item=>!items.includes(item));loot=true;
+      log(state,`Took ${actionId==='take-all'?'all items':'an item'} from ${object.name} (${check.cost} AP).`);
+    }else if(actionId==='collect'){
+      state.solo.ledger=true;log(state,'Ledger secured. Return to extraction.');
+    }else if(actionId==='extract'){
+      state.solo.status='extracted';log(state,'The ledger is safe. You made it out.');
+    }
+    clearGeometry(state);refresh(state,{forceFog:true});
+    return {ok:true,loot,targetId:id};
+  }
+  function restore(state){
+    if(state.interactables===undefined){
+      state.interactables=missionInteractables({legacy:true});
+      // Existing saves retain their passable doorway. Avoid placing a newly
+      // introduced solid chest on top of an animal's saved position.
+      const chest=state.interactables.find(object=>object.kind==='chest');
+      for(const point of [{x:5.5,y:22.5},{x:4,y:22.5},{x:3,y:24}]){
+        Object.assign(chest,point);
+        if(!state.units.some(unit=>unit.hp>0&&pointBoxDistance(unit,interactionFootprint(chest))<radius))break;
+      }
+    }
+    if(!Array.isArray(state.interactables))throw Error('Unsupported interaction save.');
+    const ids=new Set();
+    for(const object of state.interactables){
+      if(!object||typeof object.id!=='string'||ids.has(object.id)||!['door','chest','body'].includes(object.kind)||!Number.isFinite(object.range)||object.range<=0||!Array.isArray(object.inventory))throw Error('Unsupported interaction save.');
+      ids.add(object.id);
+      if(object.kind==='body'){
+        if(!state.units.some(unit=>unit.id===object.unitId&&unit.team==='guard'&&unit.hp<=0))throw Error('Unsupported body save.');
+      }else if(!Number.isFinite(object.x)||!Number.isFinite(object.y)||typeof object.open!=='boolean')throw Error('Unsupported object save.');
+      if(object.kind==='door'&&(!/^e:\d+:\d+$/.test(object.edge)||!Object.hasOwn(state.edges,object.edge)))throw Error('Unsupported door save.');
+      if(object.kind!=='door'&&typeof object.searched!=='boolean')throw Error('Unsupported container save.');
+      const itemIds=new Set();
+      for(const item of object.inventory){
+        if(!item||typeof item.id!=='string'||itemIds.has(item.id)||!['ammo','weapon','dressing','grenade'].includes(item.type))throw Error('Unsupported loot save.');
+        itemIds.add(item.id);
+        if(['weapon','ammo'].includes(item.type)&&!Object.hasOwn(weapons,item.kind))throw Error('Unknown loot weapon.');
+        if(item.type==='weapon'? !Number.isInteger(item.rounds)||item.rounds<0||!Number.isFinite(item.condition):!Number.isInteger(item.quantity)||item.quantity<1)throw Error('Unsupported loot quantity.');
+      }
+      if(object.kind==='door')state.edges[object.edge]=object.open?'door':'closed-door';
+    }
+    for(const unit of state.units)registerBody(state,unit);
+    clearGeometry(state);
+    return state;
+  }
+  return {objects,nearby,preview,perform,registerBody,restore};
+}

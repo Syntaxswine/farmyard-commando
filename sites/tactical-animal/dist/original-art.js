@@ -81,7 +81,8 @@ export class OriginalEnvironment {
       records.forEach((p,i)=>{matrix.compose(position.set(p.x,-.06,p.y),rotation,scale.set(1.006,.1,1.006));mesh.setMatrixAt(i,matrix);mesh.setColorAt(i,new T.Color(0x080e09));});
       mesh.receiveShadow=true;mesh.userData.noShadow=true;this.root.add(mesh);this.grounds.push({mesh,records});
     }
-    const walls=Object.entries(state.edges).filter(([,kind])=>kind!=='door').map(([edge])=>{const [axis,x,y]=edge.split(':');return {axis,x:+x,y:+y};});
+    const doors=new Set((state.interactables||[]).filter(object=>object.kind==='door').map(object=>object.edge));
+    const walls=Object.entries(state.edges).filter(([edge,kind])=>kind!=='door'&&!doors.has(edge)).map(([edge])=>{const [axis,x,y]=edge.split(':');return {axis,x:+x,y:+y};});
     for(const axis of ['e','s'])for(const faded of [false,true]){
       const edges=walls.filter(w=>w.axis===axis);if(!edges.length)continue;
       const brick=material('brick',faded),cap=material('concrete',faded);

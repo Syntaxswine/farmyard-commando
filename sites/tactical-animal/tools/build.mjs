@@ -14,9 +14,20 @@ if(fs.existsSync(destination)){
   fs.rmSync(destination,{recursive:true});
 }
 fs.cpSync(source,destination,{recursive:true,dereference:false});
+// Version application modules together so returning players receive updated
+// rules immediately and every importer shares the same simulation instance.
+const modules=['app.js','solo-game.js','field-view.js','mobile-controls.js'];
+const moduleHash=createHash('sha256');
+for(const file of modules)moduleHash.update(file).update(fs.readFileSync(path.join(source,file)));
+const moduleVersion=moduleHash.digest('hex').slice(0,12);
+for(const file of modules){
+  const target=path.join(destination,file);
+  const code=fs.readFileSync(target,'utf8').replace(/(\bfrom\s*|\bimport\s*\(\s*|\bimport\s*)(['"])(\.\/[^'"]+\.js)\2/g,(match,prefix,quote,specifier)=>modules.includes(specifier.slice(2))?`${prefix}${quote}${specifier}?v=${moduleVersion}${quote}`:match);
+  fs.writeFileSync(target,code);
+}
 // Give changed styles and the game icon fresh URLs on static hosts.
 const entry=path.join(destination,'index.html');
-let html=fs.readFileSync(entry,'utf8');
+let html=fs.readFileSync(entry,'utf8').replace('src="app.js"',`src="app.js?v=${moduleVersion}"`);
 for(const asset of ['style.css','touch-controls.css','icon.svg']){
   const version=createHash('sha256').update(fs.readFileSync(path.join(destination,asset))).digest('hex').slice(0,12);
   html=html.replace(`href="${asset}"`,`href="${asset}?v=${version}"`);

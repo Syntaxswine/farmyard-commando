@@ -18,7 +18,7 @@ export const hero=s=>s.units.find(u=>u.team==='squad');
 export const alive=u=>!!u&&u.hp>0;
 export const movementModeOf=u=>u.sneaking?'sneak':u.running?'run':'walk';
 export const movementRate=u=>(u.stance==='prone'?8:u.stance==='kneeling'?4:2)*(u.running?.5:u.sneaking?1.5:1);
-export const movementSpeed=u=>(u.stance==='prone'?.45:u.stance==='kneeling'?.9:1.8)*(u.running?2:u.sneaking?.5:1);
+export const movementSpeed=u=>(u.stance==='prone'?.9:u.stance==='kneeling'?1.8:3.6)*(u.running?2:u.sneaking?.5:1);
 export const combatCosts=s=>['player','enemy'].includes(s.phase)||s.units.some(g=>g.team==='guard'&&alive(g)&&g.alert);
 export const canControl=(s,u)=>alive(u)&&u.team==='squad'&&['explore','player','won'].includes(s.phase)&&s.solo.status==='active';
 export function validBuild(b){return !!b&&ANIMALS.some(a=>a.id===b.animal)&&PRIMARY.includes(b.primary)&&SECONDARY.includes(b.secondary)&&UTILITIES.includes(b.utility);}

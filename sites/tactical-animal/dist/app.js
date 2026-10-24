@@ -208,7 +208,7 @@ function operationMenu(){
     [`Switch to ${short(other)}${swapCost?' · '+swapCost+' AP':''}`,()=>act(()=>Core.equip(state,u,other)),'',!can||u.ap<swapCost],
     [`Reload ${short(u.weapon)} · ${u.ammo[u.weapon]??0}/${w.mag}${actionCost}`,()=>act(()=>Core.reload(state,u)),'',!can||!w.mag||u.ammo[u.weapon]>=w.mag||!(u.ammoPouch[u.weapon]>0)||costs&&u.ap<3],
     [utility?`Use field dressing ×${state.solo.dressings}${actionCost}`:`Throw grenade ×${u.ammo.grenade||0} · ${Core.grenadeCost(u)} AP`,()=>utility?act(()=>dressing(state)):armGrenade(),'',!can||(utility?(state.solo.dressings===0||u.hp===u.maxHp||costs&&u.ap<3):!(u.ammo.grenade>0)||u.ap<Core.grenadeCost(u))],
-    ['Mission & combat log',mission],['Controls',help],['Choose animal & loadout',backToPrep],['Restart this operation',()=>start(createSoloGame(state.solo.build))]
+    ['Mission & combat log',mission],['Controls',help],['Choose animal & loadout',backToPrep],['Title screen',()=>{storage.write();location.assign('./');}],['Restart this operation',()=>start(createSoloGame(state.solo.build))]
   ],{context:true});
 }
 function mission(){

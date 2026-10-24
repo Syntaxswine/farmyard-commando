@@ -1,0 +1,2 @@
+# Keep the imported designer byte-for-byte for its provenance hashes on every OS.
+sites/tactical-animal/dist/designer/** -text -whitespace

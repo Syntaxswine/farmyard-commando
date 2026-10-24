@@ -1,0 +1,3 @@
+# Borrowed artwork and modules must retain the source bytes in the hash manifest.
+sites/tactical-animal/dist/aft/** -text
+sites/tactical-animal/aft-provenance.json text eol=lf

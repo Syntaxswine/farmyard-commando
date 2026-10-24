@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {Core,createSoloGame,DEFAULT_BUILD,hero,refresh,encodeSave,decodeSave} from '../dist/solo-game.js';
+import {WALL_DIMENSIONS} from '../dist/world-dimensions.js';
 function ready(primary='assault',secondary='pistol'){
   const s=createSoloGame({...DEFAULT_BUILD,primary,secondary,utility:'grenade'}),u=hero(s);
   for(const g of s.units.slice(1)){g.x=36;g.y=27;g.alert=true;}
@@ -55,4 +56,34 @@ test('throwing during exploration starts combat and charges the throw once',()=>
 test('a grenade already equipped in an older save uses the same finite throw rules',()=>{
   const s=ready(),u=hero(s),g=s.units[1];u.weapon='grenade';g.x=10;g.y=25;refresh(s,{forceFog:true});
   assert.equal(Core.previewAttack(s,u,g).cost,5);assert.equal(Core.attack(s,u,g),true);assert.equal(u.ap,7);assert.equal(u.ammo.grenade,2);
+});
+
+function explored(s){for(let y=1;y<=28;y++)for(let x=1;x<=38;x++)s.seen.add(Core.key(x,y));}
+test('a grenade below the inherited two-metre wall cannot pass through its visible face',()=>{
+  const s=ready(),u=hero(s);u.x=19;u.y=10;explored(s);const point={x:22,y:10},before=encodeSave(s);
+  assert.equal(WALL_DIMENSIONS.height,2);
+  const crossing=Core.grenadeTrajectory(u,point)[16];assert.equal(crossing.x,20.5);assert.ok(crossing.z>1.41&&crossing.z<WALL_DIMENSIONS.height);
+  assert.equal(Core.previewGrenade(s,u,point).reason,'Throw path is blocked');assert.equal(Core.throwGrenade(s,u,point),false);assert.equal(encodeSave(s),before);
+});
+test('a high lob clears a wall while its blast still respects wall protection',()=>{
+  const s=ready(),u=hero(s),g=s.units[1];u.x=18;u.y=10;g.x=23;g.y=10;explored(s);
+  const point={x:23,y:10},p=Core.previewGrenade(s,u,point),hp=u.hp,guardHp=g.hp;
+  assert.equal(p.ok,true);assert.equal(p.selfDanger,false);assert.equal(Core.throwGrenade(s,u,point),true);
+  assert.equal(u.hp,hp);assert.ok(g.hp<guardHp);
+});
+test('nearby flight obstructions and solid landing points cannot consume a grenade or AP',()=>{
+  for(const point of [{x:22,y:10},{x:20.5,y:10},{x:22,y:15}]){
+    const s=ready(),u=hero(s);u.x=20.2;u.y=10;explored(s);
+    const before=encodeSave(s),p=Core.previewGrenade(s,u,point);
+    assert.equal(p.ok,false);assert.match(p.reason,/blocked|obstacle/);assert.equal(Core.throwGrenade(s,u,point),false);assert.equal(encodeSave(s),before);
+  }
+});
+test('the preview footprint stops at blast-blocking walls and does not explore fog',()=>{
+  const s=ready(),point={x:19,y:10};explored(s);const before=encodeSave(s),edge=Core.grenadeBlastFootprint(s,point);
+  assert.ok(edge[0].x<20.42);assert.equal(Core.grenadeAffects(s,point,{x:22,y:10}),false);
+  assert.ok(Math.abs(edge[48].x-14)<1e-7);assert.equal(Core.grenadeAffects(s,point,{x:17,y:10}),true);
+  assert.equal(encodeSave(s),before);
+  s.seen.clear();assert.deepEqual(Core.grenadeBlastFootprint(s,point),[]);
+  s.seen.add(Core.key(point.x,point.y));
+  for(const p of Core.grenadeBlastFootprint(s,point))assert.ok(Math.hypot(p.x-point.x,p.y-point.y)<.8);
 });

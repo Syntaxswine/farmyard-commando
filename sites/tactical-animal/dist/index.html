@@ -3,48 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#171b17">
-  <meta name="description" content="Farmyard Commando: choose your animal and loadout, explore freely, and fight tactical battles in this mobile browser game.">
+  <meta name="theme-color" content="#e8dfc9">
+  <meta name="description" content="Farmyard Commando. Play the game or build maps in the 3D map designer.">
   <title>Farmyard Commando</title>
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="touch-controls.css">
+  <link rel="stylesheet" href="original-art.css">
+  <link rel="stylesheet" href="title-screen.css">
 </head>
 <body>
-  <main id="prep">
-    <header class="masthead"><a class="brand" href="./" aria-label="Farmyard Commando home"><span class="brand-mark">FC</span><span>FARMYARD<br><b>COMMANDO</b></span></a><span class="edition"><i></i> FIELD PROTOTYPE / 01</span></header>
-    <section class="intro"><div><p class="eyebrow">ONE WORKER. ONE WAY OUT.</p><h1>FARMYARD<br><span>COMMANDO.</span></h1></div><p class="intro-copy">Choose your animal.<br>Make the loadout yours.<br>Bring something back.</p></section>
-    <div class="preparation">
-      <section class="operative-panel" aria-labelledby="animal-heading"><div class="section-label"><span>01 / THE OPERATIVE</span><span>6 AVAILABLE</span></div><div class="portrait-stage"><span class="portrait-rule">WORKER IDENTIFICATION</span><span class="portrait-number" aria-hidden="true">01</span><img id="hero-portrait" alt=""><div class="portrait-caption"><p id="hero-species"></p><h2 id="hero-name"></h2><span id="hero-role"></span></div><span class="portrait-stamp">CLEARED<br>FOR FIELD DUTY</span></div><div class="stats" id="stats"></div><h3 id="animal-heading" class="sr-only">Choose your animal</h3><div class="animal-grid" id="animals"></div></section>
-      <section class="loadout-panel" aria-labelledby="loadout-heading"><div class="section-label"><span id="loadout-heading">02 / YOUR LOADOUT</span><span>ANY ANIMAL. ANY WEAPON.</span></div><div class="loadout-heading"><h2>Tools of the trade.</h2><p>Your animal brings the skills.<br>You choose what they carry.</p></div><fieldset><legend><span>PRIMARY WEAPON</span><span id="primary-summary"></span></legend><div id="primary" class="weapon-grid"></div></fieldset><div class="loadout-bottom"><fieldset><legend>SIDEARM</legend><div id="secondary" class="secondary-grid"></div></fieldset><fieldset><legend>UTILITY</legend><div id="utility" class="utility-grid"></div></fieldset></div><p class="equipment-note" id="equipment-note"></p></section>
-      <section class="briefing-panel" aria-labelledby="mission-heading"><div class="section-label"><span>03 / THE ASSIGNMENT</span><span>OP. 001</span></div><div class="mission-map" aria-hidden="true"><div class="map-grid"></div><div class="map-room room-a"></div><div class="map-room room-b"></div><div class="map-route"></div><span class="map-start">E</span><span class="map-objective">+</span><span class="map-coordinate">38° N / MILL 04</span></div><p class="eyebrow">MILL 04 / RECORDS OFFICE</p><h2 id="mission-heading">The night<br>ledger.</h2><p class="brief-copy">The factory keeps two sets of books. Bring back the one the workers never get to see.</p><ol class="mission-steps"><li><b>01</b> Reach the records office.</li><li><b>02</b> Secure the wage ledger.</li><li><b>03</b> Return to extraction.</li></ol><div class="rhythm"><span class="rhythm-dot"></span><p>Explore in real time.<br><b>Make every turn count in combat.</b></p></div><button id="resume" class="resume" hidden>Resume your operation ↗</button></section>
+  <main class="title-screen">
+    <a class="brand title-brand" href="./" aria-label="Farmyard Commando home"><span class="brand-mark" aria-hidden="true">★</span><span>FARMYARD<br><b>COMMANDO</b></span></a>
+    <div class="title-content">
+      <p class="eyebrow">ONE WORKER. ONE WAY OUT.</p>
+      <h1>FARMYARD<br><span>COMMANDO.</span></h1>
+      <p class="title-intro">Pick your mission.</p>
+      <nav class="title-choices" aria-label="Choose game or map designer">
+        <a id="play-game" class="title-choice" href="game.html"><span class="eyebrow">01 / INTO THE FIELD</span><strong>PLAY GAME <span aria-hidden="true">↗</span></strong><span>Choose your animal and loadout.<br>Bring the ledger home.</span></a>
+        <a id="open-designer" class="title-choice" href="designer/a20b343a0234/tactics/editor-3d.html"><span class="eyebrow">02 / BUILD THE BATTLEFIELD</span><strong>MAP DESIGNER <span aria-hidden="true">↗</span></strong><span>Build and save maps.<br>Shape the ground. Set the encounter.</span></a>
+      </nav>
     </div>
-    <footer class="deploy-bar"><div><span class="eyebrow">DEPLOYMENT READY</span><p id="build-summary"></p></div><button id="deploy" class="deploy">DEPLOY SOLO <span>↗</span></button></footer>
-    <p class="source-note">Farmyard Commando · A single-character reimagining of Animal Factory Tactics. Early playable study.</p>
+    <p class="title-footer">FARMYARD COMMANDO <span>FIELD PROTOTYPE / 01</span></p>
   </main>
-  <section id="battle" hidden aria-label="Solo operation">
-    <div id="viewport" role="application" aria-label="Tactical map. Tap ground to move. Drag to look around. Tap a visible guard to target."></div>
-    <div class="view-controls"><button id="zoom-in" aria-label="Zoom in">▲</button><span>ZOOM</span><button id="zoom-out" aria-label="Zoom out">▼</button></div>
-    <button id="minimap-button" aria-label="Open tactical map"><canvas id="minimap" width="190" height="140"></canvas><span>MAP ↗</span></button>
-    <div id="loading" role="status">Preparing the field…</div>
-    <div class="hero-strip"><div class="hero-identity"><strong id="battle-name"></strong><span id="battle-species"></span></div><div class="vitals"><span id="hp-label"></span><div class="meter"><i id="hp-bar"></i></div></div><div class="ap-block"><strong id="ap"></strong><small id="ap-label">AP</small></div></div>
-    <div class="battle-bottom"><div class="thumb-layout">
-      <div class="left-controls">
-        <button id="look" class="square-control" aria-label="0 visible opponents. Recenter on your animal." disabled><span class="eye-symbol" aria-hidden="true"><svg viewBox="0 0 64 36"><path d="M3 18Q16 1 32 3Q48 1 61 18Q48 35 32 33Q16 35 3 18Z"/></svg><strong id="visible-count">0</strong></span><span class="control-caption">LOOK</span></button>
-        <button id="movement-cycle" class="square-control cycle-control" aria-label="Movement: off. Tap to cycle; hold for choices." aria-haspopup="dialog" aria-controls="control-picker" aria-expanded="false"><span class="cycle-mark" aria-hidden="true">↕</span><span id="movement-icon" class="control-icon" aria-hidden="true"></span><span id="movement-label" class="control-caption">OFF</span></button>
-        <button id="stance-cycle" class="square-control cycle-control" aria-label="Stance: standing. Tap to cycle; hold for choices." aria-haspopup="dialog" aria-controls="control-picker" aria-expanded="false"><span class="cycle-mark" aria-hidden="true">↕</span><span id="stance-icon" class="control-icon" aria-hidden="true"></span><span id="stance-label" class="control-caption">STAND</span></button>
-      </div>
-      <div class="stick-column"><div id="joystick" role="group" aria-label="Movement thumbstick. Drag from the center to move. Keyboard: W A S D or arrow keys."><div class="stick-ring"></div><span class="stick-north">▲</span><div id="stick-knob"></div></div><span class="stick-caption">MOVE</span></div>
-      <div class="right-controls">
-        <button id="end-turn" class="square-control end-turn" aria-label="End turn" disabled><strong id="turn-label">END<br>TURN</strong></button>
-        <button id="grenade" class="square-control" aria-label="Aim grenade" aria-pressed="false" disabled><span id="grenade-count" class="grenade-count" aria-hidden="true">0</span><svg class="grenade-icon" viewBox="0 0 36 38" aria-hidden="true"><path d="m15 10 2-5h7l-1 5m-9 0h11l2 7q6 5 3 13-2 6-10 6T10 27q-1-6 4-10zM24 5l6 7-2 8M13 23h14m-14 6h14M18 18v15m6-15v15"/></svg><span class="control-caption">GRENADE</span><small id="grenade-cost">5 AP</small></button>
-        <button id="menu" class="square-control" aria-label="Open options">☰<span>OPTIONS</span></button>
-      </div>
-    </div></div>
-  </section>
-  <dialog id="control-picker" class="control-picker" aria-labelledby="control-picker-title"><div class="picker-heading"><strong id="control-picker-title"></strong><span>FREE SWITCH · 0 AP</span><button id="close-picker" aria-label="Close choices">×</button></div><div id="control-choices" class="control-choices"></div><p id="control-picker-hint"></p></dialog>
-  <dialog id="overlay"><div id="overlay-content"></div><div class="context-panel" id="context" hidden></div><div id="overlay-actions" class="dialog-actions"></div></dialog>
-  <div class="toast" id="toast" role="status" hidden></div>
-  <script type="module" src="app.js"></script>
 </body>
 </html>

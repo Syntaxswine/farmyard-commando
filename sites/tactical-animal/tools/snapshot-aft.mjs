@@ -23,8 +23,44 @@ function copy(relative) {
   const text = bytes.toString('utf8');
   const imports = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s*)['"](\.[^'"]+)['"]/g;
   for (const match of text.matchAll(imports)) copy(path.posix.join(path.posix.dirname(relative), match[1]));
+  for (const match of text.matchAll(/new URL\(\s*['"](\.[^'"]+)['"]\s*,\s*import\.meta\.url/g)) {
+    copy(path.posix.join(path.posix.dirname(relative), match[1]));
+  }
 }
 for (const entry of ['core/perception.js','aim-levels.js','quickplay-presets.js', 'character-stats.js', 'animal-motion-catalog.js', 'animal-motion-paint.js', 'weapon-models.js', 'worker-locomotion.js', 'battle-posture.js']) copy('tactics/' + entry);
+// Keep the parent game's complete visual library available to this mobile game.
+// Only modules actually imported by the mobile renderer enter its runtime graph.
+const visualEntries = [
+  'weapon-icons.js', 'battle-control-icons.js', 'hybrid-materials.js',
+  'hybrid-room-art.js', 'environment-models.js', 'environment-geometry.js',
+  'environment-paint.js', 'environment-visuals.js', 'prop-art.js',
+  'painted-environment-scene.js', 'painted-cargo.js', 'painted-furniture.js',
+  'painted-chairs.js', 'painted-conveyor.js', 'painted-grass.js', 'painted-sand.js',
+  'painted-hedges.js', 'foliage-materials.js', 'foliage-models.js',
+  'biome-scene.js', 'scenery-scene.js', 'strategic-site-scene.js',
+  'cliff-map-scene.js', 'lighting-scene.js', 'battle-environment.js',
+  'factory-machine-library.js', 'factory-machine-model.js', 'factory-machine-paint.js',
+  'canvas-truck.js', 'canvas-truck-paint.js', 'utility-helicopter.js',
+  'daylight-rig.js', 'isometric-camera.js', 'painted-blast-effects.js',
+  'battle-flame-effects.js', 'battle-shot-effects.js', 'rpg-flight-effects.js',
+  'painted-blood-spray.js', 'painted-blood-stain.js', 'red-hat-model.js',
+  'animal-prone-motion.js', 'idle-motion.js', 'armed-idle-motion.js', 'rifle-firing.js',
+];
+for (const entry of visualEntries) copy('tactics/' + entry);
+for (const entry of fs.readdirSync(path.join(source, 'tactics')).sort()) {
+  if (entry.endsWith('-10k-data.json') || entry.endsWith('.css')) copy('tactics/' + entry);
+}
+function copyVisualAssets(relative) {
+  for (const entry of fs.readdirSync(path.join(source, relative), {withFileTypes: true}).sort((a,b)=>a.name.localeCompare(b.name))) {
+    // Source-control rules are not artwork and must not override this snapshot's
+    // byte-preserving Git attributes on another machine.
+    if (entry.name.startsWith('.git')) continue;
+    const file = path.posix.join(relative, entry.name);
+    if (entry.isDirectory()) { if (file !== 'assets/audio') copyVisualAssets(file); }
+    else copy(file);
+  }
+}
+copyVisualAssets('assets');
 copy('tactics/vendor/THREE-LICENSE.txt');
 // Preserve the original numeric catalogs without importing the original grid
 // simulation into the new continuous simulation's runtime dependency graph.
@@ -64,5 +100,11 @@ for (const name of paints) {
 let sourceCommit = null;
 try { const repo = path.dirname(source); sourceCommit = execFileSync('git', ['-c', 'safe.directory=' + repo.replaceAll('\\', '/'), '-C', repo, 'rev-parse', 'HEAD'], {encoding: 'utf8'}).trim(); } catch {}
 for(const old of previous){if(files.has(old.path))continue;const target=path.resolve(destination,'aft',old.path),base=path.resolve(destination,'aft')+path.sep;if(!target.startsWith(base))throw Error('Unsafe obsolete snapshot path.');if(fs.existsSync(target)){const hash=createHash('sha256').update(fs.readFileSync(target)).digest('hex');if(hash!==old.sha256)throw Error('Locally edited snapshot file: '+old.path);fs.unlinkSync(target);}}
-fs.writeFileSync(manifestPath, JSON.stringify({source: 'AnimalFactory3D/game/dist', sourceCommit, snapshotAt: new Date().toISOString(), files: [...files.values()]}, null, 2) + '\n');
+const assetGroups = {};
+for (const file of files.values()) if (file.path.startsWith('assets/')) {
+  const group = file.path.split('/')[1];
+  assetGroups[group] ??= {files: 0, bytes: 0};
+  assetGroups[group].files++; assetGroups[group].bytes += file.bytes;
+}
+fs.writeFileSync(manifestPath, JSON.stringify({source: 'AnimalFactory3D/game/dist', sourceCommit, snapshotAt: new Date().toISOString(), visualEntryPoints: visualEntries, assetGroups, files: [...files.values()]}, null, 2) + '\n');
 console.log(JSON.stringify({files: files.size, bytes: [...files.values()].reduce((sum, p) => sum + p.bytes, 0), sourceCommit}));

@@ -1,34 +1,36 @@
 import {ANIMALS,PRIMARY,SECONDARY,DEFAULT_BUILD,BRIEF,Core,normalizeBuild,buildStats,createSoloGame,hero,interaction,interact,dressing,tick,encodeSave,decodeSave,distance} from './solo-game.js';
 import {FieldView,drawMinimap} from './field-view.js';
 import {cycleStep,nextCameraFocus,bindPressHold} from './mobile-controls.js';
+import {GrenadeAim,screenToGround} from './grenade-controls.js';
+import {weaponArtwork} from './original-art.js';
+import {STANCE_ICONS} from './aft/tactics/battle-control-icons.js';
 const $=id=>document.getElementById(id),SAVE='tactical-animal-operation-v2',BUILD='tactical-animal-build-v1';
-let build={...DEFAULT_BUILD},state=null,view=null,active=false,paused=false,selected=null,aim='hip',zone='torso',burst=false,contextKey='',lastTime=0,lastUI=0,lastSave=0,lastPhase='',stick={x:0,y:0},stickPointer=null,resultShown=false,grenadeArmed=false;
+let build={...DEFAULT_BUILD},state=null,view=null,active=false,paused=false,selected=null,aim='hip',zone='torso',burst=false,contextKey='',lastTime=0,lastUI=0,lastSave=0,lastPhase='',stick={x:0,y:0},stickPointer=null,resultShown=false,aimViewport=null;
+const grenadeAim=new GrenadeAim();
 const keys=new Set(),overlay=$('overlay');
 const picker=$('control-picker');
 let pickerTrigger=null,stanceDirection=1,movementDirection=-1;
 const stanceValues=['standing','kneeling','prone'],movementValues=['run','walk','sneak'];
 const stanceNames={standing:'Standing',kneeling:'Kneeling',prone:'Prone / crawl'},movementNames={run:'Run',walk:'Off / walk',sneak:'Sneak'};
-const poses={standing:'M12 4a3 3 0 1 0 0 .1M12 10v13m0-9-6 5m6-5 6 5m-6 4-5 11m5-11 6 11',kneeling:'M12 5a3 3 0 1 0 0 .1M12 11l1 10 9 1m-9-1-6 6h13m-8-12 9 3m-9-3-4 5',prone:'M5 20a3 3 0 1 0 0 .1M9 23h15l7 4m-7-4 8-2M9 23l6-6h8'};
 const movementPoses={walk:'M18 4a3 3 0 1 0 0 .1M18 10l-2 12m2-9-8 7m8-7 7 6m-9 3-6 12m6-12 9 12',run:'M22 4a3 3 0 1 0 0 .1M21 10l-7 11m5-9-8-1-4 5m12-4 5 7 6-2M14 21l-7 5-4-4m11-1 9 5-2 8',sneak:'M17 9a3 3 0 1 0 0 .1M17 15l-3 7m2-5 10 3 3-3m-13 0-7 3M14 22l10 3-6 8m-4-11-7 8h8'};
-const poseIcon=value=>`<svg viewBox="0 0 36 38" aria-hidden="true"><path d="${poses[value]||movementPoses[value]}"/></svg>`;
+const poseIcon=value=>STANCE_ICONS[value]?.replace('<svg ','<svg class="original-stance" ')||`<svg viewBox="0 0 36 38" aria-hidden="true"><path d="${movementPoses[value]}"/></svg>`;
 try{build=normalizeBuild(JSON.parse(localStorage.getItem(BUILD)||'null'));}catch{}
 const storage={read(){try{return localStorage.getItem(SAVE);}catch{return null;}},write(){if(!state)return;try{localStorage.setItem(SAVE,encodeSave(state));}catch{toast('Device storage is full. Keep this tab open to retain the operation.');}}};
 const speciesLabel=s=>s.replaceAll('-',' '),short=k=>Core.WEAPONS[k].short;
-const gunIcon=k=>`<svg class="gun-icon" viewBox="0 0 100 30" aria-hidden="true"><path d="${k==='pistol'?'M18 9h54v8H47l-4 12H28l4-15H18z':k==='knife'?'M15 18h24l45-10-30 16H39v4H15z':k==='rpg'?'M5 13h65l12-6 13 9-13 9-12-6H45l-3 11h-9l2-11H5z':k==='flamethrower'?'M8 7h18v23H8zM26 24q15 2 18-8h43v5H59l-4 9h-8l2-14':`M6 12h33v-4h29v4h26v4H65l-3 13H51l-2-13H34l-8 8H6z${k==='sniper'?'M41 5h21M45 5v4M58 5v4':''}`}"/></svg>`;
 function button(parent,label,cls,pressed,onClick){const b=document.createElement('button');b.type='button';b.className=cls;b.innerHTML=label;b.setAttribute('aria-pressed',String(pressed));b.onclick=onClick;parent.append(b);return b;}
 function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,4000);}
 function renderPrep(){const p=ANIMALS.find(a=>a.id===build.animal),stats=buildStats(build);$('hero-portrait').src=`aft/assets/characters/armed/${p.species}-rifle.png`;$('hero-portrait').alt=`${p.name}, the ${speciesLabel(p.species)} worker`;$('hero-name').textContent=p.name;$('hero-species').textContent=speciesLabel(p.species);$('hero-role').textContent=p.label;document.querySelector('.portrait-number').textContent=String(ANIMALS.indexOf(p)+1).padStart(2,'0');$('stats').innerHTML=[['HEALTH',stats.maxHp],['ACTION POINTS',stats.maxAp],['PERCEPTION',stats.perception]].map(([label,value])=>`<div class="stat"><strong>${value}</strong><span>${label}</span></div>`).join('');
   $('animals').replaceChildren();for(const a of ANIMALS)button($('animals'),`<strong>${speciesLabel(a.species)}</strong><small>${a.name}</small>`,'animal-choice',a.id===build.animal,()=>{build.animal=a.id;renderPrep();});
-  $('primary').replaceChildren();for(const k of PRIMARY){const w=Core.WEAPONS[k];button($('primary'),`${gunIcon(k)}<strong>${w.short}</strong><small>${w.cost} AP / ${w.range} m / ${w.mag} rounds</small>`,'weapon-choice',k===build.primary,()=>{build.primary=k;renderPrep();}).setAttribute('aria-label',w.name);}
-  $('secondary').replaceChildren();for(const k of SECONDARY)button($('secondary'),`<span>${short(k)}</span><small>${k==='knife'?'MELEE':'8 ROUNDS'}</small>`,'small-choice',k===build.secondary,()=>{build.secondary=k;renderPrep();});
+  $('primary').replaceChildren();for(const k of PRIMARY){const w=Core.WEAPONS[k],choice=button($('primary'),`<strong>${w.short}</strong><small>${w.cost} AP / ${w.range} m / ${w.mag} rounds</small>`,'weapon-choice',k===build.primary,()=>{build.primary=k;renderPrep();});choice.setAttribute('aria-label',w.name);const art=weaponArtwork(k,35);art.classList.add('weapon-paint');choice.append(art);}
+  $('secondary').replaceChildren();for(const k of SECONDARY){const choice=button($('secondary'),`<span>${short(k)}</span><small>${k==='knife'?'MELEE':'8 ROUNDS'}</small>`,'small-choice',k===build.secondary,()=>{build.secondary=k;renderPrep();});const art=weaponArtwork(k,22);art.classList.add('sidearm-paint');choice.prepend(art);}
   $('utility').replaceChildren();for(const [k,label,detail] of [['dressing','Field dressing','×2'],['grenade','Frag grenades','×3']])button($('utility'),`<span>${label}</span><small>${detail}</small>`,'small-choice',k===build.utility,()=>{build.utility=k;renderPrep();});
   const skill=['hmg','rpg','flamethrower'].includes(build.primary)?'heavyWeapons':'firearms';$('primary-summary').textContent=`${skill==='firearms'?'FIREARMS':'HEAVY WEAPONS'} ${p.stats[skill]}`;$('equipment-note').textContent=`${Core.WEAPONS[build.primary].name}. ${p.name}'s ${skill==='firearms'?'firearms':'heavy weapons'} skill: ${p.stats[skill]}/100. Movement spends AP by distance, with no tile snapping.`;$('build-summary').textContent=`${p.name} / ${speciesLabel(p.species)} · ${short(build.primary)} + ${short(build.secondary)}`;
   $('resume').hidden=!storage.read();try{localStorage.setItem(BUILD,JSON.stringify(build));}catch{}
 }
-function showDialog(html,actions=[],{context=false,grenade=false}={}){
+$('grenade-art').append(weaponArtwork('grenade',32));
+function showDialog(html,actions=[],{context=false}={}){
   if(picker.open)closePicker();
-  if(grenadeArmed&&!grenade){grenadeArmed=false;view?.route([]);}
-  overlay.classList.toggle('grenade-review',grenade);
+  cancelGrenade();
   paused=true;resetStick();keys.clear();
   $('overlay-content').innerHTML=html;
   $('context').hidden=!context;
@@ -41,12 +43,19 @@ function showDialog(html,actions=[],{context=false,grenade=false}={}){
   if(!overlay.open)overlay.showModal();
 }
 function closeDialog(){overlay.close();paused=false;lastTime=performance.now();}
-overlay.addEventListener('cancel',()=>{paused=false;if(grenadeArmed){grenadeArmed=false;view?.route([]);}lastTime=performance.now();renderBattle();});
-function start(s){try{view?.dispose();$('loading').textContent='Preparing the field…';$('loading').hidden=false;state=s;selected=null;grenadeArmed=false;contextKey='';resultShown=false;stanceDirection=1;movementDirection=-1;$('prep').hidden=true;$('battle').hidden=false;document.body.classList.add('in-battle');active=true;paused=false;view=new FieldView($('viewport'),{onPick:pick,onLoading:busy=>{$('loading').hidden=!busy;},onError:message=>{$('loading').hidden=false;$('loading').textContent='Animal artwork could not load. '+message;}});view.setGame(state);lastPhase=state.phase;lastTime=performance.now();lastUI=0;renderBattle();storage.write();}catch(error){active=false;view?.dispose();view=null;$('prep').hidden=false;$('battle').hidden=true;document.body.classList.remove('in-battle');toast('Cannot start 3D view: '+error.message);}}
-function backToPrep(){storage.write();active=false;resetStick();view?.dispose();view=null;$('battle').hidden=true;$('prep').hidden=false;document.body.classList.remove('in-battle');renderPrep();}
+overlay.addEventListener('cancel',()=>{paused=false;lastTime=performance.now();renderBattle();});
+function grenadeViewport(){
+  if($('grenade-aim').hidden)return aimViewport;
+  const r=$('viewport').getBoundingClientRect(),panel=$('grenade-aim').getBoundingClientRect(),controls=document.querySelector('.thumb-layout').getBoundingClientRect();
+  const top=Math.max($('minimap-button').getBoundingClientRect().bottom,document.querySelector('.hero-strip').getBoundingClientRect().bottom),sidePanel=panel.right<=controls.left;
+  aimViewport={left:sidePanel?panel.right-r.left+12:16,right:r.width-16,top:top-r.top+12,bottom:Math.max(top-r.top+72,(sidePanel?controls.top:panel.top)-r.top-12)};
+  return aimViewport;
+}
+function start(s){try{view?.dispose();$('loading').textContent='Preparing the field…';$('loading').hidden=false;state=s;selected=null;grenadeAim.cancel();aimViewport=null;contextKey='';resultShown=false;stanceDirection=1;movementDirection=-1;$('prep').hidden=true;$('battle').hidden=false;document.body.classList.add('in-battle');active=true;paused=false;view=new FieldView($('viewport'),{onPick:pick,getAimViewport:grenadeViewport,onLoading:busy=>{$('loading').hidden=!busy;},onError:message=>{$('loading').hidden=false;$('loading').textContent='Animal artwork could not load. '+message;}});view.setGame(state);lastPhase=state.phase;lastTime=performance.now();lastUI=0;renderBattle();storage.write();}catch(error){active=false;view?.dispose();view=null;$('prep').hidden=false;$('battle').hidden=true;document.body.classList.remove('in-battle');toast('Cannot start 3D view: '+error.message);}}
+function backToPrep(){storage.write();active=false;grenadeAim.cancel();resetStick();keys.clear();view?.dispose();view=null;$('battle').hidden=true;$('prep').hidden=false;document.body.classList.remove('in-battle');renderPrep();}
 $('deploy').onclick=()=>start(createSoloGame(build));$('resume').onclick=()=>{try{const s=decodeSave(storage.read());if(s.solo.status!=='active'){toast('That operation has ended. Deploy a new animal to begin again.');return;}start(s);}catch{toast('This saved operation is from an older prototype. Deploy a new animal.');}};
 function act(fn){if(!state||paused)return;resetStick();keys.clear();fn();contextKey='';renderBattle();storage.write();}
-function pick(p){if(!state||paused||state.phase==='enemy'||state.solo.status!=='active')return;resetStick();if(grenadeArmed){const point=p.unitId!==undefined?state.units.find(u=>u.id===p.unitId):p;if(!point||p.unitId!==undefined&&p.unitId!==0&&!state.detected.has(p.unitId))return;confirmGrenade(point);return;}if(p.unitId!==undefined){if(p.unitId===0){operationMenu();return;}const target=state.units.find(u=>u.id===p.unitId);if(!state.detected.has(target?.id))return;Core.stop(state);Core.turnTo(state,hero(state),Core.headingTo(hero(state),target));selected={targetId:target.id};aim='hip';zone='torso';burst=false;}
+function pick(p){if(!state||paused||grenadeAim.active||state.phase==='enemy'||state.solo.status!=='active')return;resetStick();if(p.unitId!==undefined){if(p.unitId===0){operationMenu();return;}const target=state.units.find(u=>u.id===p.unitId);if(!state.detected.has(target?.id))return;Core.stop(state);Core.turnTo(state,hero(state),Core.headingTo(hero(state),target));selected={targetId:target.id};aim='hip';zone='torso';burst=false;}
   else{const path=Core.navigationPath(state,hero(state),p.x,p.y);if(!path){toast('No clear route to that point.');return;}view.route([hero(state),...path]);if(state.phase==='player')selected={point:p,path};else{Core.move(state,hero(state),p.x,p.y);selected=null;view.center();}}
   contextKey='';renderBattle();if(selected)operationMenu();
 }
@@ -67,23 +76,17 @@ function renderBattle(){if(!state)return;const u=hero(state),combat=state.phase=
   $('battle-name').textContent=u.name;$('battle-species').textContent=speciesLabel(u.species);
   $('hp-label').textContent=`${Math.ceil(u.hp)} / ${u.maxHp} HP`;$('hp-bar').style.width=`${u.hp/u.maxHp*100}%`;
   $('ap').textContent=combat?Math.max(0,u.ap).toFixed(1):'∞';$('ap-label').textContent=combat?'AP':'FREE MOVE';
-  $('end-turn').disabled=state.phase!=='player';
+  $('end-turn').disabled=state.phase!=='player'||grenadeAim.active;
   $('end-turn').setAttribute('aria-label',state.phase==='enemy'?'Guards are acting':'End turn');
   $('turn-label').innerHTML=state.phase==='enemy'?'GUARD<br>TURN':'END<br>TURN';
   $('joystick').classList.toggle('unavailable',!can);
-  const grenadeCount=u.ammo.grenade||0,throwCost=Core.grenadeCost(u);
-  $('grenade-count').textContent=grenadeCount;$('grenade-cost').textContent=`${throwCost} AP`;
-  $('grenade').disabled=!can||grenadeCount<1||u.ap+1e-7<throwCost;
-  $('grenade').setAttribute('aria-pressed',String(grenadeArmed));
-  $('grenade').setAttribute('aria-label',`${grenadeArmed?'Cancel grenade aim':'Aim grenade'}. ${grenadeCount} remaining. ${throwCost} AP${throwCost<Core.WEAPONS.grenade.cost?' · half cost with '+short(u.weapon):''}.`);
-  $('grenade').title=grenadeCount?`Throw: ${throwCost} AP · tap, then choose a landing point`:'No grenades. Choose frag grenades in your loadout.';
-  $('viewport').setAttribute('aria-label',grenadeArmed?'Grenade aim. Tap a target or ground to choose a landing point. Tap Grenade again to cancel.':'Tactical map. Tap ground to move. Drag to look around. Tap a visible guard to target.');
+  renderGrenadeControls();
   const mode=Core.movementModeOf(u);
-  renderCycle('movement',mode,mode==='walk'?'OFF':mode.toUpperCase(),movementNames[mode],can);
-  renderCycle('stance',u.stance,{standing:'STAND',kneeling:'KNEEL',prone:'CRAWL'}[u.stance],stanceNames[u.stance],can);
+  renderCycle('movement',mode,mode==='walk'?'OFF':mode.toUpperCase(),movementNames[mode],can&&!grenadeAim.active);
+  renderCycle('stance',u.stance,{standing:'STAND',kneeling:'KNEEL',prone:'CRAWL'}[u.stance],stanceNames[u.stance],can&&!grenadeAim.active);
   const contacts=Core.visibleOpponents(state),focused=contacts.find(g=>g.id===view?.focusedId);
   const nextFocus=nextCameraFocus(contacts,view?.focusedId);
-  $('visible-count').textContent=contacts.length;$('look').disabled=state.solo.status!=='active';
+  $('visible-count').textContent=contacts.length;$('look').disabled=state.solo.status!=='active'||grenadeAim.active;
   $('look').classList.toggle('inspecting',!!focused);
   const viewing=focused?'Viewing '+focused.name:view?.follow?'Viewing your animal':'Camera panned';
   const nextAction=nextFocus?'View '+nextFocus.name:'Recenter on your animal';
@@ -92,23 +95,48 @@ function renderBattle(){if(!state)return;const u=hero(state),combat=state.phase=
   drawMinimap($('minimap'),state);renderContext();
   if(state.solo.status!=='active'&&!resultShown){resultShown=true;storage.write();const win=state.solo.status==='extracted';showDialog(`<p class="eyebrow">OPERATION ${win?'COMPLETE':'LOST'}</p><h2>${win?'The books are open.':'One worker down.'}</h2><p>${win?`${u.name} returned with the wage ledger. ${Math.round(state.solo.distance)} metres travelled; ${state.round} combat rounds.`:'The factory kept its secrets this time. Try another animal, another loadout, or a quieter route.'}</p>`,[['Choose your next animal',backToPrep,'primary'],['Replay this loadout',()=>start(createSoloGame(state.solo.build))]]);}
 }
-$('end-turn').onclick=()=>act(()=>{selected=null;grenadeArmed=false;Core.endTurn(state);});
+$('end-turn').onclick=()=>act(()=>{selected=null;cancelGrenade();Core.endTurn(state);});
+function renderGrenadeControls(){
+  const u=hero(state),armed=grenadeAim.active,point=grenadeAim.point,p=armed&&point?Core.previewGrenade(state,u,point):null;
+  const count=u.ammo.grenade||0,cost=Core.grenadeCost(u),adjusting=stickPointer!==null||keys.size>0;
+  $('grenade-count').textContent=count;$('grenade-cost').textContent=`${cost} AP`;$('grenade-label').textContent=armed?'THROW':'GRENADE';
+  $('grenade').disabled=!Core.canControl(state,u)||count<1||u.ap+1e-7<cost||armed&&(!p?.ok||adjusting);
+  $('grenade').setAttribute('aria-pressed',String(armed));
+  $('grenade').setAttribute('aria-label',`${armed?'Throw grenade':'Aim grenade'}. ${count} remaining. ${cost} AP.`);
+  $('grenade').title=armed?(p?.reason||(!point?'Choose a landing point with the joystick':adjusting?'Release the aim controls, then throw':`Throw grenade · ${cost} AP`)):`Aim grenade · ${cost} AP · G`;
+  $('grenade-aim').hidden=!armed;$('battle').classList.toggle('aiming-grenade',armed);
+  $('stick-caption').textContent=armed?'AIM':'MOVE';
+  $('joystick').setAttribute('aria-label',armed?'Grenade aim thumbstick. Direction aims; full displacement reaches maximum range. Release to hold your aim. Keyboard: W A S D or arrows, Enter to throw, Escape to cancel.':'Movement thumbstick. Drag from the center to move. Keyboard: W A S D or arrow keys.');
+  $('viewport').setAttribute('aria-label',armed?'Grenade preview. Aim with the joystick, release to hold, then press Throw. Cancel leaves resources unchanged.':'Tactical map. Tap ground to move. Drag to look around. Tap a visible guard to target.');
+  if(!armed)return;
+  const detail=point?`${p.distance.toFixed(1)} / ${Core.WEAPONS.grenade.range} m · ${p.blast} m blast · ${cost} AP · ${count} left`:`Move the joystick to aim · ${cost} AP · ${count} left`;
+  if($('grenade-detail').textContent!==detail)$('grenade-detail').textContent=detail;
+  const warning=[p?.reason,p?.selfDanger?'Your animal is exposed to the blast.':''].filter(Boolean).join('. ');
+  $('grenade-warning').hidden=!warning;$('grenade-warning').textContent=warning;
+}
+function updateGrenadePreview(){
+  if(!grenadeAim.active)return;
+  if(grenadeAim.point)view.previewGrenade(grenadeAim.point,Core.previewGrenade(state,hero(state),grenadeAim.point));
+  renderGrenadeControls();
+}
+function cancelGrenade(){
+  if(!grenadeAim.active)return;
+  grenadeAim.cancel();resetStick();keys.clear();view?.endGrenadeAim();$('toast').hidden=true;
+}
 function armGrenade(){
-  if(!state||paused||!Core.canControl(state,hero(state)))return;
+  if(!state||paused||grenadeAim.active||!Core.canControl(state,hero(state)))return;
   const u=hero(state);if(!(u.ammo.grenade>0)||u.ap+1e-7<Core.grenadeCost(u))return;
-  resetStick();keys.clear();Core.stop(state);selected=null;view.route([]);grenadeArmed=!grenadeArmed;renderBattle();
-  if(grenadeArmed)toast('Tap a target or ground for the grenade. Tap Grenade again to cancel.');else $('toast').hidden=true;
+  resetStick();keys.clear();Core.stop(state);selected=null;grenadeAim.start();view.beginGrenadeAim();$('toast').hidden=true;renderBattle();
 }
-function confirmGrenade(point){
-  const landing={x:point.x,y:point.y},u=hero(state),p=Core.previewGrenade(state,u,landing);
-  $('toast').hidden=true;view.previewGrenade(landing);
-  const distanceLabel=Number.isFinite(p.distance)?p.distance.toFixed(1)+' m':'Invalid point';
-  showDialog(`<p class="eyebrow">GRENADE / ${u.ammo.grenade||0} REMAINING</p><h2>Throw grenade.</h2><p>${distanceLabel} away · ${p.blast} m blast radius · <b>${p.cost} AP</b><br>${p.discounted?'Half AP cost while holding '+short(u.weapon)+'.':'Standard throw cost.'}</p>${p.selfDanger?'<p class="danger-note">Your animal is inside the blast radius.</p>':''}${p.reason?'<p class="danger-note">'+p.reason+'</p>':''}`,[
-    [`Throw · ${p.cost} AP`,()=>act(()=>{grenadeArmed=false;view.route([]);Core.throwGrenade(state,u,landing);}),'primary',!p.ok],
-    ['Choose another point',()=>{}],['Cancel throw',()=>{grenadeArmed=false;view.route([]);renderBattle();}]
-  ],{grenade:true});
+function commitGrenade(){
+  if(!state||paused||!grenadeAim.active||!grenadeAim.point||stickPointer!==null||keys.size)return;
+  const u=hero(state),landing={...grenadeAim.point},p=Core.previewGrenade(state,u,landing);
+  if(!p.ok){updateGrenadePreview();return;}
+  if(!Core.throwGrenade(state,u,landing))return;
+  grenadeAim.cancel();resetStick();keys.clear();view.endGrenadeAim({linger:800});contextKey='';renderBattle();storage.write();
 }
-$('grenade').onclick=armGrenade;
+$('grenade').onclick=()=>grenadeAim.active?commitGrenade():armGrenade();
+$('cancel-grenade').onclick=()=>{cancelGrenade();renderBattle();};
 function renderCycle(kind,value,label,name,can){
   const b=$(kind+'-cycle');b.disabled=!can;b.setAttribute('aria-label',`${kind==='stance'?'Stance':'Movement'}: ${name.toLowerCase()}. Tap to cycle; hold for choices.`);
   if(b.dataset.value===value)return;b.dataset.value=value;
@@ -132,7 +160,7 @@ picker.addEventListener('cancel',pickerClosed);
 $('close-picker').onclick=closePicker;
 picker.addEventListener('click',event=>{if(event.target!==picker)return;const r=picker.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)closePicker();});
 function openPicker(kind){
-  if(!state||paused||!Core.canControl(state,hero(state)))return;
+  if(!state||paused||grenadeAim.active||!Core.canControl(state,hero(state)))return;
   resetStick();keys.clear();Core.stop(state);paused=true;
   const u=hero(state),isStance=kind==='stance',values=isStance?stanceValues:movementValues,names=isStance?stanceNames:movementNames,current=isStance?u.stance:Core.movementModeOf(u);
   pickerTrigger=$(kind+'-cycle');pickerTrigger.setAttribute('aria-expanded','true');
@@ -145,12 +173,12 @@ function openPicker(kind){
   picker.showModal();
 }
 for(const kind of ['stance','movement'])bindPressHold($(kind+'-cycle'),{
-  canUse:()=>!!state&&!paused&&Core.canControl(state,hero(state)),
+  canUse:()=>!!state&&!paused&&!grenadeAim.active&&Core.canControl(state,hero(state)),
   press:()=>{resetStick();keys.clear();Core.stop(state);},
   tap:()=>cycleControl(kind),hold:()=>openPicker(kind)
 });
 $('look').onclick=()=>{
-  if(!state||paused)return;const nextFocus=nextCameraFocus(Core.visibleOpponents(state),view.focusedId);
+  if(!state||paused||grenadeAim.active)return;const nextFocus=nextCameraFocus(Core.visibleOpponents(state),view.focusedId);
   resetStick();keys.clear();Core.stop(state);if(nextFocus)view.focusOpponent(nextFocus.id);else view.center();renderBattle();
 };
 $('zoom-in').onclick=()=>view?.zoom(.83);$('zoom-out').onclick=()=>view?.zoom(1.2);
@@ -181,7 +209,7 @@ function operationMenu(){
     [`Switch to ${short(other)}${swapCost?' · '+swapCost+' AP':''}`,()=>act(()=>Core.equip(state,u,other)),'',!can||u.ap<swapCost],
     [`Reload ${short(u.weapon)} · ${u.ammo[u.weapon]??0}/${w.mag}${actionCost}`,()=>act(()=>Core.reload(state,u)),'',!can||!w.mag||u.ammo[u.weapon]>=w.mag||!(u.ammoPouch[u.weapon]>0)||costs&&u.ap<3],
     [utility?`Use field dressing ×${state.solo.dressings}${actionCost}`:`Throw grenade ×${u.ammo.grenade||0} · ${Core.grenadeCost(u)} AP`,()=>utility?act(()=>dressing(state)):armGrenade(),'',!can||(utility?(state.solo.dressings===0||u.hp===u.maxHp||costs&&u.ap<3):!(u.ammo.grenade>0)||u.ap<Core.grenadeCost(u))],
-    ['Mission & combat log',mission],['Controls',help],['Choose animal & loadout',backToPrep],['Restart this operation',()=>start(createSoloGame(state.solo.build))]
+    ['Mission & combat log',mission],['Controls',help],['Choose animal & loadout',backToPrep],['Title screen',()=>{storage.write();location.assign('./');}],['Restart this operation',()=>start(createSoloGame(state.solo.build))]
   ],{context:true});
 }
 function mission(){
@@ -194,12 +222,54 @@ function mission(){
   ]);
 }
 $('menu').onclick=operationMenu;
-function help(){showDialog('<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br>Your decisions.</h2><ul><li>Use the center thumbstick to move freely in any direction. W A S D and arrow keys also work.</li><li>During combat, movement spends AP by the exact distance covered. Stop anywhere. The right buttons are End Turn, Grenade, then Options.</li><li>Tap Grenade, then a guard or ground to choose the landing point. Review the throw, then confirm. Tap Grenade again or press Escape to cancel aiming. Choose frag grenades in your loadout to carry three.</li><li>A grenade costs 5 AP, or 2.5 AP while a pistol or SMG is equipped. Throwing keeps that weapon in hand. Range: 10 m; blast radius: 5 m. Your animal can be hurt by its own grenade.</li><li>Tap a visible guard to open the options menu with aiming and firing choices. Higher aim spends more AP.</li><li>Drag the world to look around. Use the arrows to zoom.</li><li>Tap the stance button to go standing → kneeling → prone → kneeling → standing. Tap movement for run ↔ off / walk ↔ sneak. Both switches cost 0 AP, even when you have no AP left.</li><li>Hold either button for large direct choices. Keyboard: focus the button and press the down arrow to open choices.</li><li>The eye counts visible opponents. Each tap advances through them from nearby, clear contacts to farther, harder-to-see contacts, then recenters on your animal. The next tap starts the cycle again. With no visible opponents, it simply recenters. Camera inspection costs no AP; moving also returns to your animal.</li><li>Options holds inventory, weapon changes, reloads and treatment. Find your objective and recent events under Mission & combat log. Collect the ledger through the menu, then return to extraction.</li></ul>',[['Back to menu',operationMenu],['Return to operation',()=>{},'primary']]);}
+function help(){showDialog(`<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br>Your decisions.</h2><ul>
+  <li>Use the center thumbstick to move freely in any direction. W A S D and arrow keys also work.</li>
+  <li>During combat, movement spends AP by the exact distance covered. Stop anywhere. The right buttons are End Turn, Grenade, then Options.</li>
+  <li>Tap Grenade or press G to aim with the joystick. Direction aims the throw; displacement sets distance, up to 10 m. The animal stays still. Release to hold the preview, then tap Throw or press Enter. Cancel or Escape exits without spending AP or grenades. Choose frag grenades in your loadout to carry three.</li>
+  <li>For keyboard aiming, hold W A S D or arrows to adjust direction and distance. Release to hold aim. The camera frames the arc and blast without rotating. Filled ground is exposed to the blast; walls and unexplored ground stop the fill. The outline shows the maximum radius.</li>
+  <li>A grenade costs 5 AP, or 2.5 AP while a pistol or SMG is equipped. Throwing keeps that weapon in hand. Blast radius: 5 m. Your animal can be hurt by its own grenade. Blocked flight paths, solid obstacles, and unexplored landing points disable Throw.</li>
+  <li>Tap a visible guard to open the options menu with aiming and firing choices. Higher aim spends more AP.</li>
+  <li>Drag the world to look around when not aiming a grenade. Use the arrows to zoom.</li>
+  <li>Tap the stance button to go standing → kneeling → prone → kneeling → standing. Tap movement for run ↔ off / walk ↔ sneak. Both switches cost 0 AP, even when you have no AP left.</li>
+  <li>Hold either button for large direct choices. Keyboard: focus the button and press the down arrow to open choices.</li>
+  <li>The eye counts visible opponents. Each tap advances through them from nearby, clear contacts to farther, harder-to-see contacts, then recenters on your animal. The next tap starts the cycle again. With no visible opponents, it simply recenters. Camera inspection costs no AP; moving also returns to your animal.</li>
+  <li>Options holds inventory, weapon changes, reloads and treatment. Find your objective and recent events under Mission & combat log. Collect the ledger through the menu, then return to extraction.</li>
+  </ul>`,[['Back to menu',operationMenu],['Return to operation',()=>{},'primary']]);}
 $('minimap-button').onclick=()=>{showDialog('<p class="eyebrow">MILL 04 / TACTICAL MAP</p><h2>Find your way.</h2><canvas id="large-map" width="760" height="560" style="width:100%;height:auto;border:1px solid #535b46"></canvas><p>Cream: your animal. Orange: the objective and visible guards. Dark areas remain unexplored.</p>',[['Return to operation',()=>{},'primary']]);drawMinimap($('large-map'),state);};
-function resetStick(){stick={x:0,y:0};$('stick-knob').style.transform='translate(-50%,-50%)';}
-function updateStick(e){const r=$('joystick').getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,limit=r.width*.3,n=Math.hypot(dx,dy),scale=Math.min(1,limit/Math.max(1,n));stick=n<9?{x:0,y:0}:{x:dx*scale/limit,y:dy*scale/limit};$('stick-knob').style.transform=`translate(calc(-50% + ${stick.x*limit}px),calc(-50% + ${stick.y*limit}px))`;view?.center();}
-$('joystick').onpointerdown=e=>{if(!state||paused||!Core.canControl(state,hero(state)))return;e.preventDefault();stickPointer=e.pointerId;$('joystick').setPointerCapture(e.pointerId);Core.stop(state);selected=null;grenadeArmed=false;view.route([]);updateStick(e);};$('joystick').onpointermove=e=>{if(e.pointerId===stickPointer)updateStick(e);};
-for(const name of ['pointerup','pointercancel','lostpointercapture'])$('joystick').addEventListener(name,e=>{if(e.pointerId===stickPointer){stickPointer=null;resetStick();}});
-addEventListener('keydown',e=>{if(!active||paused||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;const k=e.key.toLowerCase();if(k===' '&&e.target.closest('button'))return;if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)){e.preventDefault();if(k===' '){if(!e.repeat)act(()=>{grenadeArmed=false;Core.endTurn(state);});}else keys.add(k);}if(k==='escape'){if(grenadeArmed){grenadeArmed=false;view.route([]);$('toast').hidden=true;renderBattle();}else $('menu').click();}});addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));addEventListener('blur',()=>{resetStick();keys.clear();});document.addEventListener('visibilitychange',()=>{resetStick();keys.clear();if(document.hidden)storage.write();lastTime=performance.now();});addEventListener('pagehide',()=>storage.write());
-function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,Math.max(0,(now-lastTime)/1000));lastTime=now;if(!active||!view)return;if(!paused&&!document.hidden){let x=stick.x,y=stick.y;if(keys.size){x=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0);y=(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);}const n=Math.max(1,Math.hypot(x,y));x/=n;y/=n;if(Math.hypot(x,y)>.1){grenadeArmed=false;if(view.focusedId!=null)view.center();}tick(state,dt,Math.hypot(x,y)>.1?{x:.7682*x+.6402*y,y:-.6402*x+.7682*y}:null);if(state.phase!==lastPhase){resetStick();keys.clear();grenadeArmed=false;Core.stop(state);lastPhase=state.phase;contextKey='';}if(now-lastSave>2500){storage.write();lastSave=now;}}view.sync(state,now);if(now-lastUI>100){renderBattle();lastUI=now;}}
+function resetStick(){const pointer=stickPointer;stickPointer=null;if(pointer!==null&&$('joystick').hasPointerCapture(pointer))$('joystick').releasePointerCapture(pointer);stick={x:0,y:0};$('stick-knob').style.transform='translate(-50%,-50%)';}
+function updateStick(e){
+  const r=$('joystick').getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,limit=r.width*.3,n=Math.hypot(dx,dy),scale=Math.min(1,limit/Math.max(1,n));
+  stick=n<(grenadeAim.active?limit*.12:9)?{x:0,y:0}:{x:dx*scale/limit,y:dy*scale/limit};$('stick-knob').style.transform=`translate(calc(-50% + ${stick.x*limit}px),calc(-50% + ${stick.y*limit}px))`;
+  if(grenadeAim.active){grenadeAim.aim(hero(state),stick,Core.WEAPONS.grenade.range);updateGrenadePreview();}else view?.center();
+}
+$('joystick').onpointerdown=e=>{if(e.button!==0||stickPointer!==null||!state||paused||!Core.canControl(state,hero(state)))return;e.preventDefault();stickPointer=e.pointerId;$('joystick').setPointerCapture(e.pointerId);Core.stop(state);selected=null;if(!grenadeAim.active)view.route([]);updateStick(e);};$('joystick').onpointermove=e=>{if(e.pointerId===stickPointer)updateStick(e);};
+for(const name of ['pointerup','pointercancel','lostpointercapture'])$('joystick').addEventListener(name,e=>{if(e.pointerId===stickPointer){resetStick();if(grenadeAim.active)renderGrenadeControls();}});
+addEventListener('keydown',e=>{
+  if(!active||paused||e.defaultPrevented||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;
+  const k=e.key.toLowerCase(),button=e.target.closest('button');
+  if(k==='g'){e.preventDefault();if(!e.repeat)armGrenade();return;}
+  if(k==='enter'&&grenadeAim.active&&!button){e.preventDefault();if(!e.repeat)commitGrenade();return;}
+  if(k===' '&&button)return;
+  if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)){
+    e.preventDefault();if(k===' '){if(!e.repeat&&!grenadeAim.active)act(()=>Core.endTurn(state));}else keys.add(k);
+  }
+  if(k==='escape'){if(grenadeAim.active){cancelGrenade();renderBattle();}else $('menu').click();}
+});
+addEventListener('keyup',e=>{keys.delete(e.key.toLowerCase());if(grenadeAim.active)renderGrenadeControls();});
+addEventListener('blur',()=>{resetStick();keys.clear();});document.addEventListener('visibilitychange',()=>{resetStick();keys.clear();if(document.hidden)storage.write();lastTime=performance.now();});addEventListener('pagehide',()=>storage.write());
+function frame(now){
+  requestAnimationFrame(frame);const dt=Math.min(.05,Math.max(0,(now-lastTime)/1000));lastTime=now;if(!active||!view)return;
+  if(!paused&&!document.hidden){
+    let x=stick.x,y=stick.y;if(keys.size){x=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0);y=(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);}
+    const n=Math.max(1,Math.hypot(x,y));x/=n;y/=n;
+    if(grenadeAim.active){
+      if(!Core.canControl(state,hero(state)))cancelGrenade();
+      else{Core.stop(state);if(keys.size){grenadeAim.nudge(hero(state),{x,y},Core.WEAPONS.grenade.range,dt);updateGrenadePreview();}}
+      tick(state,dt);
+    }else{if(Math.hypot(x,y)>.1&&view.focusedId!=null)view.center();tick(state,dt,Math.hypot(x,y)>.1?screenToGround(x,y):null);}
+    if(state.phase!==lastPhase){resetStick();keys.clear();cancelGrenade();Core.stop(state);lastPhase=state.phase;contextKey='';}
+    if(now-lastSave>2500){storage.write();lastSave=now;}
+  }
+  view.sync(state,now);if(now-lastUI>100){renderBattle();lastUI=now;}
+}
 renderPrep();requestAnimationFrame(frame);

@@ -34,7 +34,8 @@ const geometryCache=new WeakMap();
 export function geometry(s){if(geometryCache.has(s))return geometryCache.get(s);const boxes=[];for(const [k,kind] of Object.entries(s.edges)){if(kind==='door')continue;const [axis,xs,ys]=k.split(':'),x=+xs,y=+ys;boxes.push({x0:x+(axis==='e'?.42:-.56),x1:x+(axis==='e'?.58:.56),y0:y+(axis==='s'?.42:-.56),y1:y+(axis==='s'?.58:.56),kind:'wall'});}for(let y=1;y<=28;y++)for(let x=1;x<=38;x++)if(s.map[y][x]==='crate')boxes.push({x0:x-.48,x1:x+.48,y0:y-.48,y1:y+.48,kind:'crate'});geometryCache.set(s,boxes);return boxes;}
 const pointBoxDistance=(p,b)=>Math.hypot(Math.max(b.x0-p.x,0,p.x-b.x1),Math.max(b.y0-p.y,0,p.y-b.y1));
 export function freePoint(s,p,ignoreId=null,{units=true,radius=RADIUS}={}){if(!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x<.5+radius||p.x>38.5-radius||p.y<.5+radius||p.y>28.5-radius)return false;if(geometry(s).some(b=>pointBoxDistance(p,b)<radius-EPS))return false;return !units||!s.units.some(u=>alive(u)&&u.id!==ignoreId&&distance(u,p)<RADIUS+radius-EPS);}
-function intersectsBox(a,b,box){let lo=0,hi=1;for(const [k,min,max] of [['x',box.x0,box.x1],['y',box.y0,box.y1]]){const d=b[k]-a[k];if(Math.abs(d)<EPS){if(a[k]<min||a[k]>max)return false;continue;}const t0=(min-a[k])/d,t1=(max-a[k])/d;lo=Math.max(lo,Math.min(t0,t1));hi=Math.min(hi,Math.max(t0,t1));if(lo>hi)return false;}return hi>EPS&&lo<1-EPS;}
+function boxInterval(a,b,box){let lo=0,hi=1;for(const [k,min,max] of [['x',box.x0,box.x1],['y',box.y0,box.y1]]){const d=b[k]-a[k];if(Math.abs(d)<EPS){if(a[k]<min||a[k]>max)return null;continue;}const t0=(min-a[k])/d,t1=(max-a[k])/d;lo=Math.max(lo,Math.min(t0,t1));hi=Math.min(hi,Math.max(t0,t1));if(lo>hi)return null;}return [lo,hi];}
+function intersectsBox(a,b,box){const span=boxInterval(a,b,box);return !!span&&span[1]>EPS&&span[0]<1-EPS;}
 export function lineClear(s,a,b){return !geometry(s).some(box=>(box.kind==='wall'||a.stance==='prone'&&b.stance==='prone')&&intersectsBox(a,b,box));}
 export function walkSegment(s,a,b,ignoreId=null){const d=distance(a,b),steps=Math.max(1,Math.ceil(d/.1));for(let i=1;i<=steps;i++)if(!freePoint(s,{x:a.x+(b.x-a.x)*i/steps,y:a.y+(b.y-a.y)*i/steps},ignoreId))return false;return true;}
 export function canSee(s,a,b){const d=distance(a,b),range=identifyRange(a,b,a.team==='squad'?35:26)*(b.sneaking?.7:1);return alive(a)&&d<=Math.max(1.5,range)&&lineClear(s,a,b);}
@@ -66,6 +67,34 @@ export function setMovementMode(s,u,mode){if(!canControl(s,u)||!['run','sneak','
 export function setStance(s,u,stance){if(!canControl(s,u)||!['standing','kneeling','prone'].includes(stance)||u.stance===stance)return false;stop(s);u.stance=stance;refresh(s,{forceFog:true});return true;}
 const random=s=>{s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296;};
 export const grenadeCost=u=>WEAPONS.grenade.cost*(['pistol','pistol-offhand','smg'].includes(u.weapon)?.5:1);
+export function grenadeTrajectory(a,b){
+  const rise=Math.min(2.5,distance(a,b)*.35);
+  return Array.from({length:33},(_,i)=>{const t=i/32;return {x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:1.1*(1-t)+.08*t+Math.sin(t*Math.PI)*rise};});
+}
+function grenadePathBlocked(s,path){
+  return geometry(s).some(box=>{
+    const height=box.kind==='wall'?1.41:.92;
+    for(let i=1;i<path.length;i++){
+      const a=path[i-1],b=path[i],span=boxInterval(a,b,box);
+      if(span&&Math.min(...span.map(t=>a.z+(b.z-a.z)*t))<=height)return true;
+    }
+    return false;
+  });
+}
+export const grenadeAffects=(s,point,target)=>distance(target,point)<=WEAPONS.grenade.blast&&lineClear(s,point,target);
+// The fill stops at walls and unexplored ground. The outer ring still shows the
+// maximum blast radius; neither the preview nor its camera changes visibility.
+export function grenadeBlastFootprint(s,point){
+  if(!s.seen.has(key(point.x,point.y)))return [];
+  const radius=WEAPONS.grenade.blast,walls=geometry(s).filter(box=>box.kind==='wall');
+  return Array.from({length:97},(_,i)=>{
+    const angle=i/96*Math.PI*2,dx=Math.cos(angle),dy=Math.sin(angle),end={x:point.x+dx*radius,y:point.y+dy*radius};
+    let reach=radius;
+    for(const wall of walls){const span=boxInterval(point,end,wall);if(span&&span[1]>EPS)reach=Math.min(reach,Math.max(0,span[0]*radius-.01));}
+    for(let d=0;d<=reach;d+=.1)if(!s.seen.has(key(point.x+dx*d,point.y+dy*d))){reach=Math.max(0,d-.1);break;}
+    return {x:point.x+dx*reach,y:point.y+dy*reach};
+  });
+}
 export function previewGrenade(s,u,point){
   const w=WEAPONS.grenade,cost=grenadeCost(u),valid=point&&Number.isFinite(point.x)&&Number.isFinite(point.y),d=valid?distance(u,point):Infinity;
   let reason='';
@@ -74,14 +103,16 @@ export function previewGrenade(s,u,point){
   else if(!valid||point.x<.5||point.x>38.5||point.y<.5||point.y>28.5)reason='Choose a point on the field';
   else if(!s.seen.has(key(point.x,point.y)))reason='Choose an explored landing point';
   else if(d>w.range+EPS)reason='Out of throwing range';
+  else if(geometry(s).some(box=>pointBoxDistance(point,box)<.04))reason='Landing point is inside an obstacle';
+  else if(grenadePathBlocked(s,grenadeTrajectory(u,point)))reason='Throw path is blocked';
   else if(u.ap+EPS<cost)reason='Not enough AP';
-  return {ok:!reason,reason,cost,distance:d,blast:w.blast,discounted:cost<w.cost,selfDanger:!!valid&&d<=w.blast&&lineClear(s,point,u)};
+  return {ok:!reason,reason,cost,distance:d,blast:w.blast,discounted:cost<w.cost,selfDanger:!!valid&&grenadeAffects(s,point,u)};
 }
 export function throwGrenade(s,u,point){
   const p=previewGrenade(s,u,point);if(!p.ok)return false;
   stop(s);if(s.phase!=='player'){s.engaged=true;refresh(s);}
   u.ap=Math.max(0,u.ap-p.cost);u.ammo.grenade--;u.heading=headingTo(u,point);
-  let hits=0;for(const target of s.units.filter(alive))if(distance(target,point)<=p.blast&&lineClear(s,point,target)){
+  let hits=0;for(const target of s.units.filter(alive))if(grenadeAffects(s,point,target)){
     hurt(s,target,Math.round(WEAPONS.grenade.damage*Math.max(.2,1-distance(target,point)/(p.blast+1))));hits++;
   }
   log(s,`${u.name} threw a grenade (${p.cost} AP).`);
@@ -102,4 +133,4 @@ export function interact(s){const a=interaction(s);if(!a?.ok)return false;stop(s
 export function dressing(s){const u=hero(s),cost=combatCosts(s)?3:0;if(!canControl(s,u)||s.solo.dressings<1||u.hp>=u.maxHp||u.ap+EPS<cost)return false;stop(s);u.ap-=cost;u.hp=Math.min(u.maxHp,u.hp+35);s.solo.dressings--;log(s,u.name+' used a field dressing (+35 HP).');return true;}
 export function encodeSave(s){return JSON.stringify(s,(_,v)=>v instanceof Set?{$set:[...v]}:v);}
 export function decodeSave(text){const s=JSON.parse(text,(_,v)=>v&&Array.isArray(v.$set)?new Set(v.$set):v);if(s?.solo?.version!==2||!validBuild(s.solo.build)||s.units?.filter(u=>u.team==='squad').length!==1||!['active','extracted','lost'].includes(s.solo.status)||!Array.isArray(s.map)||s.map.length!==30||s.map.some(r=>!Array.isArray(r)||r.length!==40)||!['visible','seen','detected'].every(k=>s[k] instanceof Set)||s.units.some(u=>!Number.isFinite(u.x)||!Number.isFinite(u.y)||!Number.isFinite(u.hp)||!Number.isFinite(u.ap)))throw Error('Unsupported solo save.');return s;}
-export const Core={WEAPONS,AIM_ZONES,key,alive,movementModeOf,movementRate,movementSpeed,combatCosts,canControl,canSee,visibleOpponents,refresh,log,stop,travel,navigationPath,move,turnTo,setMovementMode,setStance,grenadeCost,previewGrenade,throwGrenade,previewAttack,attack,equip,reload,endTurn,headingTo};
+export const Core={WEAPONS,AIM_ZONES,key,alive,movementModeOf,movementRate,movementSpeed,combatCosts,canControl,canSee,visibleOpponents,refresh,log,stop,travel,navigationPath,move,turnTo,setMovementMode,setStance,grenadeCost,grenadeTrajectory,grenadeAffects,grenadeBlastFootprint,previewGrenade,throwGrenade,previewAttack,attack,equip,reload,endTurn,headingTo};

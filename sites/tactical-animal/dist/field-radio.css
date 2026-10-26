@@ -1,68 +1,88 @@
-/* Review standard: fixed metal bezel, recessed socket, travelling enamel cap. */
+/* Review standard: square push switches with illuminated symbols and a telephone-style guard beacon. */
 .radio-key{
   --radio-ivory:#f0e6cb;
-  --radio-cap:linear-gradient(180deg,#53604c 0%,#3d4c38 18%,#33422f 100%);
-  --radio-stem:#192719;
+  --radio-cap:linear-gradient(#3b4e40,#293d30 65%,#23362b);
+  --radio-stem:#15271b;
   --radio-drop:0px;
-  --radio-shadow:6px;
+  --radio-shadow:3px;
+  --radio-glow:transparent;
+  --radio-inner-glow:transparent;
+  --radio-glyph-color:#cbd2be;
+  --radio-glyph-glow:transparent;
   position:relative;display:inline-block;flex:none;
-  width:68px;height:80px;padding:0;border:1px solid #8f9580;border-radius:9px;
-  background:linear-gradient(130deg,#a5a48a,#737c66 30%,#4c5947 75%,#7b836b);
-  box-shadow:inset 0 1px 0 #dad7b380,inset 0 -2px 0 #333e2e,0 2px 2px #050e0980;
+  width:72px;height:72px;padding:0;border:1px solid #a4a99b;border-radius:0;
+  background:linear-gradient(135deg,#adb1a3,#6c796a 28%,#435546 72%,#89917f);
+  box-shadow:inset 0 1px 0 #e6e6ca80,inset 0 -2px 0 #2d3d2f,0 2px 2px #050e0980;
   color:var(--radio-ivory);cursor:pointer;touch-action:manipulation;
   -webkit-tap-highlight-color:transparent;user-select:none;
 }
 .radio-key:before{
-  content:'';position:absolute;inset:3px;border:1px solid #263121;border-radius:7px;
-  background:#101c12;box-shadow:inset 0 3px 5px #040d0799,0 1px 0 #b1b08b55;
+  content:'';position:absolute;inset:3px;border:1px solid #162b1d;border-radius:0;
+  background:#0d1b13;box-shadow:inset 0 2px 3px #030d0799,0 1px 0 #b1b89b55;
   pointer-events:none;
 }
 .radio-key:after{
-  /* A few broad worn spots belong to the bezel, never over the printed symbol. */
-  content:'';position:absolute;inset:0;border-radius:8px;pointer-events:none;
+  /* Light edge wear stays on the mounting bezel. */
+  content:'';position:absolute;inset:0;border-radius:0;pointer-events:none;
   background:linear-gradient(90deg,#d1c9a291,transparent) 8px 0/11px 1px no-repeat,
     linear-gradient(#d1c9a273,transparent) 0 8px/1px 10px no-repeat,
     linear-gradient(90deg,transparent,#d1c9a25c) right 7px bottom 0/8px 1px no-repeat;
 }
 .radio-key .radio-face{
-  position:absolute;left:5px;right:5px;top:4px;bottom:11px;
-  display:grid;grid-template-rows:32px 12px 10px;row-gap:1px;align-content:center;justify-items:center;
-  padding:3px 2px 2px;border:1px solid #68725a;border-radius:6px;
-  background:var(--radio-cap);
+  position:absolute;left:5px;right:5px;top:4px;bottom:6px;
+  display:grid;grid-template-rows:30px 11px 9px;row-gap:1px;align-content:center;justify-items:center;
+  padding:2px;border:1px solid #8a9d81;border-radius:0;
+  background:linear-gradient(165deg,#eff8d915,transparent 48%),var(--radio-cap);
   box-shadow:0 var(--radio-shadow) 0 var(--radio-stem),0 calc(var(--radio-shadow) + 1px) 1px #040e08,
-    0 calc(var(--radio-shadow) + 2px) 3px #050e0973,
-    inset 0 2px 1px #c4c49b4d,inset 1px 0 0 #bbc69a1f,inset 0 -2px 1px #1b2b1b99;
+    0 0 11px var(--radio-glow),inset 0 0 9px var(--radio-inner-glow),
+    inset 0 2px 1px #e5eed36b,inset 1px 0 0 #dce8ca40,inset 0 -2px 1px #102b1d99;
   transform:translateY(var(--radio-drop));
   transition:transform 65ms ease-out,box-shadow 65ms ease-out;
   pointer-events:none;
 }
-.radio-key .radio-lamp{
-  position:absolute;top:5px;left:5px;width:6px;height:3px;border-radius:1px;
-  background:#17251a;box-shadow:0 1px 0 #89917466,inset 0 1px 1px #051009;
+.radio-key .radio-icon-slot{
+  position:relative;display:block;width:30px;height:30px;color:var(--radio-glyph-color);
+  filter:drop-shadow(0 1px 1px #10221799) drop-shadow(0 0 2px var(--radio-glyph-glow)) drop-shadow(0 0 4px var(--radio-glyph-glow));
 }
-.radio-key .radio-icon-slot{position:relative;display:block;width:32px;height:32px}
 .radio-glyph{display:block;width:32px;height:32px;fill:currentColor;stroke:none}
-.radio-key .radio-label{font:700 9.5px/12px Consolas,'Courier New',monospace;letter-spacing:.35px;white-space:nowrap}
-.radio-key .radio-cost{font:600 8px/10px Consolas,'Courier New',monospace;color:#c4cbb1;white-space:nowrap}
+.radio-key .radio-glyph{width:30px;height:30px}
+.radio-key .radio-label{font:700 9.5px/11px Consolas,'Courier New',monospace;letter-spacing:.35px;white-space:nowrap;text-shadow:0 1px 1px #122213cc}
+.radio-key .radio-cost{font:600 8px/9px Consolas,'Courier New',monospace;color:#e0e6c9;white-space:nowrap;text-shadow:0 1px 1px #122213cc}
 .radio-key .radio-stock{position:absolute;top:4px;right:4px;font:700 8px/10px Consolas,'Courier New',monospace}
 .radio-key .radio-eye-count{position:absolute;inset:0;display:grid;place-items:center;font:700 12px/1 Consolas,'Courier New',monospace}
-.radio-key:enabled:active,.radio-key.is-pressed{--radio-drop:4px;--radio-shadow:2px}
-.radio-key[aria-pressed=true] .radio-lamp{background:#f1bc59;box-shadow:0 0 3px #ffc7728c,inset 0 1px 0 #ffe8a899}
-.radio-key:disabled{
-  --radio-cap:linear-gradient(#3b4838,#303c2d);
-  --radio-drop:2px;--radio-shadow:3px;
-  color:#929b89;cursor:default;opacity:1;
+.radio-key[aria-pressed=true],.radio-key[aria-pressed=true]:enabled:active{
+  --radio-glyph-color:#ffe2a0;--radio-glyph-glow:#ffbb5b8c;
 }
-.radio-key:disabled .radio-face{border-color:#59664f;box-shadow:0 3px 0 #182518,0 4px 1px #071109,inset 0 1px 1px #bcc2951f}
-.radio-key:disabled .radio-cost{color:#929b89}
+.radio-key:enabled:active,.radio-key.is-pressed{
+  --radio-drop:2px;--radio-shadow:1px;
+  --radio-glyph-color:#f4ffd7;--radio-glyph-glow:#e4ffb982;
+}
+.radio-key:disabled{
+  --radio-cap:radial-gradient(ellipse at 50% 35%,#414c43,#2b382e 70%,#202e26);
+  --radio-drop:1px;--radio-shadow:2px;--radio-glow:transparent;--radio-inner-glow:transparent;
+  --radio-glyph-color:#788573;--radio-glyph-glow:transparent;
+  color:#8d9a8c;cursor:default;opacity:1;
+}
+.radio-key:disabled .radio-face{border-color:#617060;box-shadow:0 2px 0 #17271b,0 3px 1px #071109,inset 0 1px 1px #b9c6ae33}
+.radio-key:disabled .radio-cost{color:#8d9a8c}
 .radio-key:focus-visible{outline:2px solid #efc579;outline-offset:4px}
-.radio-key.guard-alert{--radio-cap:linear-gradient(#8c4e3b,#69392e);--radio-stem:#41251e}
-.radio-key.guard-alert .radio-lamp{background:#ff7963;box-shadow:0 0 4px #ff7863aa}
-.radio-key.guard-alert .radio-icon-slot{animation:radio-contact .5s step-end 4}
-@keyframes radio-contact{0%,49%{color:#ff9b7b}50%,100%{color:var(--radio-ivory)}}
+.radio-key.eye-switch,.radio-key.eye-switch:enabled:active{
+  --radio-cap:radial-gradient(ellipse at 50% 48%,#58271f,#381c17 65%,#251613);
+  --radio-stem:#291713;--radio-glyph-color:#b48b79;--radio-glyph-glow:transparent;
+  --radio-inner-glow:transparent;--radio-glow:transparent;
+}
+.radio-key.eye-switch .radio-face{border-color:#8a6958;background:linear-gradient(165deg,#ffc6a411,transparent 48%),var(--radio-cap)}
+.radio-key.eye-switch.has-contact,.radio-key.eye-switch.has-contact:enabled:active{
+  --radio-cap:radial-gradient(ellipse at 50% 46%,#dc9254 0%,#c5643b 36%,#a03d29 70%,#682a1f 100%);
+  --radio-stem:#49251d;--radio-glow:#ff6d4359;--radio-inner-glow:#ffd48759;
+  --radio-glyph-color:#42190f;--radio-glyph-glow:transparent;
+}
+.radio-key.eye-switch.has-contact .radio-icon-slot{filter:none}
+.radio-key.eye-switch.guard-alert .radio-face{animation:radio-contact .5s step-end 4}
+@keyframes radio-contact{0%,49%{filter:brightness(1.15)}50%,100%{filter:brightness(.72)}}
 @media(prefers-reduced-motion:reduce){
   .radio-key .radio-face{transition:none}
-  .radio-key.guard-alert .radio-icon-slot{animation:none;color:#ff9b7b}
+  .radio-key.eye-switch.guard-alert .radio-face{animation:none}
 }
 @media(forced-colors:active){
   .radio-key{border:2px solid ButtonText}

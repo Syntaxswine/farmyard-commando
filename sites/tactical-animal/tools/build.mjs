@@ -29,9 +29,9 @@ for(const file of modules){
 for(const file of fs.readdirSync(source).filter(file=>file.endsWith('.html'))){
   const entry=path.join(destination,file);
   let html=fs.readFileSync(entry,'utf8').replace('src="app.js"',`src="app.js?v=${moduleVersion}"`);
-  for(const asset of ['style.css','touch-controls.css','original-art.css','title-screen.css','industrial-controls.css','icon.svg']){
+  for(const asset of ['style.css','touch-controls.css','original-art.css','title-screen.css','industrial-controls.css','field-radio.css','field-radio-icons.svg','icon.svg']){
     const version=createHash('sha256').update(fs.readFileSync(path.join(destination,asset))).digest('hex').slice(0,12);
-    html=html.replace(`href="${asset}"`,`href="${asset}?v=${version}"`);
+    html=html.replaceAll(`href="${asset}"`,`href="${asset}?v=${version}"`).replaceAll(`href="${asset}#`,`href="${asset}?v=${version}#`);
   }
   fs.writeFileSync(entry,html);
 }

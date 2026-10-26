@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <!-- All six marks use a 32-unit grid, solid fill and the same ivory ink. -->
+  <symbol id="look" viewBox="0 0 32 32">
+    <path fill-rule="evenodd" d="M2 16C6 9 10 5 16 5s10 4 14 11c-4 7-8 11-14 11S6 23 2 16Zm5 0c3 5 5 7 9 7s6-2 9-7c-3-5-5-7-9-7s-6 2-9 7Z"/>
+  </symbol>
+  <symbol id="movement" viewBox="0 0 32 32">
+    <circle cx="18" cy="5" r="3.2"/>
+    <path d="M14 10h5l3 6h5v4h-8l-3-5-1 6 7 6-3 3-8-7-2 7H4l5-13-2 2H3v-4h4Z"/>
+  </symbol>
+  <symbol id="stance" viewBox="0 0 32 32">
+    <circle cx="14" cy="5" r="3.2"/>
+    <path d="M11 10h6l3 6h8v4H17l-3-5-1 7h9l4 8h-5l-2-4h-8l-2 4H3l5-10Z"/>
+  </symbol>
+  <symbol id="end-turn" viewBox="0 0 32 32">
+    <path d="M4 3h13a11 11 0 0 1 0 22h-3v6L2 21l12-10v7h3a4 4 0 0 0 0-8H4Z"/>
+  </symbol>
+  <symbol id="grenade" viewBox="0 0 32 32">
+    <path fill-rule="evenodd" d="M9 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8Zm0 2.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/>
+    <path d="M13 6h10l3 15h-4L20 10h-7Z"/>
+    <rect x="12" y="9" width="8" height="5" rx="1"/>
+    <path d="M12 13h8c3 0 5 4 5 8 0 6-3 10-9 10S7 27 7 21c0-4 2-8 5-8Z"/>
+  </symbol>
+  <symbol id="options" viewBox="0 0 32 32">
+    <path d="M5 6h22v4H5Zm0 8h22v4H5Zm0 8h22v4H5Z"/>
+    <rect x="10" y="3" width="5" height="10" rx="1"/>
+    <rect x="20" y="11" width="5" height="10" rx="1"/>
+    <rect x="8" y="19" width="5" height="10" rx="1"/>
+  </symbol>
+</svg>

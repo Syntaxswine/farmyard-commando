@@ -22,6 +22,8 @@ Health/AP stays visible. The lower-right menu holds inventory, weapon swapping, 
 
 Buttons share an industrial retro futurist console treatment: petrol green enamel, machined nickel rims, engraved glyphs, amber latched choices, and oxide red commit keys. Title links, animal and loadout choices, field controls, inventory actions, and control pickers use the same hardware language. Pressed, disabled, keyboard focus and reduced-motion states are included; the red eye alert remains distinct. The artwork is resolution-independent CSS and inline SVG in `industrial-controls.css` and the two entry pages.
 
+The next control standard is a review study at `button-study.html`: one field-radio key in idle, pressed, selected and disabled states, plus six solid ivory symbols. `field-radio.css` supplies a fixed metal bezel and a separate enamel face with four pixels of physical travel. `field-radio-icons.svg` holds the shared 32-unit symbol family. The study includes native 68 × 80 pixel controls, fixed label/cost slots, eye-contained opponent counts, and upper-right stock counts. Review this standard before rolling it into the game controls; the current game does not load these candidate assets.
+
 ## Run and check
 
 Node.js 22+ is sufficient. No package installation or build step is needed.

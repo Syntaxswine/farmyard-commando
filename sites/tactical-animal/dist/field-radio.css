@@ -1,0 +1,71 @@
+/* Review standard: fixed metal bezel, recessed socket, travelling enamel cap. */
+.radio-key{
+  --radio-ivory:#f0e6cb;
+  --radio-cap:linear-gradient(180deg,#53604c 0%,#3d4c38 18%,#33422f 100%);
+  --radio-stem:#192719;
+  --radio-drop:0px;
+  --radio-shadow:6px;
+  position:relative;display:inline-block;flex:none;
+  width:68px;height:80px;padding:0;border:1px solid #8f9580;border-radius:9px;
+  background:linear-gradient(130deg,#a5a48a,#737c66 30%,#4c5947 75%,#7b836b);
+  box-shadow:inset 0 1px 0 #dad7b380,inset 0 -2px 0 #333e2e,0 2px 2px #050e0980;
+  color:var(--radio-ivory);cursor:pointer;touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;user-select:none;
+}
+.radio-key:before{
+  content:'';position:absolute;inset:3px;border:1px solid #263121;border-radius:7px;
+  background:#101c12;box-shadow:inset 0 3px 5px #040d0799,0 1px 0 #b1b08b55;
+  pointer-events:none;
+}
+.radio-key:after{
+  /* A few broad worn spots belong to the bezel, never over the printed symbol. */
+  content:'';position:absolute;inset:0;border-radius:8px;pointer-events:none;
+  background:linear-gradient(90deg,#d1c9a291,transparent) 8px 0/11px 1px no-repeat,
+    linear-gradient(#d1c9a273,transparent) 0 8px/1px 10px no-repeat,
+    linear-gradient(90deg,transparent,#d1c9a25c) right 7px bottom 0/8px 1px no-repeat;
+}
+.radio-key .radio-face{
+  position:absolute;left:5px;right:5px;top:4px;bottom:11px;
+  display:grid;grid-template-rows:32px 12px 10px;row-gap:1px;align-content:center;justify-items:center;
+  padding:3px 2px 2px;border:1px solid #68725a;border-radius:6px;
+  background:var(--radio-cap);
+  box-shadow:0 var(--radio-shadow) 0 var(--radio-stem),0 calc(var(--radio-shadow) + 1px) 1px #040e08,
+    0 calc(var(--radio-shadow) + 2px) 3px #050e0973,
+    inset 0 2px 1px #c4c49b4d,inset 1px 0 0 #bbc69a1f,inset 0 -2px 1px #1b2b1b99;
+  transform:translateY(var(--radio-drop));
+  transition:transform 65ms ease-out,box-shadow 65ms ease-out;
+  pointer-events:none;
+}
+.radio-key .radio-lamp{
+  position:absolute;top:5px;left:5px;width:6px;height:3px;border-radius:1px;
+  background:#17251a;box-shadow:0 1px 0 #89917466,inset 0 1px 1px #051009;
+}
+.radio-key .radio-icon-slot{position:relative;display:block;width:32px;height:32px}
+.radio-glyph{display:block;width:32px;height:32px;fill:currentColor;stroke:none}
+.radio-key .radio-label{font:700 9.5px/12px Consolas,'Courier New',monospace;letter-spacing:.35px;white-space:nowrap}
+.radio-key .radio-cost{font:600 8px/10px Consolas,'Courier New',monospace;color:#c4cbb1;white-space:nowrap}
+.radio-key .radio-stock{position:absolute;top:4px;right:4px;font:700 8px/10px Consolas,'Courier New',monospace}
+.radio-key .radio-eye-count{position:absolute;inset:0;display:grid;place-items:center;font:700 12px/1 Consolas,'Courier New',monospace}
+.radio-key:enabled:active,.radio-key.is-pressed{--radio-drop:4px;--radio-shadow:2px}
+.radio-key[aria-pressed=true] .radio-lamp{background:#f1bc59;box-shadow:0 0 3px #ffc7728c,inset 0 1px 0 #ffe8a899}
+.radio-key:disabled{
+  --radio-cap:linear-gradient(#3b4838,#303c2d);
+  --radio-drop:2px;--radio-shadow:3px;
+  color:#929b89;cursor:default;opacity:1;
+}
+.radio-key:disabled .radio-face{border-color:#59664f;box-shadow:0 3px 0 #182518,0 4px 1px #071109,inset 0 1px 1px #bcc2951f}
+.radio-key:disabled .radio-cost{color:#929b89}
+.radio-key:focus-visible{outline:2px solid #efc579;outline-offset:4px}
+.radio-key.guard-alert{--radio-cap:linear-gradient(#8c4e3b,#69392e);--radio-stem:#41251e}
+.radio-key.guard-alert .radio-lamp{background:#ff7963;box-shadow:0 0 4px #ff7863aa}
+.radio-key.guard-alert .radio-icon-slot{animation:radio-contact .5s step-end 4}
+@keyframes radio-contact{0%,49%{color:#ff9b7b}50%,100%{color:var(--radio-ivory)}}
+@media(prefers-reduced-motion:reduce){
+  .radio-key .radio-face{transition:none}
+  .radio-key.guard-alert .radio-icon-slot{animation:none;color:#ff9b7b}
+}
+@media(forced-colors:active){
+  .radio-key{border:2px solid ButtonText}
+  .radio-key .radio-face{border-color:ButtonText}
+  .radio-key[aria-pressed=true]{outline:2px solid Highlight;outline-offset:2px}
+}

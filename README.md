@@ -20,6 +20,10 @@ The eye above movement displays the number of currently visible living opponents
 
 Health/AP stays visible. The lower-right menu holds inventory, weapon swapping, reloads, treatment, mission details, recent events and detailed combat actions. Tap visible guards to open their aiming and firing options in the menu. Tap ground to travel there; during combat, confirm the route and its distance/AP estimate in the menu. WASD and arrow keys also move; Space ends the turn.
 
+Buttons share an industrial retro futurist console treatment: petrol green enamel, machined nickel rims, engraved glyphs, amber latched choices, and oxide red commit keys. Title links, animal and loadout choices, field controls, inventory actions, and control pickers use the same hardware language. Pressed, disabled, keyboard focus and reduced-motion states are included; the red eye alert remains distinct. The artwork is resolution-independent CSS and inline SVG in `industrial-controls.css` and the two entry pages.
+
+The next control standard is a review study at `button-study.html`: square push-button switches in four states, plus a separate vintage telephone-style eye indicator. Regular switches keep a dark face and let light through the translucent figures; selected figures glow amber. The eye has a dark cherry-red lens with no visible opponents, and a diffused orange-red glow while any opponents are visible. Its presence light stays on for known guards too; a new discovery adds the existing brief blink and sound. `field-radio.css` supplies square metal bezels, two pixels of switch travel, symbol lighting and the eye lens. `field-radio-icons.svg` holds the shared 32-unit symbol family. Native 72 × 72 pixel examples preserve fixed label/cost slots, eye-contained opponent counts, and upper-right stock counts. Review this standard before rolling it into the game controls; the current game does not load these candidate assets.
+
 ## Run and check
 
 Node.js 22+ is sufficient. No package installation or build step is needed.

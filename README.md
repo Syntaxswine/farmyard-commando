@@ -20,6 +20,8 @@ The eye above movement displays the number of currently visible living opponents
 
 Health/AP stays visible. The lower-right menu holds inventory, weapon swapping, reloads, treatment, mission details, recent events and detailed combat actions. Tap visible guards to open their aiming and firing options in the menu. Tap ground to travel there; during combat, confirm the route and its distance/AP estimate in the menu. WASD and arrow keys also move; Space ends the turn.
 
+Buttons share an industrial retro futurist console treatment: petrol green enamel, machined nickel rims, engraved glyphs, amber latched choices, and oxide red commit keys. Title links, animal and loadout choices, field controls, inventory actions, and control pickers use the same hardware language. Pressed, disabled, keyboard focus and reduced-motion states are included; the red eye alert remains distinct. The artwork is resolution-independent CSS and inline SVG in `industrial-controls.css` and the two entry pages.
+
 ## Run and check
 
 Node.js 22+ is sufficient. No package installation or build step is needed.

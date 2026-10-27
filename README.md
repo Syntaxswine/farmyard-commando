@@ -36,6 +36,8 @@ The checks cover every animal/primary combination, fractional positions, distanc
 
 ## Source and scope
 
+The next mission arc is specified in [The First Shift](docs/missions/first-shift.md), with six connected locations, complete mission text, spatial blockouts, and separate artist/coder briefs. The original Night Ledger remains the public mission; Short Measure is the first new playable implementation target. The [map atlas](docs/missions/first-shift-atlas.svg) is an authoring reference.
+
 Application code is in `sites/tactical-animal/dist/`. Original Animal Factory Tactics assets and reusable modules are isolated in its `aft/` directory. `sites/tactical-animal/aft-provenance.json` records the original revision and SHA-256 of each imported file. `snapshot-aft.mjs` deliberately reads the original checkout without modifying it. Weapon numbers, character profiles, statistics, species sight lobes, meshes, paint and equipment rigs come from that snapshot. Three.js retains its embedded license.
 
 The separate 3D designer is in the versioned `designer/` directory. `sites/tactical-animal/designer-provenance.json` records its entry point, original revision, source hashes, installed hashes, and small navigation/storage adaptations. `snapshot-designer.mjs <original-dist-directory>` rebuilds that import without modifying the original checkout; `--dry-run` reports the dependency closure without writing. Only the editor, overmap/library, playtest dependencies, runtime assets, and bundled map presets are included. `npm run check` verifies every imported file and its module links, and exercises original map/block editing and export compatibility.

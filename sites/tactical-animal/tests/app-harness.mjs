@@ -37,6 +37,7 @@ export function app({autoDeploy=true,initialStorage=[],storageFailure=null}={}){
     beginGrenadeAim(){this.preview=null;this.aiming=true;}
     endGrenadeAim(){this.aiming=false;}
     previewGrenade(point,preview){this.preview={point:{...point},...preview};}
+    zoom(factor){this.zoomFactor=(this.zoomFactor||1)*factor;}
     route(){} center(){} sync(){} dispose(){this.disposed=true;this.aiming=false;}
   }
   if(!saved.has('tactical-animal-build-v1'))saved.set('tactical-animal-build-v1',JSON.stringify({...game.DEFAULT_BUILD,utility:'grenade'}));

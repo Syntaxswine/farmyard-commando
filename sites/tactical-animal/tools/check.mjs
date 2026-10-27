@@ -3,12 +3,12 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 const root=path.resolve('sites/tactical-animal/dist');
-const own=['app.js','solo-game.js','missions.js','operation-storage.js','field-view.js','flame-event.js','flame-effects.js','flame-pose.js','mobile-controls.js','grenade-controls.js','original-art.js','world-dimensions.js','interactions.js','interaction-view.js','guard-alert.js','button-study.js'];
+const own=['app.js','solo-game.js','missions.js','operation-storage.js','field-view.js','flame-event.js','flame-effects.js','flame-pose.js','mobile-controls.js','grenade-controls.js','original-art.js','weapon-artwork.js','world-dimensions.js','interactions.js','interaction-view.js','guard-alert.js','button-study.js'];
 for(const file of own)execFileSync(process.execPath,['--check',path.join(root,file)]);
 const visited=new Set();
 function check(file){if(visited.has(file))return;visited.add(file);const source=fs.readFileSync(file,'utf8');for(const match of source.matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s*)['"](\.[^'"]+)['"]/g)){const dependency=path.resolve(path.dirname(file),match[1]);if(!dependency.startsWith(root+path.sep)||!fs.existsSync(dependency))throw Error(`Missing import in ${file}: ${match[1]}`);if(dependency.endsWith('.js'))check(dependency);}}
 for(const file of own)check(path.join(root,file));
-for(const file of ['index.html','game.html','button-study.html','style.css','touch-controls.css','original-art.css','title-screen.css','industrial-switches.css','map-frame.css','icon.svg','assets/ui/industrial-switches/switch-skins-v2.webp','assets/ui/industrial-switches/map-frame-v1.webp','assets/ui/industrial-switches/symbols.svg','assets/ui/industrial-switches/manifest.json'])if(!fs.existsSync(path.join(root,file)))throw Error('Missing '+file);
+for(const file of ['index.html','game.html','button-study.html','style.css','touch-controls.css','original-art.css','title-screen.css','industrial-switches.css','field-hardware.css','map-frame.css','icon.svg','assets/ui/industrial-switches/switch-skins-v2.webp','assets/ui/industrial-switches/map-frame-v1.webp','assets/ui/industrial-switches/symbols.svg','assets/ui/industrial-switches/manifest.json'])if(!fs.existsSync(path.join(root,file)))throw Error('Missing '+file);
 const app=fs.readFileSync(path.join(root,'app.js'),'utf8'),game=fs.readFileSync(path.join(root,'game.html'),'utf8');
 const ids=new Set([...game.matchAll(/\bid="([^"]+)"/g),...app.matchAll(/\bid="([^"]+)"/g)].map(match=>match[1]));
 for(const match of app.matchAll(/\$\('([^']+)'\)/g))if(!ids.has(match[1]))throw Error('Game markup is missing application control: '+match[1]);

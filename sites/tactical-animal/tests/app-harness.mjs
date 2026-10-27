@@ -3,6 +3,7 @@ import vm from 'node:vm';
 import * as game from '../dist/solo-game.js';
 import * as controls from '../dist/mobile-controls.js';
 import * as grenadeControls from '../dist/grenade-controls.js';
+import * as shootingControls from '../dist/shooting-controls.js';
 import {selectInteractionTarget} from '../dist/interactions.js';
 import {STANCE_ICONS} from '../dist/aft/tactics/battle-control-icons.js';
 
@@ -10,7 +11,11 @@ import {STANCE_ICONS} from '../dist/aft/tactics/battle-control-icons.js';
 export function app(){
   const elements=new Map(),events=new Map(),saved=new Map(),views=[];let animation;
   class Element {
-    constructor(id=''){this.id=id;this.style={};this.dataset={};this.children=[];this.listeners=new Map();this.hidden=false;this.disabled=false;this.open=false;this.textContent='';this.captures=new Set();this.classList={add(){},remove(){},toggle(){}};}
+    constructor(id=''){
+      this.id=id;this.style={};this.dataset={};this.children=[];this.listeners=new Map();this.hidden=false;this.disabled=false;this.open=false;this.textContent='';this.captures=new Set();
+      const classes=new Set();
+      this.classList={add:(...names)=>names.forEach(name=>classes.add(name)),remove:(...names)=>names.forEach(name=>classes.delete(name)),contains:name=>classes.has(name),toggle:(name,force)=>{const on=force??!classes.has(name);if(on)classes.add(name);else classes.delete(name);return on;}};
+    }
     setAttribute(name,value){this[name]=value;}
     addEventListener(name,fn){if(!this.listeners.has(name))this.listeners.set(name,[]);this.listeners.get(name).push(fn);}
     replaceChildren(...children){this.children=children;}
@@ -39,7 +44,7 @@ export function app(){
     route(){} center(){} sync(){} dispose(){}
   }
   saved.set('tactical-animal-build-v1',JSON.stringify({...game.DEFAULT_BUILD,utility:'grenade'}));
-  const context={...game,...controls,...grenadeControls,selectInteractionTarget,STANCE_ICONS,weaponArtwork:()=>new Element(),FieldView,drawMinimap(){},document:doc,localStorage:{getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)},setTimeout,clearTimeout,performance:{now:()=>0},requestAnimationFrame:fn=>animation=fn,innerHeight:844,addEventListener:(name,fn)=>events.set(name,fn),console};
+  const context={...game,...controls,...grenadeControls,...shootingControls,selectInteractionTarget,STANCE_ICONS,weaponArtwork:()=>new Element(),FieldView,drawMinimap(){},document:doc,localStorage:{getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)},setTimeout,clearTimeout,performance:{now:()=>0},requestAnimationFrame:fn=>animation=fn,innerHeight:844,addEventListener:(name,fn)=>events.set(name,fn),console};
   vm.runInNewContext(fs.readFileSync(new URL('../dist/app.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,''),context);
   el('deploy').click();const view=views.at(-1),s=view.state,u=game.hero(s);
   const key=(name,type='keydown')=>events.get(type)({key:name,target:{tagName:'BODY',closest:()=>null},preventDefault(){},repeat:false});

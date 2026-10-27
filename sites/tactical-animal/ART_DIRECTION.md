@@ -42,6 +42,10 @@ The battlefield minimap and expanded tactical map share the buttons' chipped oli
 
 The live End Turn control uses the red prismatic lens. Its lamp indicates turn-based combat and stays illuminated during both player and guard turns, including when the action is temporarily disabled for grenade aiming. It stays dark outside combat. The upper-left Zoom arrows use the green painted-metal switches, illuminate on press, and retain 44-pixel touch targets. `dist/field-hardware.css` adapts the shared switch material to the field controls.
 
+The shooting panel presents aim levels and body locations as two columns of vertically stacked, labeled rectangular switches. These use warm orange-golden amber glass with molded diamond diffusion, dark honey-brown when unlit, inside the same worn olive-metal housing. The skin and its generation prompt are recorded in `dist/assets/ui/industrial-switches/shooting-switches-v1.json`. Single/burst fire retains the green switches; the red Fire lens lights only when the selected attack can be fired. One switch per selection bank is illuminated. Reticles, silhouettes, cartridge marks, labels and numbers all use the shared white-painted legend and light.
+
+Aim switches show their actual AP price; body-location switches show their hit chance. A new target defaults to the highest affordable aim supported by the equipped weapon. Deliberate lower choices remain selected while affordable, and a more expensive burst mode falls back to the best affordable aim. Pressing a switch without enough AP flashes matching red glass three times, then returns to its normal face; the valid selection and resources remain unchanged. Opening the panel and choosing switches spend no AP or ammunition.
+
 ## Phone adaptation rules
 
 Keep the original painted silhouettes, material scale, weathering and species identity. Preserve transparent margins and use the recorded weapon crop frames rather than stretching weapon images. Retain readable touch targets, portrait framing and safe-area spacing.

@@ -5,6 +5,7 @@ import {GrenadeAim,screenToGround} from './grenade-controls.js';
 import {weaponArtwork} from './original-art.js';
 import {STANCE_ICONS} from './aft/tactics/battle-control-icons.js';
 import {selectInteractionTarget} from './interactions.js';
+import {aimOptions,availableAim,flashAPShortage} from './shooting-controls.js';
 const $=id=>document.getElementById(id),SAVE='tactical-animal-operation-v2',BUILD='tactical-animal-build-v1';
 let build={...DEFAULT_BUILD},state=null,view=null,active=false,paused=false,selected=null,aim='hip',zone='torso',burst=false,contextKey='',lastTime=0,lastUI=0,lastSave=0,lastPhase='',stick={x:0,y:0},stickPointer=null,resultShown=false,aimViewport=null;
 const grenadeAim=new GrenadeAim();
@@ -32,10 +33,11 @@ function renderPrep(){const p=ANIMALS.find(a=>a.id===build.animal),stats=buildSt
 }
 $('grenade-art').append(weaponArtwork('grenade',32));
 $('interaction-icon').append(weaponArtwork('hands',25));
-function showDialog(html,actions=[],{context=false}={}){
+function showDialog(html,actions=[],{context=false,mode=''}={}){
   if(picker.open)closePicker();
   cancelGrenade();
   paused=true;resetStick();keys.clear();$('interaction-hand').hidden=true;
+  overlay.dataset.mode=mode;
   $('overlay-content').innerHTML=html;
   $('context').hidden=!context;
   const row=$('overlay-actions');row.replaceChildren();
@@ -118,22 +120,69 @@ bindPressHold($('interaction-hand'),{
   tap:()=>{if(handTarget)useInteraction(handTarget.id,handTarget.actions[0].id);},hold:interactionChoices,
 });
 function act(fn){if(!state||paused)return;resetStick();keys.clear();fn();contextKey='';renderBattle();storage.write();}
-function pick(p){if(!state||paused||grenadeAim.active||state.phase==='enemy'||state.solo.status!=='active')return;resetStick();if(p.interactionId){focusInteraction(p.interactionId);return;}if(p.unitId!==undefined){if(p.unitId===0){operationMenu();return;}const target=state.units.find(u=>u.id===p.unitId);if(target?.hp<=0){focusInteraction('body:'+target.id);return;}if(!state.detected.has(target?.id))return;Core.stop(state);Core.turnTo(state,hero(state),Core.headingTo(hero(state),target));selected={targetId:target.id};aim='hip';zone='torso';burst=false;}
+function pick(p){if(!state||paused||grenadeAim.active||state.phase==='enemy'||state.solo.status!=='active')return;resetStick();if(p.interactionId){focusInteraction(p.interactionId);return;}if(p.unitId!==undefined){if(p.unitId===0){operationMenu();return;}const target=state.units.find(u=>u.id===p.unitId);if(target?.hp<=0){focusInteraction('body:'+target.id);return;}if(!state.detected.has(target?.id))return;Core.stop(state);Core.turnTo(state,hero(state),Core.headingTo(hero(state),target));selected={targetId:target.id};burst=false;aim=availableAim(Core.WEAPONS[hero(state).weapon],hero(state).ap);zone='torso';}
   else{const path=Core.navigationPath(state,hero(state),p.x,p.y);if(!path){toast('No clear route to that point.');return;}view.route([hero(state),...path]);if(state.phase==='player')selected={point:p,path};else{Core.move(state,hero(state),p.x,p.y);selected=null;view.center();}}
-  contextKey='';renderBattle();if(selected)operationMenu();
+  contextKey='';renderBattle();if(selected)selected.targetId!==undefined?shootingMenu():operationMenu();
 }
-function renderContext(){if(!state)return;const u=hero(state),near=interaction(state),target=selected?.targetId!==undefined?state.units.find(v=>v.id===selected.targetId):null;
+function shootingMenu(){
+  const u=hero(state),w=Core.WEAPONS[u.weapon];
+  showDialog(`<p class="eyebrow">WEAPON CONTROL / OPERATION PAUSED</p><h2>${safe(w.short)}</h2><p class="shooting-resources">${u.ap.toFixed(1)} AP AVAILABLE${w.mag?` · ${u.ammo[u.weapon]??0} ROUNDS`:''}</p>`,[],{context:true,mode:'shooting'});
+}
+function renderContext(focusControl){if(!state)return;const u=hero(state),near=interaction(state),target=selected?.targetId!==undefined?state.units.find(v=>v.id===selected.targetId):null;
   if(target&&(!Core.alive(target)||!state.detected.has(target.id)))selected=null;
+  if(target&&selected)aim=availableAim(Core.WEAPONS[u.weapon],u.ap,burst,aim);
   const p=target&&selected?Core.previewAttack(state,u,target,burst,zone,null,aim):null;
-  const sig=JSON.stringify([selected,near,aim,zone,burst,p,u.ap.toFixed(2),u.weapon,state.phase,[...state.detected],Math.round(u.x*10),Math.round(u.y*10),target?.hp]);if(sig===contextKey)return;contextKey=sig;const root=$('context');root.replaceChildren();
+  const sig=JSON.stringify([selected,near,aim,zone,burst,p,u.ap.toFixed(2),u.weapon,state.phase,[...state.detected],Math.round(u.x*10),Math.round(u.y*10),target?.hp]);if(sig===contextKey)return;contextKey=sig;const root=$('context');root.replaceChildren();root.classList.toggle('shooting-panel',!!p);
   if(state.phase==='enemy')return;
   function content(title,detail,label,fn,disabled=false){const copy=document.createElement('div');copy.className='context-copy';const h=document.createElement('strong');h.textContent=title;const small=document.createElement('small');small.textContent=detail;copy.append(h,small);root.append(copy);const b=document.createElement('button');b.textContent=label;b.disabled=disabled;b.onclick=()=>{closeDialog();act(fn);};root.append(b);return copy;}
-  if(p){const copy=content(`${target.name} · ${speciesLabel(target.species)} · ${Math.ceil(target.hp)} HP`,`${p.distance?.toFixed(1)||distance(u,target).toFixed(1)} m · ${p.chance||0}% · ${p.cost||Core.WEAPONS[u.weapon].cost} AP${p.reason?' · '+p.reason:''}${Core.WEAPONS[u.weapon].blast?' · BLAST CAN HURT YOU':''}`,burst?'Fire burst':'Fire',()=>{Core.attack(state,u,target,burst,false,zone,false,aim);},!p.ok||!Core.canControl(state,u));
-    const opts=document.createElement('div');opts.className='target-options';for(const [values,current,change,label] of [[{hip:'Quick shot',aimed:'Aimed',full:'Full aim'},aim,v=>aim=v,'Aim'],[{torso:'Torso',head:'Head',weapon:'Weapon',legs:'Legs'},zone,v=>zone=v,'Target zone']]){const select=document.createElement('select');select.setAttribute('aria-label',label);for(const [value,text] of Object.entries(values))select.add(new Option(text,value,false,value===current));select.onchange=()=>{change(select.value);contextKey='';renderContext();};opts.append(select);}if(Core.WEAPONS[u.weapon].burstRounds){const b=document.createElement('button');b.textContent=burst?'Burst ✓':'Burst';b.className='burst-toggle';b.onclick=()=>{burst=!burst;contextKey='';renderContext();};opts.append(b);}copy.append(opts);
+  if(p){
+    const w=Core.WEAPONS[u.weapon],choices=aimOptions(w,u.ap,burst),chosen=choices.find(option=>option.id===aim);
+    const readout=document.createElement('div');readout.className='shot-readout';
+    const name=document.createElement('strong');name.textContent=`${target.name} · ${speciesLabel(target.species)} · ${Math.ceil(target.hp)} HP`;
+    const detail=document.createElement('span');detail.textContent=`${p.distance?.toFixed(1)||distance(u,target).toFixed(1)} m · ${p.chance||0}% HIT · ${p.cost} AP`;
+    readout.append(name,detail);root.append(readout);
+    let restoreFocus;
+    function hardware(parent,{control,label,paint,icon,mark,pressed,disabled=false,apShort=false,red=false,amber=false,lit,onClick,rerender=true}){
+      const b=document.createElement('button');b.type='button';b.className='industrial-switch shooting-switch';b.dataset.control=control;
+      const description=label+(apShort?' Not enough AP.':'');
+      b.setAttribute('aria-label',description);if(pressed!==undefined)b.setAttribute('aria-pressed',String(pressed));
+      if(disabled||apShort)b.setAttribute('aria-disabled','true');
+      if(red||amber)b.dataset.face=red?'red':'amber';if(lit!==undefined)b.dataset.lit=String(lit);
+      // AP-blocked switches accept input solely to acknowledge the failed attempt.
+      b.disabled=disabled&&!apShort;b.title=description;
+      b.innerHTML=`<span class="switch-legend" aria-hidden="true"><span class="switch-icon"><svg class="switch-glyph" viewBox="0 0 32 32"><use href="assets/ui/industrial-switches/symbols.svg#${icon}"/></svg></span><span class="switch-label">${paint}</span><span class="switch-cost">${mark}</span></span>`;
+      b.onclick=()=>{if(apShort){flashAPShortage(b);return;}if(disabled)return;onClick();if(rerender){contextKey='';renderContext(control);}};parent.append(b);if(control===focusControl)restoreFocus=b;return b;
+    }
+    function bank(label,cls,parent=root){
+      const group=document.createElement('fieldset');group.className='shooting-group '+cls;
+      const title=document.createElement('legend');title.textContent=label;
+      const row=document.createElement('div');row.className='shooting-bank';group.append(title,row);parent.append(group);return row;
+    }
+    const columns=document.createElement('div');columns.className='shooting-columns';root.append(columns);
+    const aiming=bank('AIM LEVEL','aim-bank',columns);
+    for(const option of choices)hardware(aiming,{
+      control:'aim-'+option.id,label:`${option.label}. ${option.cost} AP. +${option.accuracy} accuracy.`,
+      paint:{hip:'QUICK SHOT',aimed:'AIMED',full:'FULL AIM'}[option.id],icon:'aim-'+option.id,mark:`${option.cost} AP`,pressed:aim===option.id,disabled:!option.available,apShort:!option.available,amber:true,onClick:()=>aim=option.id
+    });
+    const zones=bank('BODY LOCATION','zone-bank',columns);
+    for(const value of ['torso','head','weapon','legs']){
+      const preview=Core.previewAttack(state,u,target,burst,value,null,aim),label=Core.AIM_ZONES[value].label;
+      hardware(zones,{control:'zone-'+value,label:`Target ${label.toLowerCase()}. ${preview.chance}% hit chance.`,paint:label.toUpperCase(),icon:'target-'+value,mark:`${preview.chance}% HIT`,pressed:zone===value,amber:true,onClick:()=>zone=value});
+    }
+    const fireRow=bank(w.burstRounds?'FIRE MODE / TRIGGER':'TRIGGER','trigger-bank');
+    if(w.burstRounds)for(const firingBurst of [false,true]){
+      const mode=firingBurst?'Burst':'Single',modeAim=availableAim(w,u.ap,firingBurst,aim),choice=aimOptions(w,u.ap,firingBurst).find(option=>option.id===modeAim);
+      hardware(fireRow,{control:firingBurst?'burst':'single',label:`${mode} fire. ${firingBurst?w.burstRounds:1} round${firingBurst?'s':''}.`,paint:mode.toUpperCase(),icon:firingBurst?'fire-burst':'fire-single',mark:`${choice.cost} AP`,pressed:burst===firingBurst,apShort:!choice.available,onClick:()=>burst=firingBurst});
+    }
+    const ready=p.ok&&Core.canControl(state,u)&&chosen.available;
+    hardware(fireRow,{control:'fire',label:`${burst?'Fire burst':'Fire'}. ${p.chance}% hit chance. ${p.cost} AP.`,paint:'FIRE',icon:'fire',mark:`${p.cost} AP`,red:true,lit:ready,disabled:!ready,apShort:!chosen.available,rerender:false,onClick:()=>{closeDialog();act(()=>Core.attack(state,u,target,burst,false,zone,false,aim));}});
+    const warning=p.reason||(!chosen.available?'Not enough AP':'');
+    if(warning||w.blast){const note=document.createElement('p');note.className='shooting-warning';note.setAttribute('role','status');note.textContent=[warning,w.blast?'BLAST CAN HURT YOU':''].filter(Boolean).join(' · ');root.append(note);}
+    restoreFocus?.focus?.({preventScroll:true});
   }else if(selected?.point){const path=Core.navigationPath(state,u,selected.point.x,selected.point.y),cost=path?.reduce((n,p)=>n+p.cost,0)||0,d=cost/Core.movementRate(u);content('Move to this point',`${d.toFixed(1)} m · ${cost.toFixed(1)} AP${cost>u.ap?' · stops when AP runs out':''}`,'Move',()=>{Core.move(state,u,selected.point.x,selected.point.y);selected=null;view.center();},!path||u.ap<.01);
   }else if(near){content(near.label,near.cost?`${near.cost} AP · then return to extraction`:'Leave with the ledger to finish the operation',near.kind==='extract'?'Extract ↗':'Collect',()=>interact(state),!near.ok);}
   else if(state.detected.size){const guard=[...state.detected].map(id=>state.units.find(v=>v.id===id)).sort((a,b)=>distance(u,a)-distance(u,b))[0];content('Visible contact',`${guard.name} · ${distance(u,guard).toFixed(1)} m`,'Target',()=>pick({unitId:guard.id}));}
-  if(selected){const cancel=document.createElement('button');cancel.className='cancel-context';cancel.textContent='×';cancel.setAttribute('aria-label','Cancel selection');cancel.onclick=()=>{selected=null;view.route([]);contextKey='';renderContext();};root.append(cancel);}
+  if(selected){const cancel=document.createElement('button');cancel.className='cancel-context';cancel.textContent=p?'Cancel shot':'×';cancel.setAttribute('aria-label',p?'Cancel shot':'Cancel selection');cancel.onclick=()=>{selected=null;view.route([]);contextKey='';if(overlay.dataset.mode==='shooting')closeDialog();renderContext();};root.append(cancel);}
 }
 function renderBattle(){if(!state)return;const u=hero(state),combat=state.phase==='player'||state.phase==='enemy',can=Core.canControl(state,u);
   $('battle-name').textContent=u.name;$('battle-species').textContent=speciesLabel(u.species);
@@ -294,7 +343,7 @@ function help(){showDialog(`<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br
   <li>Tap Grenade or press G to aim with the joystick. Direction aims the throw; displacement sets distance, up to 10 m. The animal stays still. Release to hold the preview, then tap Throw or press Enter. Cancel or Escape exits without spending AP or grenades. Choose frag grenades in your loadout to carry three.</li>
   <li>For keyboard aiming, hold W A S D or arrows to adjust direction and distance. Release to hold aim. The camera frames the arc and blast without rotating. Filled ground is exposed to the blast; walls and unexplored ground stop the fill. The outline shows the maximum radius.</li>
   <li>A grenade costs 5 AP, or 2.5 AP while a pistol or SMG is equipped. Throwing keeps that weapon in hand. Blast radius: 5 m. Your animal can be hurt by its own grenade. Blocked flight paths, solid obstacles, and unexplored landing points disable Throw.</li>
-  <li>Tap a visible guard to open the options menu with aiming and firing choices. Higher aim spends more AP.</li>
+  <li>Tap a visible guard to open the weapon controls. Aim and target-zone switches show AP costs and hit chances. The highest affordable aim is selected initially; choose a lower level to save AP. Burst changes the cost. An unaffordable switch flashes red three times when pressed. Only a valid Fire action spends AP and ammunition.</li>
   <li>Drag the world to look around when not aiming a grenade. Use the arrows to zoom.</li>
   <li>Tap the stance button to go standing → kneeling → prone → kneeling → standing. Tap movement for run ↔ off / walk ↔ sneak. Both switches cost 0 AP, even when you have no AP left.</li>
   <li>Hold either button for large direct choices. Keyboard: focus the button and press the down arrow to open choices.</li>

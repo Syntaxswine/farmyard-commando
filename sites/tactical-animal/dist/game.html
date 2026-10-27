@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="touch-controls.css">
   <link rel="stylesheet" href="original-art.css">
+  <link rel="stylesheet" href="industrial-controls.css">
 </head>
 <body>
   <main id="prep">
@@ -27,7 +28,7 @@
   <section id="battle" hidden aria-label="Solo operation">
     <div id="viewport" role="application" aria-label="Tactical map. Tap ground to move. Drag to look around. Tap a visible guard to target."></div>
     <button id="interaction-hand" class="interaction-hand" type="button" hidden aria-haspopup="dialog" aria-label="Interact with nearby object. Hold for choices."><span id="interaction-icon" aria-hidden="true"></span><strong id="interaction-label"></strong><small id="interaction-cost"></small></button>
-    <div class="view-controls"><button id="zoom-in" aria-label="Zoom in">▲</button><span>ZOOM</span><button id="zoom-out" aria-label="Zoom out">▼</button></div>
+    <div class="view-controls"><button id="zoom-in" aria-label="Zoom in"><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M9 3H3v6m16-6h6v6M3 19v6h6m10 0h6v-6M7 14h14M14 7v14"/></svg></button><span>ZOOM</span><button id="zoom-out" aria-label="Zoom out"><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M9 3H3v6m16-6h6v6M3 19v6h6m10 0h6v-6M7 14h14"/></svg></button></div>
     <button id="minimap-button" aria-label="Open tactical map"><canvas id="minimap" width="190" height="140"></canvas><span>MAP ↗</span></button>
     <div id="loading" role="status">Preparing the field…</div>
     <div class="hero-strip"><div class="hero-identity"><strong id="battle-name"></strong><span id="battle-species"></span></div><div class="vitals"><span id="hp-label"></span><div class="meter"><i id="hp-bar"></i></div></div><div class="ap-block"><strong id="ap"></strong><small id="ap-label">AP</small></div></div>
@@ -40,7 +41,7 @@
       <p class="blast-key">Fill: exposed explored ground · outline: maximum blast</p>
     </div><div class="thumb-layout">
       <div class="left-controls">
-        <button id="look" class="square-control" aria-label="0 visible opponents. Recenter on your animal." disabled><span class="eye-symbol" aria-hidden="true"><svg viewBox="0 0 64 36"><path d="M3 18Q16 1 32 3Q48 1 61 18Q48 35 32 33Q16 35 3 18Z"/></svg><strong id="visible-count">0</strong></span><span class="control-caption">LOOK</span></button>
+        <button id="look" class="square-control" aria-label="0 visible opponents. Recenter on your animal." disabled><span class="eye-symbol" aria-hidden="true"><svg viewBox="0 0 64 36"><path d="M3 18 17 5h30l14 13-14 13H17Z"/><path d="M3 13v10m58-10v10M27 2h10M27 34h10"/></svg><strong id="visible-count">0</strong></span><span class="control-caption">LOOK</span></button>
         <button id="movement-cycle" class="square-control cycle-control" aria-label="Movement: off. Tap to cycle; hold for choices." aria-haspopup="dialog" aria-controls="control-picker" aria-expanded="false"><span class="cycle-mark" aria-hidden="true">↕</span><span id="movement-icon" class="control-icon" aria-hidden="true"></span><span id="movement-label" class="control-caption">OFF</span></button>
         <button id="stance-cycle" class="square-control cycle-control" aria-label="Stance: standing. Tap to cycle; hold for choices." aria-haspopup="dialog" aria-controls="control-picker" aria-expanded="false"><span class="cycle-mark" aria-hidden="true">↕</span><span id="stance-icon" class="control-icon" aria-hidden="true"></span><span id="stance-label" class="control-caption">STAND</span></button>
       </div>
@@ -48,7 +49,7 @@
       <div class="right-controls">
         <button id="end-turn" class="square-control end-turn" aria-label="End turn" disabled><strong id="turn-label">END<br>TURN</strong></button>
         <button id="grenade" class="square-control" aria-label="Aim grenade" aria-pressed="false" disabled><span id="grenade-count" class="grenade-count" aria-hidden="true">0</span><span id="grenade-art" class="grenade-art" aria-hidden="true"></span><span id="grenade-label" class="control-caption">GRENADE</span><small id="grenade-cost">5 AP</small></button>
-        <button id="menu" class="square-control" aria-label="Open options">☰<span>OPTIONS</span></button>
+        <button id="menu" class="square-control" aria-label="Open options"><span class="control-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M4 7h24M4 16h24M4 25h24"/><path d="M10 4v6h4V4Zm9 9v6h4v-6ZM8 22v6h4v-6Z" fill="currentColor" stroke="none"/></svg></span><span class="control-caption">OPTIONS</span></button>
       </div>
     </div></div>
   </section>

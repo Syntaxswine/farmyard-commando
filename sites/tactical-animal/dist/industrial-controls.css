@@ -1,0 +1,219 @@
+/* Shared console hardware for the title, loadout, field and dialog controls. */
+:root{
+  --key-face:linear-gradient(180deg,#42534b 0%,#2e4038 10%,#24372f 76%,#1d2b25 100%);
+  --key-rim:#899080;
+  --key-ink:#f1e8cf;
+  --key-muted:#bcc4af;
+  --key-amber:#f0c573;
+}
+
+#prep button,#battle button,#battle .view-controls button,#overlay button,#control-picker button,
+#look.inspecting,#look.guard-alert,#battle .square-control.end-turn,
+#end-turn:disabled,#grenade[aria-pressed=true],a.title-choice{
+  color:var(--key-ink);
+  border:1px solid var(--key-rim);
+  border-radius:3px;
+  background:
+    radial-gradient(circle at 5px 5px,#15221c 0 1px,#a7ad9626 1.2px 2px,transparent 2.3px),
+    radial-gradient(circle at calc(100% - 5px) 5px,#15221c 0 1px,#a7ad9626 1.2px 2px,transparent 2.3px),
+    repeating-linear-gradient(0deg,#ffffff03 0 1px,transparent 1px 3px),
+    var(--key-face);
+  box-shadow:inset 0 1px 0 #e7ecd03b,inset 1px 0 0 #bec6a910,
+    inset 0 -3px 0 #0a171d85,0 2px 0 #111c17,0 3px 5px #101a1433;
+  text-shadow:0 1px 1px #07160ca6;
+  transition:border-color .12s,box-shadow .12s,color .12s;
+  -webkit-tap-highlight-color:transparent;
+}
+
+#prep button:enabled:active,#battle button:enabled:active,
+#overlay button:enabled:active,#control-picker button:enabled:active,
+a.title-choice:active{
+  box-shadow:inset 0 2px 5px #05130da6,inset 0 -1px 0 #cad0b43b,0 1px 0 #111c17;
+}
+
+#prep button:focus-visible,#battle button:focus-visible,
+#overlay button:focus-visible,#control-picker button:focus-visible,
+a.title-choice:focus-visible{
+  outline:2px solid #e6a84c;
+  outline-offset:3px;
+}
+
+/* Amber means latched; red is reserved for commit actions and new contacts. */
+#prep button[aria-pressed=true],#control-picker button[aria-pressed=true],
+#grenade[aria-pressed=true],#look.inspecting,#overlay button[aria-pressed=true]{
+  --key-face:linear-gradient(180deg,#6b603d,#49492f 12%,#373f2b 80%,#303725);
+  --key-rim:#d7b66d;
+  color:#ffe2a0;
+  box-shadow:inset 0 1px 0 #fff0b15c,inset 0 -3px 0 #17220c99,
+    0 2px 0 #182219,0 0 0 1px #d4ac5430;
+}
+
+#prep .animal-choice{min-height:58px;padding:11px 10px 9px}
+#prep .animal-choice strong{font:700 11px/1.4 var(--mono);letter-spacing:.7px;text-transform:uppercase}
+#prep .animal-choice small{font:9px/1.5 var(--mono);color:var(--key-muted)}
+#prep .animal-choice[aria-pressed=true]:after{
+  content:'';right:6px;top:6px;width:4px;height:4px;border-radius:50%;
+  background:#ffd079;box-shadow:0 0 4px #ffc05c80;
+}
+#prep .weapon-choice{padding-bottom:12px}
+#prep .weapon-choice strong{font:700 12px/1.3 var(--mono);letter-spacing:.4px}
+#prep .weapon-choice small{color:var(--key-muted);font-size:8px}
+#prep .weapon-choice[aria-pressed=true]:before{width:3px;background:#efc578}
+#prep .weapon-choice .weapon-paint{filter:drop-shadow(0 2px 1px #0b171b99)}
+#prep .small-choice{font:600 10px/1.4 var(--mono);min-height:48px}
+#prep .small-choice small{color:var(--key-muted);font-size:8px}
+#prep .small-choice[aria-pressed=true]{border-left:3px solid #efc578;padding-left:8px}
+
+#prep .deploy,#battle #end-turn:not(:disabled){
+  --key-face:linear-gradient(180deg,#a46649,#874733 12%,#723b2d 80%,#542d25);
+  --key-rim:#d39772;
+  color:#fff0ca;
+}
+#prep .deploy{
+  position:relative;font:700 19px var(--display);letter-spacing:1.3px;
+  min-height:56px;padding-bottom:18px;border-bottom:3px solid #342e24;
+}
+#prep .deploy:after{
+  content:'';position:absolute;left:9px;right:9px;bottom:5px;height:3px;
+  background:repeating-linear-gradient(125deg,#e5bd70 0 6px,#3e3327 6px 12px);
+  opacity:.8;pointer-events:none;
+}
+#prep .resume{font:600 11px var(--mono);color:#f5d38f}
+
+/* Each title destination is a large engraved console key. */
+a.title-choice{position:relative;padding:25px 24px 23px;border-left:3px solid #9ea18a;gap:16px}
+a.title-choice>.eyebrow{color:#d9b878;font:9px var(--mono);letter-spacing:1.3px}
+a.title-choice>strong{font-family:var(--display);letter-spacing:1px;color:#f3e7c5}
+a.title-choice>span:last-child{color:#c0c6b5;font-size:12px}
+a.title-choice .launch-icon{color:#f4cc7e;flex:none;width:34px;height:34px;padding:7px;border:1px solid #9c9d7c;background:#13251e80;box-shadow:inset 0 1px 3px #0b171d80}
+a#play-game{border-left-color:#d49969}
+.launch-icon{display:inline-flex;align-items:center;justify-content:center;flex:none}
+.launch-icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:square;stroke-linejoin:miter}
+
+/* Field keys keep their existing positions and receive a solid hardware face. */
+#battle .square-control{padding:5px 4px 6px;gap:2px}
+#battle .control-caption{font:700 7px/1.2 var(--mono);letter-spacing:1px;color:#dfdfc4}
+#battle .cycle-mark{top:4px;right:5px;font-size:9px;color:#b8bca1}
+#battle .control-icon{height:32px}
+#battle .control-icon svg{height:32px;width:32px;filter:drop-shadow(0 1px 0 #08150c)}
+#battle .eye-symbol{width:46px;height:31px;filter:drop-shadow(0 1px 0 #08150c)}
+#battle .eye-symbol svg{stroke-width:2}
+#battle .eye-symbol strong{font:700 16px var(--mono);text-shadow:0 0 5px #efc26940}
+#battle #menu{gap:2px}
+#battle #menu .control-icon{height:30px}
+#battle #menu .control-icon svg{height:30px;width:31px}
+#battle #menu .control-caption{font:700 7px/1.2 var(--mono);letter-spacing:.6px}
+#battle #end-turn strong{font:700 18px/.96 var(--display);letter-spacing:1px}
+#battle #end-turn{border-bottom-width:3px}
+#battle #end-turn:not(:disabled):after{
+  content:'';position:absolute;bottom:3px;left:7px;right:7px;height:2px;
+  background:repeating-linear-gradient(125deg,#edc17b 0 4px,#593425 4px 8px);
+  pointer-events:none;
+}
+#battle .grenade-count{color:#f1cd81;font-size:9px;top:4px;right:5px}
+#battle #grenade-cost{color:#c4cbb5;font-size:8px}
+#battle .grenade-art{height:29px;--weapon-sprite-height:29px}
+
+#battle .view-controls{gap:2px}
+#battle .view-controls button{width:44px;height:44px;display:grid;place-items:center;padding:8px}
+#battle .view-controls button svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7}
+#battle .view-controls>span{color:#c3c5a9;font-size:7px;letter-spacing:1.6px}
+#battle #minimap-button{padding:5px 5px 4px}
+#battle #minimap{border:1px solid #7d8a6966;box-shadow:0 1px 0 #bdc39a30;background:#111f18}
+#battle #minimap-button span{display:block;margin-top:5px;font:700 8px/1 var(--mono);letter-spacing:1.7px;color:#e2d6ae}
+#battle .interaction-hand{padding:9px 10px 8px;border-color:#c0b17c}
+#battle .interaction-hand strong{font:700 10px var(--mono);letter-spacing:.4px}
+#battle .interaction-hand small{font-size:9px;color:#d5d1ae}
+#battle .interaction-hand.unaffordable{border-color:#c07f61}
+
+#battle button:disabled,#battle #end-turn:disabled{
+  --key-face:linear-gradient(180deg,#303d35,#25342c 15%,#1d2c25);
+  --key-rim:#5a695b;
+  color:#96a18c;opacity:1;text-shadow:none;
+  box-shadow:inset 0 1px 0 #bcc6a51c,inset 0 2px 5px #10221866,0 1px 0 #101d15;
+}
+#battle button:disabled .control-caption,#battle button:disabled small,
+#battle button:disabled .grenade-count{color:#919d87}
+#battle button:disabled .weapon-sprite{opacity:.48}
+#look.guard-alert{
+  --key-face:linear-gradient(180deg,#a35141,#71382e 12%,#542b27);
+  --key-rim:#ff8c78;
+  box-shadow:inset 0 1px 0 #ffddaa55,inset 0 -3px 0 #32191d88,
+    0 2px 0 #211b16,0 0 0 1px #ff786650,0 0 12px #f25c4033;
+}
+#look.guard-alert .control-caption{color:#ffe0bb}
+
+/* A machined ring and a brass cap make the thumbstick part of the same console. */
+#joystick{
+  border:1px solid #89917a;border-radius:30%;
+  background:radial-gradient(circle at center,#15271b88 0 48%,transparent 49%),
+    repeating-conic-gradient(from -1deg,#b6b98b26 0deg 1deg,transparent 1deg 15deg),#1b2b22b8;
+  box-shadow:inset 0 1px 0 #dbe4bb40,inset 0 -2px 0 #07171077,0 2px 5px #07141055;
+}
+.stick-ring{border-color:#a8b59077;box-shadow:0 0 0 5px #10221866,inset 0 0 0 4px #b7bf9433}
+#stick-knob{
+  border:2px solid #c9b47d;
+  background:radial-gradient(ellipse at 34% 20%,#f4df9f80,transparent 57%),
+    repeating-linear-gradient(0deg,#fff4c508 0 1px,transparent 1px 3px),
+    linear-gradient(145deg,#cab378,#9e8854 54%,#725d3c);
+  box-shadow:inset 0 1px 2px #fff2cbb0,inset 0 -4px 4px #49382088,0 5px 10px #08170db3,0 0 0 3px #12241c;
+}
+
+/* Dialogs share the metal keys, including dynamically created inventory actions. */
+#overlay,#control-picker{border:1px solid #858d75;border-top:3px solid #a79868;background:#1b2a23;box-shadow:inset 0 1px 0 #d9d0a622,0 12px 60px #07160ed9}
+#overlay button,#control-picker button{font:600 11px/1.4 var(--mono);min-height:46px}
+#overlay .dialog-actions>button{text-align:left;padding:14px 16px}
+#overlay .dialog-actions>button.primary,#overlay .context-panel>button:not(.cancel-context){
+  --key-face:linear-gradient(180deg,#d1b272,#b19356 13%,#947b48 80%,#77643d);
+  --key-rim:#e7ca88;
+  color:#202e21;text-shadow:0 1px 0 #ffe5aa66;
+}
+#overlay button:disabled{
+  --key-face:linear-gradient(#29372d,#223027);--key-rim:#4e5f4e;
+  color:#8f9f8a;opacity:1;text-shadow:none;
+  box-shadow:inset 0 2px 5px #081b1380;
+}
+#overlay .target-options select{border:1px solid #8a9075;background:#13231b;color:#e6d5ac;border-radius:2px}
+#control-picker .picker-heading>button{width:44px;height:44px;min-height:44px;padding:0;font:24px var(--mono)}
+#control-picker .control-choices button{min-height:91px;padding:12px 4px;font-size:10px}
+#control-picker .control-choices button[aria-pressed=true]{color:#ffe2a0}
+#battle .grenade-aim{border-color:#8d926f;background:#1d2e24f5}
+
+@media(hover:hover){
+  #prep button:enabled:hover:not(:active),#battle button:enabled:hover:not(:active):not(.guard-alert),
+  #overlay button:enabled:hover:not(:active),#control-picker button:enabled:hover:not(:active),a.title-choice:hover:not(:active){
+    border-color:#dfc78b;
+    box-shadow:inset 0 1px 0 #efe7ba55,inset 0 -3px 0 #07180f80,0 2px 0 #142016,0 0 0 1px #c8bc7e33;
+  }
+}
+@media(max-width:650px){
+  #prep .deploy{min-width:158px;font-size:18px;letter-spacing:.8px;gap:12px;padding-inline:13px}
+  a.title-choice{padding:21px 20px 20px;gap:12px}
+}
+@media(max-width:350px){
+  #prep .animal-choice{padding-inline:8px}
+  #prep .animal-choice strong{font-size:10px;letter-spacing:.3px}
+  #prep .small-choice{font-size:9px;gap:4px}
+  #prep .deploy{min-width:144px;font-size:17px;gap:8px}
+  #prep .weapon-choice strong{font-size:11px}
+}
+@media(max-height:580px) and (min-width:600px){
+  #battle .square-control{padding:2px 3px 4px;gap:0}
+  #battle .control-icon,#battle .control-icon svg{width:25px;height:25px}
+  #battle .eye-symbol{width:35px;height:24px}
+  #battle .eye-symbol strong{font-size:13px}
+  #battle .control-caption{font-size:6px;letter-spacing:.5px}
+  #battle #menu .control-icon,#battle #menu .control-icon svg{width:24px;height:24px}
+  #battle #menu .control-caption{font-size:6px;letter-spacing:0}
+  #battle #end-turn strong{font-size:15px;letter-spacing:.5px}
+  #battle #grenade-cost{font-size:6px;margin-top:0}
+  #battle .grenade-art{height:20px;--weapon-sprite-height:20px}
+}
+@media(prefers-reduced-motion:reduce){
+  #prep button,#battle button,#overlay button,#control-picker button,a.title-choice{transition:none}
+}
+@media(forced-colors:active){
+  #prep button[aria-pressed=true],#control-picker button[aria-pressed=true],
+  #grenade[aria-pressed=true],#look.inspecting,#overlay button[aria-pressed=true]{outline:2px solid Highlight;outline-offset:-4px}
+  #look.guard-alert{outline:3px solid Highlight;outline-offset:2px}
+}

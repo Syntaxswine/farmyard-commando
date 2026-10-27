@@ -28,7 +28,10 @@ test('the first shot waits for one lazy atlas load, then remains visible through
 test('mask updates can hide ground during playback without finding victims or moving any actor',async()=>{
   const {state,unit,event}=shot(),layer=new SoloFlameEffects(new T.Scene(),{loadTexture:async()=>new T.Texture()}),before=encodeSave(state);
   layer.enqueue(event,0);capture(layer,unit);await layer.pending;frame(layer,state,0);frame(layer,state,560);
-  const slot=layer.slots[0];assert.equal(slot.data[(25*40+5)*4],255);
+  const slot=layer.slots[0],{origin,width,height}=slot.rect;
+  assert.equal(slot.data[((25-origin.y)*width+5-origin.x)*4],255);
+  assert.equal(slot.fog.image.width,width);assert.equal(slot.fog.image.height,height);
+  assert.deepEqual(slot.shared.fogOrigin.value.toArray(),[origin.x,origin.y]);assert.deepEqual(slot.shared.fogSize.value.toArray(),[width,height]);
   const hidden={...state,revision:state.revision+1,visible:new Set()};frame(layer,hidden,650);assert.ok(slot.data.every(byte=>byte===0));
   assert.equal(encodeSave(state),before);assert.equal(layer.poseFor({...unit,x:unit.x+.3}),null);assert.equal(layer.poseFor({...unit,hp:0}),null);assert.equal(layer.poseFor({...unit,weapon:'pistol'}),null);
   layer.dispose();

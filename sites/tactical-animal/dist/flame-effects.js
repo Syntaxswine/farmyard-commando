@@ -1,7 +1,8 @@
 import * as T from './aft/tactics/vendor/three.module.js';
 import {FIRE_ASSETS,flameSheetData,paintedFireMaterial} from './aft/tactics/painted-fire-effects.js';
 import {FIRE_TIME,fireState,smooth} from './aft/tactics/painted-fire-state.js';
-import {advanceFlameClock,flameFogMask,flameMuzzleInReach} from './flame-event.js';
+import {advanceFlameClock,flameMuzzleInReach} from './flame-event.js';
+import {createFlameMask,updateFlameMask} from './flame-mask-view.js';
 const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
 export const FLAME_LIMITS=Object.freeze({active:2,queued:6,plumes:24});
 const atlas=new URL(FIRE_ASSETS.flame,new URL('./aft/tactics/',import.meta.url)).href;
@@ -13,10 +14,10 @@ function clippedMaterial(texture,shared,{fan=false,seed=0}={}){
   Object.assign(material.uniforms,shared);
   material.fragmentShader=material.fragmentShader.replace('void main(){',`
     uniform sampler2D soloFog;
-    uniform vec2 rays[37],source;
+    uniform vec2 rays[37],source,fogOrigin,fogSize;
     uniform float wedges[36],angle,spread,nozzle;
     void main(){
-      vec2 field=vWorld.xz,uv=(floor(field+vec2(.5))+vec2(.5))/vec2(40.,30.);
+      vec2 field=vWorld.xz,uv=(floor(field+vec2(.5))-fogOrigin+vec2(.5))/fogSize;
       if(any(lessThan(uv,vec2(0.)))||any(greaterThanEqual(uv,vec2(1.)))||texture2D(soloFog,uv).r<.5)discard;
       vec2 at=field-source;float bearing=atan(at.y,at.x)-angle;bearing=atan(sin(bearing),cos(bearing));
       if(abs(bearing)>spread||dot(at,vec2(cos(angle),sin(angle)))<nozzle-.005)discard;
@@ -28,8 +29,8 @@ function clippedMaterial(texture,shared,{fan=false,seed=0}={}){
 
 function makeSlot(scene,texture){
   const group=new T.Group();group.name='Solo painted flame jet';group.visible=false;scene.add(group);
-  const data=new Uint8Array(40*30*4),fog=new T.DataTexture(data,40,30,T.RGBAFormat);fog.minFilter=fog.magFilter=T.NearestFilter;fog.generateMipmaps=false;fog.needsUpdate=true;
-  const shared={soloFog:{value:fog},rays:{value:Array.from({length:37},()=>new T.Vector2())},wedges:{value:new Float32Array(36)},source:{value:new T.Vector2()},angle:{value:0},spread:{value:1},nozzle:{value:0}};
+  const mask=createFlameMask();
+  const shared={soloFog:{value:mask.fog},fogOrigin:{value:new T.Vector2()},fogSize:{value:new T.Vector2(1,1)},rays:{value:Array.from({length:37},()=>new T.Vector2())},wedges:{value:new Float32Array(36)},source:{value:new T.Vector2()},angle:{value:0},spread:{value:1},nozzle:{value:0}};
   const sheets=[-.45,0,.45].map((layer,i)=>{
     const geometry=new T.BufferGeometry();
     for(const [name,size] of [['position',3],['uv',2],['travelDistance',1]])geometry.setAttribute(name,new T.BufferAttribute(new Float32Array(648*size),size).setUsage(T.DynamicDrawUsage));
@@ -40,7 +41,7 @@ function makeSlot(scene,texture){
     const mesh=new T.Mesh(plane,clippedMaterial(texture,shared,{seed:i*1.618}));mesh.frustumCulled=false;
     mesh.userData={birth:.32+Math.floor(i/2)*.06+(i%2)*.012,lane:(i%2?-.46:.46)+.10*Math.sin(i*2.399),width:.72+.4*Math.sin(i*1.73)**2,length:.78+.47*Math.sin(i*2.17+.6)**2};group.add(mesh);return mesh;
   });
-  return {group,sheets,plumes,fog,data,shared,owner:null,revision:null,muzzle:null,geometryShape:null,dispose(){group.removeFromParent();for(const sheet of sheets){sheet.geometry.dispose();sheet.material.dispose();}for(const plume of plumes)plume.material.dispose();plane.dispose();fog.dispose();group.clear();}};
+  return {group,sheets,plumes,...mask,shared,owner:null,revision:null,muzzle:null,geometryShape:null,dispose(){group.removeFromParent();for(const sheet of sheets){sheet.geometry.dispose();sheet.material.dispose();}for(const plume of plumes)plume.material.dispose();plane.dispose();this.fog.dispose();group.clear();}};
 }
 
 // Only the operator's painted discharge is adapted. There are no victim rigs,
@@ -103,7 +104,7 @@ export class SoloFlameEffects {
       const slot=entry.slot,muzzle=entry.muzzle,shape=entry.shape;if(!slot||!muzzle)continue;
       if(entry.last===null)advanceFlameClock(entry,this.now,reduced);
       slot.group.visible=flameMuzzleInReach(shape,{x:muzzle.x,y:muzzle.z});if(!slot.group.visible)continue;
-      if(slot.revision!==state.revision){flameFogMask(shape,state.visible,slot.data);slot.fog.needsUpdate=true;slot.revision=state.revision;}
+      if(slot.revision!==state.revision){updateFlameMask(slot,shape,state.visible);slot.shared.soloFog.value=slot.fog;slot.shared.fogOrigin.value.set(slot.rect.origin.x,slot.rect.origin.y);slot.shared.fogSize.value.set(slot.rect.width,slot.rect.height);slot.revision=state.revision;}
       const u=slot.shared;u.source.value.set(shape.origin.x,shape.origin.y);u.angle.value=shape.heading;u.spread.value=shape.halfAngle;u.nozzle.value=(muzzle.x-shape.origin.x)*Math.cos(shape.heading)+(muzzle.z-shape.origin.y)*Math.sin(shape.heading);
       shape.rays.forEach((ray,i)=>u.rays.value[i].set(ray.x-shape.origin.x,ray.y-shape.origin.y));
       for(let i=0;i<36;i++){const a=shape.rays[i],b=shape.rays[i+1];u.wedges.value[i]=a.kind!=='hidden'&&a.kind===b.kind&&Math.abs(a.distance-b.distance)<=1.05?1:0;}

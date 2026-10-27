@@ -50,9 +50,22 @@ export function flameMuzzleInReach(shape,point){
   return gap(a,b)&&a.kind!=='hidden'&&b.kind!=='hidden'&&Math.hypot(x,y)<Math.min(a.distance,b.distance)*Math.cos(shape.halfAngle/36);
 }
 
-export function flameFogMask(shape,visible,bytes=new Uint8Array(40*30*4)){
+// Integer cell origin, texture dimensions and row-major RGBA indexing are shared
+// by the aim cone and the discharge. This rectangle follows the recorded cone,
+// never the renderer's resident blocks or the world's absolute coordinate size.
+export function flameMaskRect(shape){
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  for(const key of shape.visibleCells){const [x,y]=key.split(',').map(Number);if(!Number.isInteger(x)||!Number.isInteger(y))continue;x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}
+  if(x0===Infinity)return {origin:{x:Math.round(shape.origin.x),y:Math.round(shape.origin.y)},width:1,height:1};
+  return {origin:{x:x0,y:y0},width:x1-x0+1,height:y1-y0+1};
+}
+
+// Reuse an exactly sized buffer when available. Consumers must use the returned
+// buffer and rect for their texture: UV=(floor(world+.5)-origin+.5)/size.
+export function flameFogMask(shape,visible,bytes,rect=flameMaskRect(shape)){
+  const size=rect.width*rect.height*4;if(!(bytes instanceof Uint8Array)||bytes.length!==size)bytes=new Uint8Array(size);
   bytes.fill(0);
-  for(const key of shape.visibleCells){if(!visible.has(key))continue;const [x,y]=key.split(',').map(Number);if(x>=0&&x<40&&y>=0&&y<30){const at=(y*40+x)*4;bytes[at]=bytes[at+1]=bytes[at+2]=bytes[at+3]=255;}}
+  for(const key of shape.visibleCells){if(!visible.has(key))continue;const [wx,wy]=key.split(',').map(Number),x=wx-rect.origin.x,y=wy-rect.origin.y;if(Number.isInteger(x)&&Number.isInteger(y)&&x>=0&&x<rect.width&&y>=0&&y<rect.height){const at=(y*rect.width+x)*4;bytes[at]=bytes[at+1]=bytes[at+2]=bytes[at+3]=255;}}
   return bytes;
 }
 

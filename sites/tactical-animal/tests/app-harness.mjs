@@ -4,6 +4,7 @@ import * as game from '../dist/solo-game.js';
 import * as controls from '../dist/mobile-controls.js';
 import * as grenadeControls from '../dist/grenade-controls.js';
 import * as shootingControls from '../dist/shooting-controls.js';
+import * as targetMonitor from '../dist/targeting-monitor.js';
 import * as guardAlerts from '../dist/guard-alert.js';
 import {selectInteractionTarget} from '../dist/interactions.js';
 import {createOperationStorage} from '../dist/operation-storage.js';
@@ -34,7 +35,7 @@ export function app({autoDeploy=true,initialStorage=[],storageFailure=null}={}){
     fire(type,extra={}){const event={type,pointerId:1,button:0,clientX:177.5,clientY:677.5,target:this,preventDefault(){},...extra};this['on'+type]?.(event);for(const fn of this.listeners.get(type)||[])fn(event);}
   }
   const el=id=>{if(!elements.has(id))elements.set(id,new Element(id));return elements.get(id);};
-  const doc={getElementById:el,querySelector:el,createElement:()=>new Element(),body:new Element(),hidden:false,addEventListener(){}};
+  const doc={getElementById:el,querySelector:el,createElement:tag=>Object.assign(new Element(),{tagName:tag}),createElementNS:(_namespace,tag)=>Object.assign(new Element(),{tagName:tag}),body:new Element(),hidden:false,addEventListener(){}};
   class FieldView {
     constructor(_container,options){this.options=options;this.follow=true;views.push(this);}
     setGame(state){this.state=state;this.options.onLoading(false);}
@@ -46,7 +47,7 @@ export function app({autoDeploy=true,initialStorage=[],storageFailure=null}={}){
     route(){} center(){} sync(){} dispose(){this.disposed=true;this.aiming=false;}
   }
   if(!saved.has('tactical-animal-build-v1'))saved.set('tactical-animal-build-v1',JSON.stringify({...game.DEFAULT_BUILD,utility:'grenade'}));
-  const context={...game,...controls,...grenadeControls,...shootingControls,...guardAlerts,selectInteractionTarget,createOperationStorage,STANCE_ICONS,weaponArtwork:()=>new Element(),FieldView,drawMinimap(){},document:doc,localStorage:{getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)},setTimeout,clearTimeout,performance:{now:()=>0},requestAnimationFrame:fn=>animation=fn,innerHeight:844,addEventListener:(name,fn)=>events.set(name,fn),console};
+  const context={...game,...controls,...grenadeControls,...shootingControls,...guardAlerts,createTargetMonitor:(...args)=>targetMonitor.createTargetMonitor(...args,doc),selectInteractionTarget,createOperationStorage,STANCE_ICONS,weaponArtwork:()=>new Element(),FieldView,drawMinimap(){},document:doc,localStorage:{getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)},setTimeout,clearTimeout,performance:{now:()=>0},requestAnimationFrame:fn=>animation=fn,innerHeight:844,addEventListener:(name,fn)=>events.set(name,fn),console};
   context.window={get localStorage(){return context.localStorage;}};
   if(storageFailure){
     const blocked=()=>{throw Object.assign(new Error('Storage access is denied.'),{name:'SecurityError'});};

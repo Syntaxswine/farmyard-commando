@@ -5,7 +5,8 @@ import {GrenadeAim,screenToGround} from './grenade-controls.js';
 import {weaponArtwork} from './original-art.js';
 import {STANCE_ICONS} from './aft/tactics/battle-control-icons.js';
 import {selectInteractionTarget} from './interactions.js';
-import {aimOptions,availableAim,flashAPShortage} from './shooting-controls.js';
+import {aimOptions,availableAim,flashAPShortage,switchSymbol} from './shooting-controls.js';
+import {createTargetMonitor} from './targeting-monitor.js';
 import {createOperationStorage} from './operation-storage.js';
 import {GuardContactTracker,GuardAlertIndicator} from './guard-alert.js';
 const $=id=>document.getElementById(id);
@@ -79,7 +80,9 @@ function showDialog(html,actions=[],{context=false,mode=''}={}){
   if(!overlay.open)overlay.showModal();
 }
 function closeDialog(){overlay.close();paused=false;lastTime=performance.now();}
-overlay.addEventListener('cancel',()=>{paused=false;lastTime=performance.now();renderBattle();});
+function clearTargeting(){selected=null;view?.route([]);contextKey='';}
+function exitTargeting(){clearTargeting();closeDialog();renderBattle();}
+overlay.addEventListener('cancel',()=>{if(overlay.dataset.mode==='shooting')clearTargeting();paused=false;lastTime=performance.now();renderBattle();});
 function grenadeViewport(){
   if($('grenade-aim').hidden)return aimViewport;
   const r=$('viewport').getBoundingClientRect(),panel=$('grenade-aim').getBoundingClientRect(),controls=document.querySelector('.thumb-layout').getBoundingClientRect();
@@ -164,31 +167,28 @@ function pick(p){if(!state||paused||grenadeAim.active||state.phase==='enemy'||st
 }
 function shootingMenu(){
   const u=hero(state),w=Core.WEAPONS[u.weapon];
-  showDialog(`<p class="eyebrow">WEAPON CONTROL / OPERATION PAUSED</p><h2>${safe(w.short)}</h2><p class="shooting-resources">${u.ap.toFixed(1)} AP AVAILABLE${w.mag?` · ${u.ammo[u.weapon]??0} ROUNDS`:''}</p>`,[],{context:true,mode:'shooting'});
+  showDialog(`<p class="eyebrow">TARGET CONTROL / PAUSED</p><h2>${safe(w.short)}</h2><p class="shooting-resources">${u.ap.toFixed(1)} AP${w.mag?` · ${u.ammo[u.weapon]??0} ROUNDS`:''}</p>`,[],{context:true,mode:'shooting'});
 }
 function renderContext(focusControl){if(!state)return;const u=hero(state),near=interaction(state),target=selected?.targetId!==undefined?state.units.find(v=>v.id===selected.targetId):null;
   if(target&&(!Core.alive(target)||!state.detected.has(target.id)))selected=null;
   if(target&&selected)aim=availableAim(Core.WEAPONS[u.weapon],u.ap,burst,aim);
   const p=target&&selected?Core.previewAttack(state,u,target,burst,zone,null,aim):null;
-  const sig=JSON.stringify([selected,near,aim,zone,burst,p,u.ap.toFixed(2),u.weapon,state.phase,[...state.detected],Math.round(u.x*10),Math.round(u.y*10),target?.hp]);if(sig===contextKey)return;contextKey=sig;const root=$('context');root.replaceChildren();root.classList.toggle('shooting-panel',!!p);
+  const sig=JSON.stringify([selected,near,aim,zone,burst,p,u.ap.toFixed(2),u.weapon,state.phase,[...state.detected],Math.round(u.x*10),Math.round(u.y*10),target?.hp,target?.species,target?.stance,target?.weapon]);if(sig===contextKey)return;contextKey=sig;const root=$('context');root.replaceChildren();root.classList.toggle('shooting-panel',!!p);
   if(state.phase==='enemy')return;
   function content(title,detail,label,fn,disabled=false){const copy=document.createElement('div');copy.className='context-copy';const h=document.createElement('strong');h.textContent=title;const small=document.createElement('small');small.textContent=detail;copy.append(h,small);root.append(copy);const b=document.createElement('button');b.textContent=label;b.disabled=disabled;b.onclick=()=>{closeDialog();act(fn);};root.append(b);return copy;}
   if(p){
     const w=Core.WEAPONS[u.weapon],choices=aimOptions(w,u.ap,burst),chosen=choices.find(option=>option.id===aim);
-    const readout=document.createElement('div');readout.className='shot-readout';
-    const name=document.createElement('strong');name.textContent=`${target.name} · ${speciesLabel(target.species)} · ${Math.ceil(target.hp)} HP`;
-    const detail=document.createElement('span');detail.textContent=`${p.distance?.toFixed(1)||distance(u,target).toFixed(1)} m · ${p.chance||0}% HIT · ${p.cost} AP`;
-    readout.append(name,detail);root.append(readout);
+    const monitor=createTargetMonitor(state,target,p,zone);if(monitor)root.append(monitor);
     let restoreFocus;
-    function hardware(parent,{control,label,paint,icon,mark,pressed,disabled=false,apShort=false,red=false,amber=false,lit,onClick,rerender=true}){
-      const b=document.createElement('button');b.type='button';b.className='industrial-switch shooting-switch';b.dataset.control=control;
+    function hardware(parent,{control,label,paint,icon,mark,pressed,disabled=false,apShort=false,red=false,amber=false,bar=false,lit,onClick,rerender=true}){
+      const b=document.createElement('button');b.type='button';b.className='industrial-switch shooting-switch'+(bar?' fire-bar':'');b.dataset.control=control;
       const description=label+(apShort?' Not enough AP.':'');
       b.setAttribute('aria-label',description);if(pressed!==undefined)b.setAttribute('aria-pressed',String(pressed));
       if(disabled||apShort)b.setAttribute('aria-disabled','true');
       if(red||amber)b.dataset.face=red?'red':'amber';if(lit!==undefined)b.dataset.lit=String(lit);
       // AP-blocked switches accept input solely to acknowledge the failed attempt.
       b.disabled=disabled&&!apShort;b.title=description;
-      b.innerHTML=`<span class="switch-legend" aria-hidden="true"><span class="switch-icon"><svg class="switch-glyph" viewBox="0 0 32 32"><use href="assets/ui/industrial-switches/symbols.svg#${icon}"/></svg></span><span class="switch-label">${paint}</span><span class="switch-cost">${mark}</span></span>`;
+      b.innerHTML=`<span class="switch-legend" aria-hidden="true"><span class="switch-icon"><svg class="switch-glyph" viewBox="0 0 32 32"><use href="${switchSymbol(icon)}"/></svg></span><span class="switch-label">${paint}</span><span class="switch-cost">${mark}</span></span>`;
       b.onclick=()=>{if(apShort){flashAPShortage(b);return;}if(disabled)return;onClick();if(rerender){contextKey='';renderContext(control);}};parent.append(b);if(control===focusControl)restoreFocus=b;return b;
     }
     function bank(label,cls,parent=root){
@@ -197,30 +197,32 @@ function renderContext(focusControl){if(!state)return;const u=hero(state),near=i
       const row=document.createElement('div');row.className='shooting-bank';group.append(title,row);parent.append(group);return row;
     }
     const columns=document.createElement('div');columns.className='shooting-columns';root.append(columns);
-    const aiming=bank('AIM LEVEL','aim-bank',columns);
-    for(const option of choices)hardware(aiming,{
-      control:'aim-'+option.id,label:`${option.label}. ${option.cost} AP. +${option.accuracy} accuracy.`,
-      paint:{hip:'QUICK SHOT',aimed:'AIMED',full:'FULL AIM'}[option.id],icon:'aim-'+option.id,mark:`${option.cost} AP`,pressed:aim===option.id,disabled:!option.available,apShort:!option.available,amber:true,onClick:()=>aim=option.id
-    });
     const zones=bank('BODY LOCATION','zone-bank',columns);
     for(const value of ['torso','head','weapon','legs']){
       const preview=Core.previewAttack(state,u,target,burst,value,null,aim),label=Core.AIM_ZONES[value].label;
       hardware(zones,{control:'zone-'+value,label:`Target ${label.toLowerCase()}. ${preview.chance}% hit chance.`,paint:label.toUpperCase(),icon:'target-'+value,mark:`${preview.chance}% HIT`,pressed:zone===value,amber:true,onClick:()=>zone=value});
     }
-    const fireRow=bank(w.burstRounds?'FIRE MODE / TRIGGER':'TRIGGER','trigger-bank');
-    if(w.burstRounds)for(const firingBurst of [false,true]){
+    const aiming=bank('AIM LEVEL','aim-bank',columns);
+    for(const option of choices)hardware(aiming,{
+      control:'aim-'+option.id,label:`${option.label}. ${option.cost} AP. +${option.accuracy} accuracy.`,
+      paint:{hip:'QUICK SHOT',aimed:'AIMED',full:'FULL AIM'}[option.id],icon:'aim-'+option.id,mark:`${option.cost} AP`,pressed:aim===option.id,disabled:!option.available,apShort:!option.available,amber:true,onClick:()=>aim=option.id
+    });
+    const ready=p.ok&&Core.canControl(state,u)&&chosen.available;
+    const fire=hardware(root,{control:'fire',label:`${burst?'Fire burst':'Fire'}. ${p.chance}% hit chance. ${p.cost} AP.`,paint:'FIRE',icon:'fire',mark:`${p.cost} AP`,bar:true,red:true,lit:false,disabled:!ready,apShort:!chosen.available,rerender:false,onClick:()=>{closeDialog();act(()=>Core.attack(state,u,target,burst,false,zone,false,aim));}});
+    fire.dataset.ready=String(ready);
+    const fireRow=bank('FIRE MODE / EXIT','trigger-bank');fireRow.dataset.burst=String(!!w.burstRounds);
+    for(const firingBurst of w.burstRounds?[false,true]:[false]){
       const mode=firingBurst?'Burst':'Single',modeAim=availableAim(w,u.ap,firingBurst,aim),choice=aimOptions(w,u.ap,firingBurst).find(option=>option.id===modeAim);
       hardware(fireRow,{control:firingBurst?'burst':'single',label:`${mode} fire. ${firingBurst?w.burstRounds:1} round${firingBurst?'s':''}.`,paint:mode.toUpperCase(),icon:firingBurst?'fire-burst':'fire-single',mark:`${choice.cost} AP`,pressed:burst===firingBurst,apShort:!choice.available,onClick:()=>burst=firingBurst});
     }
-    const ready=p.ok&&Core.canControl(state,u)&&chosen.available;
-    hardware(fireRow,{control:'fire',label:`${burst?'Fire burst':'Fire'}. ${p.chance}% hit chance. ${p.cost} AP.`,paint:'FIRE',icon:'fire',mark:`${p.cost} AP`,red:true,lit:ready,disabled:!ready,apShort:!chosen.available,rerender:false,onClick:()=>{closeDialog();act(()=>Core.attack(state,u,target,burst,false,zone,false,aim));}});
+    hardware(fireRow,{control:'exit',label:'Exit targeting without firing.',paint:'EXIT',icon:'exit',mark:'',rerender:false,onClick:exitTargeting});
     const warning=p.reason||(!chosen.available?'Not enough AP':'');
     if(warning||w.blast){const note=document.createElement('p');note.className='shooting-warning';note.setAttribute('role','status');note.textContent=[warning,w.blast?'BLAST CAN HURT YOU':''].filter(Boolean).join(' · ');root.append(note);}
     restoreFocus?.focus?.({preventScroll:true});
   }else if(selected?.point){const path=Core.navigationPath(state,u,selected.point.x,selected.point.y),cost=path?.reduce((n,p)=>n+p.cost,0)||0,d=cost/Core.movementRate(u);content('Move to this point',`${d.toFixed(1)} m · ${cost.toFixed(1)} AP${cost>u.ap?' · stops when AP runs out':''}`,'Move',()=>{Core.move(state,u,selected.point.x,selected.point.y);selected=null;view.center();},!path||u.ap<.01);
   }else if(near){const mission=missionForState(state);content(near.label,near.kind==='extract'?mission.extraction.name:`${near.cost} AP · ${mission.objective.after}`,near.kind==='extract'?'Extract ↗':'Collect',()=>interact(state),!near.ok);}
   else if(state.detected.size){const guard=[...state.detected].map(id=>state.units.find(v=>v.id===id)).sort((a,b)=>distance(u,a)-distance(u,b))[0];content('Visible contact',`${guard.name} · ${distance(u,guard).toFixed(1)} m`,'Target',()=>pick({unitId:guard.id}));}
-  if(selected){const cancel=document.createElement('button');cancel.className='cancel-context';cancel.textContent=p?'Cancel shot':'×';cancel.setAttribute('aria-label',p?'Cancel shot':'Cancel selection');cancel.onclick=()=>{selected=null;view.route([]);contextKey='';if(overlay.dataset.mode==='shooting')closeDialog();renderContext();};root.append(cancel);}
+  if(selected&&!p){const cancel=document.createElement('button');cancel.className='cancel-context';cancel.textContent='×';cancel.setAttribute('aria-label','Cancel selection');cancel.onclick=()=>{clearTargeting();renderContext();};root.append(cancel);}
 }
 function renderBattle(){if(!state)return;const u=hero(state),combat=state.phase==='player'||state.phase==='enemy',can=Core.canControl(state,u);
   $('battle-name').textContent=u.name;$('battle-species').textContent=speciesLabel(u.species);
@@ -384,7 +386,7 @@ function help(){showDialog(`<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br
   <li>Tap Grenade or press G to aim with the joystick. Direction aims the throw; displacement sets distance, up to 10 m. The animal stays still. Release to hold the preview, then tap Throw or press Enter. Cancel or Escape exits without spending AP or grenades. Choose frag grenades in your loadout to carry three.</li>
   <li>For keyboard aiming, hold W A S D or arrows to adjust direction and distance. Release to hold aim. The camera frames the arc and blast without rotating. Filled ground is exposed to the blast; walls and unexplored ground stop the fill. The outline shows the maximum radius.</li>
   <li>A grenade costs 5 AP, or 2.5 AP while a pistol or SMG is equipped. Throwing keeps that weapon in hand. Blast radius: 5 m. Your animal can be hurt by its own grenade. Blocked flight paths, solid obstacles, and unexplored landing points disable Throw.</li>
-  <li>Tap a visible guard to open the weapon controls. Aim and target-zone switches show AP costs and hit chances. The highest affordable aim is selected initially; choose a lower level to save AP. Burst changes the cost. An unaffordable switch flashes red three times when pressed. Only a valid Fire action spends AP and ammunition.</li>
+  <li>Tap a visible guard to open the weapon controls. The green CRT shows that guard, the selected body location and its hit chance. Body locations are on the left and aim levels on the right. The highest affordable aim is selected initially; choose a lower level to save AP. Burst changes the cost. An unaffordable switch flashes red three times when pressed. The wide Fire bar is the only action that shoots. Exit or Escape closes targeting without spending AP or ammunition.</li>
   <li>Drag the world to look around when not aiming a grenade. Use the arrows to zoom.</li>
   <li>Tap the stance button to go standing → kneeling → prone → kneeling → standing. Tap movement for run ↔ off / walk ↔ sneak. Both switches cost 0 AP, even when you have no AP left.</li>
   <li>Hold either button for large direct choices. Keyboard: focus the button and press the down arrow to open choices.</li>

@@ -52,7 +52,7 @@ test('aim, target and fire-mode switches are free; lower aim choices survive oth
   assert.equal(pressed(control(a,'single')),false);
   assert.equal(a.u.ap,14);assert.equal(a.u.ammo.assault,30);
   assert.equal(a.el('overlay').open,true);
-  descendants(a.el('context')).find(element=>element['aria-label']==='Cancel shot').click();
+  control(a,'exit').click();
   assert.equal(a.el('overlay').open,false);assert.equal(a.u.ap,14);assert.equal(a.u.ammo.assault,30);
 });
 
@@ -64,7 +64,7 @@ test('burst re-prices aim levels and falls back to the best affordable aim witho
   assert.equal(unavailable(control(a,'aim-full')),true);
   assert.match(control(a,'aim-full')['aria-label'],/12 AP/);
   assert.match(control(a,'fire')['aria-label'],/9 AP/);
-  assert.equal(control(a,'fire').dataset.lit,'true');
+  assert.equal(control(a,'fire').dataset.ready,'true');
   control(a,'aim-full').click();assert.equal(pressed(control(a,'aim-aimed')),true);
   control(a,'zone-legs').click();assert.equal(pressed(control(a,'aim-aimed')),true);
   assert.equal(a.u.ap,10);assert.equal(a.u.ammo.assault,30);
@@ -85,7 +85,7 @@ test('Fire spends exactly the selected shot cost and rounds and saves the comple
   }
 });
 
-test('unaffordable shots, empty magazines and blocked shots leave the red trigger dark and spend nothing',()=>{
+test('unaffordable shots, empty magazines and blocked shots leave the trigger unavailable and spend nothing',()=>{
   for(const problem of ['AP','ammo','range']){
     const a=app(),guard=target(a,problem==='AP'?3:14);
     if(problem==='ammo')a.u.ammo.assault=0;
@@ -94,7 +94,7 @@ test('unaffordable shots, empty magazines and blocked shots leave the red trigge
     control(a,'zone-torso').click();
     const before={ap:a.u.ap,ammo:a.u.ammo.assault};
     assert.equal(unavailable(control(a,'fire')),true,problem);
-    assert.equal(control(a,'fire').dataset.lit,'false',problem);
+    assert.equal(control(a,'fire').dataset.ready,'false',problem);
     control(a,'fire').click();
     assert.deepEqual({ap:a.u.ap,ammo:a.u.ammo.assault},before);
   }

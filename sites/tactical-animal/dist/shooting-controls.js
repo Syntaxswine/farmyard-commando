@@ -1,5 +1,9 @@
 import {AIM_LEVELS,supportsAim,shotAim} from './aft/tactics/aim-levels.js';
 
+const symbols=new URL('./assets/ui/industrial-switches/symbols.svg',import.meta.url);
+symbols.search=new URL(import.meta.url).search;
+export function switchSymbol(id){const url=new URL(symbols);url.hash=id;return url.href;}
+
 const feedbackTimers=new WeakMap();
 export function flashAPShortage(button){
   clearTimeout(feedbackTimers.get(button));

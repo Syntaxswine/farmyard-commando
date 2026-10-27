@@ -32,7 +32,7 @@
     "sourceBranch": "codex/industrial-button-art",
     "sourceRevision": "d1e84684058c8d44298432a00c6ea9a6bd2b2cf6",
     "sourcePath": "sites/tactical-animal/dist/field-radio-icons.svg",
-    "adaptations": ["Added matching zoom-in and zoom-out arrows on the original 32-unit grid.", "Added white-painted aim reticles, target-zone silhouettes, cartridge fire-mode marks and a firing symbol on the same 32-unit grid."]
+    "adaptations": ["Added matching zoom-in and zoom-out arrows on the original 32-unit grid.", "Added white-painted aim reticles, target-zone silhouettes, cartridge fire-mode marks and a firing symbol on the same 32-unit grid.", "Added a matching door-and-arrow Exit symbol for the CRT targeting console."]
   },
   "materialRules": [
     "Green housings are worn painted olive metal around hazy celluloid faces.",

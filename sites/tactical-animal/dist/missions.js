@@ -1,6 +1,8 @@
 // Runtime definitions for the first playable slice of The First Shift.
 // Spatial source: design commit 5524d91, docs/missions/first-shift.maps.json.
+import {checkpointSource,checkpointMap} from './aft-sector.js';
 export const DEFAULT_MISSION_ID='night-ledger';
+const checkpoint=checkpointSource(),checkpointDoors=checkpointMap().doors;
 const bounds={x:1,y:1,w:38,h:28};
 const door=(id,name,axis,x,y,swing=1,interactive=true)=>({id,kind:'door',name,x,y,edge:`${axis}:${Math.floor(x)}:${Math.floor(y)}`,swing,range:1.65,open:false,inventory:[],interactive});
 const chest=(x,y)=>({id:'supply-chest',kind:'chest',name:'Supply chest',x,y,range:1.7,open:false,searched:false,inventory:[
@@ -54,11 +56,29 @@ const definitions=[
     ],
     result:{title:'The manifest is out.',summary:'left the feed mill with the shipping manifest.',epilogue:'The same office approves the district\'s water. Follow the service main to Pump Station 3.'},
   },
+  {
+    id:'road-checkpoint',title:'Road Checkpoint',name:'Road Checkpoint',location:'VALLEY ROAD / EAST RALLY POINT',
+    bounds:{x:0,y:0,w:240,h:240},sector:'aft-road-checkpoint',
+    briefing:'The checkpoint decides who leaves the valley. Take its travel orders from the office, then cross the open ground to the east rally point.',
+    spawn:{x:checkpoint.starts[0].x,y:checkpoint.starts[0].y,heading:0},
+    objective:{id:'travel-orders',kind:'objective',name:'Travel orders',x:21,y:112,range:.85,cost:2,
+      instruction:'Reach the checkpoint office and secure the travel orders.',after:'Cross the field to the east rally point with the orders.',
+      collected:'Every outbound wagon is diverted to Reserve 7. The roadblocks are keeping the workers in.'},
+    extraction:{x:64,y:120,name:'East rally point',label:'Extract with the travel orders',range:.85},
+    steps:['Pass the road checkpoint.','Take the travel orders from the office.','Cross to the east rally point.'],
+    rooms:[{id:'checkpoint-office',name:'Checkpoint office',rect:[17,109,8,7],doors:checkpointDoors}],
+    cover:[],
+    guards:checkpoint.guards.map(g=>({...g,name:g.character.displayName,heading:g.heading??0})),
+    containers:[{...chest(4,125),name:'Abandoned road supplies'}],
+    clues:[{id:'checkpoint-road-sign',kind:'clue',name:'Outbound diversion sign',x:34,y:120,range:1.7,anchorHeight:.8,inventory:[],text:'The public road stops here. A fresh arrow sends all freight toward Reserve 7.'}],
+    result:{title:'The road is open.',summary:'carried the travel orders beyond the checkpoint.',epilogue:'The convoy route crosses open country. Now you know where the wagons are going.'},
+  },
 ];
 
 function freeze(value){if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;}
 export function validateMission(definition){
-  const errors=[],inside=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=1&&p.x<=38&&p.y>=1&&p.y<=28;
+  const errors=[],b=definition?.bounds,validBounds=b&&[b.x,b.y,b.w,b.h].every(Number.isInteger)&&b.x>=0&&b.y>=0&&b.w>1&&b.h>1&&b.x+b.w<=240&&b.y+b.h<=240;
+  const inside=p=>validBounds&&p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=b.x&&p.x<=b.x+b.w-1&&p.y>=b.y&&p.y<=b.y+b.h-1;
   if(!definition||!/^[-a-z]+$/.test(definition.id)||!definition.title||!definition.briefing||!inside(definition.spawn)||!inside(definition.objective)||!inside(definition.extraction))errors.push('Invalid operation identity or required position.');
   if(!definition?.objective?.id||!definition?.result?.title||!Array.isArray(definition?.rooms)||!Array.isArray(definition?.guards))return [...errors,'Incomplete operation definition.'];
   const ids=new Set();
@@ -85,7 +105,9 @@ export const objectiveSecured=state=>!!(state.solo.objectives?.[missionForState(
 export const missionDestination=state=>objectiveSecured(state)?missionForState(state).extraction:missionForState(state).objective;
 
 export function missionMap(id=DEFAULT_MISSION_ID){
-  const mission=getMission(id),map={name:mission.name,terrain:Array.from({length:30},()=>Array(40).fill('void')),edges:{}};
+  const mission=getMission(id);
+  if(mission.sector==='aft-road-checkpoint')return checkpointMap();
+  const map={name:mission.name,terrain:Array.from({length:30},()=>Array(40).fill('void')),edges:{}};
   for(let y=1;y<=28;y++)for(let x=1;x<=38;x++)map.terrain[y][x]='yard';
   for(const room of mission.rooms){
     const [x,y,w,h]=room.rect;

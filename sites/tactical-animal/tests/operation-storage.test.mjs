@@ -8,10 +8,10 @@ function setup(entries=[]){
   return {records,store:createOperationStorage(backend,{normalizeBuild,encodeSave,decodeSave})};
 }
 
-test('fresh preparation offers both operations without a completion gate or active save',()=>{
+test('fresh preparation offers the original operations and sector mission without a completion gate or active save',()=>{
   const {records,store}=setup(),preferences=store.preferences();
-  assert.equal(preferences.selectedMissionId,'night-ledger');assert.deepEqual(Object.keys(preferences.builds),['night-ledger','short-measure']);
-  assert.deepEqual(preferences.completed,[]);assert.equal(store.read('night-ledger'),null);assert.equal(store.read('short-measure'),null);assert.equal(records.size,0);
+  assert.equal(preferences.selectedMissionId,'night-ledger');assert.deepEqual(Object.keys(preferences.builds),['night-ledger','short-measure','road-checkpoint']);
+  assert.deepEqual(preferences.completed,[]);assert.equal(store.read('night-ledger'),null);assert.equal(store.read('short-measure'),null);assert.equal(store.read('road-checkpoint'),null);assert.equal(records.size,0);
 });
 
 test('browsing and changing loadouts never overwrite either operation save',()=>{

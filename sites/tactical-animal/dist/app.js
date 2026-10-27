@@ -19,8 +19,9 @@ let interactionFocus=null,handTarget=null;
 const safe=text=>String(text).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
 const stanceValues=['standing','kneeling','prone'],movementValues=['run','walk','sneak'];
 const stanceNames={standing:'Standing',kneeling:'Kneeling',prone:'Prone / crawl'},movementNames={run:'Run',walk:'Off / walk',sneak:'Sneak'};
-const movementPoses={walk:'M18 4a3 3 0 1 0 0 .1M18 10l-2 12m2-9-8 7m8-7 7 6m-9 3-6 12m6-12 9 12',run:'M22 4a3 3 0 1 0 0 .1M21 10l-7 11m5-9-8-1-4 5m12-4 5 7 6-2M14 21l-7 5-4-4m11-1 9 5-2 8',sneak:'M17 9a3 3 0 1 0 0 .1M17 15l-3 7m2-5 10 3 3-3m-13 0-7 3M14 22l10 3-6 8m-4-11-7 8h8'};
-const poseIcon=value=>STANCE_ICONS[value]?.replace('<svg ','<svg class="original-stance" ')||`<svg viewBox="0 0 36 38" aria-hidden="true"><path d="${movementPoses[value]}"/></svg>`;
+const movementPoses={walk:'M13 10h6l1 10 7 10h-6l-6-9-3 9H6l5-12-1-4-3 6H2v-4h3l5-6Z',run:'M15 10h6l3 6h5v4h-8l-3-5-2 6 7 6-3 4-9-8-3 8H2l7-15-3 3H2v-4h4l5-5Z',sneak:'M12 14h7l5 5h6v4h-8l-6-5-2 5h10v4l-6 5h-6l6-6h-8l-4 6H1l7-13Z'};
+const poseIcon=value=>STANCE_ICONS[value]?.replace('<svg ','<svg class="original-stance" ')||`<svg class="original-stance" viewBox="0 0 32 34" aria-hidden="true"><circle cx="${value==='run'?20:16}" cy="${value==='sneak'?9:5}" r="3"/><path d="${movementPoses[value]}"/></svg>`;
+let loadoutChoices=null;
 // Resolve the browser's storage getter only inside the handled read/write paths:
 // privacy settings can deny access to the property itself during startup.
 const operationStorage=createOperationStorage({getItem:key=>window.localStorage.getItem(key),setItem:(key,value)=>window.localStorage.setItem(key,value)},{normalizeBuild,encodeSave,decodeSave});
@@ -44,8 +45,11 @@ function renderMissionPreparation(){
 }
 function renderPrep(){renderMissionPreparation();const p=ANIMALS.find(a=>a.id===build.animal),stats=buildStats(build);$('hero-portrait').src=`aft/assets/characters/armed/${p.species}-rifle.png`;$('hero-portrait').alt=`${p.name}, the ${speciesLabel(p.species)} worker`;$('hero-name').textContent=p.name;$('hero-species').textContent=speciesLabel(p.species);$('hero-role').textContent=p.label;document.querySelector('.portrait-number').textContent=String(ANIMALS.indexOf(p)+1).padStart(2,'0');$('stats').innerHTML=[['HEALTH',stats.maxHp],['ACTION POINTS',stats.maxAp],['PERCEPTION',stats.perception]].map(([label,value])=>`<div class="stat"><strong>${value}</strong><span>${label}</span></div>`).join('');
   $('animals').replaceChildren();for(const a of ANIMALS)button($('animals'),`<strong>${speciesLabel(a.species)}</strong><small>${a.name}</small>`,'animal-choice',a.id===build.animal,()=>{build.animal=a.id;renderPrep();});
-  $('primary').replaceChildren();for(const k of PRIMARY){const w=Core.WEAPONS[k],choice=button($('primary'),`<strong>${w.short}</strong><small>${w.cost} AP / ${w.range} m / ${w.mag} rounds</small>`,'weapon-choice',k===build.primary,()=>{build.primary=k;renderPrep();});choice.setAttribute('aria-label',w.name);const art=weaponArtwork(k,35);art.classList.add('weapon-paint');choice.append(art);}
-  $('secondary').replaceChildren();for(const k of SECONDARY){const choice=button($('secondary'),`<span>${short(k)}</span><small>${k==='knife'?'MELEE':'8 ROUNDS'}</small>`,'small-choice',k===build.secondary,()=>{build.secondary=k;renderPrep();});const art=weaponArtwork(k,22);art.classList.add('sidearm-paint');choice.prepend(art);}
+  if(!loadoutChoices){loadoutChoices=[];
+    $('primary').replaceChildren();for(const k of PRIMARY){const w=Core.WEAPONS[k],choice=button($('primary'),`<strong>${w.short}</strong><small>${w.cost} AP / ${w.range} m / ${w.mag} rounds</small>`,'weapon-choice',false,()=>{build.primary=k;renderPrep();});choice.setAttribute('aria-label',w.name);const art=weaponArtwork(k,35);art.classList.add('weapon-paint');choice.append(art);loadoutChoices.push({choice,slot:'primary',kind:k});}
+    $('secondary').replaceChildren();for(const k of SECONDARY){const choice=button($('secondary'),`<span>${short(k)}</span><small>${k==='knife'?'MELEE':'8 ROUNDS'}</small>`,'small-choice',false,()=>{build.secondary=k;renderPrep();});const art=weaponArtwork(k,22);art.classList.add('sidearm-paint');choice.prepend(art);loadoutChoices.push({choice,slot:'secondary',kind:k});}
+  }
+  for(const {choice,slot,kind}of loadoutChoices)choice.setAttribute('aria-pressed',String(build[slot]===kind));
   $('utility').replaceChildren();for(const [k,label,detail] of [['dressing','Field dressing','×2'],['grenade','Frag grenades','×3']])button($('utility'),`<span>${label}</span><small>${detail}</small>`,'small-choice',k===build.utility,()=>{build.utility=k;renderPrep();});
   const skill=['hmg','rpg','flamethrower'].includes(build.primary)?'heavyWeapons':'firearms';$('primary-summary').textContent=`${skill==='firearms'?'FIREARMS':'HEAVY WEAPONS'} ${p.stats[skill]}`;$('equipment-note').textContent=`${Core.WEAPONS[build.primary].name}. ${p.name}'s ${skill==='firearms'?'firearms':'heavy weapons'} skill: ${p.stats[skill]}/100. Movement spends AP by distance, with no tile snapping.`;$('build-summary').textContent=`${p.name} / ${speciesLabel(p.species)} · ${short(build.primary)} + ${short(build.secondary)}`;
   try{const saved=storage.read();$('resume').hidden=!saved||JSON.parse(saved).solo.status!=='active';$('resume').textContent='Resume '+getMission(selectedMissionId).title+' ↗';}catch(error){$('resume').hidden=true;toast('Could not read saved operations. You can still deploy and play in this tab.');}
@@ -55,7 +59,6 @@ function renderPrep(){renderMissionPreparation();const p=ANIMALS.find(a=>a.id===
 $('operation-select').onchange=()=>{
   try{selectedMissionId=getMission($('operation-select').value).id;build=normalizeBuild(preparationBuilds[selectedMissionId]);renderPrep();}catch(error){toast(error.message);}
 };
-$('grenade-art').append(weaponArtwork('grenade',32));
 $('interaction-icon').append(weaponArtwork('hands',25));
 function showDialog(html,actions=[],{context=false}={}){
   if(picker.open)closePicker();
@@ -187,6 +190,7 @@ function renderBattle(){if(!state)return;const u=hero(state),combat=state.phase=
   const contacts=Core.visibleOpponents(state),focused=contacts.find(g=>g.id===view?.focusedId);
   const nextFocus=nextCameraFocus(contacts,view?.focusedId);
   $('visible-count').textContent=contacts.length;$('look').disabled=state.solo.status!=='active'||grenadeAim.active;
+  $('look').dataset.lit=String(contacts.length>0);
   $('look').classList.toggle('inspecting',!!focused);
   const viewing=focused?'Viewing '+focused.name:view?.follow?'Viewing your animal':'Camera panned';
   const nextAction=nextFocus?'View '+nextFocus.name:'Recenter on your animal';
@@ -239,6 +243,7 @@ $('grenade').onclick=()=>grenadeAim.active?commitGrenade():armGrenade();
 $('cancel-grenade').onclick=()=>{cancelGrenade();renderBattle();};
 function renderCycle(kind,value,label,name,can){
   const b=$(kind+'-cycle');b.disabled=!can;b.setAttribute('aria-label',`${kind==='stance'?'Stance':'Movement'}: ${name.toLowerCase()}. Tap to cycle; hold for choices.`);
+  b.dataset.lit=String(kind==='stance'?value!=='standing':value!=='walk');
   if(b.dataset.value===value)return;b.dataset.value=value;
   $(kind+'-icon').innerHTML=poseIcon(value);$(kind+'-label').textContent=label;
 }

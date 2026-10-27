@@ -71,12 +71,12 @@
 .industrial-switch:enabled:active .switch-legend,
 .industrial-switch.is-pressed .switch-legend { transform: translateY(1px); }
 .industrial-switch:disabled { cursor: default; }
-.industrial-switch:disabled:not([data-lit='true']) {
+.industrial-switch:disabled:not([data-lit='true']):not([aria-pressed='true']) {
   --legend-paint: #b9b7a7;
   --legend-light: none;
 }
-.industrial-switch:disabled:not([data-lit='true'])::before { filter: saturate(.7) brightness(.88); }
-.industrial-switch:disabled:not([data-lit='true'])::after { opacity: 0; }
+.industrial-switch:disabled:not([data-lit='true']):not([aria-pressed='true'])::before { filter: saturate(.7) brightness(.88); }
+.industrial-switch:disabled:not([data-lit='true']):not([aria-pressed='true'])::after { opacity: 0; }
 .industrial-switch:focus-visible { outline: 2px solid #efcc8c; outline-offset: 4px; }
 @media (prefers-reduced-motion: reduce) {
   .industrial-switch::after, .industrial-switch .switch-legend { transition: none; }

@@ -1,6 +1,6 @@
 import * as T from './aft/tactics/vendor/three.module.js';
 import {BattleEnvironment} from './aft/tactics/battle-environment.js';
-import {createWeaponSprite,weaponIcon} from './aft/tactics/weapon-icons.js';
+export {weaponArtwork} from './weapon-artwork.js';
 import {WALL_DIMENSIONS} from './world-dimensions.js';
 
 const origin=new URL('./aft/tactics/',import.meta.url);
@@ -12,13 +12,6 @@ const surfaces={
   gravel:{file:'ground-gravel.png',period:2,tint:0xd4cfbe},
   grass:{file:'ground-grass.png',period:1.5,tint:0xd4cfbe},
 };
-
-export function weaponArtwork(kind,height=34){
-  const sprite=createWeaponSprite(kind,{height});
-  const image=sprite.querySelector('img');
-  if(image)image.src=new URL(weaponIcon(kind),origin).href;
-  return sprite;
-}
 
 export function groundSurface(state,x,y){
   if(state.map[y][x]==='floor')return 'concrete';

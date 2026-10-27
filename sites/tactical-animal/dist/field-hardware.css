@@ -1,5 +1,5 @@
 /* Live field controls use the approved painted switch materials. */
-#battle #end-turn.industrial-switch,
+#battle .square-control.industrial-switch,
 #battle .view-controls .industrial-switch {
   display: block;
   width: var(--switch-size);
@@ -12,7 +12,23 @@
   box-shadow: 0 2px 3px #070e0980;
   opacity: 1;
 }
-#battle #end-turn.industrial-switch { --switch-size: 60px; }
+#battle .square-control.industrial-switch { --switch-size: 60px; }
+#battle .square-control .switch-legend {
+  inset: 9px 7px 7px;
+  grid-template-rows: 25px 9px 8px;
+}
+#battle .square-control .switch-icon,
+#battle .square-control .switch-glyph,
+#battle .square-control .control-icon svg { width: 25px; height: 25px; }
+#battle .square-control .switch-label { font: 700 7px/9px var(--mono); letter-spacing: .15px; }
+#battle .square-control .switch-cost { font: 700 7px/8px var(--mono); color: inherit; margin: 0; }
+#battle .square-control .switch-stock { top: -2px; right: 0; font-size: 7px; color: inherit; }
+#battle #look .eye-symbol { width: 29px; }
+#battle #look .switch-glyph { width: 29px; fill: currentColor; stroke: none; }
+#battle #look .eye-count { font-size: 10px; }
+#battle #look.guard-alert .eye-symbol { animation: none; }
+#battle #look.guard-alert::after { animation: contact-lamp .5s step-end 4; }
+@keyframes contact-lamp { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
 #battle #end-turn .switch-legend {
   inset: 10px 7px 8px;
   grid-template-rows: 22px 16px;
@@ -35,11 +51,22 @@
 #battle .view-controls .switch-glyph { width: 24px; height: 24px; }
 #battle .view-controls > span { color: #efe6ce; }
 @media (max-width: 380px) {
-  #battle #end-turn.industrial-switch { --switch-size: 58px; }
+  #battle .square-control.industrial-switch { --switch-size: 58px; }
 }
 @media (max-height: 580px) and (min-width: 600px) {
-  #battle #end-turn.industrial-switch { --switch-size: 44px; }
+  #battle .square-control.industrial-switch { --switch-size: 44px; }
+  #battle .square-control .switch-legend { inset: 6px 5px 4px; grid-template-rows: 17px 7px 6px; }
+  #battle .square-control .switch-icon, #battle .square-control .switch-glyph,
+  #battle .square-control .control-icon svg { width: 17px; height: 17px; }
+  #battle .square-control .switch-label { font-size: 6px; line-height: 7px; }
+  #battle .square-control .switch-cost { font-size: 5.5px; line-height: 6px; }
+  #battle #look .eye-symbol, #battle #look .switch-glyph { width: 21px; }
+  #battle #look .eye-count { font-size: 8px; }
+  #battle .square-control .switch-stock { font-size: 5.5px; top: -1px; }
   #battle #end-turn .switch-legend { inset: 7px 5px 5px; grid-template-rows: 16px 13px; }
   #battle #end-turn .switch-icon, #battle #end-turn .switch-glyph { width: 16px; height: 16px; }
   #battle #end-turn .switch-label { font-size: 6.5px; line-height: 6.5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #battle #look.guard-alert::after { animation: none; }
 }

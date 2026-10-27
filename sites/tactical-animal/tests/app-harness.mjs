@@ -35,6 +35,7 @@ export function app(){
     beginGrenadeAim(){this.preview=null;this.aiming=true;}
     endGrenadeAim(){this.aiming=false;}
     previewGrenade(point,preview){this.preview={point:{...point},...preview};}
+    zoom(factor){this.zoomFactor=(this.zoomFactor||1)*factor;}
     route(){} center(){} sync(){} dispose(){}
   }
   saved.set('tactical-animal-build-v1',JSON.stringify({...game.DEFAULT_BUILD,utility:'grenade'}));

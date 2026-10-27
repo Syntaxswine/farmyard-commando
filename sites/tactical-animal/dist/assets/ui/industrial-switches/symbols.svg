@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg">
-  <!-- All six marks use a 32-unit grid, solid fill and the same ivory ink. -->
+  <!-- All control marks use a 32-unit grid, solid fill and the same ivory ink. -->
   <symbol id="look" viewBox="0 0 32 32">
     <path fill-rule="evenodd" d="M2 16C6 9 10 5 16 5s10 4 14 11c-4 7-8 11-14 11S6 23 2 16Zm5 0c3 5 5 7 9 7s6-2 9-7c-3-5-5-7-9-7s-6 2-9 7Z"/>
   </symbol>
@@ -25,5 +25,11 @@
     <rect x="10" y="3" width="5" height="10" rx="1"/>
     <rect x="20" y="11" width="5" height="10" rx="1"/>
     <rect x="8" y="19" width="5" height="10" rx="1"/>
+  </symbol>
+  <symbol id="zoom-in" viewBox="0 0 32 32">
+    <path d="M4 22 16 8l12 14h-8v4h-8v-4Z"/>
+  </symbol>
+  <symbol id="zoom-out" viewBox="0 0 32 32">
+    <path d="M4 10h8V6h8v4h8L16 24Z"/>
   </symbol>
 </svg>

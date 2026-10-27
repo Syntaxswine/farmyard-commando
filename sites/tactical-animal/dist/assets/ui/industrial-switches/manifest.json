@@ -31,7 +31,8 @@
     "file": "symbols.svg",
     "sourceBranch": "codex/industrial-button-art",
     "sourceRevision": "d1e84684058c8d44298432a00c6ea9a6bd2b2cf6",
-    "sourcePath": "sites/tactical-animal/dist/field-radio-icons.svg"
+    "sourcePath": "sites/tactical-animal/dist/field-radio-icons.svg",
+    "adaptations": ["Added matching zoom-in and zoom-out arrows on the original 32-unit grid."]
   },
   "materialRules": [
     "Green housings are worn painted olive metal around hazy celluloid faces.",

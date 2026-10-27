@@ -29,6 +29,17 @@ Run `node sites/tactical-animal/tools/snapshot-aft.mjs <original-dist-directory>
 
 The full art bank stays on disk. The browser requests only the images and modules used by the current screens and mission.
 
+## Industrial UI hardware
+
+The interface should feel like warm, worn vintage machinery: industrial and retrofuturist, with painterly skins and textures. The standalone `dist/button-study.html` material study previews the button treatment before its game rollout. Its reusable styles are in `dist/industrial-switches.css`; the painted atlas, original control symbols and generation manifest are in `dist/assets/ui/industrial-switches/`.
+
+- Green switches use chipped olive painted-metal housings around hazy, aged celluloid faces. The opaque mounting metal keeps its material identity while a warm internal lamp illuminates the inset face.
+- Symbols, labels, stock counts and AP markings belong to one white painted legend. Their illumination must change together. Keep them inside the shared `.switch-legend` group so they inherit one paint color and one lighting filter.
+- Red indicators retain the warm cherry-red and orange palette. Their translucent material has molded diamond prisms and ribs, like an old tail light or street lamp: variations in thickness break and diffuse the internal light into a pattern. The eye, count and label use the same white paint in both lighting states.
+- Preserve readable phone-sized markings, clear on/off states and touch targets. Retain the original six control symbols and respect reduced-motion preferences.
+
+The battlefield minimap and expanded tactical map share the buttons' chipped olive-metal housing through `dist/map-frame.css`. Their transparent, nine-slice `map-frame-v1.webp` border preserves the painted corners at different map sizes. Its generation prompt and provenance are recorded with the switch materials in `dist/assets/ui/industrial-switches/manifest.json`.
+
 ## Phone adaptation rules
 
 Keep the original painted silhouettes, material scale, weathering and species identity. Preserve transparent margins and use the recorded weapon crop frames rather than stretching weapon images. Retain readable touch targets, portrait framing and safe-area spacing.

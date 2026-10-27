@@ -22,7 +22,7 @@ Run `node sites/tactical-animal/tools/snapshot-aft.mjs <original-dist-directory>
 ## Art already connected to the mobile game
 
 - Character selection uses the original worker portraits. The battlefield uses the existing original species models, paint, equipment and movement rigs.
-- Loadout buttons and the grenade control use the original painted weapon images and their original crop frames. Stance controls use the parent game's silhouette symbols.
+- Loadout buttons use the original painted weapon images and their original crop frames. The mobile adapter resolves project-relative URLs before loading, versions them with the release, and keeps loaded images mounted during selection. Stance controls use the parent game's silhouette symbols.
 - `original-art.js` renders the mission with the original brick, concrete, gravel and grass textures, the original two-metre wall height and the parent game's painted cargo renderer. Walls and cargo use instancing for repeated pieces.
 - The original daylight rig supplies the morning light and shadows. Its mobile shadow map is 1024 pixels.
 - The preparation screen follows the parent's cream paper, oxide red, ink-black lettering and diagonal poster composition. Battle controls follow its olive panels, cream labels and muted gold selection treatment. System fonts keep the phone version independent of external font downloads.
@@ -39,6 +39,10 @@ The interface should feel like warm, worn vintage machinery: industrial and retr
 - Preserve readable phone-sized markings, clear on/off states and touch targets. Retain the original six control symbols and respect reduced-motion preferences.
 
 The battlefield minimap and expanded tactical map share the buttons' chipped olive-metal housing through `dist/map-frame.css`. Their transparent, nine-slice `map-frame-v1.webp` border preserves the painted corners at different map sizes. Its generation prompt and provenance are recorded with the switch materials in `dist/assets/ui/industrial-switches/manifest.json`.
+
+All six field controls and both zoom keys use the painted switch atlas through `dist/field-hardware.css`. The red eye lights for visible contacts and briefly pulses for a newly discovered guard. End Turn lights throughout both combat phases, independently of whether it is currently clickable. Run/sneak, lowered stances, and armed grenades light their complete white legends; holding a mode button retains its expanded choice menu.
+
+The live End Turn control uses the red prismatic lens. Its lamp indicates turn-based combat and stays illuminated during both player and guard turns, including when the action is temporarily disabled for grenade aiming. It stays dark outside combat. The upper-left Zoom arrows use the green painted-metal switches, illuminate on press, and retain 44-pixel touch targets. `dist/field-hardware.css` adapts the shared switch material to the field controls.
 
 ## Phone adaptation rules
 

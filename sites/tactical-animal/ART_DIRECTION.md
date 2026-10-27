@@ -38,6 +38,8 @@ The interface should feel like warm, worn vintage machinery: industrial and retr
 - Red indicators retain the warm cherry-red and orange palette. Their translucent material has molded diamond prisms and ribs, like an old tail light or street lamp: variations in thickness break and diffuse the internal light into a pattern. The eye, count and label use the same white paint in both lighting states.
 - Preserve readable phone-sized markings, clear on/off states and touch targets. Retain the original six control symbols and respect reduced-motion preferences.
 
+The battlefield minimap and expanded tactical map share the buttons' chipped olive-metal housing through `dist/map-frame.css`. Their transparent, nine-slice `map-frame-v1.webp` border preserves the painted corners at different map sizes. Its generation prompt and provenance are recorded with the switch materials in `dist/assets/ui/industrial-switches/manifest.json`.
+
 ## Phone adaptation rules
 
 Keep the original painted silhouettes, material scale, weathering and species identity. Preserve transparent margins and use the recorded weapon crop frames rather than stretching weapon images. Retain readable touch targets, portrait framing and safe-area spacing.

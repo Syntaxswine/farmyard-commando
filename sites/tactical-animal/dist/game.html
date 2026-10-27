@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="touch-controls.css">
   <link rel="stylesheet" href="original-art.css">
+  <link rel="stylesheet" href="map-frame.css">
 </head>
 <body>
   <main id="prep">
@@ -27,7 +28,7 @@
     <div id="viewport" role="application" aria-label="Tactical map. Tap ground to move. Drag to look around. Tap a visible guard to target."></div>
     <button id="interaction-hand" class="interaction-hand" type="button" hidden aria-haspopup="dialog" aria-label="Interact with nearby object. Hold for choices."><span id="interaction-icon" aria-hidden="true"></span><strong id="interaction-label"></strong><small id="interaction-cost"></small></button>
     <div class="view-controls"><button id="zoom-in" aria-label="Zoom in">▲</button><span>ZOOM</span><button id="zoom-out" aria-label="Zoom out">▼</button></div>
-    <button id="minimap-button" aria-label="Open tactical map"><canvas id="minimap" width="190" height="140"></canvas><span>MAP ↗</span></button>
+    <button id="minimap-button" class="map-metal-frame" aria-label="Open tactical map"><canvas id="minimap" width="190" height="140"></canvas><span>MAP ↗</span></button>
     <div id="loading" role="status">Preparing the field…</div>
     <div class="hero-strip"><div class="hero-identity"><strong id="battle-name"></strong><span id="battle-species"></span></div><div class="vitals"><span id="hp-label"></span><div class="meter"><i id="hp-bar"></i></div></div><div class="ap-block"><strong id="ap"></strong><small id="ap-label">AP</small></div></div>
     <div class="battle-bottom">

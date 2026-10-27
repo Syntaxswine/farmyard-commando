@@ -38,5 +38,25 @@
     "Every symbol, label, stock count and AP marking inherits one shared white-paint color and one shared illumination filter.",
     "The red lens diffuses its warm lamp through molded diamond prisms and ribs; eye, count and label remain the same white paint.",
     "Metal mounting bezels stay opaque in both lighting states."
-  ]
+  ],
+  "mapFrame": {
+    "title": "Worn olive-metal tactical map frame",
+    "created": "2026-10-27",
+    "generation": {
+      "prompt": "Use case: precise-object-edit. Asset type: a single production UI nine-slice metal border skin with a genuinely transparent center, for the tactical map in the same painterly industrial retrofuturist game. Input image is the approved button atlas and is the edit target/style reference. Take ONLY the worn olive painted METAL MOUNTING FRAME and its dark recessed inner metal lip from the upper-left unlit green button in the atlas. Reproduce that same chipped olive enamel, exposed dull steel edge wear, warm brown oxidation and soft painterly brushwork as ONE straight-on square hollow frame. Keep the original warm olive palette and modest hand-painted wear. Remove the entire green celluloid face and every other tile: the whole large inner opening must be genuine alpha transparency, with no glass, no film, no material, no color fill and no cast shadow in the center. There must be only one frame, edge to edge, no extra background or margin outside it. The opaque frame occupies exactly the outer 12 percent of the image on all four sides, including its dark inner bevel. The central 76 by 76 percent square opening is entirely transparent. Keep the four long border strips straight and continuous so they can stretch independently as a CSS nine-slice border around both a compact square minimap and a wide rectangular map; keep corner details fully inside the outer 12 percent corner squares. Nearly square corners with only the tiny softened corners of the approved hardware. No protruding hardware, no screws, no new decorative details. The outer painted metal does not glow. Preserve the material character of the approved button housing. No buttons, no lighted lens, no icons, no text, no numbers, no logos, no watermarks, no diagram, no mockup layout. Transparent PNG-style production texture, not a photograph of a frame or a scene.",
+      "tool": "built-in image_gen",
+      "original": "exec-ebc7edb6-b1d2-47c4-b828-8a90d44b3772.png",
+      "transparent_background": true
+    },
+    "reference": "switch-skins-v2.webp",
+    "file": "map-frame-v1.webp",
+    "width": 1254,
+    "height": 1254,
+    "bytes": 221832,
+    "sha256": "de448296888095d958a84afe0cdafdd8f268034c380d97a0a1f5f8cd30a9aae0",
+    "originalSha256": "5d8eee0f895e39f58a09848a7a41fd2f18eb0874ae76af515655205b537ee53e",
+    "slicePercent": 16,
+    "transparentCenter": true,
+    "processing": "Full generated image encoded as WebP quality 90 with alpha quality 100; no cropping, resizing, recoloring or repainting."
+  }
 }

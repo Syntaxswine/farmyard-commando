@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 import {Core,encodeSave} from '../dist/solo-game.js';
-import {recordFlame,pointInFlame,flameFogMask} from '../dist/flame-event.js';
+import {recordFlame,pointInFlame,flameFogMask,flameMaskRect} from '../dist/flame-event.js';
 import {flameScenario,gameplayReceipt} from './flame-scenarios.mjs';
 
 test('all 54 public-main outcomes retain identical AP, fuel, cone hits, damage, casualties, visibility, and RNG',()=>{
@@ -38,7 +38,7 @@ test('the recorded cone ends before a two-metre wall and remains immutable when 
 test('the cone cannot bridge a hidden strip, and masks intersect shot-time visibility with current visibility',()=>{
   const visible=allVisible();for(let y=0;y<30;y++)visible.delete(`7,${y}`);
   const shape=recordFlame(source,10,[],visible);assert.ok(shape.rays.every(ray=>ray.kind==='fog'&&ray.x<6.5));assert.equal(pointInFlame(shape,{x:8,y:25}),false);
-  const later=allVisible();later.delete('5,25');const mask=flameFogMask(shape,later);
-  assert.equal(mask[(25*40+7)*4],0);assert.equal(mask[(25*40+5)*4],0);assert.equal(mask[(25*40+4)*4],255);
+  const later=allVisible();later.delete('5,25');const rect=flameMaskRect(shape),mask=flameFogMask(shape,later),at=(x,y)=>((y-rect.origin.y)*rect.width+x-rect.origin.x)*4;
+  assert.equal(mask[at(7,25)],0);assert.equal(mask[at(5,25)],0);assert.equal(mask[at(4,25)],255);
   visible.delete('4,25');const hidden=recordFlame(source,10,[],visible);assert.equal(hidden.sourceVisible,false);assert.ok(hidden.rays.every(ray=>ray.kind==='hidden'&&ray.distance===0));
 });

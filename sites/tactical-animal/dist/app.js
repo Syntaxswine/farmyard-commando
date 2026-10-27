@@ -175,6 +175,8 @@ function renderBattle(){if(!state)return;const u=hero(state),combat=state.phase=
   $('hp-label').textContent=`${Math.ceil(u.hp)} / ${u.maxHp} HP`;$('hp-bar').style.width=`${u.hp/u.maxHp*100}%`;
   $('ap').textContent=combat?Math.max(0,u.ap).toFixed(1):'∞';$('ap-label').textContent=combat?'AP':'FREE MOVE';
   $('end-turn').disabled=state.phase!=='player'||grenadeAim.active;
+  $('end-turn').dataset.lit=String(combat);
+  $('end-turn').setAttribute('aria-description',combat?'Combat light on':'Combat light off');
   $('end-turn').setAttribute('aria-label',state.phase==='enemy'?'Guards are acting':'End turn');
   $('turn-label').innerHTML=state.phase==='enemy'?'GUARD<br>TURN':'END<br>TURN';
   $('joystick').classList.toggle('unavailable',!can);

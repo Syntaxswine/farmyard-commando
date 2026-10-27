@@ -40,6 +40,8 @@ The interface should feel like warm, worn vintage machinery: industrial and retr
 
 The battlefield minimap and expanded tactical map share the buttons' chipped olive-metal housing through `dist/map-frame.css`. Their transparent, nine-slice `map-frame-v1.webp` border preserves the painted corners at different map sizes. Its generation prompt and provenance are recorded with the switch materials in `dist/assets/ui/industrial-switches/manifest.json`.
 
+The live End Turn control uses the red prismatic lens. Its lamp indicates turn-based combat and stays illuminated during both player and guard turns, including when the action is temporarily disabled for grenade aiming. It stays dark outside combat. The upper-left Zoom arrows use the green painted-metal switches, illuminate on press, and retain 44-pixel touch targets. `dist/field-hardware.css` adapts the shared switch material to the field controls.
+
 ## Phone adaptation rules
 
 Keep the original painted silhouettes, material scale, weathering and species identity. Preserve transparent margins and use the recorded weapon crop frames rather than stretching weapon images. Retain readable touch targets, portrait framing and safe-area spacing.

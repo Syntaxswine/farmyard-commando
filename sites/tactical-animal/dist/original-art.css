@@ -37,6 +37,11 @@ body.in-battle{--ink:#17241e;--panel:#25342a;--panel2:#354330;--cream:#efe6ce;--
 .square-control,#battle .view-controls button,#minimap-button{border:1px solid #818868;background:linear-gradient(#354330ed,#1a2922f0);box-shadow:0 2px 5px #08140d50;border-radius:3px;color:#efe6ce}
 #battle .square-control.end-turn{background:#6d3929;border-color:#ba8060;color:#ffe6c0}
 #look.inspecting,#grenade[aria-pressed=true]{background:#686345;border-color:#efcf83}
+#look.guard-alert{border-color:#ff7669;background:#572721;box-shadow:0 0 0 1px #ff766966,0 2px 5px #08140d50}
+#look.guard-alert .eye-symbol{animation:guard-contact-blink .5s step-end 4}
+#look.guard-alert .control-caption{color:#ffc4b6}
+@keyframes guard-contact-blink{0%,49%{color:#ff7669}50%,100%{color:var(--cream)}}
+@media(prefers-reduced-motion:reduce){#look.guard-alert .eye-symbol{animation:none;color:#ff7669}}
 #joystick{border-color:#818868;background:radial-gradient(circle,#35433070,#17241e40)}#stick-knob{background:radial-gradient(circle at 35% 30%,#d2c292,#897747);border:2px solid #e4d19a;box-shadow:0 4px 14px #08140d80}
 .stick-caption,.stick-north{color:#efe6ce}.control-icon .original-stance,.control-choices .original-stance{fill:currentColor;stroke:none}
 .grenade-art{display:flex;align-items:center;justify-content:center;height:31px;width:28px}#grenade .grenade-art .weapon-sprite{height:31px}

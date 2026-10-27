@@ -6,12 +6,14 @@ import {weaponArtwork} from './original-art.js';
 import {STANCE_ICONS} from './aft/tactics/battle-control-icons.js';
 import {selectInteractionTarget} from './interactions.js';
 import {createOperationStorage} from './operation-storage.js';
+import {GuardContactTracker,GuardAlertIndicator} from './guard-alert.js';
 const $=id=>document.getElementById(id);
 let selectedMissionId=DEFAULT_MISSION_ID;
 let build={...DEFAULT_BUILD},state=null,view=null,active=false,paused=false,selected=null,aim='hip',zone='torso',burst=false,contextKey='',lastTime=0,lastUI=0,lastSave=0,lastPhase='',stick={x:0,y:0},stickPointer=null,resultShown=false,aimViewport=null;
 const grenadeAim=new GrenadeAim();
 const keys=new Set(),overlay=$('overlay');
 const picker=$('control-picker');
+const guardContacts=new GuardContactTracker(),guardAlert=new GuardAlertIndicator($('look'),$('guard-alert-status'));
 let pickerTrigger=null,stanceDirection=1,movementDirection=-1;
 let interactionFocus=null,handTarget=null;
 const safe=text=>String(text).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
@@ -57,6 +59,7 @@ $('grenade-art').append(weaponArtwork('grenade',32));
 $('interaction-icon').append(weaponArtwork('hands',25));
 function showDialog(html,actions=[],{context=false}={}){
   if(picker.open)closePicker();
+  guardAlert.stop();
   cancelGrenade();
   paused=true;resetStick();keys.clear();$('interaction-hand').hidden=true;
   $('overlay-content').innerHTML=html;
@@ -79,16 +82,17 @@ function grenadeViewport(){
   aimViewport={left:sidePanel?panel.right-r.left+12:16,right:r.width-16,top:top-r.top+12,bottom:Math.max(top-r.top+72,(sidePanel?controls.top:panel.top)-r.top-12)};
   return aimViewport;
 }
-function start(s){try{
+function start(s,{resume=false}={}){try{
   if(state&&state!==s)storage.write();cancelGrenade();resetStick();keys.clear();if(picker.open)closePicker();
+  guardAlert.stop();guardContacts.reset([...(Array.isArray(s.solo.spottedGuardIds)?s.solo.spottedGuardIds:[]),...(resume?Core.visibleOpponents(s).map(guard=>guard.id):[])]);s.solo.spottedGuardIds=guardContacts.ids();
   view?.dispose();$('loading').textContent='Preparing the field…';$('loading').hidden=false;state=s;selectedMissionId=s.solo.missionId;build=normalizeBuild(s.solo.build);Core.stop(s);delete s.effect;
   selected=null;interactionFocus=null;handTarget=null;grenadeAim.cancel();aimViewport=null;contextKey='';resultShown=false;stanceDirection=1;movementDirection=-1;aim='hip';zone='torso';burst=false;
   $('prep').hidden=true;$('battle').hidden=false;document.body.classList.add('in-battle');active=true;paused=false;
   view=new FieldView($('viewport'),{onPick:pick,getAimViewport:grenadeViewport,onLoading:busy=>{$('loading').hidden=!busy;},onError:message=>{$('loading').hidden=false;$('loading').textContent='Animal artwork could not load. '+message;}});
   view.setGame(state);lastPhase=state.phase;lastTime=performance.now();lastUI=0;lastSave=lastTime;renderBattle();storage.write();
 }catch(error){active=false;view?.dispose();view=null;$('prep').hidden=false;$('battle').hidden=true;document.body.classList.remove('in-battle');toast('Cannot start 3D view: '+error.message);}}
-function backToPrep(){cancelGrenade();resetStick();keys.clear();Core.stop(state);storage.write();active=false;view?.dispose();view=null;$('battle').hidden=true;$('prep').hidden=false;document.body.classList.remove('in-battle');renderPrep();}
-$('deploy').onclick=()=>start(createSoloGame(build,1947,selectedMissionId));$('resume').onclick=()=>{try{const s=operationStorage.load(selectedMissionId);if(s.solo.status!=='active'){toast('That operation has ended. Deploy a new animal to begin again.');return;}start(s);}catch(error){toast('Could not resume: '+error.message);}};
+function backToPrep(){cancelGrenade();resetStick();keys.clear();Core.stop(state);storage.write();guardAlert.stop();active=false;view?.dispose();view=null;$('battle').hidden=true;$('prep').hidden=false;document.body.classList.remove('in-battle');renderPrep();}
+$('deploy').onclick=()=>start(createSoloGame(build,1947,selectedMissionId));$('resume').onclick=()=>{try{const s=operationStorage.load(selectedMissionId);if(s.solo.status!=='active'){toast('That operation has ended. Deploy a new animal to begin again.');return;}start(s,{resume:true});}catch(error){toast('Could not resume: '+error.message);}};
 function positionInteractionHand(){
   const button=$('interaction-hand');
   if(!handTarget||!active||paused||grenadeAim.active||!Core.canControl(state,hero(state))||!$('loading').hidden){button.hidden=true;return;}
@@ -255,6 +259,7 @@ $('close-picker').onclick=closePicker;
 picker.addEventListener('click',event=>{if(event.target!==picker)return;const r=picker.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)closePicker();});
 function openPicker(kind){
   if(!state||paused||grenadeAim.active||!Core.canControl(state,hero(state)))return;
+  guardAlert.stop();
   resetStick();keys.clear();Core.stop(state);paused=true;
   const u=hero(state),isStance=kind==='stance',values=isStance?stanceValues:movementValues,names=isStance?stanceNames:movementNames,current=isStance?u.stance:Core.movementModeOf(u);
   pickerTrigger=$(kind+'-cycle');pickerTrigger.setAttribute('aria-expanded','true');
@@ -327,7 +332,7 @@ function help(){showDialog(`<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br
   <li>Drag the world to look around when not aiming a grenade. Use the arrows to zoom.</li>
   <li>Tap the stance button to go standing → kneeling → prone → kneeling → standing. Tap movement for run ↔ off / walk ↔ sneak. Both switches cost 0 AP, even when you have no AP left.</li>
   <li>Hold either button for large direct choices. Keyboard: focus the button and press the down arrow to open choices.</li>
-  <li>The eye counts visible opponents. Each tap advances through them from nearby, clear contacts to farther, harder-to-see contacts, then recenters on your animal. The next tap starts the cycle again. With no visible opponents, it simply recenters. Camera inspection costs no AP; moving also returns to your animal.</li>
+  <li>The eye counts visible opponents. It blinks red and plays a short alert when you first spot a guard. Known guards stay remembered when you resume. Each tap advances through visible opponents from nearby, clear contacts to farther, harder-to-see contacts, then recenters on your animal. The next tap starts the cycle again. With no visible opponents, it simply recenters. Camera inspection costs no AP; moving also returns to your animal.</li>
   <li>A hand appears above visible objects within clear reach. Tap its labelled action, or hold for choices. Tap another nearby object to focus it. Opening choices and loot windows is free; completing an action spends the shown AP in combat.</li>
   <li>Chests and fallen guards share a loot window with individual Take buttons and Take all. Transfers cost 1 AP in combat, including a bulk transfer. Doors open or close for 1 AP; opening a chest or searching a body costs 2 AP. Exploration interactions are free. A blocked doorway cannot close on an animal.</li>
   <li>Options holds inventory, weapon changes, reloads and treatment, including looted supplies. Find your objective and recent events under Mission & combat log. Use the hand to collect the mission evidence and extract.</li>
@@ -353,7 +358,7 @@ addEventListener('keydown',e=>{
   if(k==='escape'){if(grenadeAim.active){cancelGrenade();renderBattle();}else $('menu').click();}
 });
 addEventListener('keyup',e=>{keys.delete(e.key.toLowerCase());if(grenadeAim.active)renderGrenadeControls();});
-addEventListener('blur',()=>{resetStick();keys.clear();});document.addEventListener('visibilitychange',()=>{resetStick();keys.clear();if(document.hidden)storage.write();lastTime=performance.now();});addEventListener('pagehide',()=>storage.write());
+addEventListener('blur',()=>{resetStick();keys.clear();guardAlert.stop();});document.addEventListener('visibilitychange',()=>{resetStick();keys.clear();if(document.hidden){guardAlert.stop();storage.write();}lastTime=performance.now();});addEventListener('pagehide',event=>{storage.write();guardAlert.stop();if(!event.persisted)void guardAlert.dispose();});
 function frame(now){
   requestAnimationFrame(frame);const dt=Math.min(.05,Math.max(0,(now-lastTime)/1000));lastTime=now;if(!active||!view)return;
   if(!paused&&!document.hidden){
@@ -366,6 +371,10 @@ function frame(now){
     }else{if(Math.hypot(x,y)>.1&&view.focusedId!=null)view.center();tick(state,dt,Math.hypot(x,y)>.1?screenToGround(x,y):null);}
     if(state.phase!==lastPhase){resetStick();keys.clear();cancelGrenade();Core.stop(state);lastPhase=state.phase;contextKey='';}
     if(now-lastSave>2500){storage.write();lastSave=now;}
+  }
+  if(!paused&&!document.hidden&&state.solo.status==='active'){
+    const fresh=guardContacts.observe(state.units.filter(guard=>guard.team==='guard'&&guard.hp>0&&state.detected.has(guard.id)));
+    if(fresh.length){state.solo.spottedGuardIds=guardContacts.ids();guardAlert.notify(fresh);storage.write();}
   }
   view.sync(state,now);positionInteractionHand();if(now-lastUI>100){renderBattle();lastUI=now;}
 }

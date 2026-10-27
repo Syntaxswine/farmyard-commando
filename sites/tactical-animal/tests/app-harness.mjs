@@ -3,6 +3,7 @@ import vm from 'node:vm';
 import * as game from '../dist/solo-game.js';
 import * as controls from '../dist/mobile-controls.js';
 import * as grenadeControls from '../dist/grenade-controls.js';
+import * as guardAlerts from '../dist/guard-alert.js';
 import {selectInteractionTarget} from '../dist/interactions.js';
 import {createOperationStorage} from '../dist/operation-storage.js';
 import {STANCE_ICONS} from '../dist/aft/tactics/battle-control-icons.js';
@@ -39,7 +40,7 @@ export function app({autoDeploy=true,initialStorage=[],storageFailure=null}={}){
     route(){} center(){} sync(){} dispose(){this.disposed=true;this.aiming=false;}
   }
   if(!saved.has('tactical-animal-build-v1'))saved.set('tactical-animal-build-v1',JSON.stringify({...game.DEFAULT_BUILD,utility:'grenade'}));
-  const context={...game,...controls,...grenadeControls,selectInteractionTarget,createOperationStorage,STANCE_ICONS,weaponArtwork:()=>new Element(),FieldView,drawMinimap(){},document:doc,localStorage:{getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)},setTimeout,clearTimeout,performance:{now:()=>0},requestAnimationFrame:fn=>animation=fn,innerHeight:844,addEventListener:(name,fn)=>events.set(name,fn),console};
+  const context={...game,...controls,...grenadeControls,...guardAlerts,selectInteractionTarget,createOperationStorage,STANCE_ICONS,weaponArtwork:()=>new Element(),FieldView,drawMinimap(){},document:doc,localStorage:{getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)},setTimeout,clearTimeout,performance:{now:()=>0},requestAnimationFrame:fn=>animation=fn,innerHeight:844,addEventListener:(name,fn)=>events.set(name,fn),console};
   context.window={get localStorage(){return context.localStorage;}};
   if(storageFailure){
     const blocked=()=>{throw Object.assign(new Error('Storage access is denied.'),{name:'SecurityError'});};

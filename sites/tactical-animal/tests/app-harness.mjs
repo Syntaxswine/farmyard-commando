@@ -11,7 +11,7 @@ import {STANCE_ICONS} from '../dist/aft/tactics/battle-control-icons.js';
 
 // Actual application handlers and simulation with a lightweight DOM/renderer.
 export function app({autoDeploy=true,initialStorage=[],storageFailure=null}={}){
-  const elements=new Map(),events=new Map(),saved=new Map(initialStorage),views=[];let animation;
+  const elements=new Map(),events=new Map(),saved=new Map(initialStorage),views=[];let animation,clock=0;
   class Element {
     constructor(id=''){this.id=id;this.style={};this.dataset={};this.children=[];this.listeners=new Map();this.hidden=false;this.disabled=false;this.open=false;this.textContent='';this.captures=new Set();this.classList={add(){},remove(){},toggle(){}};}
     setAttribute(name,value){this[name]=value;}
@@ -57,7 +57,7 @@ export function app({autoDeploy=true,initialStorage=[],storageFailure=null}={}){
   vm.runInNewContext(fs.readFileSync(new URL('../dist/app.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,''),context);
   if(autoDeploy)el('deploy').click();
   const key=(name,type='keydown')=>events.get(type)({key:name,target:{tagName:'BODY',closest:()=>null},preventDefault(){},repeat:false});
-  const advance=(count=1)=>{for(let i=0;i<count;i++)animation((views.at(-1).state.elapsed+.05)*1000);};
+  const advance=(count=1)=>{for(let i=0;i<count;i++){clock=Math.max(clock,views.at(-1).state.elapsed*1000)+50;animation(clock);}};
   const drag=(x,y)=>{el('joystick').fire('pointerdown');el('joystick').fire('pointermove',{clientX:177.5+x,clientY:677.5+y});};
-  return {el,get view(){return views.at(-1);},get s(){return views.at(-1)?.state;},get u(){return game.hero(views.at(-1).state);},views,key,advance,drag,events,saved};
+  return {el,get view(){return views.at(-1);},get s(){return views.at(-1)?.state;},get u(){return game.hero(views.at(-1).state);},views,key,advance,drag,events,saved,document:doc};
 }

@@ -17,6 +17,7 @@ const keys=new Set(),overlay=$('overlay');
 const picker=$('control-picker');
 const guardContacts=new GuardContactTracker(),guardAlert=new GuardAlertIndicator($('look'),$('guard-alert-status'));
 let pickerTrigger=null,stanceDirection=1,movementDirection=-1;
+let lastHeldWeapon=null,areaPress=false;
 let interactionFocus=null,handTarget=null;
 const safe=text=>String(text).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
 const stanceValues=['standing','kneeling','prone'],movementValues=['run','walk','sneak'];
@@ -94,7 +95,7 @@ function start(s,{resume=false}={}){try{
   if(state&&state!==s)storage.write();cancelAreaAim();resetStick();keys.clear();if(picker.open)closePicker();
   guardAlert.stop();guardContacts.reset([...(Array.isArray(s.solo.spottedGuardIds)?s.solo.spottedGuardIds:[]),...(resume?Core.visibleOpponents(s).map(guard=>guard.id):[])]);s.solo.spottedGuardIds=guardContacts.ids();
   view?.dispose();$('loading').textContent='Preparing the field…';$('loading').hidden=false;state=s;selectedMissionId=s.solo.missionId;build=normalizeBuild(s.solo.build);Core.stop(s);delete s.effect;
-  selected=null;interactionFocus=null;handTarget=null;grenadeAim.cancel();flameAim.cancel();aimViewport=null;contextKey='';resultShown=false;stanceDirection=1;movementDirection=-1;aim='hip';zone='torso';burst=false;
+  selected=null;interactionFocus=null;handTarget=null;grenadeAim.cancel();flameAim.cancel();lastHeldWeapon=hero(s).weapon;areaPress=false;aimViewport=null;contextKey='';resultShown=false;stanceDirection=1;movementDirection=-1;aim='hip';zone='torso';burst=false;
   $('prep').hidden=true;$('battle').hidden=false;document.body.classList.add('in-battle');active=true;paused=false;
   view=new FieldView($('viewport'),{onPick:pick,getAimViewport:grenadeViewport,onLoading:busy=>{$('loading').hidden=!busy;},onError:message=>{$('loading').hidden=false;$('loading').textContent='Animal artwork could not load. '+message;}});
   view.setGame(state);lastPhase=state.phase;lastTime=performance.now();lastUI=0;lastSave=lastTime;renderBattle();storage.write();
@@ -208,21 +209,17 @@ function renderBattle(){if(!state)return;const u=hero(state),combat=state.phase=
 $('end-turn').onclick=()=>act(()=>{selected=null;cancelAreaAim();Core.endTurn(state);});
 function renderGrenadeControls(){
   const u=hero(state),armed=grenadeAim.active,point=grenadeAim.point,p=armed&&point?Core.previewGrenade(state,u,point):null;
-  const count=u.ammo.grenade||0,cost=Core.grenadeCost(u),adjusting=stickPointer!==null||keys.size>0;
-  $('grenade-count').textContent=count;$('grenade-cost').textContent=`${cost} AP`;$('grenade-label').textContent=armed?'THROW':'GRENADE';
-  $('grenade').disabled=!Core.canControl(state,u)||flameAim.active||count<1||u.ap+1e-7<cost||armed&&(!p?.ok||adjusting);
-  $('grenade').setAttribute('aria-pressed',String(armed));
-  $('grenade').setAttribute('aria-label',`${armed?'Throw grenade':'Aim grenade'}. ${count} remaining. ${cost} AP.`);
-  $('grenade').title=armed?(p?.reason||(!point?'Choose a landing point with the joystick':adjusting?'Release the aim controls, then throw':`Throw grenade · ${cost} AP`)):`Aim grenade · ${cost} AP · G`;
+  const count=u.ammo.grenade||0,cost=Core.grenadeCost(u);
   $('grenade-aim').hidden=!armed;$('battle').classList.toggle('aiming-grenade',armed);
   $('stick-caption').textContent=armed?'AIM':'MOVE';
   $('joystick').setAttribute('aria-label',armed?'Grenade aim thumbstick. Direction aims; full displacement reaches maximum range. Release to hold your aim. Keyboard: W A S D or arrows, Enter to throw, Escape to cancel.':'Movement thumbstick. Drag from the center to move. Keyboard: W A S D or arrow keys.');
   $('viewport').setAttribute('aria-label',armed?'Grenade preview. Aim with the joystick, release to hold, then press Throw. Cancel leaves resources unchanged.':'Tactical map. Tap ground to move. Drag to look around. Tap a visible guard to target.');
-  if(!armed)return;
+  if(!armed){renderAreaButton();return;}
   const detail=point?`${p.distance.toFixed(1)} / ${Core.WEAPONS.grenade.range} m · ${p.blast} m blast · ${cost} AP · ${count} left`:`Move the joystick to aim · ${cost} AP · ${count} left`;
   if($('grenade-detail').textContent!==detail)$('grenade-detail').textContent=detail;
   const warning=[p?.reason,p?.selfDanger?'Your animal is exposed to the blast.':''].filter(Boolean).join('. ');
   $('grenade-warning').hidden=!warning;$('grenade-warning').textContent=warning;
+  renderAreaButton();
 }
 function updateGrenadePreview(){
   if(!grenadeAim.active)return;
@@ -231,12 +228,13 @@ function updateGrenadePreview(){
 }
 function cancelGrenade(){
   if(!grenadeAim.active)return;
-  grenadeAim.cancel();resetStick();keys.clear();view?.endGrenadeAim();$('toast').hidden=true;
+  grenadeAim.cancel();resetStick();keys.clear();view?.endGrenadeAim();clearAreaReadiness();$('toast').hidden=true;
 }
 function armGrenade(){
   if(!state||paused||grenadeAim.active||!Core.canControl(state,hero(state)))return;
   const u=hero(state);if(!(u.ammo.grenade>0)||u.ap+1e-7<Core.grenadeCost(u))return;
   cancelFlame();
+  state.solo.areaWeapon='grenade';lastHeldWeapon=u.weapon;
   resetStick();keys.clear();Core.stop(state);selected=null;grenadeAim.start();view.beginGrenadeAim();$('toast').hidden=true;renderBattle();
 }
 function commitGrenade(){
@@ -246,17 +244,11 @@ function commitGrenade(){
   if(!Core.throwGrenade(state,u,landing))return;
   grenadeAim.cancel();resetStick();keys.clear();view.endGrenadeAim({linger:800});contextKey='';renderBattle();storage.write();
 }
-$('grenade').onclick=()=>grenadeAim.active?commitGrenade():armGrenade();
 $('cancel-grenade').onclick=()=>{cancelGrenade();renderBattle();};
 function renderFlameControls(){
-  const u=hero(state),armed=flameAim.active,equipped=u.weapon==='flamethrower',count=u.ammo.flamethrower||0;
-  const p=equipped?Core.previewFlame(state,u,armed?flameAim.heading:u.heading):null,adjusting=stickPointer!==null||keys.size>0;
-  $('flame').hidden=!equipped;$('flame').disabled=!p?.ok||grenadeAim.active||armed&&adjusting;
-  $('flame').setAttribute('aria-pressed',String(armed));$('flame').dataset.lit=String(armed);
-  $('flame').setAttribute('aria-label',`${armed?'Fire':'Aim'} flamethrower cone. 6 AP. ${count} fuel remaining.`);
-  $('flame-label').textContent=armed?'FIRE':'CONE';$('flame-count').textContent=count;
+  const u=hero(state),armed=flameAim.active,count=u.ammo.flamethrower||0,p=armed?Core.previewFlame(state,u,flameAim.heading):null;
   $('flame-aim').hidden=!armed;$('battle').classList.toggle('aiming-flame',armed);
-  if(!armed)return;
+  if(!armed){renderAreaButton();return;}
   $('stick-caption').textContent='AIM';
   $('joystick').setAttribute('aria-label','Flamethrower aim thumbstick. Direction rotates the full 10 metre cone. Release to hold aim. Enter fires; Escape cancels.');
   $('viewport').setAttribute('aria-label','Flamethrower cone preview. Aim with the joystick, release to hold, then press Fire. Walls and fog clip the highlighted area.');
@@ -264,25 +256,80 @@ function renderFlameControls(){
   $('flame-detail').textContent=`${p.range} m · ${p.spread}° cone · ${p.cost} AP · ${count} fuel · ${opponents} visible opponent${opponents===1?'':'s'} in cone`;
   const warning=[p.reason,p.contacts.some(contact=>contact.team===u.team)?'A friendly animal is in the cone.':''].filter(Boolean).join('. ');
   $('flame-warning').hidden=!warning;$('flame-warning').textContent=warning;view.previewFlame(flameAim.heading,p);
+  renderAreaButton();
 }
 function cancelFlame(){
   if(!flameAim.active)return;
-  flameAim.cancel();resetStick();keys.clear();view?.endFlameAim();$('toast').hidden=true;
+  flameAim.cancel();resetStick();keys.clear();view?.endFlameAim();clearAreaReadiness();$('toast').hidden=true;
 }
-function cancelAreaAim(){cancelGrenade();cancelFlame();}
+function cancelAreaAim(){cancelGrenade();cancelFlame();clearAreaReadiness();}
 function armFlame(heading){
   if(!state||paused||flameAim.active)return;
   const u=hero(state),direction=Number.isFinite(heading)?heading:u.heading;
   if(!Core.previewFlame(state,u,direction).ok)return;
-  cancelGrenade();resetStick();keys.clear();Core.stop(state);selected=null;flameAim.start(direction);view.beginFlameAim();$('toast').hidden=true;renderBattle();
+  cancelGrenade();resetStick();keys.clear();Core.stop(state);selected=null;state.solo.areaWeapon='flamethrower';lastHeldWeapon=u.weapon;flameAim.start(direction);view.beginFlameAim();$('toast').hidden=true;renderBattle();
 }
 function commitFlame(){
   if(!state||paused||!flameAim.active||stickPointer!==null||keys.size)return;
   if(!Core.fireFlame(state,hero(state),flameAim.heading)){renderFlameControls();return;}
   flameAim.cancel();resetStick();keys.clear();view.endFlameAim({linger:1500});contextKey='';renderBattle();storage.write();
 }
-$('flame').onclick=()=>flameAim.active?commitFlame():armFlame();
 $('cancel-flame').onclick=()=>{cancelFlame();renderBattle();};
+const areaNames={grenade:'Grenade',flamethrower:'Flamethrower'};
+const areaIcons={grenade:'<svg class="switch-glyph" viewBox="0 0 32 32"><use href="assets/ui/industrial-switches/symbols.svg#grenade"/></svg>',flamethrower:'<svg class="switch-glyph" viewBox="0 0 32 32"><path d="M16 28 4 6Q16 0 28 6Z"/></svg>'};
+function areaWeapon(){
+  const u=hero(state);
+  if(lastHeldWeapon!==u.weapon){state.solo.areaWeapon=u.weapon==='flamethrower'?'flamethrower':'grenade';lastHeldWeapon=u.weapon;}
+  if(!Object.hasOwn(areaNames,state.solo.areaWeapon)||state.solo.areaWeapon==='flamethrower'&&u.weapon!=='flamethrower')state.solo.areaWeapon=u.weapon==='flamethrower'?'flamethrower':'grenade';
+  return state.solo.areaWeapon;
+}
+function clearAreaReadiness(){const b=$('grenade');b.dataset.ready='false';b.dataset.lit='false';}
+function renderAreaButton(){
+  if(!state)return;
+  const u=hero(state),kind=areaWeapon(),flame=kind==='flamethrower',armed=flame?flameAim.active:grenadeAim.active;
+  const count=u.ammo[kind]||0,cost=flame?6:Core.grenadeCost(u),can=Core.canControl(state,u),adjusting=stickPointer!==null||keys.size>0||areaPress;
+  const p=flame?Core.previewFlame(state,u,armed?flameAim.heading:u.heading):armed&&grenadeAim.point?Core.previewGrenade(state,u,grenadeAim.point):null;
+  const ready=!!(armed&&p?.ok&&!adjusting&&!paused&&!document.hidden&&can&&$('loading').hidden),b=$('grenade');
+  // An unavailable shot must not prevent holding this shared control to switch.
+  b.disabled=!can||!$('loading').hidden;b.dataset.ready=String(ready);b.dataset.lit=String(ready);b.setAttribute('aria-pressed',String(armed));
+  if(b.dataset.kind!==kind){b.dataset.kind=kind;$('area-icon').innerHTML=areaIcons[kind];}
+  const action=armed?(flame?'Fire':'Throw'):'Aim';
+  $('grenade-count').textContent=count;$('grenade-cost').textContent=`${cost} AP`;$('grenade-label').textContent=armed?action.toUpperCase():flame?'CONE':'GRENADE';
+  b.setAttribute('aria-label',`${action} ${flame?'flamethrower cone':'grenade'}. ${count} ${flame?'fuel':'grenades'} remaining. ${cost} AP. Hold to switch weapon.`);
+  const reason=p?.reason||(!count?`No ${flame?'fuel':'grenades'} remaining`:u.ap+1e-7<cost?'Not enough AP':armed&&!p?'Choose a landing point with the joystick':armed&&adjusting?'Release the aim controls, then confirm':'');
+  b.title=(ready?`Ready to ${action.toLowerCase()}`:reason||`Aim ${areaNames[kind].toLowerCase()}`)+' · hold to switch grenade / flamethrower';
+  b.setAttribute('aria-description',(ready?'Ready to fire. Yellow light pulses. ':reason?reason+'. ':'')+'Hold for weapon choices, or press Arrow Down.');
+}
+function areaChoice(kind){
+  const u=hero(state),carried=u.weapon===kind||u.pack.some(item=>item.kind===kind)||(u.ammo[kind]||0)>0,cost=kind==='flamethrower'&&u.weapon!==kind?weaponSwapCost(u,kind):0;
+  const reason=!carried?'Not carried':!Core.canControl(state,u)?'Wait for your turn':u.ap+1e-7<cost?'Not enough AP to equip':'';
+  return {kind,cost,reason,ok:!reason};
+}
+function selectAreaWeapon(kind){
+  const choice=areaChoice(kind);if(!choice.ok){toast(choice.reason);return false;}
+  cancelAreaAim();resetStick();keys.clear();Core.stop(state);const u=hero(state);
+  if(kind==='flamethrower'&&u.weapon!==kind&&!Core.equip(state,u,kind))return false;
+  state.solo.areaWeapon=kind;lastHeldWeapon=u.weapon;selected=null;contextKey='';renderBattle();storage.write();return true;
+}
+function openAreaPicker(){
+  if(!state||paused||!Core.canControl(state,hero(state)))return;
+  guardAlert.stop();cancelAreaAim();resetStick();keys.clear();Core.stop(state);paused=true;
+  pickerTrigger=$('grenade');pickerTrigger.setAttribute('aria-expanded','true');
+  $('control-picker-title').textContent='AREA WEAPON';$('control-picker-cost').textContent='CHOOSE YOUR WEAPON';$('control-picker-hint').textContent='Select a weapon, then tap its button to aim.';
+  const row=$('control-choices');row.replaceChildren();row.classList.add('area-choices');const current=areaWeapon(),u=hero(state);
+  for(const kind of ['grenade','flamethrower']){
+    const choice=areaChoice(kind),detail=choice.reason||`${u.ammo[kind]||0} ${kind==='grenade'?'grenades':'fuel'} · ${choice.cost?choice.cost+' AP to equip':'0 AP to select'}`;
+    const b=button(row,`${areaIcons[kind]}<span>${areaNames[kind]}</span><small>${detail}</small>`,'',kind===current,()=>{closePicker();selectAreaWeapon(kind);});b.disabled=!choice.ok;b.setAttribute('aria-label',`${areaNames[kind]} · ${detail}`);if(kind===current)b.autofocus=true;
+  }
+  const bottom=innerHeight-pickerTrigger.getBoundingClientRect().top+10;picker.style.bottom=`${Math.max(12,Math.min(bottom,innerHeight-220))}px`;picker.showModal();
+}
+bindPressHold($('grenade'),{
+  canUse:()=>!!state&&!paused&&$('loading').hidden&&Core.canControl(state,hero(state)),
+  press:()=>{areaPress=true;clearAreaReadiness();},
+  tap:()=>{if(areaWeapon()==='flamethrower'){if(flameAim.active)commitFlame();else armFlame();}else if(grenadeAim.active)commitGrenade();else armGrenade();},
+  hold:openAreaPicker,
+});
+for(const type of ['pointerup','pointercancel','lostpointercapture'])$('grenade').addEventListener(type,()=>{areaPress=false;renderAreaButton();});
 function renderCycle(kind,value,label,name,can){
   const b=$(kind+'-cycle');b.disabled=!can;b.setAttribute('aria-label',`${kind==='stance'?'Stance':'Movement'}: ${name.toLowerCase()}. Tap to cycle; hold for choices.`);
   b.dataset.lit=String(kind==='stance'?value!=='standing':value!=='walk');
@@ -301,7 +348,7 @@ function cycleControl(kind){
   const u=hero(state),isStance=kind==='stance',step=cycleStep(isStance?stanceValues:movementValues,isStance?u.stance:Core.movementModeOf(u),isStance?stanceDirection:movementDirection);
   changeControl(kind,step.value);
 }
-function pickerClosed(){paused=false;lastTime=performance.now();pickerTrigger?.setAttribute('aria-expanded','false');pickerTrigger=null;}
+function pickerClosed(){paused=false;lastTime=performance.now();pickerTrigger?.setAttribute('aria-expanded','false');pickerTrigger=null;renderBattle();}
 function closePicker(){picker.close();pickerClosed();}
 picker.addEventListener('cancel',pickerClosed);
 $('close-picker').onclick=closePicker;
@@ -313,8 +360,9 @@ function openPicker(kind){
   const u=hero(state),isStance=kind==='stance',values=isStance?stanceValues:movementValues,names=isStance?stanceNames:movementNames,current=isStance?u.stance:Core.movementModeOf(u);
   pickerTrigger=$(kind+'-cycle');pickerTrigger.setAttribute('aria-expanded','true');
   $('control-picker-title').textContent=isStance?'STANCE':'MOVEMENT';
+  $('control-picker-cost').textContent='FREE SWITCH · 0 AP';
   $('control-picker-hint').textContent=isStance?'Standing ↔ Kneeling ↔ Prone':'Run ↔ Off / walk ↔ Sneak';
-  const row=$('control-choices');row.replaceChildren();
+  const row=$('control-choices');row.replaceChildren();row.classList.remove('area-choices');
   for(const value of values){const b=button(row,`${poseIcon(value)}<span>${names[value]}</span>`,'',value===current,()=>{closePicker();changeControl(kind,value);});b.setAttribute('aria-label',names[value]);if(value===current)b.autofocus=true;}
   const bottom=innerHeight-pickerTrigger.getBoundingClientRect().top+10;
   picker.style.bottom=`${Math.max(12,Math.min(bottom,innerHeight-175))}px`;
@@ -335,7 +383,7 @@ function equipment(){
   const u=hero(state),can=Core.canControl(state,u);
   showDialog(`<p class="eyebrow">${u.name.toUpperCase()} / INVENTORY</p><h2>Equipment.</h2><p>${Math.round(u.stamina)} / ${u.maxStamina} stamina · ${u.ap.toFixed(1)} AP remaining.</p>`,[
     ...u.pack.map(i=>{
-      if(i.kind==='grenade')return [`Throw grenade ×${u.ammo.grenade||0} · ${Core.grenadeCost(u)} AP`,armGrenade,'',!can||!(u.ammo.grenade>0)||u.ap<Core.grenadeCost(u)];
+      if(i.kind==='grenade')return [`Select grenades · ${u.ammo.grenade||0} remaining${areaWeapon()==='grenade'?' · active':''}`,()=>selectAreaWeapon('grenade'),'',!can];
       const cost=weaponSwapCost(u,i.kind);
       const label=`${Core.WEAPONS[i.kind].name}${Core.WEAPONS[i.kind].mag?' · '+(u.ammo[i.kind]??0)+' loaded / '+(u.ammoPouch[i.kind]||0)+' reserve':''}${u.weapon===i.kind?' · equipped':cost?' · '+cost+' AP':''}`;
       return [label,()=>act(()=>Core.equip(state,u,i.kind)),'',!can||u.weapon===i.kind||u.ap<cost];
@@ -354,6 +402,7 @@ function operationMenu(){
   showDialog(`<p class="eyebrow">${safe(missionForState(state).title)} / OPERATION PAUSED</p><h2>Field menu.</h2><p class="menu-summary">${phase}<br>${u.name} · ${short(u.weapon)} · ${u.ap.toFixed(1)} AP</p>`,[
     ['Continue operation',()=>{},'primary'],
     ['Inventory & weapons',equipment],
+    [`Area weapon: ${areaNames[areaWeapon()]} · Change`,openAreaPicker,'',!can],
     [`Switch to ${short(other)}${swapCost?' · '+swapCost+' AP':''}`,()=>act(()=>Core.equip(state,u,other)),'',!can||u.ap<swapCost],
     [`Reload ${short(u.weapon)} · ${u.ammo[u.weapon]??0}/${w.mag}${actionCost}`,()=>act(()=>Core.reload(state,u)),'',!can||!w.mag||u.ammo[u.weapon]>=w.mag||!(u.ammoPouch[u.weapon]>0)||costs&&u.ap<3],
     [`Use field dressing ×${state.solo.dressings}${actionCost}`,()=>act(()=>dressing(state)),'',!can||!state.solo.dressings||u.hp===u.maxHp||costs&&u.ap<3],
@@ -373,10 +422,11 @@ function mission(){
 $('menu').onclick=operationMenu;
 function help(){showDialog(`<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br>Your decisions.</h2><ul>
   <li>Use the center thumbstick to move freely in any direction. W A S D and arrow keys also work.</li>
-  <li>During combat, movement spends AP by the exact distance covered. Stop anywhere. The right buttons are End Turn, Grenade, then Options.</li>
+  <li>During combat, movement spends AP by the exact distance covered. Stop anywhere. The right buttons are End Turn, your area weapon, then Options.</li>
+  <li>Grenade and flamethrower share one button. Hold it to choose which to use, or open Options → Area weapon / Inventory & weapons. Selecting grenades is free and keeps your held weapon. Equipping a flamethrower uses the usual weapon-change cost. The button slowly pulses yellow when a valid aim is held and ready to fire.</li>
   <li>Tap Grenade or press G to aim with the joystick. Direction aims the throw; displacement sets distance, up to 10 m. The animal stays still. Release to hold the preview, then tap Throw or press Enter. Cancel or Escape exits without spending AP or grenades. Choose frag grenades in your loadout to carry three.</li>
   <li>For keyboard aiming, hold W A S D or arrows to adjust direction and distance. Release to hold aim. The camera frames the arc and blast without rotating. Filled ground is exposed to the blast; walls and unexplored ground stop the fill. The outline shows the maximum radius.</li>
-  <li>A grenade costs 5 AP, or 2.5 AP while a pistol or SMG is equipped. Throwing keeps that weapon in hand. Blast radius: 5 m. Your animal can be hurt by its own grenade. Blocked flight paths, solid obstacles, and unexplored landing points disable Throw.</li>
+  <li>A grenade costs 5 AP, or 2.5 AP while a pistol or SMG is equipped. Throwing keeps that weapon in hand. Blast radius: 5 m. Your animal can be hurt by its own grenade. Blocked flight paths, solid obstacles, and unexplored landing points prevent throwing.</li>
   <li>With a flamethrower equipped, tap CONE or press F. The joystick rotates its full 10 m, 48° area of effect. Release to hold aim, then tap FIRE or press Enter. The cone stops at walls and fog. Firing costs 6 AP and one fuel charge, including when no opponent is inside. Cancel or Escape leaves resources unchanged. Tapping a visible guard starts the cone pointed toward them.</li>
   <li>For other guns, tap a visible guard to open the options menu with aiming and firing choices. Higher aim spends more AP.</li>
   <li>Drag the world to look around when not aiming. Use the arrows to zoom.</li>
@@ -410,7 +460,7 @@ addEventListener('keydown',e=>{
   if(k==='escape'){if(aiming()){cancelAreaAim();renderBattle();}else $('menu').click();}
 });
 addEventListener('keyup',e=>{keys.delete(e.key.toLowerCase());if(grenadeAim.active)renderGrenadeControls();if(flameAim.active)renderFlameControls();});
-addEventListener('blur',()=>{resetStick();keys.clear();guardAlert.stop();});document.addEventListener('visibilitychange',()=>{resetStick();keys.clear();if(document.hidden){guardAlert.stop();storage.write();}lastTime=performance.now();});addEventListener('pagehide',event=>{storage.write();guardAlert.stop();if(!event.persisted)void guardAlert.dispose();});
+addEventListener('blur',()=>{areaPress=false;resetStick();keys.clear();clearAreaReadiness();guardAlert.stop();});document.addEventListener('visibilitychange',()=>{areaPress=false;resetStick();keys.clear();if(document.hidden){clearAreaReadiness();guardAlert.stop();storage.write();}lastTime=performance.now();});addEventListener('pagehide',event=>{storage.write();guardAlert.stop();if(!event.persisted)void guardAlert.dispose();});
 function frame(now){
   requestAnimationFrame(frame);const dt=Math.min(.05,Math.max(0,(now-lastTime)/1000));lastTime=now;if(!active||!view)return;
   if(!paused&&!document.hidden){

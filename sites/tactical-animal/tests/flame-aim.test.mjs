@@ -57,13 +57,13 @@ test('thumb direction maps to the fixed camera, holds on release and never short
 });
 
 test('joystick cone aiming holds position and resources, then one explicit released tap fires',()=>{
-  const a=flamer(),before=snapshot(a);assert.equal(a.el('flame').hidden,false);a.el('flame').click();
-  assert.equal(a.view.flameAiming,true);assert.equal(a.el('flame-label').textContent,'FIRE');a.drag(40,-30);a.advance(8);
-  const heading=a.view.flamePreview.heading;assert.equal(a.el('flame').disabled,true);a.el('flame').click();assert.deepEqual(snapshot(a),before);
+  const a=flamer(),before=snapshot(a);assert.equal(a.el('grenade').dataset.kind,'flamethrower');a.el('grenade').click();
+  assert.equal(a.view.flameAiming,true);assert.equal(a.el('grenade-label').textContent,'FIRE');a.drag(40,-30);a.advance(8);
+  const heading=a.view.flamePreview.heading;assert.equal(a.el('grenade').dataset.ready,'false');a.el('grenade').click();assert.deepEqual(snapshot(a),before);
   assert.equal(a.el('end-turn').disabled,true);assert.equal(a.el('stance-cycle').disabled,true);assert.equal(a.el('movement-cycle').disabled,true);assert.equal(a.el('interaction-hand').hidden,true);
   a.el('joystick').fire('pointerup');a.advance(3);assert.equal(a.view.flamePreview.heading,heading);assert.deepEqual(snapshot(a),before);
-  a.el('flame').click();assert.equal(a.view.flameAiming,false);assert.equal(a.u.ammo.flamethrower,before.fuel-1);assert.equal(a.u.ap,before.ap-6);assert.equal(a.u.x,before.x);assert.equal(a.u.y,before.y);
-  assert.equal(a.el('flame-label').textContent,'CONE');
+  a.el('grenade').click();assert.equal(a.view.flameAiming,false);assert.equal(a.u.ammo.flamethrower,before.fuel-1);assert.equal(a.u.ap,before.ap-6);assert.equal(a.u.x,before.x);assert.equal(a.u.y,before.y);
+  assert.equal(a.el('grenade-label').textContent,'CONE');
 });
 
 test('pointer loss, Escape, Cancel and opening options never fire or resume held movement',()=>{

@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {app} from './app-harness.mjs';
+import {Core} from '../dist/solo-game.js';
 
 function contact(a) {
   a.s.engaged=true;
@@ -47,4 +48,33 @@ test('the skinned Zoom controls retain their direction and spend no action point
   a.el('zoom-in').click();assert.equal(a.view.zoomFactor,.83);
   a.el('zoom-out').click();assert.equal(a.view.zoomFactor,.83*1.2);
   assert.deepEqual({x:a.u.x,y:a.u.y,ap:a.u.ap,phase:a.s.phase},before);
+});
+
+test('mode switches light for run, sneak and a lowered stance while free taps preserve AP',()=>{
+  const a=app(),ap=a.u.ap,movement=a.el('movement-cycle'),stance=a.el('stance-cycle');
+  assert.equal(movement.dataset.lit,'false');assert.equal(stance.dataset.lit,'false');
+  movement.click();assert.equal(Core.movementModeOf(a.u),'run');assert.equal(movement.dataset.lit,'true');
+  movement.click();assert.equal(movement.dataset.lit,'false');
+  movement.click();assert.equal(Core.movementModeOf(a.u),'sneak');assert.equal(movement.dataset.lit,'true');
+  for(const value of ['kneeling','prone','kneeling','standing']){stance.click();assert.equal(a.u.stance,value);assert.equal(stance.dataset.lit,String(value!=='standing'));}
+  assert.equal(a.u.ap,ap);
+});
+
+test('the opponent lamp follows visibility and goes dark after contact is lost',()=>{
+  const a=app(),eye=a.el('look'),guard=a.s.units.find(u=>u.team==='guard');
+  assert.equal(eye.dataset.lit,'false');
+  guard.x=a.u.x+1;guard.y=a.u.y;Core.refresh(a.s);a.advance(3);
+  assert.equal(eye.dataset.lit,'true');assert.ok(a.el('visible-count').textContent>0);
+  guard.x=35;guard.y=3;Core.refresh(a.s);a.advance(3);
+  assert.equal(eye.dataset.lit,'false');assert.equal(a.el('visible-count').textContent,0);
+});
+
+test('changing equipment and operation keeps loaded artwork mounted and selection current',()=>{
+  const a=app({autoDeploy:false}),primary=a.el('primary').children,secondary=a.el('secondary').children;
+  primary[5].click();assert.equal(a.el('primary').children,primary);assert.equal(primary[5]['aria-pressed'],'true');
+  primary[6].click();assert.equal(primary[5]['aria-pressed'],'false');assert.equal(primary[6]['aria-pressed'],'true');
+  secondary[0].click();assert.equal(a.el('secondary').children,secondary);assert.equal(secondary[0]['aria-pressed'],'true');
+  a.el('operation-select').value='short-measure';a.el('operation-select').fire('change');
+  assert.equal(a.el('primary').children,primary);assert.equal(a.el('secondary').children,secondary);
+  assert.equal(primary.filter(b=>b['aria-pressed']==='true').length,1);
 });

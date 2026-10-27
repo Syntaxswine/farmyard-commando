@@ -1,20 +1,15 @@
 import {WALL_DIMENSIONS} from './world-dimensions.js';
-
-export function missionInteractables({legacy=false}={}){
-  return [
-    {id:'warehouse-door',kind:'door',name:'Warehouse door',x:7.5,y:18,edge:'e:7:18',range:1.65,open:legacy,inventory:[]},
-    {id:'supply-chest',kind:'chest',name:'Supply chest',x:5.5,y:22.5,range:1.7,open:false,searched:false,inventory:[
-      {id:'assault-rounds',type:'ammo',kind:'assault',quantity:30},
-      {id:'field-dressing',type:'dressing',quantity:1},
-      {id:'frag-grenade',type:'grenade',quantity:1},
-    ]},
-  ];
-}
+import {DEFAULT_MISSION_ID,missionForState,missionInteractables,objectiveSecured} from './missions.js';
+export {missionInteractables} from './missions.js';
 
 // The open leaf stays solid, tucked along the inside of its doorway.
 export function doorFootprint(object,open=object.open){
   const {length,thickness,height}=WALL_DIMENSIONS,half=length/2,t=thickness/2;
-  return open?{x0:object.x,x1:object.x+length,y0:object.y-half-t,y1:object.y-half+t,height}:
+  const swing=object.swing??1;
+  if(object.edge?.startsWith('s:'))return open?
+    {x0:object.x-half-t,x1:object.x-half+t,y0:Math.min(object.y,object.y+swing*length),y1:Math.max(object.y,object.y+swing*length),height}:
+    {x0:object.x-half,x1:object.x+half,y0:object.y-t,y1:object.y+t,height};
+  return open?{x0:Math.min(object.x,object.x+swing*length),x1:Math.max(object.x,object.x+swing*length),y0:object.y-half-t,y1:object.y-half+t,height}:
     {x0:object.x-t,x1:object.x+t,y0:object.y-half,y1:object.y+half,height};
 }
 
@@ -29,7 +24,7 @@ export function selectInteractionTarget(candidates,currentId=null){
   return candidates.find(object=>object.id===currentId)||[...candidates].sort((a,b)=>a.distance-b.distance||a.id.localeCompare(b.id))[0]||null;
 }
 
-export function createInteractionSystem({hero,canControl,combatCosts,distance,geometry,pointBoxDistance,refresh,stop,log,clearGeometry,weapons,brief,radius}){
+export function createInteractionSystem({hero,canControl,combatCosts,distance,geometry,pointBoxDistance,refresh,stop,log,clearGeometry,weapons,radius}){
   const epsilon=1e-7;
   function registerBody(state,unit){
     if(unit.team!=='guard'||unit.hp>0||state.interactables.some(object=>object.id==='body:'+unit.id))return;
@@ -43,14 +38,15 @@ export function createInteractionSystem({hero,canControl,combatCosts,distance,ge
       const unit=state.units.find(unit=>unit.id===object.unitId);
       return unit&&unit.hp<=0?{...object,x:unit.x,y:unit.y}:null;
     }).filter(Boolean);
-    result.push(state.solo.ledger?
-      {id:'extraction',kind:'extract',name:'Extraction point',...brief.extraction,range:.85,inventory:[]}:
-      {id:'ledger',kind:'ledger',name:'Wage ledger',...brief.objective,range:.85,inventory:[]});
+    const mission=missionForState(state);
+    if(!objectiveSecured(state))result.push({...mission.objective,inventory:[]});
+    result.push({...mission.extraction,id:'extraction',kind:'extract',inventory:[]});
     return result;
   }
   function accessible(state,object){
     const unit=hero(state);
     if(!canControl(state,unit)||distance(unit,object)>object.range+epsilon)return false;
+    if(object.kind==='extract'&&!objectiveSecured(state))return false;
     // Use the movement system's rounded clearance, including around corners.
     // The target's own footprint is the only solid object we may reach into.
     const blockers=geometry(state).filter(box=>box.interactionId!==object.id),steps=Math.max(1,Math.ceil(distance(unit,object)/.1));
@@ -67,7 +63,8 @@ export function createInteractionSystem({hero,canControl,combatCosts,distance,ge
     if(object.kind==='chest')return object.open?
       [action('loot','Loot',0),action('close','Close',1)]:[action('open','Open',2)];
     if(object.kind==='body')return [action(object.searched?'loot':'search',object.searched?'Loot':'Search',object.searched?0:2)];
-    return [action(object.kind==='ledger'?'collect':'extract',object.kind==='ledger'?'Collect':'Extract',object.kind==='ledger'?2:0)];
+    if(object.kind==='clue')return [{id:'inspect',label:'Inspect',cost:0}];
+    return [action(object.kind==='extract'?'extract':'collect',object.kind==='extract'?'Extract':'Collect',object.kind==='extract'?0:object.cost)];
   }
   function preview(state,id,actionId,itemId=null){
     const object=objects(state).find(object=>object.id===id),unit=hero(state);
@@ -76,6 +73,7 @@ export function createInteractionSystem({hero,canControl,combatCosts,distance,ge
     if(object&&['take','take-all'].includes(actionId)&&object.searched&&(object.kind==='body'||object.open))action={id:actionId,label:actionId==='take-all'?'Take all':'Take',cost:cost(state,1)};
     if(!object||!action)reason='That action is no longer available.';
     else if(!canControl(state,unit))reason='Wait for your turn.';
+    else if(object.kind==='extract'&&!objectiveSecured(state))reason='Secure the '+missionForState(state).objective.name.toLowerCase()+' first.';
     else if(!accessible(state,object))reason='Move within clear reach of the object.';
     else if(['take','take-all'].includes(actionId)&&(!object.inventory.length||actionId==='take'&&!object.inventory.some(item=>item.id===itemId)))reason='There is nothing to take.';
     else if(object.kind==='door'&&['open','close'].includes(actionId)&&state.units.some(other=>other.hp>0&&pointBoxDistance(other,doorFootprint(object,actionId==='open'))<radius+epsilon))reason='Someone is in the doorway.';
@@ -103,7 +101,7 @@ export function createInteractionSystem({hero,canControl,combatCosts,distance,ge
     if(!check.ok)return {ok:false,reason:check.reason};
     const object=check.object,stored=state.interactables.find(entry=>entry.id===id),unit=hero(state);
     stop(state);unit.ap=Math.max(0,unit.ap-check.cost);
-    let loot=false;
+    let loot=false,message=null;
     if(object.kind==='door'){
       stored.open=actionId==='open';state.edges[object.edge]=stored.open?'door':'closed-door';
       log(state,`${stored.open?'Opened':'Closed'} the ${object.name.toLowerCase()} (${check.cost} AP).`);
@@ -119,15 +117,21 @@ export function createInteractionSystem({hero,canControl,combatCosts,distance,ge
       stored.inventory=stored.inventory.filter(item=>!items.includes(item));loot=true;
       log(state,`Took ${actionId==='take-all'?'all items':'an item'} from ${object.name} (${check.cost} AP).`);
     }else if(actionId==='collect'){
-      state.solo.ledger=true;log(state,'Ledger secured. Return to extraction.');
+      const mission=missionForState(state);state.solo.objectives[mission.objective.id]=true;
+      if(mission.id===DEFAULT_MISSION_ID)state.solo.ledger=true;
+      message=mission.objective.collected;log(state,message);log(state,mission.objective.after);
+    }else if(actionId==='inspect'){
+      if(!state.solo.inspected.includes(object.id))state.solo.inspected.push(object.id);
+      message=object.text;log(state,message);
     }else if(actionId==='extract'){
-      state.solo.status='extracted';log(state,'The ledger is safe. You made it out.');
+      state.solo.status='extracted';log(state,missionForState(state).result.epilogue);
     }
     clearGeometry(state);refresh(state,{forceFog:true});
-    return {ok:true,loot,targetId:id};
+    return {ok:true,loot,targetId:id,message,name:object.name};
   }
   function restore(state){
     if(state.interactables===undefined){
+      if(missionForState(state).id!==DEFAULT_MISSION_ID)throw Error('This operation is missing its saved objects.');
       state.interactables=missionInteractables({legacy:true});
       // Existing saves retain their passable doorway. Avoid placing a newly
       // introduced solid chest on top of an animal's saved position.
@@ -140,13 +144,14 @@ export function createInteractionSystem({hero,canControl,combatCosts,distance,ge
     if(!Array.isArray(state.interactables))throw Error('Unsupported interaction save.');
     const ids=new Set();
     for(const object of state.interactables){
-      if(!object||typeof object.id!=='string'||ids.has(object.id)||!['door','chest','body'].includes(object.kind)||!Number.isFinite(object.range)||object.range<=0||!Array.isArray(object.inventory))throw Error('Unsupported interaction save.');
+      if(!object||typeof object.id!=='string'||ids.has(object.id)||!['door','chest','body','clue'].includes(object.kind)||!Number.isFinite(object.range)||object.range<=0||!Array.isArray(object.inventory))throw Error('Unsupported interaction save.');
       ids.add(object.id);
       if(object.kind==='body'){
         if(!state.units.some(unit=>unit.id===object.unitId&&unit.team==='guard'&&unit.hp<=0))throw Error('Unsupported body save.');
-      }else if(!Number.isFinite(object.x)||!Number.isFinite(object.y)||typeof object.open!=='boolean')throw Error('Unsupported object save.');
-      if(object.kind==='door'&&(!/^e:\d+:\d+$/.test(object.edge)||!Object.hasOwn(state.edges,object.edge)))throw Error('Unsupported door save.');
-      if(object.kind!=='door'&&typeof object.searched!=='boolean')throw Error('Unsupported container save.');
+      }else if(!Number.isFinite(object.x)||!Number.isFinite(object.y)||object.kind!=='clue'&&typeof object.open!=='boolean')throw Error('Unsupported object save.');
+      if(object.kind==='door'&&(!/^[es]:\d+:\d+$/.test(object.edge)||!Object.hasOwn(state.edges,object.edge)||object.swing!==undefined&&![-1,1].includes(object.swing)))throw Error('Unsupported door save.');
+      if(['chest','body'].includes(object.kind)&&typeof object.searched!=='boolean')throw Error('Unsupported container save.');
+      if(object.kind==='clue'&&(typeof object.text!=='string'||!missionForState(state).clues.some(clue=>clue.id===object.id)))throw Error('Unsupported clue save.');
       const itemIds=new Set();
       for(const item of object.inventory){
         if(!item||typeof item.id!=='string'||itemIds.has(item.id)||!['ammo','weapon','dressing','grenade'].includes(item.type))throw Error('Unsupported loot save.');

@@ -76,14 +76,14 @@
 .industrial-switch:enabled:active .switch-legend,
 .industrial-switch.is-pressed .switch-legend { transform: translateY(1px); }
 .industrial-switch:disabled, .industrial-switch[aria-disabled='true'] { cursor: default; }
-.industrial-switch:disabled:not([data-lit='true']),
+.industrial-switch:disabled:not([data-lit='true']):not([aria-pressed='true']),
 .industrial-switch[aria-disabled='true']:not([data-lit='true']) {
   --legend-paint: #b9b7a7;
   --legend-light: none;
 }
-.industrial-switch:disabled:not([data-lit='true'])::before,
+.industrial-switch:disabled:not([data-lit='true']):not([aria-pressed='true'])::before,
 .industrial-switch[aria-disabled='true']:not([data-lit='true'])::before { filter: saturate(.7) brightness(.88); }
-.industrial-switch:disabled:not([data-lit='true'])::after,
+.industrial-switch:disabled:not([data-lit='true']):not([aria-pressed='true'])::after,
 .industrial-switch[aria-disabled='true']:not([data-lit='true'])::after { opacity: 0; }
 /* Three warm red-lens pulses acknowledge an AP-blocked press at about 2 Hz. */
 .industrial-switch.is-ap-short::after {

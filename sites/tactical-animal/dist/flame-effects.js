@@ -3,7 +3,7 @@ import {FIRE_ASSETS,flameSheetData,paintedFireMaterial} from './aft/tactics/pain
 import {FIRE_TIME,fireState,smooth} from './aft/tactics/painted-fire-state.js';
 import {advanceFlameClock,flameFogMask,pointInFlame} from './flame-event.js';
 const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
-export const FLAME_LIMITS=Object.freeze({active:2,queued:6,plumes:12});
+export const FLAME_LIMITS=Object.freeze({active:2,queued:6,plumes:24});
 const atlas=new URL(FIRE_ASSETS.flame,new URL('./aft/tactics/',import.meta.url)).href;
 
 // Extra fragment clipping is required for both the inherited fan sheets and
@@ -38,7 +38,7 @@ function makeSlot(scene,texture){
   });
   const plane=new T.PlaneGeometry(1,1),plumes=Array.from({length:FLAME_LIMITS.plumes},(_,i)=>{
     const mesh=new T.Mesh(plane,clippedMaterial(texture,shared,{seed:i*1.618}));mesh.frustumCulled=false;
-    mesh.userData={birth:.32+Math.floor(i/2)*.12+(i%2)*.024,lane:(i%2?-.46:.46)+.10*Math.sin(i*2.399),width:.72+.4*Math.sin(i*1.73)**2,length:.78+.47*Math.sin(i*2.17+.6)**2};group.add(mesh);return mesh;
+    mesh.userData={birth:.32+Math.floor(i/2)*.06+(i%2)*.012,lane:(i%2?-.46:.46)+.10*Math.sin(i*2.399),width:.72+.4*Math.sin(i*1.73)**2,length:.78+.47*Math.sin(i*2.17+.6)**2};group.add(mesh);return mesh;
   });
   return {group,sheets,plumes,fog,data,shared,owner:null,revision:null,muzzle:null,geometryShape:null,dispose(){group.removeFromParent();for(const sheet of sheets){sheet.geometry.dispose();sheet.material.dispose();}for(const plume of plumes)plume.material.dispose();plane.dispose();fog.dispose();group.clear();}};
 }

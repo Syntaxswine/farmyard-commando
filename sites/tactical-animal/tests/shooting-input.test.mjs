@@ -34,13 +34,16 @@ test('aim prices use each weapon and burst rounding; unsupported weapons offer o
   assert.deepEqual(aimOptions(Core.WEAPONS.shotgun,14).map(option=>option.cost),[5,8,10]);
   assert.deepEqual(aimOptions(Core.WEAPONS.hmg,14,true).map(option=>option.cost),[8,12,16]);
   assert.equal(availableAim(Core.WEAPONS.sniper,14),'aimed');
-  for(const weapon of ['rpg','flamethrower','knife']){
+  for(const weapon of ['rpg','knife']){
     const a=app();target(a,14,weapon);
     assert.equal(pressed(control(a,'aim-hip')),true);
     assert.equal(control(a,'aim-full'),undefined);assert.equal(control(a,'aim-aimed'),undefined);
     assert.equal(control(a,'burst'),undefined);
     assert.equal(a.u.ap,14);
   }
+  // The flamethrower retains base pricing but now deliberately bypasses this
+  // single-target console in favour of its joystick-controlled area cone.
+  assert.deepEqual(aimOptions(Core.WEAPONS.flamethrower,14).map(option=>option.cost),[6]);
 });
 
 test('aim, target and fire-mode switches are free; lower aim choices survive other selections',()=>{

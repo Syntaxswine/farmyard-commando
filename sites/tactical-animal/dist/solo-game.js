@@ -5,6 +5,7 @@ import {identifyRange,headingTo} from './aft/tactics/core/perception.js';
 import {shotAim} from './aft/tactics/aim-levels.js';
 import {WALL_DIMENSIONS} from './world-dimensions.js';
 import {createInteractionSystem,missionInteractables,interactionFootprint} from './interactions.js';
+import {recordFlame} from './flame-event.js';
 import {DEFAULT_MISSION_ID,getMission,missionForState,missionMap,objectiveSecured} from './missions.js';
 export {MISSIONS,DEFAULT_MISSION_ID,getMission,missionForState,missionMap,objectiveSecured,missionDestination} from './missions.js';
 
@@ -152,17 +153,49 @@ export function throwGrenade(s,u,point){
 }
 export function previewAttack(s,a,b,burst=false,zone='torso',token=null,aimLevel='hip'){if(!alive(a)||!alive(b)||a.team===b.team)return {ok:false,reason:'Choose a living opponent'};if(a.weapon==='grenade'){if(!s.detected.has(b.id))return {ok:false,reason:'Target is not visible'};return {...previewGrenade(s,a,b),chance:100,rounds:1,cover:0};}const w=WEAPONS[a.weapon],aim=shotAim(w,aimLevel,burst),cost=aim.cost,d=distance(a,b),rounds=burst&&w.burstRounds?w.burstRounds:1;let reason='';if(a.team==='squad'&&!s.detected.has(b.id))reason='Target is not visible';else if(!lineClear(s,a,b)&&!w.arc)reason='Blocked by a wall';else if(d>w.range+EPS)reason='Out of range';else if(w.mag&&(a.ammo[a.weapon]??0)<rounds)reason='Reload first';else if((combatCosts(s)||a.team==='guard')&&a.ap+EPS<cost)reason='Not enough AP';const cover=geometry(s).some(box=>box.kind==='crate'&&pointBoxDistance(b,box)<.9&&intersectsBox(a,b,{x0:box.x0-.3,x1:box.x1+.3,y0:box.y0-.3,y1:box.y1+.3}))?20:0;const chance=Math.max(5,Math.min(95,weaponAccuracy(a)+(w.accuracy||0)-(w.rangeLoss||0)*d/w.range+(aim.accuracy||0)+(AIM_ZONES[zone]?.accuracy||0)-cover+(a.stance==='kneeling'?5:a.stance==='prone'?10:0)));return {ok:!reason,reason,cost,chance:Math.round(chance),rounds,distance:d,cover};}
 function hurt(s,u,damage){u.hp=Math.max(0,u.hp-damageAfterResistance(u,damage));if(!u.hp){u.casualty='dead';u.isMoving=false;interactionRules.registerBody(s,u);log(s,u.name+' is down.');}}
+function flameAffects(s,a,u,heading){const angle=Math.abs(((headingTo(a,u)-heading+540)%360)-180);return alive(u)&&u.id!==a.id&&distance(a,u)<=WEAPONS.flamethrower.range&&angle<24&&lineClear(s,a,u);}
+function resolveFlame(s,a){
+  const impacts=[];
+  for(const u of s.units)if(flameAffects(s,a,u,a.heading)){
+    const before=u.hp,visible=s.visible.has(key(u.x,u.y))&&(u.team==='squad'||s.detected.has(u.id));
+    hurt(s,u,WEAPONS.flamethrower.damage*Math.max(.25,1-distance(a,u)/14));
+    impacts.push({id:u.id,x:u.x,y:u.y,before,after:u.hp,dead:!alive(u),visible});
+  }
+  return impacts;
+}
+export function previewFlame(s,a,heading){
+  const w=WEAPONS.flamethrower,valid=Number.isFinite(heading);let reason='';
+  if(!canControl(s,a))reason='Wait for your turn';
+  else if(a.weapon!=='flamethrower')reason='Equip the flamethrower';
+  else if(!valid)reason='Choose a direction';
+  else if(!(a.ammo.flamethrower>0))reason='Reload first';
+  else if(a.ap+EPS<w.cost)reason='Not enough AP';
+  const direction=valid?((heading%360)+360)%360:a.heading;
+  const shape=recordFlame({...a,heading:direction},w.range,geometry(s),s.visible);
+  const contacts=s.units.filter(u=>(u.team==='squad'||s.detected.has(u.id))&&s.visible.has(key(u.x,u.y))&&flameAffects(s,a,u,direction)).map(u=>({id:u.id,name:u.name,team:u.team}));
+  return {ok:!reason,reason,cost:w.cost,range:w.range,spread:48,heading:direction,shape,contacts};
+}
+export function fireFlame(s,a,heading){
+  const p=previewFlame(s,a,heading);if(!p.ok)return false;
+  stop(s);if(s.phase!=='player'){s.engaged=true;refresh(s);}
+  a.ap=Math.max(0,a.ap-p.cost);a.ammo.flamethrower--;a.heading=p.heading;
+  const flame=recordFlame(a,p.range,geometry(s),s.visible),impacts=resolveFlame(s,a),angle=a.heading*Math.PI/180;
+  log(s,`${a.name} fired a flamethrower cone (${p.cost} AP).`);
+  for(const guard of s.units.filter(u=>u.team==='guard'&&alive(u)))if(distance(a,guard)<=p.range*2){guard.alert=true;guard.lastKnown={x:a.x,y:a.y};guard.alertAge=0;}
+  s.effect={sequence:[{shooter:a.id,ax:a.x,ay:a.y,bx:a.x+Math.cos(angle)*p.range,by:a.y+Math.sin(angle)*p.range,incendiary:true,hit:impacts.length>0,weapon:'flamethrower',shot:0,shots:1,flame,impacts}]};
+  refresh(s);return true;
+}
 export function attack(s,a,b,burst=false,byAI=false,zone='torso',reaction=false,aimLevel='hip'){
   if(byAI?s.phase!=='enemy':!canControl(s,a))return false;
   const p=previewAttack(s,a,b,burst,zone,null,aimLevel);if(!p.ok)return false;if(a.weapon==='grenade')return throwGrenade(s,a,b);
   stop(s);const w=WEAPONS[a.weapon];if(!byAI&&s.phase!=='player'){s.engaged=true;refresh(s);}
   a.ap=Math.max(0,a.ap-p.cost);if(w.mag)a.ammo[a.weapon]-=p.rounds;a.heading=headingTo(a,b);
-  let hits=0;const hp=b.hp,shots=[];
+  let hits=0;const hp=b.hp,shots=[],flame=w.incendiary?recordFlame(a,w.range,geometry(s),s.visible):null,impacts=[];
   if(w.blast){
     for(const u of s.units.filter(alive))if(distance(u,b)<=w.blast&&lineClear(s,b,u)){hurt(s,u,Math.round(w.damage*Math.max(.2,1-distance(u,b)/(w.blast+1))));hits++;}
     shots.push(hits>0);
   }else if(w.incendiary){
-    for(const u of s.units.filter(u=>alive(u)&&u.id!==a.id)){const angle=Math.abs(((headingTo(a,u)-a.heading+540)%360)-180);if(distance(a,u)<=w.range&&angle<24&&lineClear(s,a,u)){hurt(s,u,w.damage*Math.max(.25,1-distance(a,u)/14));hits++;}}
+    impacts.push(...resolveFlame(s,a));hits=impacts.length;
     shots.push(hits>0);
   }else for(let i=0;i<p.rounds;i++){
     const hit=random(s)*100<p.chance;shots.push(hit);
@@ -170,7 +203,7 @@ export function attack(s,a,b,burst=false,byAI=false,zone='torso',reaction=false,
   }
   log(s,`${a.name} → ${b.name}: ${hits?Math.round(hp-b.hp)+' damage':'miss'} (${p.chance}%).`);
   for(const g of s.units.filter(g=>g.team==='guard'&&alive(g)))if(distance(a,g)<=w.range*2){g.alert=true;g.lastKnown={x:a.x,y:a.y};g.alertAge=0;}
-  s.effect={sequence:shots.map((hit,shot)=>({shooter:a.id,target:b.id,ax:a.x,ay:a.y,bx:b.x,by:b.y,incendiary:w.incendiary,hit,weapon:a.weapon,shot,shots:shots.length}))};
+  s.effect={sequence:shots.map((hit,shot)=>({shooter:a.id,target:b.id,ax:a.x,ay:a.y,bx:b.x,by:b.y,incendiary:w.incendiary,hit,weapon:a.weapon,shot,shots:shots.length,...(flame?{flame,impacts}:{} )}))};
   refresh(s);return true;
 }
 export function equip(s,u,id){if(!canControl(s,u)||!u.pack.some(i=>i.kind===id)||u.weapon===id)return false;const cost=combatCosts(s)?u.slots.includes(id)?2:3:0;if(u.ap+EPS<cost)return false;stop(s);u.ap-=cost;u.weapon=id;log(s,'Equipped '+WEAPONS[id].name+'.');return true;}
@@ -199,4 +232,4 @@ export function decodeSave(text){
   if(!Array.isArray(s.solo.inspected)||s.solo.inspected.some(id=>!mission.clues.some(clue=>clue.id===id)))throw Error('Unsupported inspection save.');
   return interactionRules.restore(s);
 }
-export const Core={WEAPONS,AIM_ZONES,key,alive,movementModeOf,movementRate,movementSpeed,combatCosts,canControl,canSee,visibleOpponents,refresh,log,stop,travel,navigationPath,move,turnTo,setMovementMode,setStance,grenadeCost,grenadeTrajectory,grenadeAffects,grenadeBlastFootprint,previewGrenade,throwGrenade,previewAttack,attack,equip,reload,endTurn,headingTo,interactionObjects,nearbyInteractions,previewInteraction,performInteraction};
+export const Core={WEAPONS,AIM_ZONES,key,alive,movementModeOf,movementRate,movementSpeed,combatCosts,canControl,canSee,visibleOpponents,refresh,log,stop,travel,navigationPath,move,turnTo,setMovementMode,setStance,grenadeCost,grenadeTrajectory,grenadeAffects,grenadeBlastFootprint,previewGrenade,throwGrenade,previewFlame,fireFlame,previewAttack,attack,equip,reload,endTurn,headingTo,interactionObjects,nearbyInteractions,previewInteraction,performInteraction};

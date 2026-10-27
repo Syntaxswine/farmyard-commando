@@ -178,3 +178,21 @@
 @media (prefers-reduced-motion: reduce) {
   #overlay .fire-bar:enabled:active { transform: none; }
 }
+
+/* The shared area-weapon switch lights only for an affordable, held aim. */
+#battle #grenade[data-ready='false'] { --legend-paint: #e9e1cd; --legend-light: none; }
+#battle #grenade[data-ready='false']::after { opacity: 0; animation: none; }
+#battle #grenade[data-ready='true']::after { animation: area-fire-ready 2.4s ease-in-out infinite; }
+#battle #grenade[data-ready='true'] .switch-legend { animation: area-fire-legend 2.4s ease-in-out infinite; }
+@keyframes area-fire-ready { 0%,100% { opacity: .12; } 50% { opacity: 1; } }
+@keyframes area-fire-legend {
+  0%,100% { color: #e9e1cd; filter: none; }
+  50% { color: #fff4dd; filter: drop-shadow(0 0 .35px #fff2d1) drop-shadow(0 0 1.3px #fff0d153); }
+}
+.control-choices.area-choices { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.area-choices small { font: 9px/1.5 var(--mono); color: var(--muted); }
+.area-choices button[aria-pressed='true'] small { color: inherit; opacity: .85; }
+@media (prefers-reduced-motion: reduce) {
+  #battle #grenade[data-ready='true']::after { animation: none; opacity: 1; }
+  #battle #grenade[data-ready='true'] .switch-legend { animation: none; }
+}

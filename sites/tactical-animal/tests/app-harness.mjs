@@ -9,7 +9,7 @@ import {createOperationStorage} from '../dist/operation-storage.js';
 import {STANCE_ICONS} from '../dist/aft/tactics/battle-control-icons.js';
 
 // Actual application handlers and simulation with a lightweight DOM/renderer.
-export function app({autoDeploy=true,initialStorage=[]}={}){
+export function app({autoDeploy=true,initialStorage=[],storageFailure=null}={}){
   const elements=new Map(),events=new Map(),saved=new Map(initialStorage),views=[];let animation;
   class Element {
     constructor(id=''){this.id=id;this.style={};this.dataset={};this.children=[];this.listeners=new Map();this.hidden=false;this.disabled=false;this.open=false;this.textContent='';this.captures=new Set();this.classList={add(){},remove(){},toggle(){}};}
@@ -41,6 +41,14 @@ export function app({autoDeploy=true,initialStorage=[]}={}){
   }
   if(!saved.has('tactical-animal-build-v1'))saved.set('tactical-animal-build-v1',JSON.stringify({...game.DEFAULT_BUILD,utility:'grenade'}));
   const context={...game,...controls,...grenadeControls,...guardAlerts,selectInteractionTarget,createOperationStorage,STANCE_ICONS,weaponArtwork:()=>new Element(),FieldView,drawMinimap(){},document:doc,localStorage:{getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)},setTimeout,clearTimeout,performance:{now:()=>0},requestAnimationFrame:fn=>animation=fn,innerHeight:844,addEventListener:(name,fn)=>events.set(name,fn),console};
+  context.window={get localStorage(){return context.localStorage;}};
+  if(storageFailure){
+    const blocked=()=>{throw Object.assign(new Error('Storage access is denied.'),{name:'SecurityError'});};
+    const backend={getItem:key=>storageFailure==='read-denied'?blocked():saved.get(key),setItem(key,value){if(storageFailure==='read-denied')return saved.set(key,value);if(storageFailure==='quota')throw Object.assign(new Error('Storage quota exceeded.'),{name:'QuotaExceededError'});blocked();}};
+    // A denied browser can throw while evaluating window.localStorage, before
+    // getItem or setItem is ever called. Exercise that exact startup boundary.
+    Object.defineProperty(context,'localStorage',{get:storageFailure==='denied'?blocked:()=>backend});
+  }
   vm.runInNewContext(fs.readFileSync(new URL('../dist/app.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,''),context);
   if(autoDeploy)el('deploy').click();
   const key=(name,type='keydown')=>events.get(type)({key:name,target:{tagName:'BODY',closest:()=>null},preventDefault(){},repeat:false});

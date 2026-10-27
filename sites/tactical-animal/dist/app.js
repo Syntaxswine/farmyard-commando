@@ -21,9 +21,13 @@ const stanceValues=['standing','kneeling','prone'],movementValues=['run','walk',
 const stanceNames={standing:'Standing',kneeling:'Kneeling',prone:'Prone / crawl'},movementNames={run:'Run',walk:'Off / walk',sneak:'Sneak'};
 const movementPoses={walk:'M18 4a3 3 0 1 0 0 .1M18 10l-2 12m2-9-8 7m8-7 7 6m-9 3-6 12m6-12 9 12',run:'M22 4a3 3 0 1 0 0 .1M21 10l-7 11m5-9-8-1-4 5m12-4 5 7 6-2M14 21l-7 5-4-4m11-1 9 5-2 8',sneak:'M17 9a3 3 0 1 0 0 .1M17 15l-3 7m2-5 10 3 3-3m-13 0-7 3M14 22l10 3-6 8m-4-11-7 8h8'};
 const poseIcon=value=>STANCE_ICONS[value]?.replace('<svg ','<svg class="original-stance" ')||`<svg viewBox="0 0 36 38" aria-hidden="true"><path d="${movementPoses[value]}"/></svg>`;
-const operationStorage=createOperationStorage(localStorage,{normalizeBuild,encodeSave,decodeSave});
-try{const preferences=operationStorage.preferences();selectedMissionId=preferences.selectedMissionId;build=preferences.builds[selectedMissionId];}catch(error){toast(error.message);}
-const storage={read(){return operationStorage.read(selectedMissionId);},write(){if(!state)return;try{operationStorage.write(state);}catch{toast('Device storage is full. Keep this tab open to retain the operation.');}}};
+// Resolve the browser's storage getter only inside the handled read/write paths:
+// privacy settings can deny access to the property itself during startup.
+const operationStorage=createOperationStorage({getItem:key=>window.localStorage.getItem(key),setItem:(key,value)=>window.localStorage.setItem(key,value)},{normalizeBuild,encodeSave,decodeSave});
+const preparationBuilds=Object.fromEntries(MISSIONS.map(mission=>[mission.id,{...DEFAULT_BUILD}]));
+try{const preferences=operationStorage.preferences();selectedMissionId=preferences.selectedMissionId;Object.assign(preparationBuilds,preferences.builds);build=normalizeBuild(preparationBuilds[selectedMissionId]);}catch(error){toast('Could not read preparation. You can still choose an operation and play in this tab.');}
+function storageWriteFailure(subject,error){const reason=error?.name==='QuotaExceededError'?'Device storage is full.':error?.name==='SecurityError'?'Browser storage is blocked.':'Browser storage could not be written.';toast(`${reason} Could not save ${subject}. Keep this tab open to retain your changes.`);}
+const storage={read(){return operationStorage.read(selectedMissionId);},write(){if(!state)return;try{operationStorage.write(state);}catch(error){storageWriteFailure('operation progress',error);}}};
 const speciesLabel=s=>s.replaceAll('-',' '),short=k=>Core.WEAPONS[k].short;
 function button(parent,label,cls,pressed,onClick){const b=document.createElement('button');b.type='button';b.className=cls;b.innerHTML=label;b.setAttribute('aria-pressed',String(pressed));b.onclick=onClick;parent.append(b);return b;}
 function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,4000);}
@@ -44,10 +48,12 @@ function renderPrep(){renderMissionPreparation();const p=ANIMALS.find(a=>a.id===
   $('secondary').replaceChildren();for(const k of SECONDARY){const choice=button($('secondary'),`<span>${short(k)}</span><small>${k==='knife'?'MELEE':'8 ROUNDS'}</small>`,'small-choice',k===build.secondary,()=>{build.secondary=k;renderPrep();});const art=weaponArtwork(k,22);art.classList.add('sidearm-paint');choice.prepend(art);}
   $('utility').replaceChildren();for(const [k,label,detail] of [['dressing','Field dressing','×2'],['grenade','Frag grenades','×3']])button($('utility'),`<span>${label}</span><small>${detail}</small>`,'small-choice',k===build.utility,()=>{build.utility=k;renderPrep();});
   const skill=['hmg','rpg','flamethrower'].includes(build.primary)?'heavyWeapons':'firearms';$('primary-summary').textContent=`${skill==='firearms'?'FIREARMS':'HEAVY WEAPONS'} ${p.stats[skill]}`;$('equipment-note').textContent=`${Core.WEAPONS[build.primary].name}. ${p.name}'s ${skill==='firearms'?'firearms':'heavy weapons'} skill: ${p.stats[skill]}/100. Movement spends AP by distance, with no tile snapping.`;$('build-summary').textContent=`${p.name} / ${speciesLabel(p.species)} · ${short(build.primary)} + ${short(build.secondary)}`;
-  try{const saved=storage.read();$('resume').hidden=!saved||JSON.parse(saved).solo.status!=='active';$('resume').textContent='Resume '+getMission(selectedMissionId).title+' ↗';operationStorage.savePreparation(selectedMissionId,build);}catch(error){$('resume').hidden=true;toast('Could not read operation storage: '+error.message);}
+  try{const saved=storage.read();$('resume').hidden=!saved||JSON.parse(saved).solo.status!=='active';$('resume').textContent='Resume '+getMission(selectedMissionId).title+' ↗';}catch(error){$('resume').hidden=true;toast('Could not read saved operations. You can still deploy and play in this tab.');}
+  preparationBuilds[selectedMissionId]=normalizeBuild(build);
+  try{operationStorage.savePreparation(selectedMissionId,build);}catch(error){storageWriteFailure('preparation changes',error);}
 }
 $('operation-select').onchange=()=>{
-  try{operationStorage.savePreparation(selectedMissionId,build);selectedMissionId=getMission($('operation-select').value).id;build=operationStorage.preferences().builds[selectedMissionId];renderPrep();}catch(error){toast(error.message);}
+  try{selectedMissionId=getMission($('operation-select').value).id;build=normalizeBuild(preparationBuilds[selectedMissionId]);renderPrep();}catch(error){toast(error.message);}
 };
 $('grenade-art').append(weaponArtwork('grenade',32));
 $('interaction-icon').append(weaponArtwork('hands',25));

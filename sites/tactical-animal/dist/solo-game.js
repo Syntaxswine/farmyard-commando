@@ -5,6 +5,7 @@ import {identifyRange,headingTo} from './aft/tactics/core/perception.js';
 import {shotAim} from './aft/tactics/aim-levels.js';
 import {WALL_DIMENSIONS} from './world-dimensions.js';
 import {createInteractionSystem,missionInteractables,interactionFootprint} from './interactions.js';
+import {recordFlame} from './flame-event.js';
 
 // Continuous positions are authoritative. Raster cells describe scenery and fog;
 // movement, AP, sightlines, and weapon range use actual world distances.
@@ -150,12 +151,12 @@ export function attack(s,a,b,burst=false,byAI=false,zone='torso',reaction=false,
   const p=previewAttack(s,a,b,burst,zone,null,aimLevel);if(!p.ok)return false;if(a.weapon==='grenade')return throwGrenade(s,a,b);
   stop(s);const w=WEAPONS[a.weapon];if(!byAI&&s.phase!=='player'){s.engaged=true;refresh(s);}
   a.ap=Math.max(0,a.ap-p.cost);if(w.mag)a.ammo[a.weapon]-=p.rounds;a.heading=headingTo(a,b);
-  let hits=0;const hp=b.hp,shots=[];
+  let hits=0;const hp=b.hp,shots=[],flame=w.incendiary?recordFlame(a,w.range,geometry(s),s.visible):null,impacts=[];
   if(w.blast){
     for(const u of s.units.filter(alive))if(distance(u,b)<=w.blast&&lineClear(s,b,u)){hurt(s,u,Math.round(w.damage*Math.max(.2,1-distance(u,b)/(w.blast+1))));hits++;}
     shots.push(hits>0);
   }else if(w.incendiary){
-    for(const u of s.units.filter(u=>alive(u)&&u.id!==a.id)){const angle=Math.abs(((headingTo(a,u)-a.heading+540)%360)-180);if(distance(a,u)<=w.range&&angle<24&&lineClear(s,a,u)){hurt(s,u,w.damage*Math.max(.25,1-distance(a,u)/14));hits++;}}
+    for(const u of s.units.filter(u=>alive(u)&&u.id!==a.id)){const angle=Math.abs(((headingTo(a,u)-a.heading+540)%360)-180);if(distance(a,u)<=w.range&&angle<24&&lineClear(s,a,u)){const before=u.hp,visible=s.visible.has(key(u.x,u.y))&&(u.team==='squad'||s.detected.has(u.id));hurt(s,u,w.damage*Math.max(.25,1-distance(a,u)/14));impacts.push({id:u.id,x:u.x,y:u.y,before,after:u.hp,dead:!alive(u),visible});hits++;}}
     shots.push(hits>0);
   }else for(let i=0;i<p.rounds;i++){
     const hit=random(s)*100<p.chance;shots.push(hit);
@@ -163,7 +164,7 @@ export function attack(s,a,b,burst=false,byAI=false,zone='torso',reaction=false,
   }
   log(s,`${a.name} → ${b.name}: ${hits?Math.round(hp-b.hp)+' damage':'miss'} (${p.chance}%).`);
   for(const g of s.units.filter(g=>g.team==='guard'&&alive(g)))if(distance(a,g)<=w.range*2){g.alert=true;g.lastKnown={x:a.x,y:a.y};g.alertAge=0;}
-  s.effect={sequence:shots.map((hit,shot)=>({shooter:a.id,target:b.id,ax:a.x,ay:a.y,bx:b.x,by:b.y,incendiary:w.incendiary,hit,weapon:a.weapon,shot,shots:shots.length}))};
+  s.effect={sequence:shots.map((hit,shot)=>({shooter:a.id,target:b.id,ax:a.x,ay:a.y,bx:b.x,by:b.y,incendiary:w.incendiary,hit,weapon:a.weapon,shot,shots:shots.length,...(flame?{flame,impacts}:{} )}))};
   refresh(s);return true;
 }
 export function equip(s,u,id){if(!canControl(s,u)||!u.pack.some(i=>i.kind===id)||u.weapon===id)return false;const cost=combatCosts(s)?u.slots.includes(id)?2:3:0;if(u.ap+EPS<cost)return false;stop(s);u.ap-=cost;u.weapon=id;log(s,'Equipped '+WEAPONS[id].name+'.');return true;}

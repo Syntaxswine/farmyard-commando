@@ -9,6 +9,8 @@ import {OriginalEnvironment} from './original-art.js';
 import {BRIEF, hero, Core} from './solo-game.js';
 import {FIELD_CAMERA,grenadeCameraFrame} from './grenade-controls.js';
 import {InteractionScenery} from './interaction-view.js';
+import {SoloFlameEffects} from './flame-effects.js';
+import {createFlameOperator} from './flame-pose.js';
 
 const V = (x=0,y=0,z=0) => new T.Vector3(x,y,z);
 // Distinct tracer pulses make each committed burst round readable. A shorter
@@ -60,7 +62,8 @@ export class FieldView {
     const hit=this.ray.intersectObjects(picks,false)[0];
     this.onPick(hit?hit.object.userData.interactionId?{interactionId:hit.object.userData.interactionId}:{unitId:hit.object.userData.unitId}:{x:point.x,y:point.z});
   }
-  setGame(s){this.generation++;this.state=s;this.samples.clear();this.failed.clear();for(const a of this.actors.values())this.disposeActor(a);this.actors.clear();this.pending.clear();this.clearEnvironment();this.buildEnvironment(s);this.center();this.lastRevision=-1;this.lastEffect=null;this.route([]);}
+  clearEffects(){for(const effect of this.effects){this.scene.remove(effect.line);effect.line.geometry.dispose();effect.line.material.dispose();}this.effects=[];this.flameEffects?.dispose();this.flameEffects=null;this.lastEffect=null;}
+  setGame(s){this.generation++;this.clearEffects();this.state=s;this.samples.clear();this.failed.clear();for(const a of this.actors.values())this.disposeActor(a);this.actors.clear();this.pending.clear();this.clearEnvironment();this.buildEnvironment(s);this.center();this.lastRevision=-1;this.lastEffect=s.effect||null;this.route([]);}
   reportLoading(){this.onLoading(this.artBusy||this.propBusy||this.pending.size>0||this.failed.size>0);}
   clearEnvironment(){this.interactionArt?.dispose();this.interactionArt=null;this.art?.dispose();this.art=null;this.environment.traverse(o=>{o.geometry?.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});this.environment.clear();for(const t of this.disposables)t.dispose();this.disposables=[];}
   buildEnvironment(s){
@@ -127,14 +130,17 @@ export class FieldView {
       ring=new T.Mesh(new T.RingGeometry(.28,.34,32),new T.MeshBasicMaterial({color:u.team==='squad'?0xd8dfb1:0xe2633c,side:T.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.y=.018;root.add(ring);
       const shadow=new T.Mesh(new T.CircleGeometry(.3,20),new T.MeshBasicMaterial({color:0x131b12,transparent:true,opacity:.22,depthWrite:false}));shadow.rotation.x=-Math.PI/2;shadow.scale.x=1.3;shadow.position.y=.01;root.add(shadow);
       pick=new T.Mesh(new T.BoxGeometry(.8,1.8,.8),new T.MeshBasicMaterial({visible:false}));pick.position.y=.9;pick.userData.unitId=u.id;root.add(pick);
-      const a={worker,paint,profile,locomotion,posture,root,pick,ring,shadow,weapon:u.weapon,equipment:worker.weapon};this.actors.set(u.id,a);this.scene.add(root);
+      const a={worker,paint,profile,locomotion,posture,root,pick,ring,shadow,weapon:u.weapon,equipment:worker.weapon,flameOperator:createFlameOperator(worker,profile)};this.actors.set(u.id,a);this.scene.add(root);
     }catch(error){paint?.dispose();worker?.weapon?.dispose();worker?.dispose();if(generation===this.generation){this.failed.add(u.id);console.error('Animal model failed',error);this.onError(error.message||'An animal texture could not load.');}}
     finally{if(this.pending.get(u.id)===generation)this.pending.delete(u.id);if(generation===this.generation)this.reportLoading();}
   }
-  disposeActor(a){this.scene.remove(a.root);a.locomotion.dispose();a.paint.dispose();a.equipment.dispose();a.worker.dispose();for(const o of [a.pick,a.ring,a.shadow]){o.geometry.dispose();o.material.dispose();}}
+  disposeActor(a){this.scene.remove(a.root);a.flameOperator?.dispose();a.locomotion.dispose();a.paint.dispose();a.equipment.dispose();a.worker.dispose();for(const o of [a.pick,a.ring,a.shadow]){o.geometry.dispose();o.material.dispose();}}
   queueEffects(effect,now){
     let previousRound=null;
     for(const event of effect.sequence||[effect]){
+      if(event.weapon==='flamethrower'||event.incendiary){
+        if(event.flame){this.flameEffects ||= new SoloFlameEffects(this.scene);this.flameEffects.enqueue(event,now);}continue;
+      }
       const thrown=event.weapon==='grenade',burst=event.shots>1,at=now+(burst?event.shot*BURST_SHOT_INTERVAL:0);
       const points=thrown?Core.grenadeTrajectory({x:event.ax,y:event.ay},{x:event.bx,y:event.by}).map(p=>V(p.x,p.z,p.y)):[V(event.ax,1.1,event.ay),V(event.bx,.9,event.by)];
       const line=new T.Line(new T.BufferGeometry().setFromPoints(points),new T.LineBasicMaterial({color:event.incendiary?0xff7835:0xf6d68c,transparent:true,opacity:.9}));
@@ -159,12 +165,14 @@ export class FieldView {
     });
   }
   sync(s,now){this.state=s;const u=hero(s),visible=s.units.filter(v=>v.team==='squad'||(v.hp>0?s.detected.has(v.id):s.visible.has(Core.key(v.x,v.y))));
+    if(s.effect&&s.effect!==this.lastEffect){this.lastEffect=s.effect;this.queueEffects(s.effect,now);}
+    this.flameEffects?.beginFrame(now,s);
     for(const [id,a] of this.actors)a.root.visible=visible.some(v=>v.id===id);
     for(const v of visible){let a=this.actors.get(v.id);if(!a){this.actor(v);continue;}const old=this.samples.get(v.id)||{blend:0,pose:{kneel:0,prone:0,down:v.hp<=0?1:0,dead:v.hp<=0?1:0}},blend=old.blend+((v.isMoving?1:0)-old.blend)*.2,goal={kneel:v.stance==='kneeling'?1:0,prone:v.stance==='prone'?1:0,down:v.hp<=0?1:0,dead:v.hp<=0?1:0};const pose=Object.fromEntries(Object.entries(goal).map(([k,value])=>[k,Math.abs(value-old.pose[k])<.005?value:old.pose[k]+(value-old.pose[k])*.15]));const sample={...v,distance:v.travelled,blend:blend<.001?0:blend,pose};this.samples.set(v.id,sample);a.root.visible=true;a.pick.visible=true;a.ring.visible=v.hp>0;a.pick.scale.set(v.hp>0?1:1.6,v.hp>0?1:.2,v.hp>0?1:1.6);a.pick.position.y=v.hp>0?.9:.18;a.pick.userData.interactionId=v.hp<=0?'body:'+v.id:null;
-      const signature=[v.weapon,sample.heading,sample.blend,sample.distance,JSON.stringify(sample.pose)].join(':');
-      if(a.signature!==signature){a.signature=signature;if(a.weapon!==v.weapon){const old=a.equipment;a.equipment=createWeaponModel(v.weapon);a.worker.equipWeapon(a.equipment);old.dispose();a.weapon=v.weapon;}
+      const fire=this.flameEffects?.poseFor(v),signature=[v.weapon,sample.heading,sample.blend,sample.distance,JSON.stringify(sample.pose)].join(':');
+      if(a.signature!==signature||fire||a.hadFlame){a.signature=signature;a.hadFlame=!!fire;if(a.weapon!==v.weapon){const old=a.equipment;a.equipment=createWeaponModel(v.weapon);a.worker.equipWeapon(a.equipment);old.dispose();a.weapon=v.weapon;}
         a.root.position.set(0,0,0);a.locomotion.apply({...sample,blend:sample.pose?.prone||sample.pose?.down?0:sample.blend});a.posture.apply(sample);if(sample.pose.down)a.posture.ground();}
-      a.root.position.set(sample.x,0,sample.y);a.root.updateMatrixWorld(true);a.worker.skeleton.update();}
+      a.root.position.set(sample.x,0,sample.y);a.root.updateMatrixWorld(true);a.worker.skeleton.update();if(fire)this.flameEffects.captureMuzzle(fire,a.flameOperator.apply(sample,fire.seconds,fire.reduced));}
     if(this.grenadeCamera)this.trackGrenadeCamera(now);
     if(this.returnSpan!=null){this.span+=(this.returnSpan-this.span)*.14;if(Math.abs(this.returnSpan-this.span)<.01){this.span=this.returnSpan;this.returnSpan=null;}this.resize();}
     if(this.focusedId!=null){const contact=s.units.find(v=>v.id===this.focusedId&&Core.alive(v)&&s.detected.has(v.id));if(contact){this.target.lerp(V(contact.x,0,contact.y),.18);this.updateCamera();}else this.center();}
@@ -172,12 +180,12 @@ export class FieldView {
     if(s.revision!==this.lastRevision){this.lastRevision=s.revision;this.art.update(s,u);this.interactionArt.update(s);
       this.objectivePin.visible=!s.solo.ledger;this.extractionPin.visible=true;
     }
-    if(s.effect&&s.effect!==this.lastEffect){this.lastEffect=s.effect;this.queueEffects(s.effect,now);}
     this.animateEffects(now);
+    this.flameEffects?.draw(s,this.camera);
     if(this.lastLightAt===undefined||now-this.lastLightAt>=200){this.daylight.update(480,this.camera,now,true);this.lastLightAt=now;}
     this.marker.rotation.z=now*.0005;this.renderer.render(this.scene,this.camera);
   }
-  dispose(){this.generation++;this.resizeObserver.disconnect();this.container.removeEventListener('pointerdown',this.pointerDown);this.container.removeEventListener('pointermove',this.pointerMove);this.container.removeEventListener('pointerup',this.pointerUp);this.container.removeEventListener('pointercancel',this.pointerUp);this.container.removeEventListener('wheel',this.wheel);for(const a of this.actors.values())this.disposeActor(a);this.actors.clear();this.clearEnvironment();this.daylight.dispose();for(const e of this.effects){e.line.geometry.dispose();e.line.material.dispose();}this.marker.geometry.dispose();this.marker.material.dispose();this.blastMarker.geometry.dispose();this.blastMarker.material.dispose();this.blastArea.geometry.dispose();this.blastArea.material.dispose();this.pathLine.geometry.dispose();this.pathLine.material.dispose();this.renderer.dispose();this.renderer.domElement.remove();}
+  dispose(){this.generation++;this.clearEffects();this.resizeObserver.disconnect();this.container.removeEventListener('pointerdown',this.pointerDown);this.container.removeEventListener('pointermove',this.pointerMove);this.container.removeEventListener('pointerup',this.pointerUp);this.container.removeEventListener('pointercancel',this.pointerUp);this.container.removeEventListener('wheel',this.wheel);for(const a of this.actors.values())this.disposeActor(a);this.actors.clear();this.clearEnvironment();this.daylight.dispose();this.marker.geometry.dispose();this.marker.material.dispose();this.blastMarker.geometry.dispose();this.blastMarker.material.dispose();this.blastArea.geometry.dispose();this.blastArea.material.dispose();this.pathLine.geometry.dispose();this.pathLine.material.dispose();this.renderer.dispose();this.renderer.domElement.remove();}
 }
 
 export function drawMinimap(canvas,s){const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;ctx.fillStyle='#1b2219';ctx.fillRect(0,0,w,h);const scale=Math.min((w-12)/38,(h-12)/28),ox=(w-38*scale)/2,oy=(h-28*scale)/2;

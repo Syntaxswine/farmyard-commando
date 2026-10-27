@@ -15,5 +15,6 @@ The source is preserved in the designer snapshot. `node sites/tactical-animal/to
 - Sandbags and the red barrel retain their one-tile physical footprints. The barrel is static cover in this milestone; chain explosions are not enabled.
 - The source's upper layers are empty. Sectors that require stairs, climbing, upper floors or water are rejected until their rules and rendering are implemented.
 - The source is mostly open country around a compact checkpoint. Populating the remaining countryside is a later authored-content task; streaming must not invent buildings or guards.
+- Pathfinding uses a stable heap and an 8,192-node work budget. An unusually complex long detour can return no route; shorter waypoints remain available. A hierarchical planner is a later step for densely built sectors.
 
 Acceptance includes continuous seam crossing with unchanged distance/AP accounting, whole-world shot obstruction beyond the rendered window, local visibility work, pursuit, persistent doors/loot/objectives after leaving and returning, legacy and sector save round trips, and bounded/disposed renderer resources. Camera focus may change scenery residency; it cannot reveal unidentified opponents or discard simulation state.

@@ -24,6 +24,9 @@ export class InteractionScenery {
       }else if(object.kind==='door'){
         const geometry=new T.BoxGeometry(1,1,1),material=new T.MeshStandardMaterial({map:wood,color:0xb5ad86,roughness:.9}),leaf=new T.Mesh(geometry,material);
         leaf.userData.interactionId=object.id;leaf.castShadow=leaf.receiveShadow=true;this.resources.push(geometry,material);this.root.add(leaf);this.records.set(object.id,{leaf});
+      }else if(object.kind==='clue'){
+        const geometry=new T.OctahedronGeometry(.18),material=new T.MeshStandardMaterial({color:0xe0c17b,roughness:.85}),marker=new T.Mesh(geometry,material);
+        marker.userData.interactionId=object.id;this.resources.push(geometry,material);this.root.add(marker);this.records.set(object.id,{marker});
       }
     }
     this.update(state);
@@ -31,16 +34,18 @@ export class InteractionScenery {
   update(state){
     for(const object of state.interactables){
       const record=this.records.get(object.id);if(!record)continue;
-      const known=state.seen.has(`${Math.round(object.x)},${Math.round(object.y)}`)||object.kind==='door'&&state.seen.has(`${Math.floor(object.x)},${Math.round(object.y)}`);
-      const visible=state.visible.has(`${Math.round(object.x)},${Math.round(object.y)}`);
+      const cells=object.kind==='door'?[`${Math.floor(object.x)},${Math.floor(object.y)}`,`${Math.ceil(object.x)},${Math.ceil(object.y)}`]:[`${Math.round(object.x)},${Math.round(object.y)}`];
+      const known=cells.some(cell=>state.seen.has(cell)),visible=cells.some(cell=>state.visible.has(cell));
       if(record.sprite){
         record.sprite.visible=known;record.sprite.position.set(object.x,.015,object.y);record.sprite.scale.set(1.15,object.open?1.1:.9,1);
         record.sprite.material.map=object.open?this.chestPaint.open:this.chestPaint.closed;record.sprite.material.color.setScalar(visible?1:.38);
-      }else{
+      }else if(record.leaf){
         const box=doorFootprint(object);record.leaf.visible=known;record.leaf.position.set((box.x0+box.x1)/2,box.height/2,(box.y0+box.y1)/2);record.leaf.scale.set(box.x1-box.x0,box.height,box.y1-box.y0);
+      }else{
+        record.marker.visible=known;record.marker.position.set(object.x,object.anchorHeight??.8,object.y);record.marker.material.color.setHex(state.solo.inspected?.includes(object.id)?0xaab68a:0xe0c17b);record.marker.material.color.multiplyScalar(visible?1:.38);
       }
     }
   }
-  get picks(){return [...this.records.values()].map(record=>record.sprite||record.leaf).filter(mesh=>mesh.visible);}
+  get picks(){return [...this.records.values()].map(record=>record.sprite||record.leaf||record.marker).filter(mesh=>mesh.visible);}
   dispose(){this.disposed=true;this.root.removeFromParent();for(const resource of this.resources)resource.dispose();this.root.clear();}
 }

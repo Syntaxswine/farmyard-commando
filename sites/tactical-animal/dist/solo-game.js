@@ -5,6 +5,8 @@ import {identifyRange,headingTo} from './aft/tactics/core/perception.js';
 import {shotAim} from './aft/tactics/aim-levels.js';
 import {WALL_DIMENSIONS} from './world-dimensions.js';
 import {createInteractionSystem,missionInteractables,interactionFootprint} from './interactions.js';
+import {DEFAULT_MISSION_ID,getMission,missionForState,missionMap,objectiveSecured} from './missions.js';
+export {MISSIONS,DEFAULT_MISSION_ID,getMission,missionForState,missionMap,objectiveSecured,missionDestination} from './missions.js';
 
 // Continuous positions are authoritative. Raster cells describe scenery and fog;
 // movement, AP, sightlines, and weapon range use actual world distances.
@@ -13,7 +15,9 @@ export const ANIMALS=QUICKPLAY_PRESETS;
 export const PRIMARY=['assault','rifle','smg','shotgun','sniper','hmg','flamethrower','rpg'];
 export const SECONDARY=['pistol','knife'],UTILITIES=['dressing','grenade'];
 export const DEFAULT_BUILD=Object.freeze({animal:'rifleman',primary:'assault',secondary:'pistol',utility:'dressing'});
-export const BRIEF=Object.freeze({name:'The night ledger',location:'MILL 04 / RECORDS OFFICE',objective:{x:31,y:6},extraction:{x:5,y:24},bounds:{x:1,y:1,w:38,h:28}});
+// Preserve the original public brief for existing callers. Active operations
+// resolve their own definition through missionForState instead.
+export const BRIEF=getMission(DEFAULT_MISSION_ID);
 export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 export const key=(x,y)=>`${Math.round(x)},${Math.round(y)}`;
 export const hero=s=>s.units.find(u=>u.team==='squad');
@@ -27,20 +31,17 @@ export function validBuild(b){return !!b&&ANIMALS.some(a=>a.id===b.animal)&&PRIM
 export function normalizeBuild(b){return validBuild(b)?{animal:b.animal,primary:b.primary,secondary:b.secondary,utility:b.utility}:{...DEFAULT_BUILD};}
 export function buildStats(b){const p=ANIMALS.find(a=>a.id===b.animal),u={team:'squad',name:p.name};initializeStats(u,p.stats);return u;}
 export function log(s,message){s.log.unshift(message);s.log=s.log.slice(0,35);s.revision++;}
-const edgeKey=(axis,x,y)=>`${axis}:${x}:${y}`;
-function room(m,x,y,w,h){for(let cy=y;cy<y+h;cy++)for(let cx=x;cx<x+w;cx++)m.terrain[cy][cx]='floor';for(let cy=y;cy<y+h;cy++){m.edges[edgeKey('e',x-1,cy)]='wall';m.edges[edgeKey('e',x+w-1,cy)]='wall';}for(let cx=x;cx<x+w;cx++){m.edges[edgeKey('s',cx,y-1)]='wall';m.edges[edgeKey('s',cx,y+h-1)]='wall';}m.edges[edgeKey('e',x-1,y+Math.floor(h/2))]='door';m.edges[edgeKey('s',x+Math.floor(w/2),y+h-1)]='door';}
-export function missionMap(){const m={name:BRIEF.name,terrain:Array.from({length:30},()=>Array(40).fill('void')),edges:{}};for(let y=1;y<=28;y++)for(let x=1;x<=38;x++)m.terrain[y][x]='yard';room(m,8,14,10,8);room(m,24,2,12,11);for(let y=5;y<=20;y++)m.edges[edgeKey('e',20,y)]='wall';delete m.edges[edgeKey('e',20,13)];delete m.edges[edgeKey('e',20,14)];for(const [x,y] of [[6,17],[6,18],[11,17],[12,17],[15,19],[22,15],[22,16],[28,8],[29,8],[33,4],[17,6],[17,7],[11,9],[12,9],[32,17],[32,18]])m.terrain[y][x]='crate';return m;}
 function makeUnit(id,team,name,species,weapon,x,y,heading,stats){const u={id,team,name,species,weapon,x,y,z:0,heading,stance:'standing',running:false,sneaking:false,travelled:0,isMoving:false,alert:false,lastKnown:null,alertAge:0,slots:[weapon],pack:[],ammo:{[weapon]:WEAPONS[weapon].mag},ammoPouch:{[weapon]:WEAPONS[weapon].mag*3}};initializeStats(u,stats);return u;}
-export function createSoloGame(build=DEFAULT_BUILD,seed=1947){
+export function createSoloGame(build=DEFAULT_BUILD,seed=1947,missionId=DEFAULT_MISSION_ID){
   if(!validBuild(build))throw Error('Choose a valid animal and loadout.');
-  const p=ANIMALS.find(a=>a.id===build.animal),m=missionMap(),u=makeUnit(0,'squad',p.name,p.species,build.primary,5,24,270,p.stats);
+  const mission=getMission(missionId),p=ANIMALS.find(a=>a.id===build.animal),m=missionMap(mission.id),u=makeUnit(0,'squad',p.name,p.species,build.primary,mission.spawn.x,mission.spawn.y,mission.spawn.heading,p.stats);
   u.slots=[build.primary,build.secondary];const kinds=[...u.slots,...(build.utility==='grenade'?['grenade']:[])];
   u.ammo=Object.fromEntries(kinds.map(k=>[k,WEAPONS[k].mag]));u.pack=kinds.map(kind=>({type:'weapon',kind,rounds:u.ammo[kind],condition:100}));if(build.secondary==='pistol')u.ammoPouch.pistol=24;
   const stats={strength:10,endurance:20,agility:22,firearms:35,perception:35,dexterity:35};
-  const units=[u,makeUnit(1,'guard','Boris','pig-foreman','pistol',16,12,0,stats),makeUnit(2,'guard','Lev','pig-foreman','rifle',29,19,90,stats),makeUnit(3,'guard','Oleg','pig-foreman','pistol',30,5,0,stats)];
-  const fallen=makeUnit(4,'guard','Ilya','pig-foreman','pistol',6.9,23.7,160,stats);fallen.hp=0;fallen.casualty='dead';units.push(fallen);
-  const s={map:m.terrain,edges:m.edges,units,interactables:missionInteractables(),phase:'explore',round:0,selected:0,visible:new Set(),seen:new Set(),detected:new Set(),log:[],seed,revision:0,queue:[],enemyIndex:1,enemyDelay:0,elapsed:0,solo:{version:2,build:{...build},ledger:false,status:'active',dressings:build.utility==='dressing'?2:0,distance:0,apDistance:0}};
-  interactionRules.restore(s);refresh(s);log(s,'Reach the records office. Move freely; contact begins turn-based combat.');return s;
+  const units=[u,...mission.guards.map((g,i)=>makeUnit(i+1,'guard',g.name,g.species,g.weapon,g.x,g.y,g.heading,stats))];
+  if(mission.fallen){const f=mission.fallen,fallen=makeUnit(units.length,'guard',f.name,f.species,f.weapon,f.x,f.y,f.heading,stats);fallen.hp=0;fallen.casualty='dead';units.push(fallen);}
+  const s={map:m.terrain,edges:m.edges,units,interactables:missionInteractables({missionId:mission.id}),phase:'explore',round:0,selected:0,visible:new Set(),seen:new Set(),detected:new Set(),log:[],seed,revision:0,queue:[],enemyIndex:1,enemyDelay:0,elapsed:0,solo:{version:2,missionId:mission.id,build:{...build},objectives:{},inspected:[],ledger:false,status:'active',dressings:build.utility==='dressing'?2:0,distance:0,apDistance:0}};
+  interactionRules.restore(s);refresh(s);log(s,mission.briefing);return s;
 }
 const geometryCache=new WeakMap();
 export function geometry(s){
@@ -51,7 +52,11 @@ export function geometry(s){
     const interactionId=s.interactables?.find(object=>object.kind==='door'&&object.edge===k)?.id;
     boxes.push({x0:x-hx,x1:x+hx,y0:y-hy,y1:y+hy,height:WALL_DIMENSIONS.height,kind:'wall',...(interactionId?{interactionId}:{})});
   }
-  for(let y=1;y<=28;y++)for(let x=1;x<=38;x++)if(s.map[y][x]==='crate')boxes.push({x0:x-.48,x1:x+.48,y0:y-.48,y1:y+.48,height:.92,kind:'crate'});
+  const cargo=missionForState(s).cover.filter(p=>s.interactables?.some(object=>object.kind==='clue'&&object.id===p.id));
+  for(let y=1;y<=28;y++)for(let x=1;x<=38;x++)if(s.map[y][x]==='crate'){
+    const placement=cargo.find(({rect:[cx,cy,w,h]})=>x>=cx&&x<cx+w&&y>=cy&&y<cy+h);
+    boxes.push({x0:x-.48,x1:x+.48,y0:y-.48,y1:y+.48,height:.92,kind:'crate',...(placement?{interactionId:placement.id}:{})});
+  }
   for(const object of s.interactables||[])if(object.kind==='chest'||object.kind==='door'&&object.open)boxes.push({...interactionFootprint(object),kind:object.kind==='door'?'wall':'crate',interactionId:object.id});
   geometryCache.set(s,boxes);return boxes;
 }
@@ -171,15 +176,25 @@ export function reload(s,u){if(!canControl(s,u))return false;const w=WEAPONS[u.w
 export function endTurn(s){if(s.phase!=='player'||s.solo.status!=='active')return false;stop(s);s.phase='enemy';s.enemyIndex=1;s.enemyDelay=.35;s.engaged=false;for(const g of s.units.filter(g=>g.team==='guard')){g.ap=g.maxAp;g.alertAge++;if(g.alertAge>3&&!canSee(s,g,hero(s)))g.alert=false;}s.revision++;return true;}
 function enemyStep(s,dt){const u=hero(s);let g=s.units[s.enemyIndex];if(!g){s.round++;u.ap=u.maxAp;u.stamina=Math.min(u.maxStamina,u.stamina+10);s.phase='player';refresh(s);return;}if(!alive(g)||!g.alert||g.ap<.02){g.isMoving=false;s.enemyIndex++;s.enemyDelay=.15;return;}s.enemyDelay-=dt;if(s.enemyDelay>0)return;const p=previewAttack(s,g,u);if(p.ok&&canSee(s,g,u)){attack(s,g,u,false,true);s.enemyDelay=.6;return;}if(g.ammo[g.weapon]===0&&g.ap>=3){const count=Math.min(WEAPONS[g.weapon].mag,g.ammoPouch[g.weapon]||0);if(count){g.ammo[g.weapon]=count;g.ammoPouch[g.weapon]-=count;g.ap-=3;s.enemyDelay=.4;return;}}if(g.ap<WEAPONS[g.weapon].cost&&canSee(s,g,u)&&distance(g,u)<=WEAPONS[g.weapon].range){g.ap=0;return;}const goal=g.lastKnown||u,range=distance(g,goal),offset=Math.min(.75,range),tx=goal.x-(goal.x-g.x)/Math.max(range,.001)*offset,ty=goal.y-(goal.y-g.y)/Math.max(range,.001)*offset,path=navigationPath(s,g,tx,ty),next=path?.[0];if(!next){g.ap=0;return;}const d=distance(g,next);if(d<.08){g.ap=0;return;}const step=Math.min(d,movementSpeed(g)*dt);if(!travel(s,g,(next.x-g.x)/d*step,(next.y-g.y)/d*step,{enemy:true}))g.ap=0;}
 export function tick(s,dt=1/60,input=null){if(s.solo.status!=='active')return false;dt=Math.max(0,Math.min(.05,dt));s.elapsed+=dt;for(const u of s.units)u.isMoving=false;if(s.phase==='enemy'){enemyStep(s,dt);return true;}const u=hero(s);if(input&&Math.hypot(input.x,input.y)>.1){s.queue=[];const n=Math.max(1,Math.hypot(input.x,input.y));travel(s,u,input.x/n*movementSpeed(u)*dt,input.y/n*movementSpeed(u)*dt);}else if(s.queue.length){const p=s.queue[0],d=distance(u,p);if(d<.025)s.queue.shift();else{const step=Math.min(d,movementSpeed(u)*dt),moved=travel(s,u,(p.x-u.x)/d*step,(p.y-u.y)/d*step);if(!moved||s.phase==='player'&&u.ap<EPS)s.queue=[];}}else if(s.phase==='explore'||s.phase==='won')u.stamina=Math.min(u.maxStamina,u.stamina+dt*2);return true;}
-const interactionRules=createInteractionSystem({hero,canControl,combatCosts,distance,geometry,pointBoxDistance,refresh,stop,log,clearGeometry:s=>geometryCache.delete(s),weapons:WEAPONS,brief:BRIEF,radius:RADIUS});
+const interactionRules=createInteractionSystem({hero,canControl,combatCosts,distance,geometry,pointBoxDistance,refresh,stop,log,clearGeometry:s=>geometryCache.delete(s),weapons:WEAPONS,radius:RADIUS});
 export const interactionObjects=s=>interactionRules.objects(s);
 export const nearbyInteractions=s=>interactionRules.nearby(s);
 export const previewInteraction=(s,id,action,itemId)=>interactionRules.preview(s,id,action,itemId);
 export const performInteraction=(s,id,action,itemId)=>interactionRules.perform(s,id,action,itemId);
 // Existing mission/menu callers use the same validated actions as the hand.
-export function interaction(s){const object=nearbyInteractions(s).find(object=>object.kind==='ledger'||object.kind==='extract');if(!object)return null;return {...object.actions[0],kind:object.kind,label:object.kind==='extract'?'Extract with the ledger':'Take the ledger'};}
-export function interact(s){const id=s.solo.ledger?'extraction':'ledger';return performInteraction(s,id,s.solo.ledger?'extract':'collect').ok;}
+export function interaction(s){const mission=missionForState(s),object=nearbyInteractions(s).find(object=>['ledger','objective','extract'].includes(object.kind));if(!object)return null;return {...object.actions[0],kind:object.kind,label:object.kind==='extract'?mission.extraction.label:mission.id===DEFAULT_MISSION_ID?'Take the ledger':'Take the manifest'};}
+export function interact(s){const secured=objectiveSecured(s);return performInteraction(s,secured?'extraction':missionForState(s).objective.id,secured?'extract':'collect').ok;}
 export function dressing(s){const u=hero(s),cost=combatCosts(s)?3:0;if(!canControl(s,u)||s.solo.dressings<1||u.hp>=u.maxHp||u.ap+EPS<cost)return false;stop(s);u.ap-=cost;u.hp=Math.min(u.maxHp,u.hp+35);s.solo.dressings--;log(s,u.name+' used a field dressing (+35 HP).');return true;}
 export function encodeSave(s){return JSON.stringify(s,(_,v)=>v instanceof Set?{$set:[...v]}:v);}
-export function decodeSave(text){const s=JSON.parse(text,(_,v)=>v&&Array.isArray(v.$set)?new Set(v.$set):v);if(s?.solo?.version!==2||!validBuild(s.solo.build)||s.units?.filter(u=>u.team==='squad').length!==1||!['active','extracted','lost'].includes(s.solo.status)||!Array.isArray(s.map)||s.map.length!==30||s.map.some(r=>!Array.isArray(r)||r.length!==40)||!['visible','seen','detected'].every(k=>s[k] instanceof Set)||s.units.some(u=>!Number.isFinite(u.x)||!Number.isFinite(u.y)||!Number.isFinite(u.hp)||!Number.isFinite(u.ap)))throw Error('Unsupported solo save.');return interactionRules.restore(s);}
+export function decodeSave(text){
+  const s=JSON.parse(text,(_,v)=>v&&Array.isArray(v.$set)?new Set(v.$set):v);
+  if(s?.solo?.version!==2||!validBuild(s.solo.build)||s.units?.filter(u=>u.team==='squad').length!==1||!['active','extracted','lost'].includes(s.solo.status)||!Array.isArray(s.map)||s.map.length!==30||s.map.some(r=>!Array.isArray(r)||r.length!==40)||!['visible','seen','detected'].every(k=>s[k] instanceof Set)||s.units.some(u=>!Number.isFinite(u.x)||!Number.isFinite(u.y)||!Number.isFinite(u.hp)||!Number.isFinite(u.ap)))throw Error('Unsupported solo save.');
+  const mission=getMission(s.solo.missionId??DEFAULT_MISSION_ID);s.solo.missionId=mission.id;
+  if(s.solo.objectives===undefined)s.solo.objectives={};
+  if(!s.solo.objectives||typeof s.solo.objectives!=='object'||Array.isArray(s.solo.objectives)||Object.entries(s.solo.objectives).some(([id,value])=>id!==mission.objective.id||typeof value!=='boolean'))throw Error('Unsupported objective save.');
+  if(mission.id===DEFAULT_MISSION_ID&&s.solo.ledger)s.solo.objectives.ledger=true;
+  if(s.solo.inspected===undefined)s.solo.inspected=[];
+  if(!Array.isArray(s.solo.inspected)||s.solo.inspected.some(id=>!mission.clues.some(clue=>clue.id===id)))throw Error('Unsupported inspection save.');
+  return interactionRules.restore(s);
+}
 export const Core={WEAPONS,AIM_ZONES,key,alive,movementModeOf,movementRate,movementSpeed,combatCosts,canControl,canSee,visibleOpponents,refresh,log,stop,travel,navigationPath,move,turnTo,setMovementMode,setStance,grenadeCost,grenadeTrajectory,grenadeAffects,grenadeBlastFootprint,previewGrenade,throwGrenade,previewAttack,attack,equip,reload,endTurn,headingTo,interactionObjects,nearbyInteractions,previewInteraction,performInteraction};

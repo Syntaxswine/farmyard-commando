@@ -1,11 +1,13 @@
-import {ANIMALS,PRIMARY,SECONDARY,DEFAULT_BUILD,BRIEF,Core,normalizeBuild,buildStats,createSoloGame,hero,interaction,interact,dressing,tick,encodeSave,decodeSave,distance} from './solo-game.js';
+import {ANIMALS,PRIMARY,SECONDARY,DEFAULT_BUILD,MISSIONS,DEFAULT_MISSION_ID,getMission,missionForState,missionMap,objectiveSecured,missionDestination,Core,normalizeBuild,buildStats,createSoloGame,hero,interaction,interact,dressing,tick,encodeSave,decodeSave,distance} from './solo-game.js';
 import {FieldView,drawMinimap} from './field-view.js';
 import {cycleStep,nextCameraFocus,bindPressHold} from './mobile-controls.js';
 import {GrenadeAim,screenToGround} from './grenade-controls.js';
 import {weaponArtwork} from './original-art.js';
 import {STANCE_ICONS} from './aft/tactics/battle-control-icons.js';
 import {selectInteractionTarget} from './interactions.js';
-const $=id=>document.getElementById(id),SAVE='tactical-animal-operation-v2',BUILD='tactical-animal-build-v1';
+import {createOperationStorage} from './operation-storage.js';
+const $=id=>document.getElementById(id);
+let selectedMissionId=DEFAULT_MISSION_ID;
 let build={...DEFAULT_BUILD},state=null,view=null,active=false,paused=false,selected=null,aim='hip',zone='torso',burst=false,contextKey='',lastTime=0,lastUI=0,lastSave=0,lastPhase='',stick={x:0,y:0},stickPointer=null,resultShown=false,aimViewport=null;
 const grenadeAim=new GrenadeAim();
 const keys=new Set(),overlay=$('overlay');
@@ -17,19 +19,40 @@ const stanceValues=['standing','kneeling','prone'],movementValues=['run','walk',
 const stanceNames={standing:'Standing',kneeling:'Kneeling',prone:'Prone / crawl'},movementNames={run:'Run',walk:'Off / walk',sneak:'Sneak'};
 const movementPoses={walk:'M18 4a3 3 0 1 0 0 .1M18 10l-2 12m2-9-8 7m8-7 7 6m-9 3-6 12m6-12 9 12',run:'M22 4a3 3 0 1 0 0 .1M21 10l-7 11m5-9-8-1-4 5m12-4 5 7 6-2M14 21l-7 5-4-4m11-1 9 5-2 8',sneak:'M17 9a3 3 0 1 0 0 .1M17 15l-3 7m2-5 10 3 3-3m-13 0-7 3M14 22l10 3-6 8m-4-11-7 8h8'};
 const poseIcon=value=>STANCE_ICONS[value]?.replace('<svg ','<svg class="original-stance" ')||`<svg viewBox="0 0 36 38" aria-hidden="true"><path d="${movementPoses[value]}"/></svg>`;
-try{build=normalizeBuild(JSON.parse(localStorage.getItem(BUILD)||'null'));}catch{}
-const storage={read(){try{return localStorage.getItem(SAVE);}catch{return null;}},write(){if(!state)return;try{localStorage.setItem(SAVE,encodeSave(state));}catch{toast('Device storage is full. Keep this tab open to retain the operation.');}}};
+// Resolve the browser's storage getter only inside the handled read/write paths:
+// privacy settings can deny access to the property itself during startup.
+const operationStorage=createOperationStorage({getItem:key=>window.localStorage.getItem(key),setItem:(key,value)=>window.localStorage.setItem(key,value)},{normalizeBuild,encodeSave,decodeSave});
+const preparationBuilds=Object.fromEntries(MISSIONS.map(mission=>[mission.id,{...DEFAULT_BUILD}]));
+try{const preferences=operationStorage.preferences();selectedMissionId=preferences.selectedMissionId;Object.assign(preparationBuilds,preferences.builds);build=normalizeBuild(preparationBuilds[selectedMissionId]);}catch(error){toast('Could not read preparation. You can still choose an operation and play in this tab.');}
+function storageWriteFailure(subject,error){const reason=error?.name==='QuotaExceededError'?'Device storage is full.':error?.name==='SecurityError'?'Browser storage is blocked.':'Browser storage could not be written.';toast(`${reason} Could not save ${subject}. Keep this tab open to retain your changes.`);}
+const storage={read(){return operationStorage.read(selectedMissionId);},write(){if(!state)return;try{operationStorage.write(state);}catch(error){storageWriteFailure('operation progress',error);}}};
 const speciesLabel=s=>s.replaceAll('-',' '),short=k=>Core.WEAPONS[k].short;
 function button(parent,label,cls,pressed,onClick){const b=document.createElement('button');b.type='button';b.className=cls;b.innerHTML=label;b.setAttribute('aria-pressed',String(pressed));b.onclick=onClick;parent.append(b);return b;}
 function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,4000);}
-function renderPrep(){const p=ANIMALS.find(a=>a.id===build.animal),stats=buildStats(build);$('hero-portrait').src=`aft/assets/characters/armed/${p.species}-rifle.png`;$('hero-portrait').alt=`${p.name}, the ${speciesLabel(p.species)} worker`;$('hero-name').textContent=p.name;$('hero-species').textContent=speciesLabel(p.species);$('hero-role').textContent=p.label;document.querySelector('.portrait-number').textContent=String(ANIMALS.indexOf(p)+1).padStart(2,'0');$('stats').innerHTML=[['HEALTH',stats.maxHp],['ACTION POINTS',stats.maxAp],['PERCEPTION',stats.perception]].map(([label,value])=>`<div class="stat"><strong>${value}</strong><span>${label}</span></div>`).join('');
+function renderMissionPreparation(){
+  const mission=getMission(selectedMissionId),index=MISSIONS.indexOf(mission)+1;
+  $('operation-select').innerHTML=MISSIONS.map(m=>`<option value="${m.id}">${safe(m.title)}</option>`).join('');$('operation-select').value=mission.id;
+  $('operation-number').textContent='OP. '+String(index).padStart(3,'0');$('mission-location').textContent=mission.location;
+  $('mission-heading').textContent=mission.title;$('briefing-text').textContent=mission.briefing;
+  $('mission-steps').innerHTML=mission.steps.map((step,i)=>`<li><b>${String(i+1).padStart(2,'0')}</b> ${safe(step)}</li>`).join('');
+  $('deploy').setAttribute('aria-label','Deploy solo: '+mission.title);
+  const map=missionMap(mission.id),seen=new Set();for(let y=1;y<=28;y++)for(let x=1;x<=38;x++)seen.add(Core.key(x,y));
+  drawMinimap($('mission-preview'),{map:map.terrain,edges:map.edges,seen,detected:new Set(),units:[{id:0,team:'squad',hp:1,...mission.spawn}],solo:{missionId:mission.id,objectives:{}}});
+  $('mission-preview').setAttribute('aria-label',mission.title+' layout. Arrival, objective and extraction.');
+}
+function renderPrep(){renderMissionPreparation();const p=ANIMALS.find(a=>a.id===build.animal),stats=buildStats(build);$('hero-portrait').src=`aft/assets/characters/armed/${p.species}-rifle.png`;$('hero-portrait').alt=`${p.name}, the ${speciesLabel(p.species)} worker`;$('hero-name').textContent=p.name;$('hero-species').textContent=speciesLabel(p.species);$('hero-role').textContent=p.label;document.querySelector('.portrait-number').textContent=String(ANIMALS.indexOf(p)+1).padStart(2,'0');$('stats').innerHTML=[['HEALTH',stats.maxHp],['ACTION POINTS',stats.maxAp],['PERCEPTION',stats.perception]].map(([label,value])=>`<div class="stat"><strong>${value}</strong><span>${label}</span></div>`).join('');
   $('animals').replaceChildren();for(const a of ANIMALS)button($('animals'),`<strong>${speciesLabel(a.species)}</strong><small>${a.name}</small>`,'animal-choice',a.id===build.animal,()=>{build.animal=a.id;renderPrep();});
   $('primary').replaceChildren();for(const k of PRIMARY){const w=Core.WEAPONS[k],choice=button($('primary'),`<strong>${w.short}</strong><small>${w.cost} AP / ${w.range} m / ${w.mag} rounds</small>`,'weapon-choice',k===build.primary,()=>{build.primary=k;renderPrep();});choice.setAttribute('aria-label',w.name);const art=weaponArtwork(k,35);art.classList.add('weapon-paint');choice.append(art);}
   $('secondary').replaceChildren();for(const k of SECONDARY){const choice=button($('secondary'),`<span>${short(k)}</span><small>${k==='knife'?'MELEE':'8 ROUNDS'}</small>`,'small-choice',k===build.secondary,()=>{build.secondary=k;renderPrep();});const art=weaponArtwork(k,22);art.classList.add('sidearm-paint');choice.prepend(art);}
   $('utility').replaceChildren();for(const [k,label,detail] of [['dressing','Field dressing','×2'],['grenade','Frag grenades','×3']])button($('utility'),`<span>${label}</span><small>${detail}</small>`,'small-choice',k===build.utility,()=>{build.utility=k;renderPrep();});
   const skill=['hmg','rpg','flamethrower'].includes(build.primary)?'heavyWeapons':'firearms';$('primary-summary').textContent=`${skill==='firearms'?'FIREARMS':'HEAVY WEAPONS'} ${p.stats[skill]}`;$('equipment-note').textContent=`${Core.WEAPONS[build.primary].name}. ${p.name}'s ${skill==='firearms'?'firearms':'heavy weapons'} skill: ${p.stats[skill]}/100. Movement spends AP by distance, with no tile snapping.`;$('build-summary').textContent=`${p.name} / ${speciesLabel(p.species)} · ${short(build.primary)} + ${short(build.secondary)}`;
-  $('resume').hidden=!storage.read();try{localStorage.setItem(BUILD,JSON.stringify(build));}catch{}
+  try{const saved=storage.read();$('resume').hidden=!saved||JSON.parse(saved).solo.status!=='active';$('resume').textContent='Resume '+getMission(selectedMissionId).title+' ↗';}catch(error){$('resume').hidden=true;toast('Could not read saved operations. You can still deploy and play in this tab.');}
+  preparationBuilds[selectedMissionId]=normalizeBuild(build);
+  try{operationStorage.savePreparation(selectedMissionId,build);}catch(error){storageWriteFailure('preparation changes',error);}
 }
+$('operation-select').onchange=()=>{
+  try{selectedMissionId=getMission($('operation-select').value).id;build=normalizeBuild(preparationBuilds[selectedMissionId]);renderPrep();}catch(error){toast(error.message);}
+};
 $('grenade-art').append(weaponArtwork('grenade',32));
 $('interaction-icon').append(weaponArtwork('hands',25));
 function showDialog(html,actions=[],{context=false}={}){
@@ -56,9 +79,16 @@ function grenadeViewport(){
   aimViewport={left:sidePanel?panel.right-r.left+12:16,right:r.width-16,top:top-r.top+12,bottom:Math.max(top-r.top+72,(sidePanel?controls.top:panel.top)-r.top-12)};
   return aimViewport;
 }
-function start(s){try{view?.dispose();$('loading').textContent='Preparing the field…';$('loading').hidden=false;state=s;selected=null;interactionFocus=null;handTarget=null;grenadeAim.cancel();aimViewport=null;contextKey='';resultShown=false;stanceDirection=1;movementDirection=-1;$('prep').hidden=true;$('battle').hidden=false;document.body.classList.add('in-battle');active=true;paused=false;view=new FieldView($('viewport'),{onPick:pick,getAimViewport:grenadeViewport,onLoading:busy=>{$('loading').hidden=!busy;},onError:message=>{$('loading').hidden=false;$('loading').textContent='Animal artwork could not load. '+message;}});view.setGame(state);lastPhase=state.phase;lastTime=performance.now();lastUI=0;renderBattle();storage.write();}catch(error){active=false;view?.dispose();view=null;$('prep').hidden=false;$('battle').hidden=true;document.body.classList.remove('in-battle');toast('Cannot start 3D view: '+error.message);}}
-function backToPrep(){storage.write();active=false;grenadeAim.cancel();resetStick();keys.clear();view?.dispose();view=null;$('battle').hidden=true;$('prep').hidden=false;document.body.classList.remove('in-battle');renderPrep();}
-$('deploy').onclick=()=>start(createSoloGame(build));$('resume').onclick=()=>{try{const s=decodeSave(storage.read());if(s.solo.status!=='active'){toast('That operation has ended. Deploy a new animal to begin again.');return;}start(s);}catch{toast('This saved operation is from an older prototype. Deploy a new animal.');}};
+function start(s){try{
+  if(state&&state!==s)storage.write();cancelGrenade();resetStick();keys.clear();if(picker.open)closePicker();
+  view?.dispose();$('loading').textContent='Preparing the field…';$('loading').hidden=false;state=s;selectedMissionId=s.solo.missionId;build=normalizeBuild(s.solo.build);Core.stop(s);delete s.effect;
+  selected=null;interactionFocus=null;handTarget=null;grenadeAim.cancel();aimViewport=null;contextKey='';resultShown=false;stanceDirection=1;movementDirection=-1;aim='hip';zone='torso';burst=false;
+  $('prep').hidden=true;$('battle').hidden=false;document.body.classList.add('in-battle');active=true;paused=false;
+  view=new FieldView($('viewport'),{onPick:pick,getAimViewport:grenadeViewport,onLoading:busy=>{$('loading').hidden=!busy;},onError:message=>{$('loading').hidden=false;$('loading').textContent='Animal artwork could not load. '+message;}});
+  view.setGame(state);lastPhase=state.phase;lastTime=performance.now();lastUI=0;lastSave=lastTime;renderBattle();storage.write();
+}catch(error){active=false;view?.dispose();view=null;$('prep').hidden=false;$('battle').hidden=true;document.body.classList.remove('in-battle');toast('Cannot start 3D view: '+error.message);}}
+function backToPrep(){cancelGrenade();resetStick();keys.clear();Core.stop(state);storage.write();active=false;view?.dispose();view=null;$('battle').hidden=true;$('prep').hidden=false;document.body.classList.remove('in-battle');renderPrep();}
+$('deploy').onclick=()=>start(createSoloGame(build,1947,selectedMissionId));$('resume').onclick=()=>{try{const s=operationStorage.load(selectedMissionId);if(s.solo.status!=='active'){toast('That operation has ended. Deploy a new animal to begin again.');return;}start(s);}catch(error){toast('Could not resume: '+error.message);}};
 function positionInteractionHand(){
   const button=$('interaction-hand');
   if(!handTarget||!active||paused||grenadeAim.active||!Core.canControl(state,hero(state))||!$('loading').hidden){button.hidden=true;return;}
@@ -86,6 +116,7 @@ function useInteraction(id,action,itemId=null){
   if(!result.ok){toast(result.reason);renderBattle();return;}
   selected=null;view.route([]);contextKey='';renderBattle();storage.write();
   if(result.loot)lootWindow(id);
+  else if(result.message)showDialog(`<p class="eyebrow">FIELD NOTES</p><h2>${safe(result.name)}</h2><p>${safe(result.message)}</p>`,[['Return to operation',()=>{},'primary'],['Mission & combat log',mission]]);
 }
 function interactionChoices(){
   const object=Core.nearbyInteractions(state).find(object=>object.id===interactionFocus);if(!object)return;
@@ -131,7 +162,7 @@ function renderContext(){if(!state)return;const u=hero(state),near=interaction(s
   if(p){const copy=content(`${target.name} · ${speciesLabel(target.species)} · ${Math.ceil(target.hp)} HP`,`${p.distance?.toFixed(1)||distance(u,target).toFixed(1)} m · ${p.chance||0}% · ${p.cost||Core.WEAPONS[u.weapon].cost} AP${p.reason?' · '+p.reason:''}${Core.WEAPONS[u.weapon].blast?' · BLAST CAN HURT YOU':''}`,burst?'Fire burst':'Fire',()=>{Core.attack(state,u,target,burst,false,zone,false,aim);},!p.ok||!Core.canControl(state,u));
     const opts=document.createElement('div');opts.className='target-options';for(const [values,current,change,label] of [[{hip:'Quick shot',aimed:'Aimed',full:'Full aim'},aim,v=>aim=v,'Aim'],[{torso:'Torso',head:'Head',weapon:'Weapon',legs:'Legs'},zone,v=>zone=v,'Target zone']]){const select=document.createElement('select');select.setAttribute('aria-label',label);for(const [value,text] of Object.entries(values))select.add(new Option(text,value,false,value===current));select.onchange=()=>{change(select.value);contextKey='';renderContext();};opts.append(select);}if(Core.WEAPONS[u.weapon].burstRounds){const b=document.createElement('button');b.textContent=burst?'Burst ✓':'Burst';b.className='burst-toggle';b.onclick=()=>{burst=!burst;contextKey='';renderContext();};opts.append(b);}copy.append(opts);
   }else if(selected?.point){const path=Core.navigationPath(state,u,selected.point.x,selected.point.y),cost=path?.reduce((n,p)=>n+p.cost,0)||0,d=cost/Core.movementRate(u);content('Move to this point',`${d.toFixed(1)} m · ${cost.toFixed(1)} AP${cost>u.ap?' · stops when AP runs out':''}`,'Move',()=>{Core.move(state,u,selected.point.x,selected.point.y);selected=null;view.center();},!path||u.ap<.01);
-  }else if(near){content(near.label,near.cost?`${near.cost} AP · then return to extraction`:'Leave with the ledger to finish the operation',near.kind==='extract'?'Extract ↗':'Collect',()=>interact(state),!near.ok);}
+  }else if(near){const mission=missionForState(state);content(near.label,near.kind==='extract'?mission.extraction.name:`${near.cost} AP · ${mission.objective.after}`,near.kind==='extract'?'Extract ↗':'Collect',()=>interact(state),!near.ok);}
   else if(state.detected.size){const guard=[...state.detected].map(id=>state.units.find(v=>v.id===id)).sort((a,b)=>distance(u,a)-distance(u,b))[0];content('Visible contact',`${guard.name} · ${distance(u,guard).toFixed(1)} m`,'Target',()=>pick({unitId:guard.id}));}
   if(selected){const cancel=document.createElement('button');cancel.className='cancel-context';cancel.textContent='×';cancel.setAttribute('aria-label','Cancel selection');cancel.onclick=()=>{selected=null;view.route([]);contextKey='';renderContext();};root.append(cancel);}
 }
@@ -156,7 +187,7 @@ function renderBattle(){if(!state)return;const u=hero(state),combat=state.phase=
   $('look').setAttribute('aria-label',`${contacts.length} visible opponent${contacts.length===1?'':'s'}. ${viewing}. Next: ${nextAction}.`);
   $('look').title=`${nextAction} · opponents, then your animal`;
   drawMinimap($('minimap'),state);renderContext();renderInteractionHand();
-  if(state.solo.status!=='active'&&!resultShown){resultShown=true;storage.write();const win=state.solo.status==='extracted';showDialog(`<p class="eyebrow">OPERATION ${win?'COMPLETE':'LOST'}</p><h2>${win?'The books are open.':'One worker down.'}</h2><p>${win?`${u.name} returned with the wage ledger. ${Math.round(state.solo.distance)} metres travelled; ${state.round} combat rounds.`:'The factory kept its secrets this time. Try another animal, another loadout, or a quieter route.'}</p>`,[['Choose your next animal',backToPrep,'primary'],['Replay this loadout',()=>start(createSoloGame(state.solo.build))]]);}
+  if(state.solo.status!=='active'&&!resultShown){resultShown=true;storage.write();const win=state.solo.status==='extracted',mission=missionForState(state);showDialog(`<p class="eyebrow">${safe(mission.title)} / OPERATION ${win?'COMPLETE':'LOST'}</p><h2>${win?mission.result.title:'One worker down.'}</h2><p>${win?`${u.name} ${mission.result.summary} ${Math.round(state.solo.distance)} metres travelled; ${state.round} combat rounds.`:'The factory kept its secrets this time. Try another animal, another loadout, or a quieter route.'}</p>${win?`<p>${mission.result.epilogue}</p>`:''}`,[['Choose your next operation',backToPrep,'primary'],['Replay this loadout',()=>start(createSoloGame(state.solo.build,1947,state.solo.missionId))]]);}
 }
 $('end-turn').onclick=()=>act(()=>{selected=null;cancelGrenade();Core.endTurn(state);});
 function renderGrenadeControls(){
@@ -266,21 +297,21 @@ function operationMenu(){
   const other=u.weapon===state.solo.build.primary?state.solo.build.secondary:state.solo.build.primary;
   const swapCost=weaponSwapCost(u,other),actionCost=costs?' · 3 AP':'';
   const phase=state.phase==='enemy'?'Guard turn':state.phase==='player'?`Your turn · round ${state.round}`:'Real-time exploration';
-  showDialog(`<p class="eyebrow">OPERATION PAUSED</p><h2>Field menu.</h2><p class="menu-summary">${phase}<br>${u.name} · ${short(u.weapon)} · ${u.ap.toFixed(1)} AP</p>`,[
+  showDialog(`<p class="eyebrow">${safe(missionForState(state).title)} / OPERATION PAUSED</p><h2>Field menu.</h2><p class="menu-summary">${phase}<br>${u.name} · ${short(u.weapon)} · ${u.ap.toFixed(1)} AP</p>`,[
     ['Continue operation',()=>{},'primary'],
     ['Inventory & weapons',equipment],
     [`Switch to ${short(other)}${swapCost?' · '+swapCost+' AP':''}`,()=>act(()=>Core.equip(state,u,other)),'',!can||u.ap<swapCost],
     [`Reload ${short(u.weapon)} · ${u.ammo[u.weapon]??0}/${w.mag}${actionCost}`,()=>act(()=>Core.reload(state,u)),'',!can||!w.mag||u.ammo[u.weapon]>=w.mag||!(u.ammoPouch[u.weapon]>0)||costs&&u.ap<3],
     [`Use field dressing ×${state.solo.dressings}${actionCost}`,()=>act(()=>dressing(state)),'',!can||!state.solo.dressings||u.hp===u.maxHp||costs&&u.ap<3],
     [`Throw grenade ×${u.ammo.grenade||0} · ${Core.grenadeCost(u)} AP`,armGrenade,'',!can||!(u.ammo.grenade>0)||u.ap<Core.grenadeCost(u)],
-    ['Mission & combat log',mission],['Controls',help],['Choose animal & loadout',backToPrep],['Title screen',()=>{storage.write();location.assign('./');}],['Restart this operation',()=>start(createSoloGame(state.solo.build))]
+    ['Mission & combat log',mission],['Controls',help],['Choose operation, animal & loadout',backToPrep],['Title screen',()=>{storage.write();location.assign('./');}],['Restart this operation',()=>start(createSoloGame(state.solo.build,1947,state.solo.missionId))]
   ],{context:true});
 }
 function mission(){
-  const u=hero(state),near=interaction(state),dest=state.solo.ledger?BRIEF.extraction:BRIEF.objective;
+  const u=hero(state),near=interaction(state),definition=missionForState(state),secured=objectiveSecured(state),dest=missionDestination(state);
   const safe=text=>String(text).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
-  const objective=state.solo.ledger?'Return to extraction with the ledger.':'Reach the records office and secure the wage ledger.';
-  showDialog(`<p class="eyebrow">MILL 04 / THE NIGHT LEDGER</p><h2>Your assignment.</h2><p>${objective}<br>${distance(u,dest).toFixed(1)} m to ${state.solo.ledger?'extraction':'the records office'}.</p><p class="menu-log-title">RECENT EVENTS</p><ol class="menu-log">${state.log.slice(0,8).map(line=>`<li>${safe(line)}</li>`).join('')}</ol>`,[
+  const objective=secured?definition.objective.after:definition.objective.instruction;
+  showDialog(`<p class="eyebrow">${safe(definition.location)} / ${safe(definition.title.toUpperCase())}</p><h2>Your assignment.</h2><p>${safe(definition.briefing)}</p><p>${safe(objective)}<br>${distance(u,dest).toFixed(1)} m to ${safe(secured?definition.extraction.name:definition.objective.name)}.</p><p class="menu-log-title">RECENT EVENTS</p><ol class="menu-log">${state.log.slice(0,8).map(line=>`<li>${safe(line)}</li>`).join('')}</ol>`,[
     ...(near?[[`${near.label}${near.cost?' · '+near.cost+' AP':''}`,()=>act(()=>interact(state)),'primary',!near.ok]]:[]),
     ['Back to menu',operationMenu],['Return to operation',()=>{}]
   ]);
@@ -299,9 +330,9 @@ function help(){showDialog(`<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br
   <li>The eye counts visible opponents. Each tap advances through them from nearby, clear contacts to farther, harder-to-see contacts, then recenters on your animal. The next tap starts the cycle again. With no visible opponents, it simply recenters. Camera inspection costs no AP; moving also returns to your animal.</li>
   <li>A hand appears above visible objects within clear reach. Tap its labelled action, or hold for choices. Tap another nearby object to focus it. Opening choices and loot windows is free; completing an action spends the shown AP in combat.</li>
   <li>Chests and fallen guards share a loot window with individual Take buttons and Take all. Transfers cost 1 AP in combat, including a bulk transfer. Doors open or close for 1 AP; opening a chest or searching a body costs 2 AP. Exploration interactions are free. A blocked doorway cannot close on an animal.</li>
-  <li>Options holds inventory, weapon changes, reloads and treatment, including looted supplies. Find your objective and recent events under Mission & combat log. Use the hand to collect the ledger and extract.</li>
+  <li>Options holds inventory, weapon changes, reloads and treatment, including looted supplies. Find your objective and recent events under Mission & combat log. Use the hand to collect the mission evidence and extract.</li>
   </ul>`,[['Back to menu',operationMenu],['Return to operation',()=>{},'primary']]);}
-$('minimap-button').onclick=()=>{showDialog('<p class="eyebrow">MILL 04 / TACTICAL MAP</p><h2>Find your way.</h2><canvas id="large-map" width="760" height="560" style="width:100%;height:auto;border:1px solid #535b46"></canvas><p>Cream: your animal. Orange: the objective and visible guards. Dark areas remain unexplored.</p>',[['Return to operation',()=>{},'primary']]);drawMinimap($('large-map'),state);};
+$('minimap-button').onclick=()=>{showDialog(`<p class="eyebrow">${safe(missionForState(state).location)} / TACTICAL MAP</p><h2>Find your way.</h2><canvas id="large-map" width="760" height="560" style="width:100%;height:auto;border:1px solid #535b46"></canvas><p>Cream: your animal. Orange: the objective and visible guards. Green: extraction. Dark areas remain unexplored.</p>`,[['Return to operation',()=>{},'primary']]);drawMinimap($('large-map'),state);};
 function resetStick(){const pointer=stickPointer;stickPointer=null;if(pointer!==null&&$('joystick').hasPointerCapture(pointer))$('joystick').releasePointerCapture(pointer);stick={x:0,y:0};$('stick-knob').style.transform='translate(-50%,-50%)';}
 function updateStick(e){
   const r=$('joystick').getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,limit=r.width*.3,n=Math.hypot(dx,dy),scale=Math.min(1,limit/Math.max(1,n));

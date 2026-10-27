@@ -41,6 +41,13 @@
       <p id="grenade-warning" class="danger-note" role="status" hidden></p>
       <p>Release to hold aim, then tap THROW. Enter throws; Esc cancels.</p>
       <p class="blast-key">Fill: exposed explored ground · outline: maximum blast</p>
+    </div>
+    <div id="flame-aim" class="grenade-aim" hidden aria-label="Flamethrower cone aiming">
+      <div class="grenade-aim-heading"><strong>FLAMETHROWER CONE</strong><button id="cancel-flame" type="button">Cancel <span aria-hidden="true">×</span></button></div>
+      <output id="flame-detail" aria-live="polite"></output>
+      <p id="flame-warning" class="danger-note" role="status" hidden></p>
+      <p>Joystick rotates the cone. Release, then tap FIRE. Enter fires; Esc cancels.</p>
+      <p class="blast-key">Highlighted area stops at walls and fog. Firing spends one fuel charge.</p>
     </div><div class="thumb-layout">
       <div class="left-controls">
         <button id="look" class="square-control industrial-switch" data-face="red" data-lit="false" type="button" aria-label="0 visible opponents. Recenter on your animal." disabled><span class="switch-legend"><span class="switch-icon eye-symbol" aria-hidden="true"><svg class="switch-glyph" viewBox="0 0 32 32"><use href="assets/ui/industrial-switches/symbols.svg#look"/></svg><strong id="visible-count" class="eye-count">0</strong></span><span class="switch-label">LOOK</span></span></button>
@@ -50,6 +57,7 @@
       <div class="stick-column"><div id="joystick" role="group" aria-label="Movement thumbstick. Drag from the center to move. Keyboard: W A S D or arrow keys."><div class="stick-ring"></div><span class="stick-north">▲</span><div id="stick-knob"></div></div><span id="stick-caption" class="stick-caption">MOVE</span></div>
       <div class="right-controls">
         <button id="end-turn" class="square-control end-turn industrial-switch" data-face="red" data-lit="false" type="button" aria-label="End turn" disabled><span class="switch-legend"><span class="switch-icon" aria-hidden="true"><svg class="switch-glyph" viewBox="0 0 32 32"><use href="assets/ui/industrial-switches/symbols.svg#end-turn"/></svg></span><span id="turn-label" class="switch-label">END<br>TURN</span></span></button>
+        <button id="flame" class="square-control industrial-switch" data-lit="false" type="button" aria-label="Aim flamethrower cone" aria-pressed="false" hidden><span class="switch-legend"><span id="flame-count" class="switch-stock" aria-hidden="true">0</span><span class="switch-icon" aria-hidden="true"><svg class="switch-glyph" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 28 4 6Q16 0 28 6Z"/><path d="M16 28 16 3M16 28 10 4M16 28 22 4"/></svg></span><span id="flame-label" class="switch-label">CONE</span><small class="switch-cost">6 AP</small></span></button>
         <button id="grenade" class="square-control industrial-switch" type="button" aria-label="Aim grenade" aria-pressed="false" disabled><span class="switch-legend"><span id="grenade-count" class="switch-stock" aria-hidden="true">0</span><span class="switch-icon" aria-hidden="true"><svg class="switch-glyph" viewBox="0 0 32 32"><use href="assets/ui/industrial-switches/symbols.svg#grenade"/></svg></span><span id="grenade-label" class="switch-label">GRENADE</span><small id="grenade-cost" class="switch-cost">5 AP</small></span></button>
         <button id="menu" class="square-control industrial-switch" type="button" aria-label="Open options"><span class="switch-legend" aria-hidden="true"><span class="switch-icon"><svg class="switch-glyph" viewBox="0 0 32 32"><use href="assets/ui/industrial-switches/symbols.svg#options"/></svg></span><span class="switch-label">OPTIONS</span></span></button>
       </div>

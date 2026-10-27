@@ -5,6 +5,7 @@ import {SoloFlameEffects,FLAME_LIMITS} from '../dist/flame-effects.js';
 import {FieldView} from '../dist/field-view.js';
 import {Core,encodeSave} from '../dist/solo-game.js';
 import {flameScenario} from './flame-scenarios.mjs';
+import {pointInFlame,flameMuzzleInReach} from '../dist/flame-event.js';
 const camera=new T.PerspectiveCamera();camera.position.set(14,16,34);
 function shot(){const fixture=flameScenario();Core.attack(fixture.state,fixture.unit,fixture.target);return {...fixture,event:fixture.state.effect.sequence[0]};}
 function deferred(){let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return {promise,resolve,reject};}
@@ -37,6 +38,14 @@ test('painted jets never appear beyond a recorded wall even if the model muzzle 
   const {state,unit,event}=shot();event.flame.rays=event.flame.rays.map(ray=>({...ray,x:unit.x+.25,y:unit.y+(ray.y-unit.y)*.025,distance:.25,kind:'wall'}));
   const layer=new SoloFlameEffects(new T.Scene(),{loadTexture:async()=>new T.Texture()});layer.enqueue(event,0);capture(layer,unit);await layer.pending;frame(layer,state,0);frame(layer,state,560);
   assert.equal(layer.slots[0].group.visible,false);layer.dispose();
+});
+
+test('a distant occlusion seam beside the muzzle bearing cannot suppress the entire directional jet',async()=>{
+  const {state,unit,event}=shot(),shape=event.flame;
+  shape.rays=shape.rays.map((ray,i)=>{const angle=shape.heading-shape.halfAngle+2*shape.halfAngle*i/36,distance=i===20?10:9.4;return {...ray,x:unit.x+Math.cos(angle)*distance,y:unit.y+Math.sin(angle)*distance,distance,kind:i===20?'range':'wall'};});
+  const muzzle={x:unit.x+.55,y:unit.y+.02};assert.equal(pointInFlame(shape,muzzle),false);assert.equal(flameMuzzleInReach(shape,muzzle),true);
+  const layer=new SoloFlameEffects(new T.Scene(),{loadTexture:async()=>new T.Texture()});layer.enqueue(event,0);capture(layer,unit);await layer.pending;frame(layer,state,0);frame(layer,state,560);
+  assert.equal(layer.slots[0].group.visible,true);assert.ok(layer.slots[0].plumes.some(mesh=>mesh.visible));assert.equal(layer.slots[0].shared.wedges.value[19],0,'the far seam stays clipped');layer.dispose();
 });
 
 test('reduced motion uses a brief static painted sheet and no moving plume cards',async()=>{

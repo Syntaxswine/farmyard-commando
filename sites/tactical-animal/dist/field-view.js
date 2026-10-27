@@ -11,6 +11,7 @@ import {FIELD_CAMERA,grenadeCameraFrame} from './grenade-controls.js';
 import {InteractionScenery} from './interaction-view.js';
 import {SoloFlameEffects} from './flame-effects.js';
 import {createFlameOperator} from './flame-pose.js';
+import {FlameConePreview} from './flame-aim-view.js';
 
 const V = (x=0,y=0,z=0) => new T.Vector3(x,y,z);
 // Distinct tracer pulses make each committed burst round readable. A shorter
@@ -62,8 +63,8 @@ export class FieldView {
     const hit=this.ray.intersectObjects(picks,false)[0];
     this.onPick(hit?hit.object.userData.interactionId?{interactionId:hit.object.userData.interactionId}:{unitId:hit.object.userData.unitId}:{x:point.x,y:point.z});
   }
-  clearEffects(){for(const effect of this.effects){this.scene.remove(effect.line);effect.line.geometry.dispose();effect.line.material.dispose();}this.effects=[];this.flameEffects?.dispose();this.flameEffects=null;this.lastEffect=null;}
-  clearGestures(){for(const id of this.pointers.keys())if(this.container.hasPointerCapture(id))this.container.releasePointerCapture(id);this.pointers.clear();this.gesture=null;this.pinch=null;this.grenadeCamera=null;this.returnSpan=null;this.focusedId=null;}
+  clearEffects(){for(const effect of this.effects){this.scene.remove(effect.line);effect.line.geometry.dispose();effect.line.material.dispose();}this.effects=[];this.flameEffects?.dispose();this.flameEffects=null;this.flameCone?.dispose();this.flameCone=null;this.flameAim=null;this.lastEffect=null;}
+  clearGestures(){for(const id of this.pointers.keys())if(this.container.hasPointerCapture(id))this.container.releasePointerCapture(id);this.pointers.clear();this.gesture=null;this.pinch=null;this.grenadeCamera=null;this.flameAim=null;this.flameCone?.hide();this.returnSpan=null;this.focusedId=null;}
   setGame(s){this.generation++;this.clearGestures();this.clearEffects();this.span=13;this.state=s;this.samples.clear();this.failed.clear();for(const a of this.actors.values())this.disposeActor(a);this.actors.clear();this.pending.clear();this.clearEnvironment();this.buildEnvironment(s);this.center();this.resize();this.lastRevision=-1;this.lastLightAt=undefined;this.lastEffect=s.effect||null;this.route([]);}
   reportLoading(){this.onLoading(this.artBusy||this.propBusy||this.pending.size>0||this.failed.size>0);}
   clearEnvironment(){this.interactionArt?.dispose();this.interactionArt=null;this.art?.dispose();this.art=null;this.environment.traverse(o=>{o.geometry?.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});this.environment.clear();for(const t of this.disposables)t.dispose();this.disposables=[];}
@@ -82,7 +83,7 @@ export class FieldView {
     for(let x=3;x<37;x+=3){const mark=new T.Mesh(new T.PlaneGeometry(1.2,.06),new T.MeshBasicMaterial({color:0xb0a475,transparent:true,opacity:.16}));mark.rotation.x=-Math.PI/2;mark.position.set(x,.003,26.8);this.environment.add(mark);}
   }
   makePin(point,color){const group=new T.Group();group.position.set(point.x,0,point.y);const mat=new T.MeshBasicMaterial({color,transparent:true,opacity:.8,side:T.DoubleSide});const ring=new T.Mesh(new T.RingGeometry(.36,.45,32),mat);ring.rotation.x=-Math.PI/2;ring.position.y=.035;group.add(ring);const shaft=new T.Mesh(new T.CylinderGeometry(.017,.017,1.6,6),mat.clone());shaft.position.y=.8;group.add(shaft);const flag=new T.Mesh(new T.OctahedronGeometry(.14),mat.clone());flag.position.y=1.65;group.add(flag);this.environment.add(group);return group;}
-  route(path=[]){this.blastMarker.visible=false;this.blastArea.visible=false;this.grenadePreviewKey='';this.marker.material.color.setHex(0xf2c56a);this.pathLine.material.color.setHex(0xe6b464);this.pathLine.geometry.dispose();this.pathLine.geometry=new T.BufferGeometry().setFromPoints(path.map(p=>V(p.x,.06,p.y)));const end=path.at(-1);this.marker.visible=!!end;if(end)this.marker.position.set(end.x,.035,end.y);}
+  route(path=[]){this.flameCone?.hide();this.flamePreviewKey='';this.blastMarker.visible=false;this.blastArea.visible=false;this.grenadePreviewKey='';this.marker.material.color.setHex(0xf2c56a);this.pathLine.material.color.setHex(0xe6b464);this.pathLine.geometry.dispose();this.pathLine.geometry=new T.BufferGeometry().setFromPoints(path.map(p=>V(p.x,.06,p.y)));const end=path.at(-1);this.marker.visible=!!end;if(end)this.marker.position.set(end.x,.035,end.y);}
   beginGrenadeAim(){
     const baseSpan=this.grenadeCamera?.baseSpan??this.returnSpan??this.span;
     for(const id of this.pointers.keys())if(this.container.hasPointerCapture(id))this.container.releasePointerCapture(id);
@@ -95,6 +96,13 @@ export class FieldView {
     if(linger){this.grenadeCamera.until=performance.now()+linger;return;}
     this.returnSpan=this.grenadeCamera.baseSpan;this.grenadeCamera=null;this.focusedId=null;this.follow=true;
   }
+  beginFlameAim(){this.beginGrenadeAim();this.grenadeCamera.kind='flame';this.flameCone ||= new FlameConePreview(this.scene);}
+  previewFlame(heading,preview){
+    this.flameAim={heading};if(this.grenadeCamera)this.grenadeCamera.shape=preview.shape;
+    const signature=[heading,this.state.revision,preview.ok].join(':');if(signature===this.flamePreviewKey)return;
+    this.flamePreviewKey=signature;this.flameCone.update(preview,this.state.visible);
+  }
+  endFlameAim(options){this.flameAim=null;this.endGrenadeAim(options);}
   previewGrenade(point,preview){
     if(this.grenadeCamera)this.grenadeCamera.point={...point};
     const signature=[point.x,point.y,this.state.revision,preview.ok,preview.selfDanger].join(':');
@@ -110,8 +118,8 @@ export class FieldView {
   }
   trackGrenadeCamera(now){
     const aim=this.grenadeCamera;if(!aim)return;
-    if(aim.until&&now>=aim.until){this.endGrenadeAim();return;}
-    const u=hero(this.state),points=aim.point?Core.grenadeTrajectory(u,aim.point):[{x:u.x,y:u.y,z:1.8}];
+    if(aim.until&&now>=aim.until&&!(aim.kind==='flame'&&this.flameEffects?.queue.length)){this.endGrenadeAim();return;}
+    const u=hero(this.state),points=aim.kind==='flame'?(aim.shape?.rays||[]).flatMap(ray=>[{x:ray.x,y:ray.y,z:0},{x:ray.x,y:ray.y,z:1.5}]):aim.point?Core.grenadeTrajectory(u,aim.point):[{x:u.x,y:u.y,z:1.8}];
     points.push({x:u.x,y:u.y,z:0},{x:u.x,y:u.y,z:1.8});
     if(aim.point)for(let i=0;i<16;i++){const a=i/16*Math.PI*2;points.push({x:aim.point.x+Math.cos(a)*Core.WEAPONS.grenade.blast,y:aim.point.y+Math.sin(a)*Core.WEAPONS.grenade.blast,z:0});}
     const frame=grenadeCameraFrame(points,{width:this.container.clientWidth,height:this.container.clientHeight,...this.getAimViewport?.()},aim.baseSpan);
@@ -170,7 +178,8 @@ export class FieldView {
     this.flameEffects?.beginFrame(now,s);
     for(const [id,a] of this.actors)a.root.visible=visible.some(v=>v.id===id);
     for(const v of visible){let a=this.actors.get(v.id);if(!a){this.actor(v);continue;}const old=this.samples.get(v.id)||{blend:0,pose:{kneel:0,prone:0,down:v.hp<=0?1:0,dead:v.hp<=0?1:0}},blend=old.blend+((v.isMoving?1:0)-old.blend)*.2,goal={kneel:v.stance==='kneeling'?1:0,prone:v.stance==='prone'?1:0,down:v.hp<=0?1:0,dead:v.hp<=0?1:0};const pose=Object.fromEntries(Object.entries(goal).map(([k,value])=>[k,Math.abs(value-old.pose[k])<.005?value:old.pose[k]+(value-old.pose[k])*.15]));const sample={...v,distance:v.travelled,blend:blend<.001?0:blend,pose};this.samples.set(v.id,sample);a.root.visible=true;a.pick.visible=true;a.ring.visible=v.hp>0;a.pick.scale.set(v.hp>0?1:1.6,v.hp>0?1:.2,v.hp>0?1:1.6);a.pick.position.y=v.hp>0?.9:.18;a.pick.userData.interactionId=v.hp<=0?'body:'+v.id:null;
-      const fire=this.flameEffects?.poseFor(v),signature=[v.weapon,sample.heading,sample.blend,sample.distance,JSON.stringify(sample.pose)].join(':');
+      if(v.id===0&&this.flameAim)sample.heading=this.flameAim.heading;
+      const fire=v.id===0&&this.flameAim?null:this.flameEffects?.poseFor(v),signature=[v.weapon,sample.heading,sample.blend,sample.distance,JSON.stringify(sample.pose)].join(':');
       if(a.signature!==signature||fire||a.hadFlame){a.signature=signature;a.hadFlame=!!fire;if(a.weapon!==v.weapon){const old=a.equipment;a.equipment=createWeaponModel(v.weapon);a.worker.equipWeapon(a.equipment);old.dispose();a.weapon=v.weapon;}
         a.root.position.set(0,0,0);a.locomotion.apply({...sample,blend:sample.pose?.prone||sample.pose?.down?0:sample.blend});a.posture.apply(sample);if(sample.pose.down)a.posture.ground();}
       a.root.position.set(sample.x,0,sample.y);a.root.updateMatrixWorld(true);a.worker.skeleton.update();if(fire)this.flameEffects.captureMuzzle(fire,a.flameOperator.apply(sample,fire.seconds,fire.reduced));}

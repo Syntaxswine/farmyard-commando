@@ -1,7 +1,7 @@
 import * as T from './aft/tactics/vendor/three.module.js';
 import {FIRE_ASSETS,flameSheetData,paintedFireMaterial} from './aft/tactics/painted-fire-effects.js';
 import {FIRE_TIME,fireState,smooth} from './aft/tactics/painted-fire-state.js';
-import {advanceFlameClock,flameFogMask,pointInFlame} from './flame-event.js';
+import {advanceFlameClock,flameFogMask,flameMuzzleInReach} from './flame-event.js';
 const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
 export const FLAME_LIMITS=Object.freeze({active:2,queued:6,plumes:24});
 const atlas=new URL(FIRE_ASSETS.flame,new URL('./aft/tactics/',import.meta.url)).href;
@@ -102,7 +102,7 @@ export class SoloFlameEffects {
     for(const entry of this.queue){
       const slot=entry.slot,muzzle=entry.muzzle,shape=entry.shape;if(!slot||!muzzle)continue;
       if(entry.last===null)advanceFlameClock(entry,this.now,reduced);
-      slot.group.visible=pointInFlame(shape,{x:muzzle.x,y:muzzle.z});if(!slot.group.visible)continue;
+      slot.group.visible=flameMuzzleInReach(shape,{x:muzzle.x,y:muzzle.z});if(!slot.group.visible)continue;
       if(slot.revision!==state.revision){flameFogMask(shape,state.visible,slot.data);slot.fog.needsUpdate=true;slot.revision=state.revision;}
       const u=slot.shared;u.source.value.set(shape.origin.x,shape.origin.y);u.angle.value=shape.heading;u.spread.value=shape.halfAngle;u.nozzle.value=(muzzle.x-shape.origin.x)*Math.cos(shape.heading)+(muzzle.z-shape.origin.y)*Math.sin(shape.heading);
       shape.rays.forEach((ray,i)=>u.rays.value[i].set(ray.x-shape.origin.x,ray.y-shape.origin.y));

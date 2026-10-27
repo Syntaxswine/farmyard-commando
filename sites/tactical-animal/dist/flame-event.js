@@ -39,6 +39,17 @@ export function pointInFlame(shape,point){
   return !gap(a,b)&&(b.x-a.x)*(point.y-a.y)-(b.y-a.y)*(point.x-a.x)>=-1e-8;
 }
 
+// A distant wall/range transition removes that decorative wedge, but must not
+// suppress the entire jet when its real muzzle is in the clear shared prefix.
+// Fragment and sheet clipping still leave the distant discontinuity unbridged.
+export function flameMuzzleInReach(shape,point){
+  if(pointInFlame(shape,point))return true;
+  const x=point.x-shape.origin.x,y=point.y-shape.origin.y,angle=Math.atan2(Math.sin(Math.atan2(y,x)-shape.heading),Math.cos(Math.atan2(y,x)-shape.heading));
+  if(!shape.sourceVisible||Math.abs(angle)>shape.halfAngle||!shape.visibleCells.includes(cell(point.x,point.y)))return false;
+  const i=Math.max(0,Math.min(35,Math.floor((angle+shape.halfAngle)/(2*shape.halfAngle)*36))),a=shape.rays[i],b=shape.rays[i+1];
+  return gap(a,b)&&a.kind!=='hidden'&&b.kind!=='hidden'&&Math.hypot(x,y)<Math.min(a.distance,b.distance)*Math.cos(shape.halfAngle/36);
+}
+
 export function flameFogMask(shape,visible,bytes=new Uint8Array(40*30*4)){
   bytes.fill(0);
   for(const key of shape.visibleCells){if(!visible.has(key))continue;const [x,y]=key.split(',').map(Number);if(x>=0&&x<40&&y>=0&&y<30){const at=(y*40+x)*4;bytes[at]=bytes[at+1]=bytes[at+2]=bytes[at+3]=255;}}

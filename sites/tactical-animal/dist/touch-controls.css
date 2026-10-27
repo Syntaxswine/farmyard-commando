@@ -47,6 +47,7 @@
 .stick-caption{font:7px var(--mono);letter-spacing:3px;margin-top:8px;color:#a4ad89}
 #joystick.unavailable{opacity:.4}
 #battle.aiming-grenade #joystick{border-color:var(--rust)}
+#battle.aiming-flame #joystick{border-color:var(--rust)}
 .grenade-aim{position:absolute;left:0;right:0;bottom:calc(100% + 10px);padding:10px 12px;background:#20271df5;border:1px solid #84724e;font:10px/1.5 var(--mono)}
 .grenade-aim-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
 .grenade-aim-heading>strong{font-size:10px;letter-spacing:1.2px}
@@ -112,6 +113,8 @@ dialog .target-options .burst-toggle{min-height:44px;padding:5px 10px;font:10px 
   #battle .battle-bottom{width:min(500px,calc(100% - 40px));bottom:7px}
   #battle.aiming-grenade .battle-bottom{width:calc(100% - 24px)}
   #battle.aiming-grenade .thumb-layout{margin-left:170px}
+  #battle.aiming-flame .battle-bottom{width:calc(100% - 24px)}
+  #battle.aiming-flame .thumb-layout{margin-left:170px}
   .grenade-aim{left:0;right:auto;bottom:0;width:150px;padding:8px}
   .grenade-aim-heading{gap:4px;flex-wrap:wrap}
   .grenade-aim-heading>strong{font-size:8px}

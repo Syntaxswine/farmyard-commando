@@ -13,7 +13,7 @@
     "Doors give world-space centers on a room boundary. East/west door normals are x; north/south door normals are y.",
     "Suggested routes use straight waypoint segments through door centers. Validate against the actual simulation before publishing.",
     "Landmarks marked decorative are not collision. Solid props require corresponding gameplay geometry.",
-    "Only the original mission currently exists in public solo play; other layouts are authored targets."
+    "Night Ledger and Short Measure have runtime implementations; the remaining layouts are authored targets."
   ],
   "missions": [
     {

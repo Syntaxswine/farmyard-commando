@@ -2,7 +2,7 @@
 
 Six small locations expose one connected system. A worker steals a wage ledger, follows its missing money through the factory district, and helps the workers make the evidence public. The animal and equipment remain the player's choices. The locations carry the story through their layout, abandoned work, altered signs, and usable objects.
 
-This is the shared narrative and spatial brief for the artist and coder. The accompanying [map blockouts](first-shift.maps.json) and [map atlas](first-shift-atlas.svg) describe all six locations. They are authoring references; they are not designer exports or playable solo maps. The existing Night Ledger mission is the opening. Short Measure is the first new implementation slice. The later four missions are fully scripted design targets, with their additional mechanics called out below.
+This is the shared narrative and spatial brief for the artist and coder. The accompanying [map blockouts](first-shift.maps.json) and [map atlas](first-shift-atlas.svg) describe all six locations. They are authoring references; they are not designer exports or runtime solo maps. The Night Ledger and Short Measure form the first playable slice. The later four missions are fully scripted design targets, with their additional mechanics called out below.
 
 ## Story and play rules
 

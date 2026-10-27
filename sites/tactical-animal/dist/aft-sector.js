@@ -20,7 +20,7 @@ export function unpackSector(data){
 
 // The first adapter accepts ground-level sectors only. Reject unsupported
 // features instead of silently turning water, stairs or upper floors into yard.
-export function adaptAftSector(source){
+export function adaptAftSector(source,{provenance=null}={}){
   if(source?.version!==2||source.width!==WORLD_SECTOR_SIZE||source.height!==WORLD_SECTOR_SIZE||!Array.isArray(source.terrain)||source.terrain.length!==WORLD_SECTOR_SIZE||source.terrain.some(row=>!Array.isArray(row)||row.length!==WORLD_SECTOR_SIZE||row.some(t=>!terrainKinds.has(t))))throw Error('Unsupported AFT sector terrain or dimensions.');
   if((source.upper??[]).some(layer=>!layer||typeof layer!=='object'||Object.keys(layer).length)||(source.stairs??[]).length||(source.climbs??[]).length||(source.canopies??[]).length)throw Error('This sector requires unsupported vertical traversal.');
   const edges={},doors=[];
@@ -40,8 +40,8 @@ export function adaptAftSector(source){
     obstacles.push({x0:prop.x-.48,x1:prop.x+.48,y0:prop.y-.48,y1:prop.y+.48,height,kind:'crate',sourceKind:prop.kind});
   }
   for(const position of [...source.starts??[],...source.guards??[],...source.exits??[]])if((position.z??0)!==0)throw Error('This sector requires an upper-floor actor.');
-  return {name:source.name,terrain:source.terrain.map(row=>row.slice()),edges,props,obstacles,doors,worldBounds:{x:0,y:0,w:WORLD_SECTOR_SIZE,h:WORLD_SECTOR_SIZE},groundPalette:'aft-sector',source:structuredClone(CHECKPOINT_PROVENANCE)};
+  return {name:source.name,terrain:source.terrain.map(row=>row.slice()),edges,props,obstacles,doors,worldBounds:{x:0,y:0,w:WORLD_SECTOR_SIZE,h:WORLD_SECTOR_SIZE},groundPalette:'aft-sector',...(provenance?{source:structuredClone(provenance)}:{})};
 }
 
 export const checkpointSource=()=>unpackSector(CHECKPOINT_DATA);
-export const checkpointMap=()=>adaptAftSector(checkpointSource());
+export const checkpointMap=()=>adaptAftSector(checkpointSource(),{provenance:CHECKPOINT_PROVENANCE});

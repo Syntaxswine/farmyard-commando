@@ -16,6 +16,8 @@ test('ground-level adapter preserves all 57,600 tiles and original obstacle posi
   const source=checkpointSource(),world=checkpointMap();
   assert.deepEqual(world.terrain,source.terrain);assert.deepEqual(world.props,source.props);
   assert.deepEqual(world.worldBounds,{x:0,y:0,w:240,h:240});
+  assert.deepEqual(world.source,CHECKPOINT_PROVENANCE);
+  assert.equal(adaptAftSector(source).source,undefined);
   assert.equal(world.groundPalette,'aft-sector');assert.equal(world.obstacles.length,3);
   for(const [index,prop]of source.props.entries()){
     const box=world.obstacles[index];assert.equal((box.x0+box.x1)/2,prop.x);assert.equal((box.y0+box.y1)/2,prop.y);assert.equal(box.sourceKind,prop.kind);

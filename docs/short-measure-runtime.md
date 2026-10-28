@@ -46,29 +46,16 @@ The geometry rules:
 
 Each part is an axis-aligned box around one primitive of the model. For the bent beam and the cylinders that box is a little larger than the visible piece: the tilted beam's box is 0.24 m tall where the beam is 0.10 m. That is conservative, but it is a known approximation.
 
-A guard closing on an animal aims 0.75 m short of it. Beside a prop that spot is often inside the reservation. Without a fallback, the guard stood frozen until its alert lapsed; on main the same still happens beside a crate or a wall.
+A guard closing on an animal aims 0.75 m short of it, and beside a prop that spot is often inside the reservation. On main the guard then stood frozen until its alert lapsed, as it still did beside a crate or a wall on every mission. PR #21 first patched props alone, with three spots held per guard. The approach is now one search on every mission; [Guard approach](guard-approach.md) has the rule, its censuses and its costs.
 
-Here, the guard instead takes up to three clear spots near the aim, nearest first and 0.3 m apart, that a route can actually end on, and walks to the first one it can reach. It also drops a route waypoint it is already standing on. The choice is held until its quarry moves or a door changes. Crates and walls keep main's behaviour on purpose: changing them is an AI change for every mission.
+Beside the props, PR #21's own censuses (the animal 0.24–0.74 m from a prop, the guard 2–9 m off) now count these approaches where the pre-prop main engaged and ours does not:
 
-Measured on seeded approach censuses: the animal 0.24–0.74 m from a prop, the guard 2–9 m off at any bearing. A case counts when main's guard engages but ours freezes until its alert lapses.
-
-| Census | First fallback (round 1) | Now |
+| Census | PR #21 | Now |
 | --- | --- | --- |
-| Tuning seed 77, 1,000 approaches | 40 | 2 |
-| Held-out seed 9001, 800 approaches | 38 | 9 |
+| Tuning seed 77, 1,000 approaches | 2 | 1 |
+| Held-out seed 9001, 800 approaches | 9 | 2 |
 
-The tuning residuals are geometry. The animal itself stands in the 1.2 m gap between the arrival bay and the freight scale, the guard takes the long way round, and its alert lapses on the way.
-
-The held-out residuals are not all geometry. In about six of the nine a standing spot was reachable, and the guard still froze for one of three reasons:
-- its three nearest spots were all cut off (for example by both open shed leaves and the animal);
-- its aim fell just outside a prop, where main's freeze rule still applies;
-- main's own 8 cm arrival rule ended the turn on a route to the aim.
-
-A single multi-goal search, from the guard to any free node within about 1.5 m of the aim, would fix all three in one search. That changes guard AI and costs a search per tick, so it is left for a separate change; the same search would also fix main's freezes against crates and walls.
-
-Other known costs of the fallback:
-- **Timing.** The review measured p99 tick time of about 0.9 ms against main's 0.45 ms, and p999 of 12–13 ms against main's 4 ms (desktop). About a quarter of approaches at the scale have a tick over 8 ms; on main, 0.5%. Phones will show it as a stutter. Dropping a redundant check has since trimmed about 3 ms from the worst tick.
-- **Saves.** The held spots are not part of a save, so a guard resumed mid-approach may choose slightly differently. That happened in 1 of 160 resumed approaches, ending 2 cm apart.
+Two of the three are census placements inside the clearance of the open west leaf, which play cannot produce: a door does not open onto a unit, and a save storing one is released. The third is a door detour around the arrival bay, longer than the guard's alert lasts.
 
 Only the simulation's data modules (`mission-scenery.js`, `solids.js`) load in every mission. The kit, its inherited model modules and the paper art load for Short Measure alone. Before the kit's model is in the scene, the inherited cargo keeps drawing the sealed load's crates, so a failed or refused kit never leaves an invisible collider. The four new props have no inherited art at all. If the kit fails, the field shows an error banner, but the banner does not block input: play can continue with those four props solid and unseen until a reload. On main, a failed cargo atlas leaves every crate in the same state.
 

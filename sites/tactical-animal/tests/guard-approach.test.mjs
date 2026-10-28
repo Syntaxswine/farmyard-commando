@@ -1,6 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 import {createSoloGame,DEFAULT_BUILD,Core,hero,distance,canSee,tick,encodeSave,decodeSave,navigationPath,QUARRY_REACH} from '../dist/solo-game.js';
+
+test('in a seeded census on every mission, no guard stalls while a firing node is reachable',{timeout:60000},()=>{
+  // tools/guard-census.mjs, 40 approaches a mission whose 0.75 m spot is solid: the
+  // old approach froze in about four of five. A sample, not a law; the full
+  // censuses are in docs/guard-approach.md.
+  for(const mission of ['night-ledger','road-checkpoint','short-measure']){
+    const out=execFileSync(process.execPath,[fileURLToPath(new URL('../tools/guard-census.mjs',import.meta.url)),mission,'blocked','3','40'],{encoding:'utf8'});
+    const row=/^this: fired (\d+), frozen \d+ \(stalled \d+, (\d+) of them with a firing node reachable/m.exec(out);
+    assert.ok(row,out);
+    assert.equal(+row[2],0,`${mission}: ${out}`);
+    assert.ok(+row[1]>=25,`${mission}: only ${row[1]} of 40 guards engaged`);
+  }
+});
 
 // One alert guard closing on an animal that stays put (cases come from the seeded
 // approach censuses in docs/guard-approach.md); every other guard is down.

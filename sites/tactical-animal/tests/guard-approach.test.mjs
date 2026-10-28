@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {createSoloGame,DEFAULT_BUILD,Core,hero,distance,canSee,tick,encodeSave,decodeSave,navigationPath,QUARRY_REACH} from '../dist/solo-game.js';
+import {createSoloGame,DEFAULT_BUILD,Core,hero,distance,canSee,tick,encodeSave,decodeSave,navigationPath,lineClear,freePoint,walkSegment,QUARRY_REACH} from '../dist/solo-game.js';
 
 test('in a seeded census on every mission, no guard stalls while a firing node is reachable',{timeout:60000},()=>{
   // tools/guard-census.mjs, 40 approaches a mission whose 0.75 m spot is solid: the
@@ -80,8 +80,35 @@ test('a goal keeps its view of the animal wherever the guard stops beside it',()
   // Node (34,12) sees the animal past a wall end by a hair; a guard stopping 6 cm
   // off it, inside the 8 cm at which it counts as arrived, could not, and froze
   // there. Goals are judged with walls grown by those 8 cm.
-  const {g,firing}=approach('short-measure',{x:32.146,y:11.501},{x:36.717,y:10.464},{heading:122.4,doors:true});
+  const {s,g,firing}=approach('short-measure',{x:32.146,y:11.501},{x:36.717,y:10.464},{heading:122.4,doors:true});
+  const animal={x:32.146,y:11.501,stance:'standing'};
+  assert.ok(lineClear(s,{x:34,y:12,stance:'standing'},animal)&&!lineClear(s,{x:34.06,y:11.99,stance:'standing'},animal),'the case still sits on the wall end it pins');
   assert.ok(firing>=1,`the guard never fired, ending at ${g.x.toFixed(2)},${g.y.toFixed(2)}`);
+});
+
+test('a guard whose animal was last seen in a doorway shut since closes on the door',()=>{
+  // The last-seen point is now inside the shut warehouse door, where no node can see
+  // it; the guard heads for the nearest clear point on its own side instead.
+  const door={x:7.5,y:18},{s,g}=approach('night-ledger',{x:33,y:5},{x:4.5,y:18},{lastKnown:door,heading:0,rounds:3});
+  assert.equal(freePoint(s,door,null,{units:false}),false);
+  assert.ok(distance(g,{x:4.5,y:18})>1&&distance(g,door)<QUARRY_REACH+.5,`the guard ended at ${g.x.toFixed(2)},${g.y.toFixed(2)}`);
+});
+
+test('the shared scenery table holds no unit: a unit beside a walk blocks it, and a doorway reopens once it leaves',()=>{
+  const s=createSoloGame(DEFAULT_BUILD,1947,'night-ledger'),u=hero(s),g=s.units[1],cost=path=>path?path.reduce((total,p)=>total+p.cost,0):Infinity;
+  // Two radii are 0.46 m: a unit 0.40 m beside a 1 m walk blocks it, one 0.60 m off does not.
+  Object.assign(g,{x:10.5,y:10.4});assert.equal(walkSegment(s,{x:10,y:10},{x:11,y:10},u.id),false);
+  Object.assign(g,{x:10.5,y:10.6});assert.equal(walkSegment(s,{x:10,y:10},{x:11,y:10},u.id),true);
+  // Each first search on a fresh geometry runs with a unit in the way; a table that
+  // stored that answer would keep the doorway shut after the unit leaves.
+  Object.assign(g,{x:20,y:5});Object.assign(u,{x:7,y:18});assert.ok(Core.performInteraction(s,'warehouse-door','open').ok);
+  Object.assign(u,{x:6,y:15});Object.assign(g,{x:7.5,y:18});const held=cost(navigationPath(s,u,9,18));
+  Object.assign(g,{x:20,y:5});const left=cost(navigationPath(s,u,9,18));
+  assert.ok(held>12&&left<12,`a unit in the doorway: ${held} AP; gone: ${left} AP`);
+  Object.assign(u,{x:7,y:18});assert.ok(Core.performInteraction(s,'warehouse-door','close').ok&&Core.performInteraction(s,'warehouse-door','open').ok);
+  Object.assign(u,{x:6,y:15});Object.assign(g,{x:8,y:18});const onNode=cost(navigationPath(s,u,9,18));
+  Object.assign(g,{x:20,y:5});const gone=cost(navigationPath(s,u,9,18));
+  assert.ok(onNode>12&&gone<12,`a unit on the east node: ${onNode} AP; gone: ${gone} AP`);
 });
 
 test('a straight walk still stops exactly 0.75 m short of where the animal was seen',()=>{

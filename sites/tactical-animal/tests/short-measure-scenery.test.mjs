@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from '../dist/aft/tactics/vendor/three.module.js';
-import {createSoloGame,DEFAULT_BUILD,Core,hero,distance,geometry,freePoint,walkSegment,lineClear,navigationPath,previewGrenade,encodeSave,decodeSave,tick,getMission} from '../dist/solo-game.js';
+import {createSoloGame,DEFAULT_BUILD,Core,hero,distance,geometry,freePoint,walkSegment,lineClear,navigationPath,previewGrenade,encodeSave,decodeSave,tick,getMission,approachPath} from '../dist/solo-game.js';
 import {missionScenery,missionArtBindings,clueAnchorHeight,SCENERY_DIGEST} from '../dist/mission-scenery.js';
 import {SHORT_MEASURE_SOLIDS,SOLIDS_VERSION,SOLIDS_DIGEST} from '../dist/mission-art/short-measure/solids.js';
 import {solidPartBoxes} from '../dist/mission-art/short-measure/solid-parts.js';
@@ -161,7 +161,7 @@ test('the ration scale is solid around its clue, which stays inspectable from ei
 });
 
 // A guard aims 0.75 m short of its quarry. Beside a prop that spot is solid ground.
-function standoff(heroAt,guardAt,{doors=false,heading,rounds=3}={}){
+function standoff(heroAt,guardAt,{doors=false,heading,rounds=3,watch=null}={}){
   const base=mill();
   if(doors)for(const o of base.interactables)if(o.kind==='door'){o.open=true;base.edges[o.edge]='door';}
   const s={...base},u=hero(s),g=s.units[1];   // a fresh object: the opened doors rebuild geometry
@@ -176,7 +176,7 @@ function standoff(heroAt,guardAt,{doors=false,heading,rounds=3}={}){
     // exploration, endTurn refuses, and later rounds silently never run.
     s.phase='player';s.engaged=true;
     let fired=false,last=s.effect;Core.endTurn(s);
-    for(let frame=0;s.phase==='enemy'&&frame<2000;frame++){tick(s,.05);if(s.effect!==last){last=s.effect;fired||=s.effect?.sequence?.[0]?.shooter===g.id;}}
+    for(let frame=0;s.phase==='enemy'&&frame<2000;frame++){watch?.(s,g);tick(s,.05);if(s.effect!==last){last=s.effect;fired||=s.effect?.sequence?.[0]?.shooter===g.id;}}
     if(fired)firing++;
   }
   return {s,g,firing,moved:distance(g,guardAt)};
@@ -209,8 +209,12 @@ test('review-round census cases still engage, one only through the 8 cm waypoint
     ['reached waypoint: the route opens 4 cm from the guard',{x:7.919327088585123,y:18.790288305529394},{x:7.180232108991293,y:22.87409519878036},262.29286341927946],
   ];
   for(const [rule,heroAt,guardAt,heading] of cases){
-    const {g,firing}=standoff(heroAt,guardAt,{doors:true,heading,rounds:4});
+    // The precondition the fourth case pins: some plan's first waypoint lies inside
+    // the 8 cm at which the guard counts as arrived, with more route after it.
+    let opens=false;const watch=(s,g)=>{if(s.units[s.enemyIndex]!==g||!g.alert)return;const route=approachPath(s,g,g.lastKnown);opens||=route?.length>1&&distance(g,route[0])<.08;};
+    const {g,firing}=standoff(heroAt,guardAt,{doors:true,heading,rounds:4,watch});
     assert.ok(firing>0||g.alert,`${rule}: guard froze at ${g.x.toFixed(2)},${g.y.toFixed(2)}`);
+    if(rule.startsWith('reached waypoint'))assert.ok(opens,'the case no longer opens a route inside 8 cm of the guard');
   }
 });
 

@@ -4,7 +4,10 @@
 //   node sites/tactical-animal/tools/guard-census.mjs <mission> <mode> <seed> <cases> [name=checkout ...]
 // mode blocked: only cases whose 0.75 m-short spot is solid (main's freeze rule)
 //      near:    no filter on that spot
-//      props:   PR #21's census beside Short Measure's props, <cases> per prop
+//      props:   PR #21's census beside Short Measure's props, <cases> per prop. It keeps
+//               PR #21's doors-shut placement check, so a few placements stand inside
+//               an open leaf's clearance, where play cannot put a unit; they show up
+//               as stalls with a firing node reachable, in every version.
 // With no checkout named, this one is censused; the first named checkout places
 // the cases and runs the oracle. A case is FROZEN when the guard never fires and its
 // alert lapses; STALLED when a turn ends with AP left, no shot, no step and no
@@ -53,6 +56,7 @@ function place(b){
 const aimOf=c=>({x:c.heroAt.x-(c.heroAt.x-c.guardAt.x)/c.radius*.75,y:c.heroAt.y-(c.heroAt.y-c.guardAt.y)/c.radius*.75});
 const shut=field(ref,false),opened=field(ref,true),cases=[];
 if(mode==='props'){
+  if(!ref.geometry(shut).some(b=>b.kind==='prop'))throw Error('props mode needs a checkout with the Short Measure props named first');
   // PR #21's filter, kept so its numbers reproduce: positions checked with the doors
   // shut, the spot within 0.23 m of that prop, a fixed number of tries per prop.
   for(const b of ref.geometry(shut).filter(b=>b.kind==='prop'))for(let k=0,taken=0;k<(+seedArg===9001?6000:4000)&&taken<+casesArg;k++){

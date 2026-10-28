@@ -468,7 +468,20 @@ function wideSight(s,a,b,margin){return !geometryNear(s,a,b,margin,'wall').some(
 // resumed save plans exactly the same route.
 export const QUARRY_REACH=2;
 const SEALED_BUDGET=128;
-function approachPath(s,g,quarry){
+// A last-seen point inside scenery (a door shut over it, a leaf swung onto it) can
+// be seen from nowhere, so the guard closes on the nearest clear point instead,
+// scanned outward in 5 cm rings, taking the one nearest itself within a ring.
+function clearQuarry(s,p,g){
+  if(freePoint(s,p,null,{units:false}))return p;
+  for(let ring=1;ring<=20;ring++){
+    let best=null;
+    for(let i=0;i<32;i++){const a=i/32*Math.PI*2,q={x:p.x+Math.cos(a)*ring*.05,y:p.y+Math.sin(a)*ring*.05};if(freePoint(s,q,null,{units:false})&&(!best||distance(q,g)<distance(best,g)))best=q;}
+    if(best)return best;
+  }
+  return null;
+}
+export function approachPath(s,g,lastSeen){
+  const quarry=clearQuarry(s,lastSeen,g);if(!quarry)return null;
   const range=distance(g,quarry),offset=Math.min(.75,range),aim={x:quarry.x-(quarry.x-g.x)/Math.max(range,.001)*offset,y:quarry.y-(quarry.y-g.y)/Math.max(range,.001)*offset};
   const sees=p=>wideSight(s,p,quarry,ARRIVED);
   if(sees(aim)&&freePoint(s,aim,g.id)&&walkSegment(s,g,aim,g.id))return [{...aim,z:0,cost:distance(g,aim)*movementRate(g)}];

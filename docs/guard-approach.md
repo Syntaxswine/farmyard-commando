@@ -6,11 +6,12 @@ How an alert guard closes on an animal it cannot yet fire on, on every mission. 
 
 A guard that cannot fire walks toward where it last saw or heard the animal, and stops 0.75 m short of it. It plans again every tick:
 
-1. **Straight walk.** If it can walk straight to the spot 0.75 m short on its own line, and that spot sees the animal past the walls, it walks straight there. This is main's move, unchanged.
-2. **Search.** Otherwise one A* search takes it to the nearest grid node, by walking distance, that stands within `QUARRY_REACH` (2 m) of the animal and sees it. From that node the straight walk usually opens.
+1. **Straight walk.** If it can walk straight to the spot 0.75 m short on its own line, and that spot sees the animal past the walls, it walks straight there. This is main's move. Only the sight test is new, and with the margin in rule 3 it sends about 1 straight approach in 500 to the search instead. None of those searched routes is more than 1.5 times the straight walk.
+2. **Search.** Otherwise one A* search takes it to the nearest grid node, by walking distance, that stands within `QUARRY_REACH` (2 m) of the animal and sees it. From that node the straight walk usually opens. Where it never does, the guard stops at the node, up to 2 m from the animal.
 3. **Sight with a margin.** A goal's line to the animal must clear every wall grown by 8 cm. That is `ARRIVED`, the distance at which a guard counts as arrived, so the view holds wherever the guard actually stops.
-4. **Sealed pockets.** After 256 expansions without reaching a goal, the search floods back from the goals. If that flood runs dry within 128 nodes without meeting the guard's search, the animal is shut away and the search stops. This changes no outcome, only the cost.
-5. **A route opening at the guard's feet.** When a route's first waypoint lies within 8 cm of the guard, it walks on to the next one instead of ending its turn there.
+4. **A last-seen point inside scenery.** When a door has been shut over the point, or a leaf swung onto it, nothing can see it. The guard closes on the nearest clear point instead, scanned outward in 5 cm rings, taking the one nearest itself within a ring.
+5. **Sealed pockets.** After 256 expansions without reaching a goal, the search floods back from the goals. If that flood runs dry within 128 nodes without meeting the guard's search, the animal is shut away and the search stops. This changes no outcome, only the cost.
+6. **A route opening at the guard's feet.** When a route's first waypoint lies within 8 cm of the guard, it walks on to the next one instead of ending its turn there.
 
 Nothing about the approach is held between ticks, so a resumed save plans exactly the same route.
 
@@ -29,7 +30,7 @@ It also walked to a spot on the far side of a wall from the animal and stood the
 
 ## Censuses
 
-One alert guard plays four rounds; every other guard is down. The animal stands 0.24–0.74 m from a random walk-blocking box (wall, crate, prop, chest or open leaf). The guard starts 2–9 m away at any bearing and heading, and doors are open in 70% of cases. Positions are checked against the doors as the case sets them, because an open leaf is solid.
+One alert guard plays four rounds; every other guard is down. The animal stands 0.24–0.74 m from a random walk-blocking box: a wall, a shut door, a crate, a prop or a chest, taken from the doors-shut geometry. The guard starts 2–9 m away at any bearing and heading, and doors are open in 70% of cases. Positions are checked against the doors as the case sets them, because an open leaf is solid.
 
 - **Frozen:** the guard never fires, and its alert lapses.
 - **Stalled:** a turn ends with AP left, no shot, no step and no sight of the animal.
@@ -58,13 +59,14 @@ Where both versions engage, they engage alike. Shots fired match within one in e
 
 ## How play changes
 
-- **Straight approaches are unchanged:** the same move to the same spot.
-- **Routed approaches change.** A routed approach now heads for the nearest node that sees the animal, where main headed for its 0.75 m spot; from there it walks straight to that spot. The guard ends in the same place by a different route, or reaches the animal where main froze.
+- **Straight approaches keep main's move to the same spot.** The exception, about 1 in 500, is a spot that sees the animal only past a wall edge closer than 8 cm; those approaches take the search.
+- **Routed approaches change.** A routed approach now heads for the nearest node that sees the animal, where main headed for its 0.75 m spot; from there it usually walks straight to that spot. The guard ends in the same place by a different route, or reaches the animal where main froze. Where no straight walk opens from the goal node, it stops at the node, up to 2 m away.
+- **A guard whose animal was last seen in a doorway shut since** walks to the door, as main's did.
 - **Seeded random play diverges** from the PR #21 tip, always at the end of a turn. A lockstep fuzz of 8 seeds × 300 commands diverged in 7 of 8 Night Ledger runs (between commands 8 and 106), 3 of 8 Road Checkpoint runs and 4 of 8 Short Measure runs. `tests/scenery-neutrality-baseline.json` is re-recorded from this change.
 
 ## Cost
 
-Guards plan every tick, so consecutive searches ask the same questions about the same nodes. Scenery alone decides whether a grid node is clear and whether a straight walk to a neighbouring node is. Those answers live in one table per geometry (`sceneryGrid`: a byte per node and per direction, 0.5 MB on the 240 × 240 sector). A door changing rebuilds the geometry and so starts a fresh table. Units are checked on every call. The table changes no result (lockstep fuzz, 3 missions × 8 seeds × 300 commands).
+Guards plan every tick, so consecutive searches ask the same questions about the same nodes. Scenery alone decides whether a grid node is clear and whether a straight walk to a neighbouring node is. Those answers live in one table per geometry (`sceneryGrid`: ten bytes a node, 576 KB on the 240 × 240 sector). A door changing rebuilds the geometry and so starts a fresh table. Units are checked on every call. The table changes no result (lockstep fuzz, 3 missions × 8 seeds × 300 commands).
 
 Wall clock, desktop, each version in its own process, census "any spot", seed 1:
 
@@ -77,6 +79,10 @@ Wall clock, desktop, each version in its own process, census "any spot", seed 1:
 
 On Road Checkpoint the p99 stays higher because far more guards now walk: 4,857 ticks with a step, against 577. A step costs about what main's did (p99 4.2 ms, against 4.6–5.3). What is left per tick is mostly the A*'s own bookkeeping (string keys, maps, the heap) and route smoothing; those are the next costs to take if phones stutter.
 
+Two costs the census misses:
+- **Long routes.** A guard's first tick round Road Checkpoint's 47 m wall (the animal at 88, 106, the guard at 88, 102.5) costs about 15 ms on a cold table. PR #21's tip spent 14 ms on the same route.
+- **Pockets over the flood budget.** `SEALED_BUDGET` (128 nodes) covers every pocket that closed doors make on today's maps. The largest are Short Measure's packing hall (104 nodes) and Road Checkpoint's office (56). A larger pocket would fall back to the full search: about 19 ms with a warm table and 35 ms cold, once a round for each guard whose animal is inside. A budget of 256 cost long routes about 5% on Road Checkpoint, so it stays at 128.
+
 ## Re-running
 
 From the repository root, with another checkout to compare against:
@@ -86,4 +92,4 @@ node sites/tactical-animal/tools/guard-census.mjs night-ledger near 1 300 before
 node sites/tactical-animal/tools/guard-census.mjs short-measure props 77 250 after=. main=../pre-prop-checkout
 ```
 
-Modes are `blocked` (the spot solid), `near` (any spot) and `props` (PR #21's census beside the Short Measure props). The first checkout named places the cases and runs the reachability check. `ROWS=1` prints every frozen case.
+Modes are `blocked` (the spot solid), `near` (any spot) and `props` (PR #21's census beside the Short Measure props). The first checkout named places the cases and runs the reachability check, so for `props` it must be one with the props. `ROWS=1` prints every frozen case.

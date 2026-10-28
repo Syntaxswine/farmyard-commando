@@ -51,11 +51,11 @@ test('imported prop footprints block movement, prone sight, and grenade landing 
 
 test('flame and grenade actions retain their resource and hit rules beyond the old map dimensions',()=>{
   const s=createSoloGame({...DEFAULT_BUILD,primary:'flamethrower',utility:'grenade'},1947,'road-checkpoint'),u=hero(s),target=s.units[1];
-  Object.assign(u,{x:174.25,y:125.25});Object.assign(target,{x:183.75,y:125.25,alert:true});s.phase='player';s.engaged=true;refresh(s,{forceFog:true});
+  Object.assign(u,{x:174.25,y:125.25});Object.assign(target,{x:183.75,y:125.25,alert:true});Object.assign(s.units[2],{x:180.25,y:129.25});s.phase='player';s.engaged=true;refresh(s,{forceFog:true});
   const before=encodeSave(s),ap=u.ap,fuel=u.ammo.flamethrower,hp=target.hp,grenades=u.ammo.grenade;
   assert.ok(Core.previewFlame(s,u,0).contacts.some(contact=>contact.id===target.id));assert.ok(Core.previewGrenade(s,u,{x:180.25,y:125.25}).ok);assert.equal(encodeSave(s),before);
   assert.ok(Core.fireFlame(s,u,0));close(u.ap,ap-Core.WEAPONS.flamethrower.cost);assert.equal(u.ammo.flamethrower,fuel-1);assert.ok(target.hp<hp);
-  const afterFlame=target.hp;assert.ok(Core.throwGrenade(s,u,{x:180.25,y:125.25}));close(u.ap,ap-Core.WEAPONS.flamethrower.cost-Core.grenadeCost(u));assert.equal(u.ammo.grenade,grenades-1);assert.ok(target.hp<afterFlame);
+  assert.equal(target.hp,0);const grenadeTarget=s.units[2],afterFlame=grenadeTarget.hp;assert.ok(Core.throwGrenade(s,u,{x:180.25,y:125.25}));close(u.ap,ap-Core.WEAPONS.flamethrower.cost-Core.grenadeCost(u));assert.equal(u.ammo.grenade,grenades-1);assert.ok(grenadeTarget.hp<afterFlame);
 });
 
 test('geometry broad phase and fog rays never visit distant obstacle kinds',()=>{

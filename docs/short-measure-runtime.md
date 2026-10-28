@@ -10,7 +10,7 @@ All nine new doors use the same 2 m wall height and the same solid footprint in 
 
 ## Art handoff
 
-Inherited cargo renders the following solid cells. Rectangles are `[x,y,width,height]`, including cells from the origin through `origin + size - 1`. Keep these footprints clear of additional collision unless the runtime definition is also deliberately updated.
+The following cargo cells are solid (inherited cargo art draws all of them except `sealed-load`, which the art kit now draws). Rectangles are `[x,y,width,height]`, including cells from the origin through `origin + size - 1`. Keep these footprints clear of additional collision unless the runtime definition is also deliberately updated.
 
 | Placement ID | Rectangle | Purpose |
 | --- | --- | --- |
@@ -22,7 +22,29 @@ Inherited cargo renders the following solid cells. Rectangles are `[x,y,width,he
 | `loading-stack` | `[31,17,2,1]` | Dispatch-to-gate cover |
 | `east-gate-stack` | `[34,21,2,1]` | Eastern cover |
 
-The `worker-scale` clue is at `(8,20)` inside the ration shed. Its current marker adds no collision. The `sealed-load` clue at `(28,20)` belongs to the cargo rectangle above; reaching its face is sufficient to inspect it. Both markers use their stable interaction IDs and have a 1.7 m interaction range. Bespoke scale and sack artwork can replace these markers without changing mission logic.
+The `sealed-load` clue at `(28,20)` belongs to the cargo rectangle above; reaching its face is sufficient to inspect it. Both clues use their stable interaction IDs and have a 1.7 m interaction range.
+
+### Environment art in play
+
+`mission-art-view.js` draws the [environment art kit](art/short-measure/README.md). `mission-scenery.js` registers the same solids with the simulation, so neither side can be accepted without the other. `tools/short-measure-art.mjs` regenerates the solid-part table (`mission-art/short-measure/solids.js`) from the kit's own models, and a test fails if the table drifts.
+
+| Placement | Ground reservation `[w,n,e,s]` | Height | Notes |
+| --- | --- | --- | --- |
+| `worker-scale` | `[7.15,19.45,8.85,20.55]` | 1.72 m | Stands around the clue anchor `(8,20)`. Inspect it from beside, for example from `(8,21)`; its marker and hand float at 2 m. |
+| `freight-scale` | `[9.85,23.45,11.55,24.55]` | 1.72 m | Outbound lane, south of the shed. |
+| `sealed-load-arrival` | `[7.15,23.175,8.65,24.425]` | 0.95 m | Full sacks beside the arrival lane. They give crate cover. |
+| `shipping-manifest` desk | `[31,5.6,33,6.6]` | 1.05 m | Behind the unchanged use point `(32,7)`. The paper hides once collected. |
+| `sealed-load` | the four crate cells above | 0.92 m | Visual replacement only: the kit's load is sized to the crate collider. |
+
+The geometry rules:
+- **Ground reservations** block walking, grenade landings and reach. They never block sight or projectiles.
+- **Individual parts** (108 boxes, each with its own height span) block bullets, grenade arcs, flame and prone-to-prone sight only where they actually are. The air under the desk top and around the scale frames stays open.
+- **Standing and kneeling sight** is still blocked by walls alone.
+- **The cover rule** counts crates and the full-sack bay.
+
+`tests/short-measure-scenery.test.mjs` runs the whole table.
+
+A save written before these props existed may store an animal inside one. The clue marker at `(8,20)` had no collision, so players could stand on it. Decoding moves such an animal to the nearest clear point (about 0.8 m from the scale's centre). Every other played position is kept exactly.
 
 | Room | Rectangle | Doors (center coordinates) |
 | --- | --- | --- |

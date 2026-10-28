@@ -1,5 +1,6 @@
 // Authoring proposal, not a mission definition. World x/z equals blockout x/y.
-export const ART_VERSION = 'short-measure/1';
+// /2: sealed-load conformed to the runtime crate collider so its binding agrees.
+export const ART_VERSION = 'short-measure/2';
 export const SOURCE_COMMIT = 'a20b343a0234b5d8b365a4e1668961ca1bf37653';
 export const SOURCES = {
   sacks: {path:'aft/tactics/environment-models.js', recipe:'sandbags: crown + stitched seam; flattened for empties', license:'AFT snapshot supplied by the user; upstream art license not declared', commit:SOURCE_COMMIT},
@@ -34,10 +35,10 @@ export const PLACEMENTS = [
     hook:'Optional additional full-sack bay with matching solid. Omit the model until bound; do not move sealed-load inspection.',
     note:'Arrival contrast beside empty sacks; leaves the y=25 direct route and south shed door clear.'},
   {id:'sealed-load', kind:'sacks-full', anchor:[28,20], offset:[-.5,-.5], yaw:0,
-    size:[2,1,2], footprint:[26.5,18.5,28.5,20.5], height:1,
+    size:[1.96,.92,1.96], footprint:[26.52,18.52,28.48,20.48], height:.92,
     status:'existing-cover-replacement', owner:'cover:27,19,2,2', sources:['sacks','pallet','geometry','materials','reserve7'],
-    hook:'Replace only this cover visual after validating footprint AND 1 m height. Keep inspect anchor (28,20). Never draw both cargo visuals.',
-    note:'The offset centers the art on the blockout cover cells, rather than on its southeast inspection point.'},
+    hook:'Replace only this cover visual after validating footprint AND height against the four runtime crate cells. Keep inspect anchor (28,20). Never draw both cargo visuals.',
+    note:'The offset centers the art on the blockout cover cells, rather than on its southeast inspection point. Sized to the runtime crate collider (0.96 m cells, 0.92 m high); the first proposal was 2 cm wider a side and 8 cm taller, so its binding could never agree.'},
   {id:'worker-empty-sacks', storyId:'worker-scale', kind:'sacks-empty', anchor:[6,23.2], offset:[0,0], yaw:0,
     size:[1.8,.055,.6], footprint:[5.1,22.9,6.9,23.5], height:.055,
     status:'decorative', owner:null, sources:['sacks','geometry','materials'],

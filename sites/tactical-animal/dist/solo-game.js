@@ -3,7 +3,8 @@ import {initializeStats,weaponAccuracy,damageAfterResistance} from './aft/tactic
 import {QUICKPLAY_PRESETS} from './aft/tactics/quickplay-presets.js';
 import {identifyRange,headingTo} from './aft/tactics/core/perception.js';
 import {shotAim} from './aft/tactics/aim-levels.js';
-import {WALL_DIMENSIONS} from './world-dimensions.js';
+import {WALL_DIMENSIONS,CRATE_DIMENSIONS} from './world-dimensions.js';
+import {missionScenery} from './mission-scenery.js';
 import {createInteractionSystem,missionInteractables,interactionFootprint} from './interactions.js';
 import {recordFlame} from './flame-event.js';
 import {createFireRules,firePending,recordBurn} from './solo-fire.js';
@@ -68,34 +69,67 @@ export function geometry(s){
   const {width,height}=gridDimensions(s);
   for(let y=0;y<height;y++)for(let x=0;x<width;x++)if(s.map[y][x]==='crate'){
     const placement=cargo.find(({rect:[cx,cy,w,h]})=>x>=cx&&x<cx+w&&y>=cy&&y<cy+h);
-    boxes.push({x0:x-.48,x1:x+.48,y0:y-.48,y1:y+.48,height:.92,kind:'crate',...(placement?{interactionId:placement.id}:{})});
+    const {half,height:crateHeight}=CRATE_DIMENSIONS;
+    boxes.push({x0:x-half,x1:x+half,y0:y-half,y1:y+half,height:crateHeight,kind:'crate',...(placement?{interactionId:placement.id}:{})});
   }
   for(const box of s.obstacles||[])boxes.push({...box});
+  for(const box of missionScenery(missionForState(s),s.map))boxes.push({...box});
   for(const object of s.interactables||[])if(object.kind==='chest'||object.kind==='door'&&object.open)boxes.push({...interactionFootprint(object),kind:object.kind==='door'?'wall':'crate',interactionId:object.id});
-  const buckets=new Map();
-  for(const box of boxes)for(let y=Math.floor(box.y0/GEOMETRY_BUCKET);y<=Math.floor(box.y1/GEOMETRY_BUCKET);y++)for(let x=Math.floor(box.x0/GEOMETRY_BUCKET);x<=Math.floor(box.x1/GEOMETRY_BUCKET);x++){
-    const id=`${x},${y}`;if(!buckets.has(id))buckets.set(id,[]);buckets.get(id).push(box);
+  const layers={};
+  for(const [name,keep] of Object.entries(GEOMETRY_LAYERS)){
+    const buckets=new Map();layers[name]=buckets;
+    for(const box of boxes)if(keep(box))for(let y=Math.floor(box.y0/GEOMETRY_BUCKET);y<=Math.floor(box.y1/GEOMETRY_BUCKET);y++)for(let x=Math.floor(box.x0/GEOMETRY_BUCKET);x<=Math.floor(box.x1/GEOMETRY_BUCKET);x++){
+      const id=`${x},${y}`;if(!buckets.has(id))buckets.set(id,[]);buckets.get(id).push(box);
+    }
   }
-  geometryCache.set(s,{boxes,buckets});return boxes;
+  geometryCache.set(s,{boxes,layers});return boxes;
 }
+// Each question gets its own broad phase: walking never sifts a prop's parts,
+// standing sight looks only at walls, and anything in flight skips reservations.
+const GEOMETRY_LAYERS={all:()=>true,walk:box=>blocksWalking(box),air:box=>occupiesAir(box),wall:box=>box.kind==='wall'};
 // Broad phase shared by movement, sight, silhouettes and area weapons. The
 // interaction system invalidates this cache immediately after a door changes.
-export function geometryNear(s,a,b=a,padding=0){
+export function geometryNear(s,a,b=a,padding=0,layer='all'){
   if(![a.x,a.y,b.x,b.y,padding].every(Number.isFinite)||padding<0)return [];
-  geometry(s);const {buckets}=geometryCache.get(s),boxes=new Set();
+  geometry(s);const buckets=geometryCache.get(s).layers[layer],boxes=new Set();
   const x0=Math.min(a.x,b.x)-padding,x1=Math.max(a.x,b.x)+padding,y0=Math.min(a.y,b.y)-padding,y1=Math.max(a.y,b.y)+padding;
   for(let y=Math.floor(y0/GEOMETRY_BUCKET);y<=Math.floor(y1/GEOMETRY_BUCKET);y++)for(let x=Math.floor(x0/GEOMETRY_BUCKET);x<=Math.floor(x1/GEOMETRY_BUCKET);x++)for(const box of buckets.get(`${x},${y}`)||[])if(box.x1>=x0&&box.x0<=x1&&box.y1>=y0&&box.y0<=y1)boxes.add(box);
   return [...boxes];
 }
+// Geometry kinds answer different questions; tests/short-measure-scenery.test.mjs
+// runs the whole table. Walls, crates, chests, open doors, imported obstacles and
+// prop reservations stand on the ground from 0 to their height. A prop's parts
+// each fill only their own [z0, height]. Walking asks the ground; anything that
+// travels through the air asks the parts, so the air beside or under them stays open.
+export const blocksWalking=box=>box.kind!=='part';
+const occupiesAir=box=>box.kind!=='prop';
+const PRONE_EYE=.3;
+const eyeHeight=u=>u.stance==='prone'?PRONE_EYE:u.stance==='kneeling'?.75:1.1;
+const bodyHeight=u=>u.stance==='prone'?.42:u.stance==='kneeling'?1.15:1.75;
 const pointBoxDistance=(p,b)=>Math.hypot(Math.max(b.x0-p.x,0,p.x-b.x1),Math.max(b.y0-p.y,0,p.y-b.y1));
 function insideWorld(s,p,padding=0){const b=worldBounds(s);return Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=b.x-.5+padding&&p.x<=b.x+b.w-.5-padding&&p.y>=b.y-.5+padding&&p.y<=b.y+b.h-.5-padding;}
-export function freePoint(s,p,ignoreId=null,{units=true,radius=RADIUS}={}){if(!insideWorld(s,p,radius))return false;if(geometryNear(s,p,p,radius).some(b=>pointBoxDistance(p,b)<radius-EPS))return false;return !units||!s.units.some(u=>alive(u)&&u.id!==ignoreId&&distance(u,p)<RADIUS+radius-EPS);}
+export function freePoint(s,p,ignoreId=null,{units=true,radius=RADIUS}={}){if(!insideWorld(s,p,radius))return false;if(geometryNear(s,p,p,radius,'walk').some(b=>pointBoxDistance(p,b)<radius-EPS))return false;return !units||!s.units.some(u=>alive(u)&&u.id!==ignoreId&&distance(u,p)<RADIUS+radius-EPS);}
 function boxInterval(a,b,box){let lo=0,hi=1;for(const [k,min,max] of [['x',box.x0,box.x1],['y',box.y0,box.y1]]){const d=b[k]-a[k];if(Math.abs(d)<EPS){if(a[k]<min||a[k]>max)return null;continue;}const t0=(min-a[k])/d,t1=(max-a[k])/d;lo=Math.max(lo,Math.min(t0,t1));hi=Math.min(hi,Math.max(t0,t1));if(lo>hi)return null;}return [lo,hi];}
 function intersectsBox(a,b,box){const span=boxInterval(a,b,box);return !!span&&span[1]>EPS&&span[0]<1-EPS;}
-export function lineClear(s,a,b){return [a.x,a.y,b.x,b.y].every(Number.isFinite)&&!geometryNear(s,a,b).some(box=>(box.kind==='wall'||a.stance==='prone'&&b.stance==='prone')&&intersectsBox(a,b,box));}
+// The parameter span within [0,1] where a segment, rising linearly from height
+// za at a to zb at b, is inside both the box's footprint and its [z0, height].
+function airSpan(a,b,za,zb,box){
+  const span=boxInterval(a,b,box);if(!span)return null;
+  let [lo,hi]=span;const dz=zb-za,z0=box.z0??0;
+  if(Math.abs(dz)<EPS){if(za<z0||za>box.height)return null;}
+  else{const t0=(z0-za)/dz,t1=(box.height-za)/dz;lo=Math.max(lo,Math.min(t0,t1));hi=Math.min(hi,Math.max(t0,t1));if(lo>hi)return null;}
+  return [lo,hi];
+}
+// Only walls block standing or kneeling sight. Between two prone animals any
+// solid that crosses their eye line blocks it, at its own height.
+export function lineClear(s,a,b){
+  if(![a.x,a.y,b.x,b.y].every(Number.isFinite))return false;
+  if(a.stance!=='prone'||b.stance!=='prone')return !geometryNear(s,a,b,0,'wall').some(box=>intersectsBox(a,b,box));
+  return !geometryNear(s,a,b,0,'air').some(box=>intersectsBox(a,b,box)&&(box.kind==='wall'||!!airSpan(a,b,PRONE_EYE,PRONE_EYE,box)));
+}
 export function walkSegment(s,a,b,ignoreId=null){
   if(!insideWorld(s,b,RADIUS))return false;
-  const blockers=geometryNear(s,a,b,RADIUS),units=s.units.filter(u=>alive(u)&&u.id!==ignoreId),steps=Math.max(1,Math.ceil(distance(a,b)/.1));
+  const blockers=geometryNear(s,a,b,RADIUS,'walk'),units=s.units.filter(u=>alive(u)&&u.id!==ignoreId),steps=Math.max(1,Math.ceil(distance(a,b)/.1));
   for(let i=1;i<=steps;i++){
     const p={x:a.x+(b.x-a.x)*i/steps,y:a.y+(b.y-a.y)*i/steps};
     if(!insideWorld(s,p,RADIUS)||blockers.some(box=>pointBoxDistance(p,box)<RADIUS-EPS)||units.some(u=>distance(u,p)<2*RADIUS-EPS))return false;
@@ -112,7 +146,9 @@ export function visibleOpponents(s){
     const d=distance(u,g),nx=-(g.y-u.y)/Math.max(d,EPS),ny=(g.x-u.x)/Math.max(d,EPS);
     const exposed=[-RADIUS,-RADIUS/2,0,RADIUS/2,RADIUS].filter(offset=>{
       const p={x:g.x+nx*offset,y:g.y+ny*offset};
-      return !geometryNear(s,u,p).some(box=>intersectsBox(u,p,box));
+      // Columns conceal whatever stands behind their footprint; a part conceals
+      // only where it crosses the line from the viewer's eye to the torso.
+      return !geometryNear(s,u,p,0,'air').some(box=>intersectsBox(u,p,box)&&(box.kind!=='part'||!!airSpan(u,p,eyeHeight(u),bodyHeight(g)*.62,box)));
     }).length/5;
     const clarity=(.5+exposed*.5)*identifyRange(u,g,35)/35*(g.sneaking?.7:1);
     return {unit:g,distance:d,score:d/Math.max(.01,clarity)};
@@ -185,12 +221,8 @@ export function grenadeTrajectory(a,b){
   return Array.from({length:33},(_,i)=>{const t=i/32;return {x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:1.1*(1-t)+.08*t+Math.sin(t*Math.PI)*rise};});
 }
 function grenadePathBlocked(s,path){
-  return geometryNear(s,path[0],path.at(-1)).some(box=>{
-    const height=box.height;
-    for(let i=1;i<path.length;i++){
-      const a=path[i-1],b=path[i],span=boxInterval(a,b,box);
-      if(span&&Math.min(...span.map(t=>a.z+(b.z-a.z)*t))<=height)return true;
-    }
+  return geometryNear(s,path[0],path.at(-1),0,'air').some(box=>{
+    for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i];if(airSpan(a,b,a.z,b.z,box))return true;}
     return false;
   });
 }
@@ -199,7 +231,7 @@ export const grenadeAffects=(s,point,target)=>distance(target,point)<=WEAPONS.gr
 // maximum blast radius; neither the preview nor its camera changes visibility.
 export function grenadeBlastFootprint(s,point){
   if(!s.seen.has(key(point.x,point.y)))return [];
-  const radius=WEAPONS.grenade.blast,walls=geometryNear(s,point,point,radius).filter(box=>box.kind==='wall');
+  const radius=WEAPONS.grenade.blast,walls=geometryNear(s,point,point,radius,'wall');
   return Array.from({length:97},(_,i)=>{
     const angle=i/96*Math.PI*2,dx=Math.cos(angle),dy=Math.sin(angle),end={x:point.x+dx*radius,y:point.y+dy*radius};
     let reach=radius;
@@ -216,7 +248,7 @@ export function previewGrenade(s,u,point){
   else if(!valid||!insideWorld(s,point))reason='Choose a point on the field';
   else if(!s.seen.has(key(point.x,point.y)))reason='Choose an explored landing point';
   else if(d>w.range+EPS)reason='Out of throwing range';
-  else if(geometryNear(s,point,point,.04).some(box=>pointBoxDistance(point,box)<.04))reason='Landing point is inside an obstacle';
+  else if(geometryNear(s,point,point,.04,'walk').some(box=>pointBoxDistance(point,box)<.04))reason='Landing point is inside an obstacle';
   else if(grenadePathBlocked(s,grenadeTrajectory(u,point)))reason='Throw path is blocked';
   else if(u.ap+EPS<cost)reason='Not enough AP';
   return {ok:!reason,reason,cost,distance:d,blast:w.blast,discounted:cost<w.cost,selfDanger:!!valid&&grenadeAffects(s,point,u)};
@@ -234,14 +266,14 @@ export function throwGrenade(s,u,point){
   s.effect={sequence:[{shooter:u.id,ax:u.x,ay:u.y,bx:point.x,by:point.y,hit:hits>0,weapon:'grenade',blast:p.blast,...impactEvent,fireSequences:(s.fireAnimations||[]).filter(e=>e.sequence>fireBefore).map(e=>e.sequence)}]};
   refresh(s);return true;
 }
-export function previewAttack(s,a,b,burst=false,zone='torso',token=null,aimLevel='hip'){if(!alive(a)||!alive(b)||a.team===b.team)return {ok:false,reason:'Choose a living opponent'};if(a.weapon==='grenade'){if(!s.detected.has(b.id))return {ok:false,reason:'Target is not visible'};return {...previewGrenade(s,a,b),chance:100,rounds:1,cover:0};}const w=WEAPONS[a.weapon],aim=shotAim(w,aimLevel,burst),cost=aim.cost,d=distance(a,b),rounds=burst&&w.burstRounds?w.burstRounds:1;let reason='';if(a.team==='squad'&&!s.detected.has(b.id))reason='Target is not visible';else if(a.burningTurns)reason='On fire: running in panic';else if(!lineClear(s,a,b)&&!w.arc)reason='Blocked by a wall';else if(d>w.range+EPS)reason='Out of range';else if(w.mag&&(a.ammo[a.weapon]??0)<rounds)reason='Reload first';else if((combatCosts(s)||a.team==='guard')&&a.ap+EPS<cost)reason='Not enough AP';const cover=geometryNear(s,b,b,.9).some(box=>box.kind==='crate'&&pointBoxDistance(b,box)<.9&&intersectsBox(a,b,{x0:box.x0-.3,x1:box.x1+.3,y0:box.y0-.3,y1:box.y1+.3}))?20:0;const chance=Math.max(5,Math.min(95,weaponAccuracy(a)+(w.accuracy||0)-(w.rangeLoss||0)*d/w.range+(aim.accuracy||0)+(AIM_ZONES[zone]?.accuracy||0)-cover+(a.stance==='kneeling'?5:a.stance==='prone'?10:0)));return {ok:!reason,reason,cost,chance:Math.round(chance),rounds,distance:d,cover};}
+export function previewAttack(s,a,b,burst=false,zone='torso',token=null,aimLevel='hip'){if(!alive(a)||!alive(b)||a.team===b.team)return {ok:false,reason:'Choose a living opponent'};if(a.weapon==='grenade'){if(!s.detected.has(b.id))return {ok:false,reason:'Target is not visible'};return {...previewGrenade(s,a,b),chance:100,rounds:1,cover:0};}const w=WEAPONS[a.weapon],aim=shotAim(w,aimLevel,burst),cost=aim.cost,d=distance(a,b),rounds=burst&&w.burstRounds?w.burstRounds:1;let reason='';if(a.team==='squad'&&!s.detected.has(b.id))reason='Target is not visible';else if(a.burningTurns)reason='On fire: running in panic';else if(!lineClear(s,a,b)&&!w.arc)reason='Blocked by a wall';else if(d>w.range+EPS)reason='Out of range';else if(w.mag&&(a.ammo[a.weapon]??0)<rounds)reason='Reload first';else if((combatCosts(s)||a.team==='guard')&&a.ap+EPS<cost)reason='Not enough AP';const cover=geometryNear(s,b,b,.9,'walk').some(box=>(box.kind==='crate'||box.cover)&&pointBoxDistance(b,box)<.9&&intersectsBox(a,b,{x0:box.x0-.3,x1:box.x1+.3,y0:box.y0-.3,y1:box.y1+.3}))?20:0;const chance=Math.max(5,Math.min(95,weaponAccuracy(a)+(w.accuracy||0)-(w.rangeLoss||0)*d/w.range+(aim.accuracy||0)+(AIM_ZONES[zone]?.accuracy||0)-cover+(a.stance==='kneeling'?5:a.stance==='prone'?10:0)));return {ok:!reason,reason,cost,chance:Math.round(chance),rounds,distance:d,cover};}
 function kill(s,u){const living=alive(u);u.hp=0;u.ap=0;u.casualty='dead';u.burningTurns=0;u.isMoving=false;interactionRules.registerBody(s,u);if(living)log(s,u.name+' is down.');}
 function hurt(s,u,damage){if(!alive(u))return;u.hp=Math.max(0,u.hp-damageAfterResistance(u,damage));if(!u.hp)kill(s,u);}
 function flameAffects(s,a,u,heading){
   const angle=Math.abs(((headingTo(a,u)-heading+540)%360)-180);
   if(!alive(u)||u.id===a.id||distance(a,u)>WEAPONS.flamethrower.range||angle>=24)return false;
-  const source=a.stance==='prone'?.3:a.stance==='kneeling'?.75:1.1,heights=u.stance==='prone'?[.3,.42,.15]:u.stance==='kneeling'?[.75,1.15,.2]:[1.1,1.75,.5];
-  return heights.some(height=>!geometryNear(s,a,u).some(box=>{const span=boxInterval(a,u,box);return span&&span[1]>EPS&&span[0]<1-EPS&&Math.min(...span.map(t=>source+(height-source)*t))<=box.height;}));
+  const source=eyeHeight(a),heights=u.stance==='prone'?[.3,.42,.15]:u.stance==='kneeling'?[.75,1.15,.2]:[1.1,1.75,.5];
+  return heights.some(height=>!geometryNear(s,a,u,0,'air').some(box=>{const span=boxInterval(a,u,box);return !!span&&span[1]>EPS&&span[0]<1-EPS&&!!airSpan(a,u,source,height,box);}));
 }
 function resolveFlame(s,a,event={explosions:[]}){
   const impacts=[];
@@ -260,7 +292,7 @@ export function previewFlame(s,a,heading){
   else if(!(a.ammo.flamethrower>0))reason='Reload first';
   else if(a.ap+EPS<w.cost)reason='Not enough AP';
   const direction=valid?((heading%360)+360)%360:a.heading;
-  const shape=recordFlame({...a,heading:direction},w.range,geometryNear(s,a,a,w.range),s.visible);
+  const shape=recordFlame({...a,heading:direction},w.range,geometryNear(s,a,a,w.range,'wall'),s.visible);
   const contacts=s.units.filter(u=>(u.team==='squad'||s.detected.has(u.id))&&s.visible.has(key(u.x,u.y))&&flameAffects(s,a,u,direction)).map(u=>({id:u.id,name:u.name,team:u.team}));
   return {ok:!reason,reason,cost:w.cost,range:w.range,spread:48,heading:direction,shape,contacts};
 }
@@ -268,7 +300,7 @@ export function fireFlame(s,a,heading){
   const p=previewFlame(s,a,heading);if(!p.ok)return false;
   stop(s);if(s.phase!=='player'){s.engaged=true;refresh(s);}
   a.ap=Math.max(0,a.ap-p.cost);a.ammo.flamethrower--;syncAmmo(a,'flamethrower');a.heading=p.heading;
-  const impactEvent={explosions:[]},fireBefore=s.fireAnimationSequence||0,flame=recordFlame(a,p.range,geometryNear(s,a,a,p.range),s.visible),impacts=resolveFlame(s,a,impactEvent),angle=a.heading*Math.PI/180;
+  const impactEvent={explosions:[]},fireBefore=s.fireAnimationSequence||0,flame=recordFlame(a,p.range,geometryNear(s,a,a,p.range,'wall'),s.visible),impacts=resolveFlame(s,a,impactEvent),angle=a.heading*Math.PI/180;
   log(s,`${a.name} fired a flamethrower cone (${p.cost} AP).`);
   for(const guard of s.units.filter(u=>u.team==='guard'&&alive(u)))if(distance(a,guard)<=p.range*2){guard.alert=true;guard.lastKnown={x:a.x,y:a.y};guard.alertAge=0;}
   s.effect={sequence:[{shooter:a.id,ax:a.x,ay:a.y,bx:a.x+Math.cos(angle)*p.range,by:a.y+Math.sin(angle)*p.range,incendiary:true,hit:impacts.length>0,weapon:'flamethrower',shot:0,shots:1,flame,impacts,...impactEvent,fireSequences:(s.fireAnimations||[]).filter(e=>e.sequence>fireBefore).map(e=>e.sequence)}]};
@@ -281,14 +313,11 @@ function detonateImpact(s,shooter,victim,zone,weapon,event){
   if(chance>0&&random(s)<chance){(event.explosions??=[]).push(fuelRules.explode(s,victim));return true;}return false;
 }
 function confirmedImpact(s,a,b,zone){
-  const dx=b.x-a.x,dy=b.y-a.y,length2=dx*dx+dy*dy,source=a.stance==='prone'?.3:a.stance==='kneeling'?.75:1.1;
-  const height=u=>u.stance==='prone'?.42:u.stance==='kneeling'?1.15:1.75;
+  const dx=b.x-a.x,dy=b.y-a.y,length2=dx*dx+dy*dy,source=eyeHeight(a),height=bodyHeight;
   const end=zone==='head'?height(b):zone==='legs'?height(b)*.25:height(b)*.62,dh=end-source;
   let blocked=1+EPS;
-  for(const box of geometryNear(s,a,b)){
-    const span=boxInterval(a,b,box);if(!span)continue;let t=span[0];
-    if(source+dh*t>box.height){if(dh>=0)continue;t=(box.height-source)/dh;if(t>span[1])continue;}
-    if(t>EPS)blocked=Math.min(blocked,t);
+  for(const box of geometryNear(s,a,b,0,'air')){
+    const span=airSpan(a,b,source,end,box);if(span&&span[0]>EPS)blocked=Math.min(blocked,span[0]);
   }
   return s.units.filter(u=>alive(u)&&u.id!==a.id).map(unit=>{
     const t=length2?((unit.x-a.x)*dx+(unit.y-a.y)*dy)/length2:1,h=source+dh*t;
@@ -305,7 +334,7 @@ export function attack(s,a,b,burst=false,byAI=false,zone='torso',reaction=false,
   for(let round=0;round<p.rounds&&alive(a)&&!a.burningTurns;round++){
     if(w.mag&&!(a.ammo[weapon]>0))break;if(w.mag){a.ammo[weapon]--;syncAmmo(a,weapon);}
     const fireBefore=s.fireAnimationSequence||0,event={shooter:a.id,target:b.id,ax:a.x,ay:a.y,bx:b.x,by:b.y,incendiary:w.incendiary,hit:false,weapon,shot:round,explosions:[]};sequence.push(event);
-    if(w.incendiary){event.flame=recordFlame(a,w.range,geometryNear(s,a,a,w.range),s.visible);event.impacts=resolveFlame(s,a,event);event.hit=event.impacts.length>0;}
+    if(w.incendiary){event.flame=recordFlame(a,w.range,geometryNear(s,a,a,w.range,'wall'),s.visible);event.impacts=resolveFlame(s,a,event);event.hit=event.impacts.length>0;}
     else if(w.blast){
       for(const victim of s.units.filter(alive))if(alive(victim)&&distance(victim,b)<=w.blast&&lineClear(s,b,victim)){if(!detonateImpact(s,a,victim,'torso',w,event))hurt(s,victim,Math.round(w.damage*Math.max(.2,1-distance(victim,b)/(w.blast+1))));event.hit=true;}
     }else{
@@ -330,7 +359,7 @@ const fireRules=createFireRules({kill,walkSegment,random,key,log});
 const fuelRules=createFuelRules({kill,ignite:fireRules.ignite,recordBurn,inside:insideWorld,log});
 export const ignite=(s,u)=>{const result=fireRules.ignite(s,u);if(result)refresh(s);return result;};
 export const enterFire=(s,u)=>{const result=fireRules.enterFire(s,u);if(result)refresh(s);return result;};
-const interactionRules=createInteractionSystem({hero,canControl,combatCosts,distance,geometry,pointBoxDistance,refresh,stop,log,clearGeometry:s=>geometryCache.delete(s),weapons:WEAPONS,radius:RADIUS});
+const interactionRules=createInteractionSystem({hero,canControl,combatCosts,distance,geometry,blocksWalking,pointBoxDistance,refresh,stop,log,clearGeometry:s=>geometryCache.delete(s),weapons:WEAPONS,radius:RADIUS});
 export const interactionObjects=s=>interactionRules.objects(s);
 export const nearbyInteractions=s=>interactionRules.nearby(s);
 export const previewInteraction=(s,id,action,itemId)=>interactionRules.preview(s,id,action,itemId);
@@ -361,6 +390,22 @@ export function decodeSave(text){
   if(mission.id===DEFAULT_MISSION_ID&&s.solo.ledger)s.solo.objectives.ledger=true;
   if(s.solo.inspected===undefined)s.solo.inspected=[];
   if(!Array.isArray(s.solo.inspected)||s.solo.inspected.some(id=>!mission.clues.some(clue=>clue.id===id)))throw Error('Unsupported inspection save.');
-  fireRules.restore(s,p=>insideWorld(canonical,p));fuelRules.restore(s);return interactionRules.restore(s);
+  fireRules.restore(s,p=>insideWorld(canonical,p));fuelRules.restore(s);
+  return releaseFromScenery(interactionRules.restore(s));
+}
+// A save written before a prop became solid may store a living animal inside it
+// (Short Measure's ration scale stands where its clue marker once had no
+// collision). Such a unit moves to the nearest clear point, scanned outward in
+// 5 cm rings; every other played position is kept exactly.
+function releaseFromScenery(s){
+  for(const u of s.units){
+    if(!alive(u)||freePoint(s,u,u.id,{units:false}))continue;
+    let best=null;
+    for(let ring=1;ring<=60&&!best;ring++){const r=ring*.05;for(let i=0;i<32;i++){const a=i/32*Math.PI*2,p={x:u.x+Math.cos(a)*r,y:u.y+Math.sin(a)*r};if(freePoint(s,p,u.id)){best=p;break;}}}
+    if(!best)continue;
+    u.x=best.x;u.y=best.y;u.isMoving=false;
+    if(u.team==='squad')s.queue=[];
+  }
+  return s;
 }
 export const Core={tankExplosionChance,ignite,enterFire,WEAPONS,AIM_ZONES,key,alive,movementModeOf,movementRate,movementSpeed,combatCosts,canControl,canSee,visibleOpponents,refresh,log,stop,travel,navigationPath,move,turnTo,setMovementMode,setStance,grenadeCost,grenadeTrajectory,grenadeAffects,grenadeBlastFootprint,previewGrenade,throwGrenade,previewFlame,fireFlame,previewAttack,attack,equip,reload,endTurn,headingTo,interactionObjects,nearbyInteractions,previewInteraction,performInteraction};

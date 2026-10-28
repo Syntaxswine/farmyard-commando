@@ -38,7 +38,8 @@ export function foregroundWall(wall,unit){
 // Chunk meshes own instance buffers. Painted textures, cargo prototypes,
 // materials and geometry belong to the environment for the whole operation.
 export class OriginalEnvironment {
-  constructor(renderer,state,{onLoading=()=>{},onError=()=>{},loader}={}){
+  // replacedCells: crate tiles whose visual now belongs to accepted mission art.
+  constructor(renderer,state,{onLoading=()=>{},onError=()=>{},loader,replacedCells=new Set()}={}){
     this.root=new T.Group();this.root.name='Animal Factory Tactics original art';
     Object.assign(this,{state,disposed:false,materials:[],textures:[],chunks:new Map(),index:new Map(),prototypes:new Map(),materialCache:new Map(),texturesByKind:{},stats:{created:0,disposed:0}});
     const manager=new T.LoadingManager();
@@ -62,7 +63,7 @@ export class OriginalEnvironment {
     const used=new Set(['brick','concrete']),bounds=worldBounds(state);
     for(let y=bounds.y;y<bounds.y+bounds.h;y++)for(let x=bounds.x;x<bounds.x+bounds.w;x++){
       used.add(groundSurface(state,x,y));
-      if(state.map[y][x]==='crate'&&!occupied.has(key(x,y)))bucket({x,y}).cargo.push({x,y,form:'crate-square'});
+      if(state.map[y][x]==='crate'&&!occupied.has(key(x,y))&&!replacedCells.has(key(x,y)))bucket({x,y}).cargo.push({x,y,form:'crate-square'});
     }
     for(const kind of used)this.material(kind);
     this.material('brick',true);this.material('concrete',true);

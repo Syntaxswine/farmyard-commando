@@ -196,10 +196,12 @@ test('a guard closing on an animal beside a prop finds the clear side instead of
   }
 });
 
-test('census cases pin the two approach rules that each prevent freezes',()=>{
-  // Each froze (no shot, alert lapsed within four rounds) once its rule was
-  // removed, in the 1,000-approach census; with it the guard engages. Exact
-  // census values: these cases sit near decision edges, so rounding moves them.
+test('review-round census cases still engage, one only through the 8 cm waypoint rule',()=>{
+  // Each froze (no shot, alert lapsed within four rounds) in review round 2's
+  // 1,000-approach census. The first three picked spots no route could end on; the
+  // approach search now targets grid nodes, where every route ends. The fourth
+  // route opens 4 cm from the guard and still needs enemyStep to walk on past it.
+  // Exact census values: these cases sit near decision edges, so rounding moves them.
   const cases=[
     ['route ends: a free spot no route can end on',{x:6.483179605067708,y:20.18899905295111},{x:13.743990889711291,y:18.425564061108183},53.496729796752334],
     ['route ends',{x:6.8748554619634525,y:23.375523177045398},{x:9.85492917953809,y:21.460194110655912},299.40732984803617],
@@ -215,8 +217,7 @@ test('census cases pin the two approach rules that each prevent freezes',()=>{
 test('in a seeded sample beside every prop, no guard freezes while a standing spot near its aim is reachable',()=>{
   // Seeded sample of review round 2's approach census: the animal 0.24-0.74 m from
   // a prop face, the guard 2-9 m off at any bearing and heading, doors open 70%.
-  // This pins the sample, not a law: a held-out census of 800 approaches still
-  // finds about 1% that freeze with a spot reachable (docs/short-measure-runtime.md).
+  // This pins the sample, not a law; the wider censuses are in docs/guard-approach.md.
   const random=(seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;})(2026);
   const probe=mill(),props=geometry(probe).filter(box=>box.kind==='prop');let cases=0;
   for(const p of props)for(let tries=0,taken=0;tries<400&&taken<10;tries++){
@@ -237,9 +238,10 @@ test('in a seeded sample beside every prop, no guard freezes while a standing sp
   assert.ok(cases>=36,`only ${cases} approaches sampled`);
 });
 
-test('a guard that re-sights its quarry mid-approach heads for the new position, not spots near the old one',()=>{
-  // Round one caches spots beside the scale; then the animal is seen behind the
-  // dispatch desk, where the 0.75 m aim again falls inside a prop.
+test('a guard that re-sights its quarry mid-approach heads for the new position, not the old one',()=>{
+  // Round one closes on the animal beside the scale; then it is seen behind the
+  // dispatch desk, where the 0.75 m aim again falls inside a prop. Nothing about the
+  // approach is held between ticks, so the new sighting is the new goal at once.
   const base=mill();for(const o of base.interactables)if(o.kind==='door'){o.open=true;base.edges[o.edge]='door';}
   const s={...base},u=hero(s),g=s.units[1];
   for(const other of s.units.slice(2))other.hp=0;

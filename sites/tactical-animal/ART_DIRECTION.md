@@ -52,6 +52,8 @@ Aim switches show their actual AP price; body-location switches show their hit c
 
 ## Phone adaptation rules
 
+Searchable chests and fallen guards with remaining contents have a soft golden contour halo. `search-halo.js` derives it from their actual painted alpha or posed 3D silhouette. Uneven brighter patches drift slowly along the contour, shifting subtly between honey amber and pale gold, like moving light behind the object. Keep the object's painting intact and avoid a uniform flashing outline. The glow is stronger within interaction reach, stops when contents are exhausted, and respects current visibility, line of sight, scene depth and chunk residency. It does not discover scenario items or change perception rolls. Reduced motion keeps a static gold contour. The renderer reuses a bounded set of masks, borrows source art/geometry, and releases its own resources at operation changes.
+
 Keep the original painted silhouettes, material scale, weathering and species identity. Preserve transparent margins and use the recorded weapon crop frames rather than stretching weapon images. Retain readable touch targets, portrait framing and safe-area spacing.
 
 The solo simulation owns collision, movement, AP, targeting and knowledge of the map. A scenery placement needs a matching gameplay footprint before becoming a solid visible object. Respect unexplored ground and hidden opponents; foreground walls may fade for camera readability without changing line of sight. The existing mission receives a material and model replacement; its layout and rules stay intact.

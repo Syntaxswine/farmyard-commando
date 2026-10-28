@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
-import {versionedModules,versionImports} from './module-versions.mjs';
 
 // Sites accepts conventional static output roots. Keep the authored prototype
 // in its project folder and copy its exact files to an owned deployment output.
@@ -17,20 +16,35 @@ if(fs.existsSync(destination)){
 fs.cpSync(source,destination,{recursive:true,dereference:false});
 // Version application modules together so returning players receive updated
 // rules immediately and every importer shares the same simulation instance.
-// Mission art ships with the rules that read it, so it shares the version; the
-// pinned aft/ and designer/ trees keep exact URLs (see module-versions.mjs).
-const versioned=new Set(versionedModules(source));
+const modules=fs.readdirSync(source).filter(file=>file.endsWith('.js'));
+// Mission art changes independently of the frozen AFT snapshots. Include its
+// nested modules in the same release so old kit/manifest pairs cannot be mixed
+// with a newly registered collision table on returning browsers.
+function ownedFiles(directory,prefix=''){
+  if(!fs.existsSync(directory))return [];
+  return fs.readdirSync(directory,{withFileTypes:true}).flatMap(entry=>{
+    const name=prefix+entry.name;
+    return entry.isDirectory()?ownedFiles(path.join(directory,entry.name),name+'/'):[name];
+  });
+}
+const missionFiles=ownedFiles(path.join(source,'mission-art'),'mission-art/');
+modules.push(...missionFiles.filter(file=>file.endsWith('.js')));modules.sort();
+const moduleSet=new Set(modules);
 const moduleHash=createHash('sha256');
-for(const file of versioned)moduleHash.update(file).update(fs.readFileSync(path.join(source,file)));
+for(const file of modules)moduleHash.update(file).update(fs.readFileSync(path.join(source,file)));
 const moduleVersion=moduleHash.digest('hex').slice(0,12);
-for(const file of versioned){
+function versionImports(code,file){
+  return code.replace(/(\bfrom\s*|\bimport\s*\(\s*|\bimport\s*)(['"])(\.\.?\/[^'"]+\.js)\2/g,(match,prefix,quote,specifier)=>moduleSet.has(path.posix.normalize(path.posix.join(path.posix.dirname(file),specifier)))?`${prefix}${quote}${specifier}?v=${moduleVersion}${quote}`:match);
+}
+for(const file of modules){
   const target=path.join(destination,file);
-  fs.writeFileSync(target,versionImports(fs.readFileSync(target,'utf8'),file,versioned,moduleVersion));
+  const code=versionImports(fs.readFileSync(target,'utf8'),file);
+  fs.writeFileSync(target,code);
 }
 // Give changed styles and the game icon fresh URLs on static hosts.
-for(const file of fs.readdirSync(source).filter(file=>file.endsWith('.html'))){
+for(const file of [...fs.readdirSync(source).filter(file=>file.endsWith('.html')),...missionFiles.filter(file=>file.endsWith('.html'))]){
   const entry=path.join(destination,file);
-  let html=fs.readFileSync(entry,'utf8').replace('src="app.js"',`src="app.js?v=${moduleVersion}"`);
+  let html=versionImports(fs.readFileSync(entry,'utf8'),file).replace('src="app.js"',`src="app.js?v=${moduleVersion}"`);
   for(const asset of ['style.css','touch-controls.css','original-art.css','title-screen.css','map-frame.css','industrial-switches.css','field-hardware.css','icon.svg']){
     const version=createHash('sha256').update(fs.readFileSync(path.join(destination,asset))).digest('hex').slice(0,12);
     html=html.replace(`href="${asset}"`,`href="${asset}?v=${version}"`);

@@ -100,7 +100,7 @@
       "Existing cover visual replacement ownership",
       "Optional inspect hooks and collected-paper state binding"
     ],
-    "coderAcceptance": "Arrival freight scale and sack bay installed after route, door, spawn, guard-post and leaf-swing clearance checks; architect acceptance is requested on the pull request.",
+    "coderAcceptance": "Arrival freight scale and sack bay installed after route, door, spawn, guard-post and leaf-swing clearance checks; the architect approved them in the combined candidate shipped as PR #20.",
     "authoringChanges": [
       "sealed-load sized to the runtime crate collider: 1.96 x 1.96 x 0.92 m (short-measure/2)",
       "full-load corner posts end at the lower of 0.935 m and the load height"

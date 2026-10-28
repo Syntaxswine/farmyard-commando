@@ -78,4 +78,9 @@ test('preparation distinguishes resuming the old operation from deploying the ne
   assert.match(a.el('resume').textContent,/previous checkpoint/);assert.match(a.el('briefing-text').textContent,/Deploy Solo starts the new approach map/);
   a.el('resume').click();assert.equal(missionForState(a.s).layoutVersion,1);assert.equal(a.u.x,2);
   const fresh=app({autoDeploy:false,initialStorage:[[PREPARATION_SAVE,preferences]]});fresh.el('deploy').click();assert.equal(fresh.s.solo.layoutVersion,2);assert.equal(fresh.u.x,48);assert.equal(fresh.s.phase,'explore');
+  for(const status of ['lost','extracted']){
+    old.solo.status=status;
+    const completed=app({autoDeploy:false,initialStorage:[[PREPARATION_SAVE,preferences],[OPERATION_SLOT+'road-checkpoint',encodeSave(old)]]});
+    assert.equal(completed.el('resume').hidden,true);assert.doesNotMatch(completed.el('briefing-text').textContent,/Your save uses the previous checkpoint/);
+  }
 });

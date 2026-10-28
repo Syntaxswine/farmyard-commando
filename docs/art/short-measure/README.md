@@ -4,7 +4,11 @@ First pass for the east feed mill, based on the architect's blockout at design c
 
 **Installed in play (2026-10-28).** `mission-scenery.js` now registers every solid below with the simulation, and `mission-art-view.js` draws the kit in Short Measure. See [Environment art in play](../../short-measure-runtime.md#environment-art-in-play). Two authoring changes came with the installation:
 - The sealed load is sized to the runtime crate collider (1.96 × 1.96 × 0.92 m). The 2 × 2 × 1 m proposal could never bind.
-- The full loads' corner posts end at the load height. A fixed post reached 0.935 m.
+- The full loads' corner posts stop at the lower of 0.935 m and the load height. The fixed post reached 0.935 m and stood above the 0.92 m sealed load. The 0.95 m arrival bay is unchanged.
+
+Two contract decisions are recorded here rather than worded away:
+- **The optional freight scale and arrival bay are installed.** This is coder acceptance, given after checking routes, doors (including open leaves), spawn and guard posts. The tightest gap is 0.53 m, between the open west leaf and the scale, against a 0.46 m animal. Architect acceptance is requested on the pull request.
+- **The worker scale's clue marker stays.** The handoff said the scale "supersedes the decorative story marker only after binding". The marker is the game's clue affordance (a tap target that changes colour once inspected), so it is kept and lifted to 2 m above the scale instead of being removed.
 
 The worker station has an empty platform, a bent ivory beam and a red welded stop. The matching freight station has a level beam, intact counterweight and a full sack. Collapsed pale sacks sit beside a full outbound cargo bin. The same seven-in-a-square stencil appears on the scales, sacks, cargo seal and dispatch paper. Broad shapes and inherited materials carry the story at phone scale.
 
@@ -56,7 +60,7 @@ The kit lives in [kit.js](../../../sites/tactical-animal/dist/mission-art/short-
 6. Keep collection at `(32,7)`, 0.4 m south of the desk footprint. The paper center is `(32,6.18)` at roughly 1 m. Call `setCollected(true)` on the art adapter, or `kit.setCollected(desk,true)`, when collected and on saved resume. This hides only paper and its red tab; the desk and its collision remain.
 7. On mission switch, unregister physics/occlusion parts first, remove the art, then call `dispose()`. Disposal is idempotent. The kit owns its geometry, materials and generated textures; an optional `paperTexture` belongs to the caller. The review closes its renderer, shadow map and borrowed texture on `pagehide`.
 
-The additional freight scale and arrival bay are proposals requiring architect/coder acceptance. The original mission remains completable with inherited cargo while these assets are reviewed. No action text, AP rule, save migration, minimap, door state or mission objective is implemented by the art kit.
+The additional freight scale and arrival bay are proposals requiring architect/coder acceptance (coder acceptance is recorded at the top of this page; architect acceptance is requested on the pull request). The original mission remains completable with inherited cargo while these assets are reviewed. No action text, AP rule, save migration, minimap, door state or mission objective is implemented by the art kit.
 
 ## Source and rights record
 

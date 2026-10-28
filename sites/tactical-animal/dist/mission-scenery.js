@@ -1,4 +1,5 @@
 import {SHORT_MEASURE_SOLIDS} from './mission-art/short-measure/solids.js';
+import {PLACEMENTS,acceptsBinding} from './mission-art/short-measure/manifest.js';
 import {CRATE_DIMENSIONS} from './world-dimensions.js';
 
 // Bespoke mission scenery registered with the authoritative simulation. The
@@ -70,6 +71,19 @@ export function missionArtBindings(mission,terrain){
     bindings[solid.id]={owner:solid.owner,footprint,height,occlusion:{mode:'solid-mesh-parts',shapeKey:solid.shapeKey}};
   }
   return bindings;
+}
+
+// Crate tiles whose visual an accepted cover replacement takes over. The kit's
+// own acceptance rule decides it here, so the cargo renderer knows before the
+// kit itself has loaded; the view checks the kit agrees once it arrives.
+export function replacedCoverTiles(mission,terrain){
+  const tiles=new Set(),bindings=missionArtBindings(mission,terrain);
+  for(const placement of PLACEMENTS){
+    const rect=coverRect(placement.owner);
+    if(!rect||!bindings[placement.id]||!acceptsBinding(placement,bindings[placement.id]))continue;
+    const [x,y,w,h]=rect;for(let cy=y;cy<y+h;cy++)for(let cx=x;cx<x+w;cx++)tiles.add(`${cx},${cy}`);
+  }
+  return tiles;
 }
 
 // The registered solid that embodies this clue, if any, lifts its marker and

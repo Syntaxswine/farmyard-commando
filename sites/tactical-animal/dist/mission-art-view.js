@@ -17,7 +17,8 @@ function tilesUnder([west,north,east,south]){
 // registered (mission-scenery.js). Props follow map knowledge like cargo does;
 // the collectible paper follows the objective. Returns null for missions
 // without art.
-export function createMissionArt(state,{onLoading=()=>{},onError=()=>{},loader}={}){
+// `bindings` defaults to what the simulation registered; tests pass others.
+export function createMissionArt(state,{onLoading=()=>{},onError=()=>{},loader,bindings:override}={}){
   const mission=missionForState(state);if(!missionHasArt(mission))return null;
   let disposed=false;
   const manager=new T.LoadingManager();
@@ -27,7 +28,7 @@ export function createMissionArt(state,{onLoading=()=>{},onError=()=>{},loader}=
   manager.onError=url=>{if(!disposed)console.warn('Mission paper art could not load: '+url.split('/').at(-1));};
   const paper=(loader||new T.TextureLoader(manager)).load(new URL('./mission-art/short-measure/shipping-manifest.svg',import.meta.url).href);
   paper.colorSpace=T.SRGBColorSpace;
-  const bindings=missionArtBindings(mission,state.map);
+  const bindings=override??missionArtBindings(mission,state.map);
   const art=createShortMeasureArt({missionId:mission.id,bindings,collected:objectiveSecured(state),paperTexture:paper});
   // A registered solid that the kit refused would be collision nobody can see.
   const refused=art.skipped.filter(id=>bindings[id]);

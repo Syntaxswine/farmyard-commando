@@ -84,12 +84,14 @@ export function geometry(s){
   }
   geometryCache.set(s,{boxes,layers});return boxes;
 }
-// Each question gets its own broad phase: walking never sifts a prop's parts,
-// standing sight looks only at walls, and anything in flight skips reservations.
-const GEOMETRY_LAYERS={all:()=>true,walk:box=>blocksWalking(box),air:box=>occupiesAir(box),wall:box=>box.kind==='wall'};
+// Each question gets its own broad phase, and the layer IS the kind filter:
+// walking never sifts a prop's parts, standing sight looks only at walls, and
+// anything in flight skips reservations. A caller must name its question.
+const GEOMETRY_LAYERS={walk:box=>blocksWalking(box),air:box=>occupiesAir(box),wall:box=>box.kind==='wall'};
 // Broad phase shared by movement, sight, silhouettes and area weapons. The
 // interaction system invalidates this cache immediately after a door changes.
-export function geometryNear(s,a,b=a,padding=0,layer='all'){
+export function geometryNear(s,a,b,padding,layer){
+  if(!GEOMETRY_LAYERS[layer])throw Error(`geometryNear needs a layer (${Object.keys(GEOMETRY_LAYERS).join(', ')}), not ${layer}.`);
   if(![a.x,a.y,b.x,b.y,padding].every(Number.isFinite)||padding<0)return [];
   geometry(s);const buckets=geometryCache.get(s).layers[layer],boxes=new Set();
   const x0=Math.min(a.x,b.x)-padding,x1=Math.max(a.x,b.x)+padding,y0=Math.min(a.y,b.y)-padding,y1=Math.max(a.y,b.y)+padding;
@@ -353,7 +355,7 @@ export function attack(s,a,b,burst=false,byAI=false,zone='torso',reaction=false,
 export function equip(s,u,id){if(!canControl(s,u)||!u.pack.some(i=>i.kind===id)||u.weapon===id)return false;const cost=combatCosts(s)?u.slots.includes(id)?2:3:0;if(u.ap+EPS<cost)return false;stop(s);u.ap-=cost;u.weapon=id;log(s,'Equipped '+WEAPONS[id].name+'.');return true;}
 export function reload(s,u){if(!canControl(s,u))return false;const w=WEAPONS[u.weapon],count=Math.min(w.mag-(u.ammo[u.weapon]??0),u.ammoPouch[u.weapon]||0),cost=combatCosts(s)?3:0;if(!count||u.ap+EPS<cost)return false;stop(s);u.ap-=cost;u.ammo[u.weapon]+=count;u.ammoPouch[u.weapon]-=count;syncAmmo(u,u.weapon);log(s,'Reloaded '+count+' rounds.');return true;}
 export function endTurn(s){if(s.phase!=='player'||s.solo.status!=='active')return false;stop(s);for(const unit of s.units)fireRules.panicRun(s,unit);s.phase='enemy';s.enemyIndex=1;s.enemyDelay=.35;s.engaged=false;for(const g of s.units.filter(g=>g.team==='guard')){g.ap=g.burningTurns?0:g.maxAp;g.alertAge++;if(g.alertAge>3&&!canSee(s,g,hero(s)))g.alert=false;}s.revision++;return true;}
-function enemyStep(s,dt){const u=hero(s);let g=s.units[s.enemyIndex];if(!g){fireRules.finishRound(s);s.round++;s.panicDelay=3;u.ap=alive(u)&&!u.burningTurns?u.maxAp:0;u.stamina=Math.min(u.maxStamina,u.stamina+10);s.phase='player';refresh(s);return;}if(!alive(g)||g.burningTurns||!g.alert||g.ap<.02){g.isMoving=false;s.enemyIndex++;s.enemyDelay=.15;return;}s.enemyDelay-=dt;if(s.enemyDelay>0)return;const p=previewAttack(s,g,u);if(p.ok&&canSee(s,g,u)){attack(s,g,u,false,true);s.enemyDelay=.6;return;}if(g.ammo[g.weapon]===0&&g.ap>=3){const count=Math.min(WEAPONS[g.weapon].mag,g.ammoPouch[g.weapon]||0);if(count){g.ammo[g.weapon]=count;g.ammoPouch[g.weapon]-=count;g.ap-=3;s.enemyDelay=.4;return;}}if(g.ap<WEAPONS[g.weapon].cost&&canSee(s,g,u)&&distance(g,u)<=WEAPONS[g.weapon].range){g.ap=0;return;}const goal=g.lastKnown||u,range=distance(g,goal),offset=Math.min(.75,range),tx=goal.x-(goal.x-g.x)/Math.max(range,.001)*offset,ty=goal.y-(goal.y-g.y)/Math.max(range,.001)*offset,path=navigationPath(s,g,tx,ty),next=path?.[0];if(!next){g.ap=0;return;}const d=distance(g,next);if(d<.08){g.ap=0;return;}const step=Math.min(d,movementSpeed(g)*dt);if(!travel(s,g,(next.x-g.x)/d*step,(next.y-g.y)/d*step,{enemy:true}))g.ap=0;}
+function enemyStep(s,dt){const u=hero(s);let g=s.units[s.enemyIndex];if(!g){fireRules.finishRound(s);s.round++;s.panicDelay=3;u.ap=alive(u)&&!u.burningTurns?u.maxAp:0;u.stamina=Math.min(u.maxStamina,u.stamina+10);s.phase='player';refresh(s);return;}if(!alive(g)||g.burningTurns||!g.alert||g.ap<.02){g.isMoving=false;s.enemyIndex++;s.enemyDelay=.15;return;}s.enemyDelay-=dt;if(s.enemyDelay>0)return;const p=previewAttack(s,g,u);if(p.ok&&canSee(s,g,u)){attack(s,g,u,false,true);s.enemyDelay=.6;return;}if(g.ammo[g.weapon]===0&&g.ap>=3){const count=Math.min(WEAPONS[g.weapon].mag,g.ammoPouch[g.weapon]||0);if(count){g.ammo[g.weapon]=count;g.ammoPouch[g.weapon]-=count;g.ap-=3;s.enemyDelay=.4;return;}}if(g.ap<WEAPONS[g.weapon].cost&&canSee(s,g,u)&&distance(g,u)<=WEAPONS[g.weapon].range){g.ap=0;return;}const goal=g.lastKnown||u,range=distance(g,goal),offset=Math.min(.75,range),tx=goal.x-(goal.x-g.x)/Math.max(range,.001)*offset,ty=goal.y-(goal.y-g.y)/Math.max(range,.001)*offset,path=approachPath(s,g,{x:tx,y:ty}),next=path?.[0];if(!next){g.ap=0;return;}const d=distance(g,next);if(d<.08){g.ap=0;return;}const step=Math.min(d,movementSpeed(g)*dt);if(!travel(s,g,(next.x-g.x)/d*step,(next.y-g.y)/d*step,{enemy:true}))g.ap=0;}
 export function tick(s,dt=1/60,input=null){if(s.solo.status!=='active')return false;dt=Math.max(0,Math.min(.05,dt));s.elapsed+=dt;for(const u of s.units)u.isMoving=false;if(s.phase==='enemy'){enemyStep(s,dt);return true;}const u=hero(s);if(u.burningTurns){refresh(s);if(s.phase==='player'){s.panicDelay=Math.max(0,(s.panicDelay??3)-dt);if(!s.panicDelay)endTurn(s);}return true;}walkWhenExhausted(s,u);if(input&&Math.hypot(input.x,input.y)>.1){s.queue=[];const n=Math.max(1,Math.hypot(input.x,input.y));travel(s,u,input.x/n*movementSpeed(u)*dt,input.y/n*movementSpeed(u)*dt);}else if(s.queue.length){const p=s.queue[0],d=distance(u,p);if(d<.025)s.queue.shift();else{const step=Math.min(d,movementSpeed(u)*dt),moved=travel(s,u,(p.x-u.x)/d*step,(p.y-u.y)/d*step);if(!moved||s.phase==='player'&&u.ap<EPS)s.queue=[];}}else if(s.phase==='explore'||s.phase==='won')u.stamina=Math.min(u.maxStamina,u.stamina+dt*2);return true;}
 const fireRules=createFireRules({kill,walkSegment,random,key,log});
 const fuelRules=createFuelRules({kill,ignite:fireRules.ignite,recordBurn,inside:insideWorld,log});
@@ -393,6 +395,23 @@ export function decodeSave(text){
   fireRules.restore(s,p=>insideWorld(canonical,p));fuelRules.restore(s);
   return releaseFromScenery(interactionRules.restore(s));
 }
+// The nearest spot around p (never p itself) where a unit could stand, scanned
+// outward in 5 cm rings of 32 bearings; null beyond maxRadius metres.
+function nearestStanding(s,p,ignoreId,maxRadius){
+  for(let ring=1;ring*.05<=maxRadius+EPS;ring++){const r=ring*.05;for(let i=0;i<32;i++){const a=i/32*Math.PI*2,q={x:p.x+Math.cos(a)*r,y:p.y+Math.sin(a)*r};if(freePoint(s,q,ignoreId))return q;}}
+  return null;
+}
+// A guard closing on its quarry aims 0.75 m short of it. When that spot is inside
+// a mission prop (the ration scale beside its inspect point, the dispatch desk),
+// it heads for the nearest clear spot instead of freezing until its alert lapses.
+// Crates and walls keep main's behaviour, where such a guard still freezes: fixing
+// that is an AI change for every mission, so it stays out of the art integration.
+function approachPath(s,g,target){
+  const path=navigationPath(s,g,target.x,target.y);
+  if(path||!geometryNear(s,target,target,RADIUS,'walk').some(box=>box.kind==='prop'&&pointBoxDistance(target,box)<RADIUS-EPS))return path;
+  const near=nearestStanding(s,target,g.id,2);
+  return near?navigationPath(s,g,near.x,near.y):null;
+}
 // A save written before a prop became solid may store a living animal inside it
 // (Short Measure's ration scale stands where its clue marker once had no
 // collision). Such a unit moves to the nearest clear point, scanned outward in
@@ -400,8 +419,7 @@ export function decodeSave(text){
 function releaseFromScenery(s){
   for(const u of s.units){
     if(!alive(u)||freePoint(s,u,u.id,{units:false}))continue;
-    let best=null;
-    for(let ring=1;ring<=60&&!best;ring++){const r=ring*.05;for(let i=0;i<32;i++){const a=i/32*Math.PI*2,p={x:u.x+Math.cos(a)*r,y:u.y+Math.sin(a)*r};if(freePoint(s,p,u.id)){best=p;break;}}}
+    const best=nearestStanding(s,u,u.id,3);
     if(!best)continue;
     u.x=best.x;u.y=best.y;u.isMoving=false;
     if(u.team==='squad')s.queue=[];

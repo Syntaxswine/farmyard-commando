@@ -17,12 +17,18 @@ fs.cpSync(source,destination,{recursive:true,dereference:false});
 // Version application modules together so returning players receive updated
 // rules immediately and every importer shares the same simulation instance.
 const modules=fs.readdirSync(source).filter(file=>file.endsWith('.js')).sort();
+// Mission art modules ship with the rules that read them (the simulation imports
+// their solid tables), so they share the version. The hash-pinned aft/ and
+// designer/ imports keep their exact URLs: every importer must share one three.js.
+const walk=dir=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(entry=>entry.isDirectory()?walk(path.join(dir,entry.name)):[path.join(dir,entry.name)]);
+const art=fs.existsSync(path.join(source,'mission-art'))?walk(path.join(source,'mission-art')).filter(file=>file.endsWith('.js')).map(file=>path.relative(source,file).split(path.sep).join('/')).sort():[];
+const versioned=new Set([...modules,...art]);
 const moduleHash=createHash('sha256');
-for(const file of modules)moduleHash.update(file).update(fs.readFileSync(path.join(source,file)));
+for(const file of versioned)moduleHash.update(file).update(fs.readFileSync(path.join(source,file)));
 const moduleVersion=moduleHash.digest('hex').slice(0,12);
-for(const file of modules){
-  const target=path.join(destination,file);
-  const code=fs.readFileSync(target,'utf8').replace(/(\bfrom\s*|\bimport\s*\(\s*|\bimport\s*)(['"])(\.\/[^'"]+\.js)\2/g,(match,prefix,quote,specifier)=>modules.includes(specifier.slice(2))?`${prefix}${quote}${specifier}?v=${moduleVersion}${quote}`:match);
+for(const file of versioned){
+  const target=path.join(destination,file),folder=path.posix.dirname(file);
+  const code=fs.readFileSync(target,'utf8').replace(/(\bfrom\s*|\bimport\s*\(\s*|\bimport\s*)(['"])(\.\.?\/[^'"]+\.js)\2/g,(match,prefix,quote,specifier)=>versioned.has(path.posix.normalize(path.posix.join(folder,specifier)))?`${prefix}${quote}${specifier}?v=${moduleVersion}${quote}`:match);
   fs.writeFileSync(target,code);
 }
 // Give changed styles and the game icon fresh URLs on static hosts.

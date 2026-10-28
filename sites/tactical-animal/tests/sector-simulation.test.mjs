@@ -37,7 +37,7 @@ test('explicit sector bounds allow outer cells and reject movement beyond the ph
   for(const p of [{x:-.3,y:120},{x:239.3,y:120},{x:120,y:-.3},{x:120,y:239.3}])assert.equal(freePoint(s,p,u.id),false);
   Object.assign(u,{x:239,y:120});assert.ok(travel(s,u,1,0)>0);assert.ok(u.x<=239.27+1e-7);assert.ok(freePoint(s,u,u.id));
   const old=createSoloGame();assert.equal(freePoint(old,{x:0,y:24},hero(old).id),false);assert.ok(freePoint(old,{x:1,y:24},hero(old).id));
-  assert.equal(lineClear(s,u,{x:Infinity,y:120}),false);assert.deepEqual(geometryNear(s,u,{x:Infinity,y:120}),[]);assert.equal(navigationPath(s,u,NaN,120),null);
+  assert.equal(lineClear(s,u,{x:Infinity,y:120}),false);assert.deepEqual(geometryNear(s,u,{x:Infinity,y:120},0,'walk'),[]);assert.equal(navigationPath(s,u,NaN,120),null);
 });
 
 test('imported prop footprints block movement, prone sight, and grenade landing in global coordinates',()=>{
@@ -63,7 +63,7 @@ test('geometry broad phase and fog rays never visit distant obstacle kinds',()=>
   s.obstacles=Array.from({length:3000},(_,i)=>({x0:150+i%80,x1:150.4+i%80,y0:150+Math.floor(i/80),y1:150.4+Math.floor(i/80),height:2,kind:'wall'}));
   const boxes=geometry(s);let visits=0;
   for(const box of boxes)Object.defineProperty(box,'kind',{get(){visits++;return 'wall';}});
-  assert.deepEqual(geometryNear(s,{x:5,y:5},{x:20,y:20}),[]);
+  assert.deepEqual(geometryNear(s,{x:5,y:5},{x:20,y:20},0,'walk'),[]);
   refresh(s,{forceFog:true});assert.equal(visits,0);assert.ok(s.visible.size>1000&&s.visible.size<3900);
   for(const cell of s.visible){const [x,y]=cell.split(',').map(Number);assert.ok(Math.hypot(x-u.x,y-u.y)<35);}
   assert.equal(s.visible.has('100,100'),false);assert.ok(s.seen.has('2,118'),'Explored cells outside the current neighborhood persist.');

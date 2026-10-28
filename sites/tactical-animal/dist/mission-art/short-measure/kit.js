@@ -87,8 +87,8 @@ export function createShortMeasureKit({paperTexture=null}={}) {
     box(root,'wood',0,.19,0,w,.12,d);
     // A solid timber cargo bin visibly explains the conservative box collider.
     box(root,'wood',0,.40,0,w,.30,d);
-    // Corner posts end at the declared load height; a fixed .75 m post topped
-    // out at .935 m and stood above a load sized to the .92 m crate collider.
+    // Corner posts stop at the lower of .935 m and the declared load height; a
+    // fixed .75 m post stood above the sealed load sized to the .92 m crate collider.
     const post=Math.min(.75,h-.185);
     for(const x of [-w/2+.045,w/2-.045])box(root,'dark-metal',x,.185+post/2,0,.09,post,d);
     for(const z of [-d/2+.04,d/2-.04])box(root,'wood',0,.58,z,w,.26,.08);

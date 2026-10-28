@@ -9,6 +9,7 @@ import {PLACEMENTS,ART_VERSION,bindingFor} from '../dist/mission-art/short-measu
 import {createShortMeasureKit,createShortMeasureArt} from '../dist/mission-art/short-measure/kit.js';
 import {createMissionArt} from '../dist/mission-art-view.js';
 import {InteractionScenery} from '../dist/interaction-view.js';
+import {FieldView} from '../dist/field-view.js';
 import {blockWindow} from '../dist/world-grid.js';
 
 const GRENADES={...DEFAULT_BUILD,utility:'grenade'};
@@ -156,10 +157,37 @@ test('the ration scale is solid around its clue, which stays inspectable from ei
   for(const [x,y] of [[8,21],[8,19.1]]){Object.assign(u,{x,y});const p=Core.previewInteraction(s,'worker-scale','inspect');assert.ok(p.ok,`${x},${y}: ${p.reason}`);}
 });
 
+// A guard aims 0.75 m short of its quarry. Beside a prop that spot is solid ground.
+function standoff(heroAt,guardAt){
+  const s=mill(),u=hero(s),g=s.units[1];
+  for(const other of s.units.slice(2))other.hp=0;
+  Object.assign(u,{...heroAt,ap:20,hp:10000,maxHp:10000});Object.assign(g,{...guardAt,alert:true,lastKnown:{...heroAt},alertAge:0});
+  s.engaged=true;s.phase='player';Core.refresh(s,{forceFog:true});
+  // Count the rounds in which the guard opens fire (each shot leaves a new
+  // effect naming its shooter); a frozen guard never does.
+  let firing=0;
+  for(let round=0;round<3;round++){
+    let fired=false,last=s.effect;Core.endTurn(s);
+    for(let frame=0;s.phase==='enemy'&&frame<2000;frame++){tick(s,.05);if(s.effect!==last){last=s.effect;fired||=s.effect?.sequence?.[0]?.shooter===g.id;}}
+    if(fired)firing++;
+  }
+  return {g,firing};
+}
+test('a guard closing on an animal beside a prop finds the clear side instead of freezing',()=>{
+  // Inspecting the scale from (8,21) with a guard north of it; hiding behind the desk.
+  for(const [heroAt,guardAt] of [[{x:8,y:21},{x:7.6,y:18.2}],[{x:32,y:5.3},{x:32,y:10.4}]]){
+    const {g,firing}=standoff(heroAt,guardAt);
+    assert.equal(firing,3,`guard fired in ${firing} of 3 rounds, ending at ${g.x.toFixed(2)},${g.y.toFixed(2)}`);
+    assert.equal(g.alert,true);
+  }
+});
+
 test('a save that stood on the old scale marker loads beside the scale and walks away; nothing else moves',()=>{
   const s=mill(),stored=JSON.parse(encodeSave(s));stored.units[0].x=8;stored.units[0].y=20;
+  stored.queue=[{x:9.5,y:21.2,z:0,cost:3}];   // a route planned from inside the scale
   const restored=decodeSave(JSON.stringify(stored)),u=hero(restored);
   assert.ok(freePoint(restored,u,u.id));assert.ok(Math.hypot(u.x-8,u.y-20)<.85,`${u.x},${u.y}`);
+  assert.deepEqual(restored.queue,[]);
   assert.deepEqual(restored.units.slice(1).map(g=>[g.x,g.y]),s.units.slice(1).map(g=>[g.x,g.y]));
   const before={x:u.x,y:u.y};for(let i=0;i<10;i++)tick(restored,.05,{x:0,y:1});
   assert.ok(Math.hypot(u.x-before.x,u.y-before.y)>.3);
@@ -174,13 +202,71 @@ test('the art view follows map knowledge, hands the sealed load its crate tiles 
     assert.ok(loads[0].endsWith('mission-art/short-measure/shipping-manifest.svg'));
     assert.deepEqual([...art.replacedCells].sort(),['27,19','27,20','28,19','28,20']);
     const shown=()=>art.root.children.filter(child=>child.visible&&child.name!=='ground-markings').map(child=>child.name).sort();
-    s.seen=new Set();art.update(s,blockWindow(s,hero(s)));assert.deepEqual(shown(),[]);
+    const paint=()=>art.root.getObjectByName('ground-markings').children.filter(mark=>mark.visible).map(mark=>mark.name);
+    s.seen=new Set();art.update(s,blockWindow(s,hero(s)));assert.deepEqual(shown(),[]);assert.deepEqual(paint(),[]);
+    s.seen.add('7,25');art.update(s,blockWindow(s,hero(s)));assert.deepEqual(paint(),['ration-lane-bar']);
     s.seen.add('9,20');art.update(s,blockWindow(s,hero(s)));assert.deepEqual(shown(),['worker-scale']);
     s.seen.add('32,6');art.update(s,blockWindow(s,hero(s)));assert.deepEqual(shown(),['shipping-manifest','worker-scale']);
     const paper=art.root.getObjectByName('collectible-paper');assert.equal(paper.visible,true);
     s.solo.objectives['shipping-manifest']=true;art.update(s,blockWindow(s,hero(s)));assert.equal(paper.visible,false);
   }finally{art.dispose();art.dispose();}
   assert.equal(createMissionArt(createSoloGame()),null);
+});
+
+test('a binding the kit refuses is reported, never hidden',()=>{
+  const s=mill(),errors=[],bindings=missionArtBindings(getMission('short-measure'),s.map);
+  bindings['worker-scale']={...bindings['worker-scale'],height:1.6};
+  const art=createMissionArt(s,{loader:{load:()=>new T.Texture()},bindings,onError:message=>errors.push(message)});
+  try{
+    assert.deepEqual(art.refused,['worker-scale']);assert.equal(art.root.getObjectByName('worker-scale'),undefined);
+    assert.equal(errors.length,1);assert.match(errors[0],/worker-scale/);
+  }finally{art.dispose();}
+});
+
+// FieldView end to end without a GPU: images never finish loading, so only the
+// synchronous scene graph and the mission art's lifecycle are exercised.
+function bareView(state){
+  const view=Object.create(FieldView.prototype),errors=[];
+  Object.assign(view,{state,generation:1,renderer:{capabilities:{getMaxAnisotropy:()=>1}},environment:new T.Group(),failed:new Set(),disposables:[],residentWindow:null,onLoading(){},onError:message=>errors.push(message)});
+  return {view,errors};
+}
+const crateCargo=view=>[...view.art.index.values()].flatMap(block=>block.cargo).filter(p=>p.form==='crate-square').map(p=>`${p.x},${p.y}`);
+test('the field draws each crate tile once: inherited cargo or the kit, and disposes the kit with the field',async()=>{
+  const previous=globalThis.document;
+  globalThis.document={createElementNS:()=>({style:{},addEventListener(){},removeEventListener(){},set src(value){}})};
+  try{
+    const s=mill(),{view,errors}=bareView(s);
+    view.buildEnvironment(s);const art=await view.missionArtReady;
+    assert.deepEqual(errors,[]);assert.equal(view.missionArt,art);assert.equal(art.root.parent,view.environment);
+    const cargo=crateCargo(view);
+    for(const tile of ['27,19','28,19','27,20','28,20'])assert.equal(cargo.includes(tile),false,tile);
+    assert.ok(cargo.includes('8,10')&&cargo.includes('31,17'));   // every other cover keeps its cargo
+    // The field's generic traversal frees materials but never their maps, so only
+    // the kit's own dispose frees its generated textures and the paper.
+    const counts=new Map();
+    art.root.traverse(mesh=>{if(!mesh.isMesh)return;for(const resource of [mesh.material,mesh.material.map].filter(Boolean))if(!counts.has(resource)){counts.set(resource,0);resource.addEventListener('dispose',()=>counts.set(resource,counts.get(resource)+1));}});
+    view.clearEnvironment();assert.equal(view.missionArt,null);
+    assert.ok([...counts.keys()].filter(resource=>resource.isTexture).length>=9);   // 8 surfaces + the paper
+    assert.ok([...counts.values()].every(n=>n===1),'every kit material and texture is disposed exactly once');
+    // A field replaced before the kit arrives never receives it.
+    const late=bareView(mill());late.view.buildEnvironment(late.view.state);late.view.generation++;
+    assert.equal(await late.view.missionArtReady,null);assert.equal(late.view.missionArt,undefined);
+    late.view.clearEnvironment();
+    // Night Ledger loads no kit and keeps all of its cargo.
+    const night=createSoloGame(),plain=bareView(night);plain.view.buildEnvironment(night);
+    assert.equal(await plain.view.missionArtReady,null);assert.equal(crateCargo(plain.view).length,night.map.flat().filter(t=>t==='crate').length);
+    plain.view.clearEnvironment();
+  }finally{if(previous===undefined)delete globalThis.document;else globalThis.document=previous;}
+});
+
+test('the interaction hand rises with the clue marker above the scale',()=>{
+  const s=mill(),view=Object.create(FieldView.prototype),camera=new T.OrthographicCamera(-6,6,6,-6,.1,100);
+  camera.position.set(18,14,32);camera.lookAt(8,0,20);camera.updateMatrixWorld();
+  Object.assign(view,{state:s,camera,container:{clientWidth:390,clientHeight:844}});
+  const at=height=>{const p=new T.Vector3(8,height,20).project(camera);return {x:(p.x+1)*195,y:(1-p.y)*422};};
+  const anchor=view.interactionAnchor(s.interactables.find(o=>o.id==='worker-scale'));
+  assert.ok(Math.abs(anchor.x-at(2).x)<1e-6&&Math.abs(anchor.y-at(2).y)<1e-6);
+  assert.ok(Math.abs(anchor.y-at(.8).y)>10);   // not at the authored .8 m, inside the prop
 });
 
 test('an embodied clue floats its marker above its prop; other markers keep their authored height',()=>{

@@ -29,7 +29,7 @@ test('dense loot stays bounded with deterministic nearest-item priority',()=>{
 
 test('charred loot outlines its ash painting instead of resurrecting a dissolved body or highlighting flames',()=>{
   const body={kind:'body',unitId:4,strength:.55},unit={id:4,hp:0},rig=new T.Group(),ash=new T.Mesh(),view={state:{units:[unit]},actors:new Map([[4,{worker:{root:rig}}]]),burnEffects:{sessions:new Map([[4,{effects:{ash,group:new T.Group()}}]])}};
-  assert.equal(searchHaloTarget(body,view).root,rig);unit.burningTurns=1;assert.equal(searchHaloTarget(body,view).root,null);unit.burnedRemains=true;
+  assert.equal(searchHaloTarget(body,view).root,rig);assert.equal(searchHaloTarget(body,view).width,1.75);unit.burningTurns=1;assert.equal(searchHaloTarget(body,view).root,null);unit.burnedRemains=true;
   assert.equal(searchHaloTarget(body,view).root,ash);view.burnEffects.sessions.clear();assert.equal(searchHaloTarget(body,view).root,undefined);
   ash.geometry.dispose();ash.material.dispose();
 });
@@ -48,7 +48,19 @@ test('silhouette proxies follow sprite/mesh contours, reuse their resources, and
   geometry.dispose();material.dispose();sprite.material.dispose();texture.dispose();
 });
 
-function renderer(){return {size:new T.Vector2(390,844),target:null,color:new T.Color(0x17241e),alpha:1,shadowMap:{autoUpdate:true},capabilities:{maxSamples:4},passes:[],getSize(out){return out.copy(this.size);},getPixelRatio:()=>1.75,getRenderTarget(){return this.target;},setRenderTarget(value){this.target=value;},getClearColor(out){return out.copy(this.color);},getClearAlpha(){return this.alpha;},setClearColor(value,alpha){this.color.set(value);this.alpha=alpha;},render(scene){scene.updateMatrixWorld(true);this.passes.push(this.target);if(this.fail&&this.passes.length===2)throw Error('GPU fixture failure');}};}
+function renderer(){return {size:new T.Vector2(390,844),target:null,color:new T.Color(0x17241e),alpha:1,autoClear:true,shadowMap:{autoUpdate:true},capabilities:{maxSamples:4},passes:[],getSize(out){return out.copy(this.size);},getPixelRatio:()=>1.75,getRenderTarget(){return this.target;},setRenderTarget(value){this.target=value;},getClearColor(out){return out.copy(this.color);},getClearAlpha(){return this.alpha;},setClearColor(value,alpha){this.color.set(value);this.alpha=alpha;},render(scene){scene.updateMatrixWorld(true);this.passes.push(this.target);if(this.fail&&this.passes.length===2)throw Error('GPU fixture failure');}};}
+
+test('body width uses its own mask pass while chest width, masks and renderer clearing stay intact',()=>{
+  const state=createSoloGame(),chestObject=state.interactables.find(object=>object.kind==='chest'),halo=new SearchHalo(),r=renderer(),scene=new T.Scene(),body=new T.Mesh(new T.BoxGeometry(),new T.MeshBasicMaterial()),chest=new T.Sprite(new T.SpriteMaterial()),visible=[];
+  scene.add(body,chest);const view={interactionArt:{records:new Map([[chestObject.id,{sprite:chest}]])}};
+  assert.equal(searchHaloTarget({...chestObject,strength:1},view).width,1);
+  const render=r.render.bind(r);r.render=pass=>{if(pass===halo.maskScene)visible.push([...halo.proxies].filter(([,record])=>record.clone.visible).map(([source])=>source));render(pass);};
+  halo.render(r,scene,new T.Camera(),[{root:body,width:1.75},{root:chest,width:1}],3000);
+  assert.deepEqual(visible,[[chest],[body]]);assert.equal(r.passes.length,6);assert.equal(r.autoClear,true);assert.equal(halo.proxies.size,2);
+  const materials=[...halo.proxies.values()].flatMap(record=>record.materials);halo.render(r,scene,new T.Camera(),[{root:body,width:2},{root:chest,width:1}],4000);
+  assert.deepEqual([...halo.proxies.values()].flatMap(record=>record.materials),materials,'width changes reuse the existing masks and materials');
+  halo.dispose();body.geometry.dispose();body.material.dispose();chest.material.dispose();
+});
 
 test('posed body masks share the current skeleton without changing or disposing the original rig',()=>{
   const halo=new SearchHalo(),geometry=new T.BoxGeometry(),material=new T.MeshBasicMaterial(),body=new T.SkinnedMesh(geometry,material),bone=new T.Bone();
@@ -63,6 +75,6 @@ test('animation time changes without rebuilding proxies/targets, reduced motion 
   halo.render(r,scene,new T.Camera(),[{root}],1000);const proxy=halo.proxies.get(root);assert.equal(halo.time.value,1);assert.equal(r.passes.length,4);assert.equal(halo.mask.width,293);assert.equal(halo.mask.height,633);
   halo.render(r,scene,new T.Camera(),[{root}],3000);assert.equal(halo.time.value,3);assert.equal(halo.proxies.get(root),proxy);
   reduced=true;halo.render(r,scene,new T.Camera(),[{root}],6000);assert.equal(halo.time.value,0);assert.equal(r.target,null);assert.equal(r.color.getHex(),0x17241e);assert.equal(r.shadowMap.autoUpdate,true);
-  r.passes=[];r.fail=true;assert.throws(()=>halo.render(r,scene,new T.Camera(),[{root}],8000),/GPU fixture failure/);assert.equal(r.target,null);assert.equal(r.color.getHex(),0x17241e);assert.equal(r.shadowMap.autoUpdate,true);
+  r.passes=[];r.fail=true;assert.throws(()=>halo.render(r,scene,new T.Camera(),[{root}],8000),/GPU fixture failure/);assert.equal(r.target,null);assert.equal(r.color.getHex(),0x17241e);assert.equal(r.shadowMap.autoUpdate,true);assert.equal(r.autoClear,true);
   r.fail=false;r.passes=[];halo.render(r,scene,new T.Camera(),[],9000);assert.equal(r.passes.length,1);halo.dispose();root.geometry.dispose();root.material.dispose();
 });

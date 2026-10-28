@@ -7,6 +7,7 @@ import * as T from '../dist/aft/tactics/vendor/three.module.js';
 import {PLACEMENTS,GROUND_MARKINGS,SOURCES,STRUCTURES,CAMERAS,bindingFor,acceptsBinding} from '../dist/mission-art/short-measure/manifest.js';
 import {createShortMeasureKit,createShortMeasureArt} from '../dist/mission-art/short-measure/kit.js';
 import {FIELD_CAMERA} from '../dist/grenade-controls.js';
+import {CRATE_DIMENSIONS} from '../dist/world-dimensions.js';
 const root=path.resolve('sites/tactical-animal/dist');
 const blockout=JSON.parse(fs.readFileSync(path.join(root,'mission-art/short-measure/blockout.json'),'utf8'));
 
@@ -100,8 +101,9 @@ test('new solids preserve authored routes, door approaches and objective use poi
  }
  assert.equal(PLACEMENTS.find(p=>p.id==='worker-empty-sacks').height,.055);
  assert.ok(STRUCTURES.every(p=>p.wallHeight===2));
- const cover=blockout.cover.find(([x,z])=>x===27&&z===19),[x,z,w,d]=cover;
- assert.deepEqual(PLACEMENTS.find(p=>p.id==='sealed-load').footprint,[x-.5,z-.5,x+w-.5,z+d-.5]);
+ // The cover replacement is sized to the runtime crate collider over the same cells.
+ const cover=blockout.cover.find(([x,z])=>x===27&&z===19),[x,z,w,d]=cover,{half,height}=CRATE_DIMENSIONS,load=PLACEMENTS.find(p=>p.id==='sealed-load');
+ assert.deepEqual(load.footprint,[x-half,z-half,x+w-1+half,z+d-1+half]);assert.equal(load.height,height);
 });
 
 test('objective collection hides only the paper and tab, and disposal owns resources once',()=>{

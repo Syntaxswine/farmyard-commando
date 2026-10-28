@@ -1,6 +1,6 @@
 {
-  "version": "short-measure/1",
-  "stage": "Authoring proposal; runtime adapter not installed",
+  "version": "short-measure/2",
+  "stage": "Runtime adapter installed: mission-scenery.js registers these solids and mission-art-view.js draws them",
   "units": "metres",
   "axes": "x east, z south, y up; size is [width,height,depth]; footprint is [west,north,east,south]",
   "orientation": "Yaw radians about +Y; 0 faces south (+Z)",
@@ -119,7 +119,7 @@
       "note": "Bent ivory beam, red welded stop and empty pan. Supersedes the blockout decorative marker only after binding.",
       "occlusion": {
         "mode": "solid-mesh-parts",
-        "shapeKey": "short-measure/1/scale-worker/1.7x1.72x1.1"
+        "shapeKey": "short-measure/2/scale-worker/1.7x1.72x1.1"
       }
     },
     {
@@ -159,7 +159,7 @@
       "note": "Intact level beam, green counterweight, full pan. Same chassis and stamp as worker-scale.",
       "occlusion": {
         "mode": "solid-mesh-parts",
-        "shapeKey": "short-measure/1/scale-freight/1.7x1.72x1.1"
+        "shapeKey": "short-measure/2/scale-freight/1.7x1.72x1.1"
       }
     },
     {
@@ -200,7 +200,7 @@
       "note": "Arrival contrast beside empty sacks; leaves the y=25 direct route and south shed door clear.",
       "occlusion": {
         "mode": "solid-mesh-parts",
-        "shapeKey": "short-measure/1/sacks-full/1.5x0.95x1.25"
+        "shapeKey": "short-measure/2/sacks-full/1.5x0.95x1.25"
       }
     },
     {
@@ -216,17 +216,17 @@
       ],
       "yaw": 0,
       "size": [
-        2,
-        1,
-        2
+        1.96,
+        0.92,
+        1.96
       ],
       "footprint": [
-        26.5,
-        18.5,
-        28.5,
-        20.5
+        26.52,
+        18.52,
+        28.48,
+        20.48
       ],
-      "height": 1,
+      "height": 0.92,
       "status": "existing-cover-replacement",
       "owner": "cover:27,19,2,2",
       "sources": [
@@ -236,11 +236,11 @@
         "materials",
         "reserve7"
       ],
-      "hook": "Replace only this cover visual after validating footprint AND 1 m height. Keep inspect anchor (28,20). Never draw both cargo visuals.",
-      "note": "The offset centers the art on the blockout cover cells, rather than on its southeast inspection point.",
+      "hook": "Replace only this cover visual after validating footprint AND height against the four runtime crate cells. Keep inspect anchor (28,20). Never draw both cargo visuals.",
+      "note": "The offset centers the art on the blockout cover cells, rather than on its southeast inspection point. Sized to the runtime crate collider (0.96 m cells, 0.92 m high); the first proposal was 2 cm wider a side and 8 cm taller, so its binding could never agree.",
       "occlusion": {
         "mode": "solid-mesh-parts",
-        "shapeKey": "short-measure/1/sacks-full/2x1x2"
+        "shapeKey": "short-measure/2/sacks-full/1.96x0.92x1.96"
       }
     },
     {
@@ -318,7 +318,7 @@
       "note": "Objective ground point remains 0.4 m south of the desk, outside its collision footprint. Paper center is (32,6.18) at 1.00 m.",
       "occlusion": {
         "mode": "solid-mesh-parts",
-        "shapeKey": "short-measure/1/dispatch-desk/2x1.05x1"
+        "shapeKey": "short-measure/2/dispatch-desk/2x1.05x1"
       }
     }
   ],

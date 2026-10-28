@@ -24,7 +24,7 @@ export function selectInteractionTarget(candidates,currentId=null){
   return candidates.find(object=>object.id===currentId)||[...candidates].sort((a,b)=>a.distance-b.distance||a.id.localeCompare(b.id))[0]||null;
 }
 
-export function createInteractionSystem({hero,canControl,combatCosts,distance,geometry,pointBoxDistance,refresh,stop,log,clearGeometry,weapons,radius}){
+export function createInteractionSystem({hero,canControl,combatCosts,distance,geometry,blocksWalking=()=>true,pointBoxDistance,refresh,stop,log,clearGeometry,weapons,radius}){
   const epsilon=1e-7;
   function registerBody(state,unit){
     if(unit.team!=='guard'||unit.hp>0||state.interactables.some(object=>object.id==='body:'+unit.id))return;
@@ -50,7 +50,8 @@ export function createInteractionSystem({hero,canControl,combatCosts,distance,ge
     if(object.kind==='extract'&&!objectiveSecured(state))return false;
     // Use the movement system's rounded clearance, including around corners.
     // The target's own footprint is the only solid object we may reach into.
-    const blockers=geometry(state).filter(box=>box.interactionId!==object.id),steps=Math.max(1,Math.ceil(distance(unit,object)/.1));
+    // Reach sweeps a body across the ground, so it asks what walking asks.
+    const blockers=geometry(state).filter(box=>box.interactionId!==object.id&&blocksWalking(box)),steps=Math.max(1,Math.ceil(distance(unit,object)/.1));
     for(let i=0;i<=steps;i++){
       const point={x:unit.x+(object.x-unit.x)*i/steps,y:unit.y+(object.y-unit.y)*i/steps};
       if(blockers.some(box=>pointBoxDistance(point,box)<radius-epsilon))return false;

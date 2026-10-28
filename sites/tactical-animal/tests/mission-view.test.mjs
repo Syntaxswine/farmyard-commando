@@ -36,7 +36,8 @@ test('inspectable blockout markers and horizontal doors respect map knowledge an
   view.records=new Map([['worker-scale',{marker}],['packing-south',{leaf}]]);
   view.update(state);assert.equal(marker.visible,false);assert.equal(leaf.visible,false);assert.equal(view.picks.length,0);
   state.visible.add('8,20');state.seen.add('8,20');state.seen.add('19,17');view.update(state);
-  assert.equal(marker.visible,true);assert.deepEqual(marker.position.toArray(),[8,.8,20]);assert.equal(leaf.visible,true);
+  // The ration scale now stands around this clue, so its marker floats above the prop.
+  assert.equal(marker.visible,true);assert.deepEqual(marker.position.toArray(),[8,2,20]);assert.equal(leaf.visible,true);
   assert.ok(Math.abs(leaf.scale.x-1.12)<1e-6);assert.equal(leaf.scale.y,2);assert.ok(Math.abs(leaf.scale.z-.16)<1e-6);
   const before=marker.material.color.getHex();state.solo.inspected.push('worker-scale');view.update(state);assert.notEqual(marker.material.color.getHex(),before);
   assert.equal(view.picks.length,2);marker.geometry.dispose();marker.material.dispose();leaf.geometry.dispose();leaf.material.dispose();

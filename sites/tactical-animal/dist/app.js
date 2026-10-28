@@ -66,7 +66,7 @@ $('operation-select').onchange=()=>{
   try{selectedMissionId=getMission($('operation-select').value).id;build=normalizeBuild(preparationBuilds[selectedMissionId]);renderPrep();}catch(error){toast(error.message);}
 };
 $('interaction-icon').append(weaponArtwork('hands',25));
-function showDialog(html,actions=[],{context=false,mode=''}={}){
+function showDialog(html,actions=[],{context=false,mode='',focusControl}={}){
   if(picker.open)closePicker();
   guardAlert.stop();
   cancelAreaAim();
@@ -80,8 +80,8 @@ function showDialog(html,actions=[],{context=false,mode=''}={}){
     if(id)b.id=id;
     b.onclick=()=>{closeDialog();fn();};row.append(b);
   }
-  if(context){contextKey='';renderContext();}
   if(!overlay.open)overlay.showModal();
+  if(context){contextKey='';renderContext(focusControl);}
 }
 function closeDialog(){overlay.close();paused=false;lastTime=performance.now();}
 function clearTargeting(){selected=null;view?.route([]);contextKey='';}
@@ -168,19 +168,33 @@ bindPressHold($('interaction-hand'),{
   tap:()=>{if(handTarget)useInteraction(handTarget.id,handTarget.actions[0].id);},hold:interactionChoices,
 });
 function act(fn){if(!state||paused)return;resetStick();keys.clear();fn();contextKey='';renderBattle();storage.write();}
+function triggerReloadStatus(u){
+  const w=Core.WEAPONS[u.weapon],empty=!!w.mag&&!w.thrown&&!(u.ammo[u.weapon]>0),cost=Core.combatCosts(state)?3:0,reserve=u.ammoPouch?.[u.weapon]||0,can=Core.canControl(state,u);
+  const apShort=can&&reserve>0&&u.ap+1e-7<cost;
+  const reason=!can?'Wait for your turn':!reserve?'No spare ammunition':apShort?'Not enough AP':'';
+  return {empty,cost,reserve,apShort,ok:empty&&!reason,reason};
+}
+function reloadFromTrigger({targeting=false}={}){
+  if(!state||paused&&!targeting)return false;
+  if(!Core.reload(state,hero(state))){contextKey='';renderBattle();return false;}
+  cancelAreaAim();resetStick();keys.clear();contextKey='';
+  if(targeting)shootingMenu('fire');
+  renderBattle();storage.write();return true;
+}
 function pick(p){if(!state||paused||aiming()||state.phase==='enemy'||state.solo.status!=='active')return;resetStick();if(p.interactionId){focusInteraction(p.interactionId);return;}if(p.unitId!==undefined){if(p.unitId===0){operationMenu();return;}const target=state.units.find(u=>u.id===p.unitId);if(target?.hp<=0){focusInteraction('body:'+target.id);return;}if(!state.detected.has(target?.id))return;if(hero(state).weapon==='flamethrower'){armFlame(Core.headingTo(hero(state),target));return;}Core.stop(state);Core.turnTo(state,hero(state),Core.headingTo(hero(state),target));selected={targetId:target.id};burst=false;aim=availableAim(Core.WEAPONS[hero(state).weapon],hero(state).ap);zone='torso';}
   else{const path=Core.navigationPath(state,hero(state),p.x,p.y);if(!path){toast('No clear route to that point.');return;}view.route([hero(state),...path]);if(state.phase==='player')selected={point:p,path};else{Core.move(state,hero(state),p.x,p.y);selected=null;view.center();}}
   contextKey='';renderBattle();if(selected)selected.targetId!==undefined?shootingMenu():operationMenu();
 }
-function shootingMenu(){
+function shootingMenu(focusControl='zone-'+zone){
   const u=hero(state),w=Core.WEAPONS[u.weapon];
-  showDialog(`<p class="eyebrow">TARGET CONTROL / PAUSED</p><h2>${safe(w.short)}</h2><p class="shooting-resources">${u.ap.toFixed(1)} AP${w.mag?` · ${u.ammo[u.weapon]??0} ROUNDS`:''}</p>`,[],{context:true,mode:'shooting'});
+  showDialog(`<p class="eyebrow">TARGET CONTROL / PAUSED</p><h2>${safe(w.short)}</h2><p class="shooting-resources">${u.ap.toFixed(1)} AP${w.mag?` · ${u.ammo[u.weapon]??0} ROUNDS`:''}</p>`,[],{context:true,mode:'shooting',focusControl});
 }
 function renderContext(focusControl){if(!state)return;const u=hero(state),near=interaction(state),target=selected?.targetId!==undefined?state.units.find(v=>v.id===selected.targetId):null;
   if(target&&(!Core.alive(target)||!state.detected.has(target.id)))selected=null;
   if(target&&selected)aim=availableAim(Core.WEAPONS[u.weapon],u.ap,burst,aim);
   const p=target&&selected&&u.weapon!=='flamethrower'?Core.previewAttack(state,u,target,burst,zone,null,aim):null;
-  const sig=JSON.stringify([selected,near,aim,zone,burst,p,u.ap.toFixed(2),u.weapon,u.ammo[u.weapon],state.phase,[...state.detected],Math.round(u.x*10),Math.round(u.y*10),target?.hp,target?.species,target?.stance,target?.weapon]);if(sig===contextKey)return;contextKey=sig;const root=$('context');root.replaceChildren();root.classList.toggle('shooting-panel',!!p);
+  const reload=triggerReloadStatus(u);
+  const sig=JSON.stringify([selected,near,aim,zone,burst,p,reload,u.ap.toFixed(2),u.weapon,u.ammo[u.weapon],state.phase,[...state.detected],Math.round(u.x*10),Math.round(u.y*10),target?.hp,target?.species,target?.stance,target?.weapon]);if(sig===contextKey)return;contextKey=sig;const root=$('context');root.replaceChildren();root.classList.toggle('shooting-panel',!!p);
   if(state.phase==='enemy')return;
   function content(title,detail,label,fn,disabled=false){const copy=document.createElement('div');copy.className='context-copy';const h=document.createElement('strong');h.textContent=title;const small=document.createElement('small');small.textContent=detail;copy.append(h,small);root.append(copy);const b=document.createElement('button');b.textContent=label;b.disabled=disabled;b.onclick=()=>{closeDialog();act(fn);};root.append(b);return copy;}
   if(u.weapon==='flamethrower'&&!selected?.point){const flame=Core.previewFlame(state,u,u.heading);content('Flamethrower cone',`${flame.range} m · ${flame.spread}° spread · ${flame.cost} AP${flame.reason?' · '+flame.reason:''}`,'Aim cone',()=>armFlame(),!flame.ok);}
@@ -215,16 +229,20 @@ function renderContext(focusControl){if(!state)return;const u=hero(state),near=i
       control:'aim-'+option.id,label:`${option.label}. ${option.cost} AP. +${option.accuracy} accuracy.`,
       paint:{hip:'QUICK SHOT',aimed:'AIMED',full:'FULL AIM'}[option.id],icon:'aim-'+option.id,mark:`${option.cost} AP`,pressed:aim===option.id,disabled:!option.available,apShort:!option.available,amber:true,onClick:()=>aim=option.id
     });
-    const ready=p.ok&&Core.canControl(state,u)&&chosen.available;
-    const fire=hardware(root,{control:'fire',label:`${burst?'Fire burst':'Fire'}. ${p.chance}% hit chance. ${p.cost} AP.`,paint:'FIRE',icon:'fire',mark:`${p.cost} AP`,bar:true,red:true,lit:false,disabled:!ready,apShort:!chosen.available,rerender:false,onClick:()=>{closeDialog();act(()=>Core.attack(state,u,target,burst,false,zone,false,aim));}});
-    fire.dataset.ready=String(ready);
+    const ready=reload.empty?reload.ok:p.ok&&Core.canControl(state,u)&&chosen.available;
+    const fire=hardware(root,{control:'fire',label:reload.empty?`Reload ${w.short}. ${reload.cost} AP. ${reload.reserve} spare rounds.`:`${burst?'Fire burst':'Fire'}. ${p.chance}% hit chance. ${p.cost} AP.`,paint:reload.empty?'RELOAD':'FIRE',icon:reload.empty?'reload':'fire',mark:`${reload.empty?reload.cost:p.cost} AP`,bar:true,red:true,lit:false,disabled:!ready,apShort:reload.empty?reload.apShort:!chosen.available,rerender:false,onClick:()=>{
+      if(reload.empty){reloadFromTrigger({targeting:true});return;}
+      closeDialog();act(()=>Core.attack(state,u,target,burst,false,zone,false,aim));
+      if(triggerReloadStatus(u).empty&&selected?.targetId===target.id&&Core.alive(target)&&state.detected.has(target.id)&&Core.canControl(state,u))shootingMenu('fire');
+    }});
+    fire.dataset.ready=String(ready);fire.dataset.action=reload.empty?'reload':'fire';
     const fireRow=bank('FIRE MODE / EXIT','trigger-bank');fireRow.dataset.burst=String(!!w.burstRounds);
     for(const firingBurst of w.burstRounds?[false,true]:[false]){
       const mode=firingBurst?'Burst':'Single',modeAim=availableAim(w,u.ap,firingBurst,aim),choice=aimOptions(w,u.ap,firingBurst).find(option=>option.id===modeAim);
       hardware(fireRow,{control:firingBurst?'burst':'single',label:`${mode} fire. ${firingBurst?w.burstRounds:1} round${firingBurst?'s':''}.`,paint:mode.toUpperCase(),icon:firingBurst?'fire-burst':'fire-single',mark:`${choice.cost} AP`,pressed:burst===firingBurst,apShort:!choice.available,onClick:()=>burst=firingBurst});
     }
     hardware(fireRow,{control:'exit',label:'Exit targeting without firing.',paint:'EXIT',icon:'exit',mark:'',rerender:false,onClick:exitTargeting});
-    const warning=p.reason||(!chosen.available?'Not enough AP':'');
+    const warning=reload.empty?reload.reason:p.reason||(!chosen.available?'Not enough AP':'');
     if(warning||w.blast){const note=document.createElement('p');note.className='shooting-warning';note.setAttribute('role','status');note.textContent=[warning,w.blast?'BLAST CAN HURT YOU':''].filter(Boolean).join(' · ');root.append(note);}
     restoreFocus?.focus?.({preventScroll:true});
   }else if(selected?.point){const path=Core.navigationPath(state,u,selected.point.x,selected.point.y),cost=path?.reduce((n,p)=>n+p.cost,0)||0,d=cost/Core.movementRate(u);content('Move to this point',`${d.toFixed(1)} m · ${cost.toFixed(1)} AP${cost>u.ap?' · stops when AP runs out':''}`,'Move',()=>{Core.move(state,u,selected.point.x,selected.point.y);selected=null;view.center();},!path||u.ap<.01);
@@ -318,6 +336,7 @@ function cancelAreaAim(){cancelGrenade();cancelFlame();clearAreaReadiness();}
 function armFlame(heading){
   if(!state||paused||flameAim.active)return;
   const u=hero(state),direction=Number.isFinite(heading)?heading:u.heading;
+  if(u.weapon==='flamethrower'&&triggerReloadStatus(u).empty&&Core.canControl(state,u)){cancelGrenade();state.solo.areaWeapon='flamethrower';lastHeldWeapon=u.weapon;renderBattle();return;}
   if(!Core.previewFlame(state,u,direction).ok)return;
   cancelGrenade();resetStick();keys.clear();Core.stop(state);selected=null;state.solo.areaWeapon='flamethrower';lastHeldWeapon=u.weapon;flameAim.start(direction);view.beginFlameAim();$('toast').hidden=true;renderBattle();
 }
@@ -341,16 +360,18 @@ function renderAreaButton(){
   const u=hero(state),kind=areaWeapon(),flame=kind==='flamethrower',armed=flame?flameAim.active:grenadeAim.active;
   const count=u.ammo[kind]||0,cost=flame?6:Core.grenadeCost(u),can=Core.canControl(state,u),adjusting=stickPointer!==null||keys.size>0||areaPress;
   const p=flame?Core.previewFlame(state,u,armed?flameAim.heading:u.heading):armed&&grenadeAim.point?Core.previewGrenade(state,u,grenadeAim.point):null;
-  const ready=!!(armed&&p?.ok&&!adjusting&&!paused&&!document.hidden&&can&&$('loading').hidden),b=$('grenade');
+  const reload=flame?triggerReloadStatus(u):null,reloading=!!reload?.empty;
+  const ready=!!((reloading?reload.ok:armed&&p?.ok)&&!adjusting&&!paused&&!document.hidden&&can&&$('loading').hidden),b=$('grenade');
   // An unavailable shot must not prevent holding this shared control to switch.
   b.disabled=!can||!$('loading').hidden;b.dataset.ready=String(ready);b.dataset.lit=String(ready);b.setAttribute('aria-pressed',String(armed));
-  if(b.dataset.kind!==kind){b.dataset.kind=kind;$('area-icon').innerHTML=areaIcons[kind];}
-  const action=armed?(flame?'Fire':'Throw'):'Aim';
-  $('grenade-count').textContent=count;$('grenade-cost').textContent=`${cost} AP`;$('grenade-label').textContent=armed?action.toUpperCase():flame?'CONE':'GRENADE';
-  b.setAttribute('aria-label',`${action} ${flame?'flamethrower cone':'grenade'}. ${count} ${flame?'fuel':'grenades'} remaining. ${cost} AP. Hold to switch weapon.`);
-  const reason=p?.reason||(!count?`No ${flame?'fuel':'grenades'} remaining`:u.ap+1e-7<cost?'Not enough AP':armed&&!p?'Choose a landing point with the joystick':armed&&adjusting?'Release the aim controls, then confirm':'');
+  const icon=reloading?'reload':kind;b.dataset.kind=kind;b.dataset.action=reloading?'reload':armed?'fire':'aim';
+  if(b.dataset.icon!==icon){b.dataset.icon=icon;$('area-icon').innerHTML=reloading?`<svg class="switch-glyph" viewBox="0 0 32 32"><use href="${switchSymbol('reload')}"/></svg>`:areaIcons[kind];}
+  const action=reloading?'Reload':armed?(flame?'Fire':'Throw'):'Aim';
+  $('grenade-count').textContent=count;$('grenade-cost').textContent=`${reloading?reload.cost:cost} AP`;$('grenade-label').textContent=reloading?'RELOAD':armed?action.toUpperCase():flame?'CONE':'GRENADE';
+  b.setAttribute('aria-label',reloading?`Reload flamethrower. ${reload.cost} AP. ${reload.reserve} spare fuel charges. Hold to switch weapon.`:`${action} ${flame?'flamethrower cone':'grenade'}. ${count} ${flame?'fuel':'grenades'} remaining. ${cost} AP. Hold to switch weapon.`);
+  const reason=reloading?reload.reason:p?.reason||(!count?`No ${flame?'fuel':'grenades'} remaining`:u.ap+1e-7<cost?'Not enough AP':armed&&!p?'Choose a landing point with the joystick':armed&&adjusting?'Release the aim controls, then confirm':'');
   b.title=(ready?`Ready to ${action.toLowerCase()}`:reason||`Aim ${areaNames[kind].toLowerCase()}`)+' · hold to switch grenade / flamethrower';
-  b.setAttribute('aria-description',(ready?'Ready to fire. Yellow light pulses. ':reason?reason+'. ':'')+'Hold for weapon choices, or press Arrow Down.');
+  b.setAttribute('aria-description',(ready?`Ready to ${reloading?'reload':'fire'}. Yellow light pulses. `:reason?reason+'. ':'')+'Hold for weapon choices, or press Arrow Down.');
 }
 function areaChoice(kind){
   const u=hero(state),carried=u.weapon===kind||u.pack.some(item=>item.kind===kind)||(u.ammo[kind]||0)>0,cost=kind==='flamethrower'&&u.weapon!==kind?weaponSwapCost(u,kind):0;
@@ -378,7 +399,11 @@ function openAreaPicker(){
 bindPressHold($('grenade'),{
   canUse:()=>!!state&&!paused&&$('loading').hidden&&Core.canControl(state,hero(state)),
   press:()=>{areaPress=true;clearAreaReadiness();},
-  tap:()=>{if(areaWeapon()==='flamethrower'){if(flameAim.active)commitFlame();else armFlame();}else if(grenadeAim.active)commitGrenade();else armGrenade();},
+  tap:()=>{if(areaWeapon()==='flamethrower'){
+    const reload=triggerReloadStatus(hero(state));
+    if(reload.empty){if(reload.apShort)flashAPShortage($('grenade'));else if(!reload.ok)toast(reload.reason);else reloadFromTrigger();}
+    else if(flameAim.active)commitFlame();else armFlame();
+  }else if(grenadeAim.active)commitGrenade();else armGrenade();},
   hold:openAreaPicker,
 });
 for(const type of ['pointerup','pointercancel','lostpointercapture'])$('grenade').addEventListener(type,()=>{areaPress=false;renderAreaButton();});
@@ -481,6 +506,7 @@ function help(){showDialog(`<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br
   <li>A grenade costs 5 AP, or 2.5 AP while a pistol or SMG is equipped. Throwing keeps that weapon in hand. Blast radius: 5 m. Your animal can be hurt by its own grenade. Blocked flight paths, solid obstacles, and unexplored landing points prevent throwing.</li>
   <li>With a flamethrower equipped, tap CONE or press F. The joystick rotates its full 10 m, 48° area of effect. Release to hold aim, then tap FIRE or press Enter. The cone stops at walls and fog. Firing costs 6 AP and one fuel charge, including when no opponent is inside. Cancel or Escape leaves resources unchanged. Tapping a visible guard starts the cone pointed toward them.</li>
   <li>Tap a visible guard to open the weapon controls. The green CRT shows that guard, the selected body location and its hit chance. Body locations are on the left and aim levels on the right. The highest affordable aim is selected initially; choose a lower level to save AP. Burst changes the cost. An unaffordable switch flashes red three times when pressed. The wide Fire bar is the only action that shoots. Exit or Escape closes targeting without spending AP or ammunition.</li>
+  <li>When a gun is empty, FIRE becomes RELOAD. Reloading uses carried spare ammunition and costs 3 AP in combat, or 0 AP outside combat. It does not also shoot. An empty flamethrower shows the same Reload shortcut on its area button.</li>
   <li>Drag the world to look around when not aiming. Use the arrows to zoom.</li>
   <li>Tap the stance button to go standing → kneeling → prone → kneeling → standing. Tap movement for run ↔ off / walk ↔ sneak. Both switches cost 0 AP, even when you have no AP left.</li>
   <li>Hold either button for large direct choices. Keyboard: focus the button and press the down arrow to open choices.</li>

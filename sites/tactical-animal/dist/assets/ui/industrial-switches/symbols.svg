@@ -66,6 +66,10 @@
   <symbol id="fire" viewBox="0 0 32 32">
     <path d="m15 1 4 10 10-4-6 10 8 6-12-1-3 10-4-10-11 2 7-8-7-7 11 3Z"/>
   </symbol>
+  <symbol id="reload" viewBox="0 0 32 32">
+    <path d="M27 3v10H17l4-4a10 10 0 1 0 4 11h5A15 15 0 1 1 24 5Z"/>
+    <path d="M13 14h6v10h-6Zm-1 11h8v3h-8Z"/>
+  </symbol>
   <symbol id="exit" viewBox="0 0 32 32">
     <path d="M3 2h16v8h-4V6H7v20h8v-4h4v8H3Z"/>
     <path d="m23 8 8 8-8 8v-6H11v-4h12Z"/>

@@ -51,7 +51,7 @@ test('both weapon lights track a valid released aim, loading, menus, cancellatio
 test('invalid or unaffordable shots stay unlit, keep resources, and still permit the hold menu',()=>{
   const a=flamer();a.key('g');a.drag(-60,0);a.el('joystick').fire('pointerup');const before=snapshot(a);
   assert.equal(a.el('grenade').dataset.ready,'false');assert.equal(a.el('grenade').disabled,false);a.el('grenade').click();assert.deepEqual(snapshot(a),before);
-  openChoices(a);choose(a,'Flamethrower');a.u.ammo.flamethrower=0;a.u.ap=0;a.advance(3);
+  openChoices(a);choose(a,'Flamethrower');a.u.ammo.flamethrower=0;a.u.ap=0;a.s.engaged=true;a.s.phase='player';a.advance(3);
   const empty=snapshot(a);assert.equal(a.el('grenade').disabled,false);assert.equal(a.el('grenade').dataset.ready,'false');a.el('grenade').click();assert.deepEqual(snapshot(a),empty);
   openChoices(a);assert.equal(a.el('control-picker').open,true);choose(a,'Grenade');assert.equal(a.s.solo.areaWeapon,'grenade');assert.deepEqual(snapshot(a),empty);
 });

@@ -88,10 +88,9 @@ test('Fire spends exactly the selected shot cost and rounds and saves the comple
   }
 });
 
-test('unaffordable shots, empty magazines and blocked shots leave the trigger unavailable and spend nothing',()=>{
-  for(const problem of ['AP','ammo','range']){
+test('unaffordable shots and blocked shots leave the trigger unavailable and spend nothing',()=>{
+  for(const problem of ['AP','range']){
     const a=app(),guard=target(a,problem==='AP'?3:14);
-    if(problem==='ammo')a.u.ammo.assault=0;
     if(problem==='range')guard.x=a.u.x+30;
     // A free zone selection refreshes the authoritative preview.
     control(a,'zone-torso').click();

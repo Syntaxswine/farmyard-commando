@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createSoloGame,DEFAULT_BUILD,Core,hero,distance,canSee,tick,encodeSave,decodeSave,QUARRY_REACH} from '../dist/solo-game.js';
+import {createSoloGame,DEFAULT_BUILD,Core,hero,distance,canSee,tick,encodeSave,decodeSave,navigationPath,QUARRY_REACH} from '../dist/solo-game.js';
 
 // One alert guard closing on an animal that stays put (cases come from the seeded
 // approach censuses in docs/guard-approach.md); every other guard is down.
@@ -100,6 +100,18 @@ test('an animal shut behind closed doors costs one bounded search, not the whole
   Core.endTurn(s);reads=0;for(let frame=0;s.phase==='enemy'&&frame<2000;frame++)tick(s,.05);
   assert.equal(distance(g,{x:113.354,y:101.868}),0,'no route exists, so the guard stays put');
   assert.ok(reads<3000,`the guard's turn read the unit list ${reads} times`);
+});
+
+test('a door opening between searches reopens the route at once',()=>{
+  // Searches share one scenery table per geometry. Opening the warehouse door
+  // rebuilds the geometry, so the very next search must route through the doorway
+  // (no straight walk exists either way: the line runs into the wall beside it).
+  const s=createSoloGame(DEFAULT_BUILD,1947,'night-ledger'),u=hero(s),cost=path=>path.reduce((total,p)=>total+p.cost,0);
+  Object.assign(u,{x:6,y:15});const around=navigationPath(s,u,9,18);
+  assert.ok(cost(around)>30,`with the door shut the route goes round (${cost(around)} AP)`);
+  Object.assign(u,{x:7,y:18});assert.ok(Core.performInteraction(s,'warehouse-door','open').ok);
+  Object.assign(u,{x:6,y:15});const through=navigationPath(s,u,9,18);
+  assert.ok(through.length>1&&cost(through)<12,`with the door open the route costs ${cost(through)} AP`);
 });
 
 test('a save taken mid-approach resumes on exactly the same route',()=>{

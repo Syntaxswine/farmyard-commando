@@ -129,14 +129,47 @@ export function lineClear(s,a,b){
   if(a.stance!=='prone'||b.stance!=='prone')return !geometryNear(s,a,b,0,'wall').some(box=>intersectsBox(a,b,box));
   return !geometryNear(s,a,b,0,'air').some(box=>intersectsBox(a,b,box)&&(box.kind==='wall'||!!airSpan(a,b,PRONE_EYE,PRONE_EYE,box)));
 }
-export function walkSegment(s,a,b,ignoreId=null){
+export function walkSegment(s,a,b,ignoreId=null){return sceneryWalk(s,a,b)&&unitsWalk(s,a,b,ignoreId);}
+// The scenery half of a walk: every 10 cm sample inside the world and clear of walk-blocking boxes.
+function sceneryWalk(s,a,b){
   if(!insideWorld(s,b,RADIUS))return false;
-  const blockers=geometryNear(s,a,b,RADIUS,'walk'),units=s.units.filter(u=>alive(u)&&u.id!==ignoreId),steps=Math.max(1,Math.ceil(distance(a,b)/.1));
+  const blockers=geometryNear(s,a,b,RADIUS,'walk'),steps=Math.max(1,Math.ceil(distance(a,b)/.1));
   for(let i=1;i<=steps;i++){
     const p={x:a.x+(b.x-a.x)*i/steps,y:a.y+(b.y-a.y)*i/steps};
-    if(!insideWorld(s,p,RADIUS)||blockers.some(box=>pointBoxDistance(p,box)<RADIUS-EPS)||units.some(u=>distance(u,p)<2*RADIUS-EPS))return false;
+    if(!insideWorld(s,p,RADIUS)||blockers.some(box=>pointBoxDistance(p,box)<RADIUS-EPS))return false;
   }
   return true;
+}
+// The unit half: every sample clear of living units other than ignoreId. A unit
+// outside the walk's box grown by two radii cannot reach any sample, so it is skipped.
+function unitsWalk(s,a,b,ignoreId){
+  const pad=2*RADIUS,x0=Math.min(a.x,b.x)-pad,x1=Math.max(a.x,b.x)+pad,y0=Math.min(a.y,b.y)-pad,y1=Math.max(a.y,b.y)+pad;
+  const units=s.units.filter(u=>alive(u)&&u.id!==ignoreId&&u.x>=x0&&u.x<=x1&&u.y>=y0&&u.y<=y1);if(!units.length)return true;
+  const steps=Math.max(1,Math.ceil(distance(a,b)/.1));
+  for(let i=1;i<=steps;i++){const p={x:a.x+(b.x-a.x)*i/steps,y:a.y+(b.y-a.y)*i/steps};if(units.some(u=>distance(u,p)<2*RADIUS-EPS))return false;}
+  return true;
+}
+// Scenery alone decides whether a grid node is clear and whether a straight walk to
+// a neighbouring node is, so searches share those answers through one table per
+// geometry (a door changing rebuilds the geometry and so starts a fresh table).
+// Units are checked afresh every time. 0 unknown, 1 clear, 2 blocked.
+const sceneryGrids=new WeakMap();
+function sceneryGrid(s){
+  const boxes=geometry(s);let grid=sceneryGrids.get(boxes);
+  if(!grid){const {width,height}=gridDimensions(s);grid={width,height,nodes:new Uint8Array(width*height),walks:new Uint8Array(width*height*9)};sceneryGrids.set(boxes,grid);}
+  return grid;
+}
+// freePoint for an integer grid node, its scenery half read from the table.
+function nodeClear(s,grid,q,ignoreId){
+  const inside=q.x>=0&&q.y>=0&&q.x<grid.width&&q.y<grid.height,i=q.y*grid.width+q.x;
+  let open=inside?grid.nodes[i]:0;if(!open){open=freePoint(s,q,null,{units:false})?1:2;if(inside)grid.nodes[i]=open;}
+  return open===1&&!s.units.some(u=>alive(u)&&u.id!==ignoreId&&distance(u,q)<2*RADIUS-EPS);
+}
+// walkSegment from grid node p to a neighbouring node q, its scenery half read from the table.
+function linkClear(s,grid,p,q,ignoreId){
+  const inside=p.x>=0&&p.y>=0&&p.x<grid.width&&p.y<grid.height,i=(p.y*grid.width+p.x)*9+(q.y-p.y+1)*3+(q.x-p.x+1);
+  let open=inside?grid.walks[i]:0;if(!open){open=sceneryWalk(s,p,q)?1:2;if(inside)grid.walks[i]=open;}
+  return open===1&&unitsWalk(s,p,q,ignoreId);
 }
 export function canSee(s,a,b){const d=distance(a,b),range=identifyRange(a,b,a.team==='squad'?35:26)*(b.sneaking?.7:1);return alive(a)&&d<=Math.max(1.5,range)&&lineClear(s,a,b);}
 export function visibleOpponents(s){
@@ -193,7 +226,7 @@ function gridNodesAround(s,u,p){
 // the search as unreachable.
 const SEALED_CHECK=256;
 function gridSearch(s,u,start,isGoal,estimate,sealed=null){
-  const open=new PathFrontier(),startKey=key(start.x,start.y);
+  const open=new PathFrontier(),startKey=key(start.x,start.y),grid=sceneryGrid(s);
   const cost=new Map([[startKey,0]]),parents=new Map(),points=new Map([[startKey,start]]),links=new Map(),passable=new Map();
   open.push({...start,g:0,f:estimate(start)});let found=null,expanded=0;
   while(open.items.length&&expanded<NAVIGATION_NODE_LIMIT){
@@ -204,9 +237,9 @@ function gridSearch(s,u,start,isGoal,estimate,sealed=null){
       if(!dx&&!dy)continue;
       const q={x:p.x+dx,y:p.y+dy},qk=key(q.x,q.y),g=p.g+Math.hypot(dx,dy);
       if(g>=(cost.get(qk)??Infinity))continue;
-      if(!passable.has(qk))passable.set(qk,freePoint(s,q,u.id));if(!passable.get(qk))continue;
+      if(!passable.has(qk))passable.set(qk,nodeClear(s,grid,q,u.id));if(!passable.get(qk))continue;
       // Direction matters because swept sampling includes its destination.
-      const link=pk+'>'+qk;if(!links.has(link))links.set(link,walkSegment(s,p,q,u.id));if(!links.get(link))continue;
+      const link=pk+'>'+qk;if(!links.has(link))links.set(link,linkClear(s,grid,p,q,u.id));if(!links.get(link))continue;
       cost.set(qk,g);parents.set(qk,pk);points.set(qk,q);open.push({...q,g,f:g+estimate(q)});
     }
   }
@@ -439,9 +472,9 @@ function approachPath(s,g,quarry){
   const range=distance(g,quarry),offset=Math.min(.75,range),aim={x:quarry.x-(quarry.x-g.x)/Math.max(range,.001)*offset,y:quarry.y-(quarry.y-g.y)/Math.max(range,.001)*offset};
   const sees=p=>wideSight(s,p,quarry,ARRIVED);
   if(sees(aim)&&freePoint(s,aim,g.id)&&walkSegment(s,g,aim,g.id))return [{...aim,z:0,cost:distance(g,aim)*movementRate(g)}];
-  const goals=[];
+  const goals=[],grid=sceneryGrid(s);
   const reach=QUARRY_REACH+EPS;
-  for(let y=Math.ceil(quarry.y-reach);y<=quarry.y+reach;y++)for(let x=Math.ceil(quarry.x-reach);x<=quarry.x+reach;x++){const p={x,y};if(distance(p,quarry)<=reach&&freePoint(s,p,g.id)&&sees(p))goals.push(p);}
+  for(let y=Math.ceil(quarry.y-reach);y<=quarry.y+reach;y++)for(let x=Math.ceil(quarry.x-reach);x<=quarry.x+reach;x++){const p={x,y};if(distance(p,quarry)<=reach&&nodeClear(s,grid,p,g.id)&&sees(p))goals.push(p);}
   const start=goals.length&&gridNodesAround(s,g,g)[0];if(!start)return null;
   // A quarry behind closed doors sits in a small pocket: after SEALED_CHECK nodes
   // without reaching it, flood back from its goals, and when that flood runs dry
@@ -452,7 +485,7 @@ function approachPath(s,g,quarry){
     for(let i=0;i<queue.length;i++){
       const p=queue[i];if(reached.has(key(p.x,p.y)))return false;
       for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){
-        const q={x:p.x+dx,y:p.y+dy},qk=key(q.x,q.y);if((!dx&&!dy)||seen.has(qk)||!freePoint(s,q,g.id)||!walkSegment(s,q,p,g.id))continue;
+        const q={x:p.x+dx,y:p.y+dy},qk=key(q.x,q.y);if((!dx&&!dy)||seen.has(qk)||!nodeClear(s,grid,q,g.id)||!linkClear(s,grid,q,p,g.id))continue;
         seen.add(qk);queue.push(q);if(queue.length>SEALED_BUDGET)return false;
       }
     }

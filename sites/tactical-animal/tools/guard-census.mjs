@@ -14,6 +14,11 @@
 //               lastKnown inside the shut door play three rounds, and each guard ends
 //               at the door on its own side (within 1.5 m of the spot), elsewhere on
 //               its side, round on the far side, or where it started.
+//      doorshot: the animal is heard from inside a doorway (lastKnown in its clearance),
+//               steps 0.6 m out to either side and shuts it with the other doors; the
+//               guard stands anywhere free 2-15 m off. Each guard fired (it saw the
+//               animal), moved, stayed put though some side of the door was a walk
+//               away, or stayed put with no side reachable.
 // With no checkout named, this one is censused; the first named checkout places
 // the cases and runs the oracle. A case is FROZEN when the guard never fires and its
 // alert lapses; STALLED when a turn ends with AP left, no shot, no step and no
@@ -22,7 +27,7 @@
 import path from 'node:path';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 const [mission,mode,seedArg,casesArg,...named]=process.argv.slice(2);
-if(!mission||!['blocked','near','props','doorway'].includes(mode)||!Number.isFinite(+seedArg)||!(+casesArg>0))throw Error('usage: guard-census.mjs <mission> <blocked|near|props|doorway> <seed> <cases> [name=checkout ...]');
+if(!mission||!['blocked','near','props','doorway','doorshot'].includes(mode)||!Number.isFinite(+seedArg)||!(+casesArg>0))throw Error('usage: guard-census.mjs <mission> <blocked|near|props|doorway|doorshot> <seed> <cases> [name=checkout ...]');
 const here=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..');
 const trees=named.length?named.map(a=>a.split(/=(.*)/s).slice(0,2)):[['this',here]];
 const M={};for(const [name,root] of trees)M[name]=await import(pathToFileURL(path.join(root,'sites/tactical-animal/dist/solo-game.js')).href);
@@ -78,6 +83,7 @@ function doorways(){
     const L={...g.lastKnown};if(ref.freePoint(only(ref,o.id,false),L,null,{units:false}))continue;
     cases.push({door:o.id,L,G,heading:g.heading,to,side,n,o:{x:o.x,y:o.y},half:Math.sign((L.x-o.x)*n.x+(L.y-o.y)*n.y)===side?'guard':'far'});
   }
+  if(!cases.length)throw Error(`doorway mode placed no case on ${mission} (its 1 m walk through each door was blocked)`);
   const ends={};
   for(const c of cases)for(const name of names){
     const T=M[name],s=only(T,c.door,false),u=T.hero(s),g=s.units[1];for(const other of s.units.slice(2))other.hp=0;
@@ -89,7 +95,35 @@ function doorways(){
   console.log(`${mission} doorway seed ${seedArg}: ${cases.length} cases (last seen in the guard's half of the doorway ${cases.filter(c=>c.half==='guard').length}, the far half ${cases.filter(c=>c.half==='far').length})`);
   for(const k of Object.keys(ends).sort())console.log(`${k} ${ends[k]}`);
 }
-if(mode==='doorway')doorways();else census();
+function doorshots(){
+  const shut=field(ref,false),doors=shut.interactables.filter(o=>o.kind==='door');
+  if(!doors.length)throw Error(`${mission} has no doors`);
+  const key=p=>p.x+','+p.y,cases=[];
+  for(let k=0;k<+casesArg*200&&cases.length<+casesArg;k++){
+    const o=doors[Math.floor(random()*doors.length)],east=o.edge.startsWith('e:'),n=east?{x:1,y:0}:{x:0,y:1},t=east?{x:0,y:1}:{x:1,y:0};
+    const across=(random()*2-1)*.31,along=(random()*2-1)*.25,P={x:o.x+n.x*across+t.x*along,y:o.y+n.y*across+t.y*along};
+    if(ref.freePoint(shut,P,null,{units:false}))continue;
+    const a=random()*Math.PI*2,r=2+random()*13,G={x:P.x+Math.cos(a)*r,y:P.y+Math.sin(a)*r},heading=random()*360,out=random()<.5?-.6:.6,heroAt={x:o.x+n.x*out+t.x*along,y:o.y+n.y*out+t.y*along};
+    if(!ref.freePoint(shut,G,null,{units:false})||!ref.freePoint(shut,heroAt,null,{units:false})||dist(G,heroAt)<1)continue;
+    // reachable: a grid walk from the guard to a clear node within 1.5 m of the doorway spot
+    const g=shut.units[1],at={x:g.x,y:g.y};Object.assign(g,G);let reach=false;const best=new Set(),open=[];
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const q={x:Math.round(G.x)+dx,y:Math.round(G.y)+dy};if(ref.freePoint(shut,q,g.id)&&ref.walkSegment(shut,G,q,g.id)){best.add(key(q));open.push(q);}}
+    for(let i=0;i<open.length&&i<20000&&!reach;i++){const p=open[i];if(dist(p,P)<=1.5){reach=true;break;}for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const q={x:p.x+dx,y:p.y+dy};if((dx||dy)&&!best.has(key(q))&&ref.freePoint(shut,q,g.id)&&ref.walkSegment(shut,p,q,g.id)){best.add(key(q));open.push(q);}}}
+    Object.assign(g,at);cases.push({P,G,heading,reach,heroAt});
+  }
+  const ends={};
+  for(const c of cases)for(const name of names){
+    const T=M[name],s=field(T,false),u=T.hero(s),g=s.units[1];for(const other of s.units.slice(2))other.hp=0;
+    Object.assign(u,{...c.heroAt,ap:20,hp:1e6,maxHp:1e6});Object.assign(g,{...c.G,heading:c.heading,alert:true,lastKnown:{...c.P},alertAge:0,hp:1e6});T.Core.refresh(s,{forceFog:true});
+    let fired=false;
+    for(let round=0;round<3;round++){s.phase='player';s.engaged=true;let effect=s.effect;T.Core.endTurn(s);for(let f=0;s.phase==='enemy'&&f<3000;f++){T.tick(s,.05);if(s.effect!==effect){effect=s.effect;fired||=s.effect?.sequence?.[0]?.shooter===g.id;}}}
+    const end=fired?'fired':dist(g,c.G)>=.1?'moved':c.reach?'stayed put though a side was a walk away':'stayed put, no side reachable';
+    ends[`${name}: ${end}`]=(ends[`${name}: ${end}`]||0)+1;
+  }
+  console.log(`${mission} doorshot seed ${seedArg}: ${cases.length} cases`);
+  for(const k of Object.keys(ends).sort())console.log(`${k} ${ends[k]}`);
+}
+if(mode==='doorway')doorways();else if(mode==='doorshot')doorshots();else census();
 function census(){
 const aimOf=c=>({x:c.heroAt.x-(c.heroAt.x-c.guardAt.x)/c.radius*.75,y:c.heroAt.y-(c.heroAt.y-c.guardAt.y)/c.radius*.75});
 const shut=field(ref,false),opened=field(ref,true),cases=[];

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {createSoloGame,DEFAULT_BUILD,Core,hero,distance,canSee,tick,encodeSave,decodeSave,navigationPath,lineClear,freePoint,walkSegment,QUARRY_REACH} from '../dist/solo-game.js';
+import {createSoloGame,DEFAULT_BUILD,Core,hero,distance,canSee,tick,encodeSave,decodeSave,navigationPath,lineClear,freePoint,walkSegment,standIns,QUARRY_REACH} from '../dist/solo-game.js';
 
 test('in a seeded census on every mission, no guard stalls while a firing node is reachable',{timeout:60000},()=>{
   // tools/guard-census.mjs, 40 approaches a mission whose 0.75 m spot is solid: the
@@ -102,6 +102,34 @@ test('a guard whose animal was last seen in a doorway shut since closes on the d
   // guard walking round the warehouse until a step uncovered its own side again.
   const {g}=approach('night-ledger',{x:33,y:5},{x:7.18,y:18},{lastKnown:{x:7.75,y:18},heading:0,rounds:2});
   assert.ok(distance(g,{x:7.18,y:18})<.05,`the guard at the door wandered to ${g.x.toFixed(2)},${g.y.toFixed(2)}`);
+});
+
+test('off the axis of a shut door, the guard takes the side it can walk to',()=>{
+  // Road Checkpoint: heard shooting from the office's front doorway, which is then shut.
+  // The nearest clear point in a straight line is inside the sealed office; each side
+  // gets a stand-in and the search takes the one it reaches, outside.
+  const lastKnown={x:117,y:115.3},{s,g}=approach('road-checkpoint',{x:20,y:20},{x:88,y:120},{lastKnown,heading:0,rounds:3});
+  assert.equal(freePoint(s,lastKnown,null,{units:false}),false);
+  assert.ok(distance(g,{x:88,y:120})>3&&g.y>115.5,`the guard ended at ${g.x.toFixed(2)},${g.y.toFixed(2)}`);
+  // Night Ledger: a guard 2.5 m from the warehouse door outside takes the outside, not
+  // the inside 10.5 m round by the south gap.
+  const near=approach('night-ledger',{x:33,y:5},{x:7,y:20.5},{lastKnown:{x:7.75,y:18},heading:0,rounds:3});
+  assert.ok(near.g.x<7.5&&distance(near.g,{x:7.5,y:18})<QUARRY_REACH+.5,`the guard ended at ${near.g.x.toFixed(2)},${near.g.y.toFixed(2)}`);
+});
+
+test('stand-ins depend on the scenery alone, so a unit standing on one changes nothing',()=>{
+  // They are kept per geometry, so they must not depend on where units stand.
+  const lastKnown={x:7.75,y:18},bare=createSoloGame(DEFAULT_BUILD,1947,'night-ledger'),expected=standIns(bare,lastKnown);
+  assert.equal(expected.length,2,'one stand-in each side of the shut warehouse door');
+  for(const spot of expected){const s=createSoloGame(DEFAULT_BUILD,1947,'night-ledger');Object.assign(s.units[1],spot);assert.deepEqual(standIns(s,lastKnown),expected);}
+});
+
+test('a last-seen point inside a prop an old save predates still draws the guard to it',()=>{
+  // A save from before the ration scale was solid may hold a last-seen point on its clue
+  // spot, 0.78 m from clear ground; the stand-in scan reaches it there.
+  const lastKnown={x:8,y:20},{s,g}=approach('short-measure',{x:33,y:5},{x:13.5,y:19.3},{lastKnown,heading:0,doors:true,rounds:3});
+  assert.equal(freePoint(s,lastKnown,null,{units:false}),false);
+  assert.ok(distance(g,{x:13.5,y:19.3})>2&&distance(g,lastKnown)<QUARRY_REACH+1,`the guard ended at ${g.x.toFixed(2)},${g.y.toFixed(2)}`);
 });
 
 test('the shared scenery table holds no unit: a unit beside a walk blocks it, and a doorway reopens once it leaves',()=>{

@@ -152,11 +152,12 @@ function unitsWalk(s,a,b,ignoreId){
 // Scenery alone decides whether a grid node is clear and whether a straight walk to
 // a neighbouring node is, so searches share those answers through one table per
 // geometry (a door changing rebuilds the geometry and so starts a fresh table).
-// Units are checked afresh every time. 0 unknown, 1 clear, 2 blocked.
+// Units are checked afresh every time. 0 unknown, 1 clear, 2 blocked. The stand-ins
+// for last-seen points inside scenery (standIns) depend on the scenery alone too.
 const sceneryGrids=new WeakMap();
 function sceneryGrid(s){
   const boxes=geometry(s);let grid=sceneryGrids.get(boxes);
-  if(!grid){const {width,height}=gridDimensions(s);grid={width,height,nodes:new Uint8Array(width*height),walks:new Uint8Array(width*height*9)};sceneryGrids.set(boxes,grid);}
+  if(!grid){const {width,height}=gridDimensions(s);grid={width,height,nodes:new Uint8Array(width*height),walks:new Uint8Array(width*height*9),standIns:new Map()};sceneryGrids.set(boxes,grid);}
   return grid;
 }
 // freePoint for an integer grid node, its scenery half read from the table.
@@ -469,29 +470,36 @@ function wideSight(s,a,b,margin){return !geometryNear(s,a,b,margin,'wall').some(
 // resumed save plans exactly the same route.
 export const QUARRY_REACH=2;
 const SEALED_BUDGET=128;
-// A last-seen point inside scenery (a door shut over it, a leaf swung onto it) is no
-// spot an animal could stand on, and close to the leaf nothing can see it. The guard
-// closes instead on a clear point within 0.7 m of it (5 cm rings, 32 bearings): the
-// clear point nearest the guard fixes the guard's side, and the quarry is the one
-// nearest the last-seen point with a wall-clear line to it. That stays put while the
-// guard walks, whichever half of the doorway the point fell in. Units are left out,
-// so the guard's own body never pushes the point away.
-function clearQuarry(s,p,g){
-  if(freePoint(s,p,null,{units:false}))return p;
-  const clear=[];
-  for(let ring=1;ring<=14;ring++)for(let i=0;i<32;i++){const a=i/32*Math.PI*2,q={x:p.x+Math.cos(a)*ring*.05,y:p.y+Math.sin(a)*ring*.05};if(freePoint(s,q,null,{units:false}))clear.push(q);}
-  if(!clear.length)return null;
-  const side=clear.reduce((best,q)=>distance(q,g)<distance(best,g)?q:best);
-  return clear.find(q=>lineClear(s,{...q,stance:'standing'},{...side,stance:'standing'}));
+// A last-seen point inside scenery (a door shut over it, a leaf swung onto it, a prop
+// an old save predates) is no spot an animal could stand on, and close to it nothing
+// can see it. Its stand-ins are clear points scanned in 5 cm rings (32 bearings), out
+// to 0.7 m beyond the first ring that has one (a shut door's clearance is 0.62 m
+// across, so the far side is always reached) and at most 1.5 m: one for each group of
+// them that see one another past the walls, the innermost of each. The search takes
+// goals round every stand-in, so a guard walks to whichever side of a shut door it
+// reaches first. Units are left out, so nobody's body pushes a stand-in away, and the
+// stand-ins depend on the point and the scenery alone; they are kept per geometry.
+export function standIns(s,p){
+  if(freePoint(s,p,null,{units:false}))return [p];
+  const grid=sceneryGrid(s),k=`${p.x},${p.y}`;if(grid.standIns.has(k))return grid.standIns.get(k);
+  let clear=[];
+  for(let ring=1,last=30;ring<=last;ring++){
+    for(let i=0;i<32;i++){const a=i/32*Math.PI*2,q={x:p.x+Math.cos(a)*ring*.05,y:p.y+Math.sin(a)*ring*.05};if(freePoint(s,q,null,{units:false}))clear.push(q);}
+    if(clear.length&&last===30)last=Math.min(30,ring+14);
+  }
+  const stands=[],sees=(a,b)=>lineClear(s,{...a,stance:'standing'},{...b,stance:'standing'});
+  while(clear.length){const q=clear[0];stands.push(q);clear=clear.filter(r=>!sees(r,q));}
+  grid.standIns.set(k,stands);return stands;
 }
 export function approachPath(s,g,lastSeen){
-  const quarry=clearQuarry(s,lastSeen,g);if(!quarry)return null;
+  const quarries=standIns(s,lastSeen);if(!quarries.length)return null;
+  // The straight walk aims at the nearest stand-in; the search weighs them all.
+  const quarry=quarries.reduce((best,q)=>distance(q,g)<distance(best,g)?q:best);
   const range=distance(g,quarry),offset=Math.min(.75,range),aim={x:quarry.x-(quarry.x-g.x)/Math.max(range,.001)*offset,y:quarry.y-(quarry.y-g.y)/Math.max(range,.001)*offset};
-  const sees=p=>wideSight(s,p,quarry,ARRIVED);
-  if(sees(aim)&&freePoint(s,aim,g.id)&&walkSegment(s,g,aim,g.id))return [{...aim,z:0,cost:distance(g,aim)*movementRate(g)}];
-  const goals=[],grid=sceneryGrid(s);
+  if(wideSight(s,aim,quarry,ARRIVED)&&freePoint(s,aim,g.id)&&walkSegment(s,g,aim,g.id))return [{...aim,z:0,cost:distance(g,aim)*movementRate(g)}];
+  const goals=[],taken=new Set(),grid=sceneryGrid(s);
   const reach=QUARRY_REACH+EPS;
-  for(let y=Math.ceil(quarry.y-reach);y<=quarry.y+reach;y++)for(let x=Math.ceil(quarry.x-reach);x<=quarry.x+reach;x++){const p={x,y};if(distance(p,quarry)<=reach&&nodeClear(s,grid,p,g.id)&&sees(p))goals.push(p);}
+  for(const q of quarries)for(let y=Math.ceil(q.y-reach);y<=q.y+reach;y++)for(let x=Math.ceil(q.x-reach);x<=q.x+reach;x++){const p={x,y},pk=key(x,y);if(!taken.has(pk)&&distance(p,q)<=reach&&nodeClear(s,grid,p,g.id)&&wideSight(s,p,q,ARRIVED)){taken.add(pk);goals.push(p);}}
   const start=goals.length&&gridNodesAround(s,g,g)[0];if(!start)return null;
   // A quarry behind closed doors sits in a small pocket: after SEALED_CHECK nodes
   // without reaching it, flood back from its goals, and when that flood runs dry
@@ -508,7 +516,8 @@ export function approachPath(s,g,lastSeen){
     }
     return true;
   };
-  const raw=gridSearch(s,g,start,(p,pk)=>goalKeys.has(pk),q=>Math.max(0,distance(q,quarry)-QUARRY_REACH),sealed);
+  const estimate=quarries.length===1?q=>Math.max(0,distance(q,quarry)-QUARRY_REACH):q=>Math.min(...quarries.map(c=>Math.max(0,distance(q,c)-QUARRY_REACH)));
+  const raw=gridSearch(s,g,start,(p,pk)=>goalKeys.has(pk),estimate,sealed);
   return raw&&smoothRoute(s,g,raw);
 }
 // A save written before a prop became solid may store a living animal inside it

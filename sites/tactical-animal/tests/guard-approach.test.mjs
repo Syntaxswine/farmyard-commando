@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {createSoloGame,DEFAULT_BUILD,Core,hero,distance,canSee,tick,encodeSave,decodeSave,navigationPath,lineClear,freePoint,walkSegment,standIns,QUARRY_REACH} from '../dist/solo-game.js';
+import {createSoloGame,DEFAULT_BUILD,Core,hero,distance,canSee,tick,encodeSave,decodeSave,navigationPath,lineClear,freePoint,walkSegment,standIns,approachPath,QUARRY_REACH} from '../dist/solo-game.js';
 
 test('in a seeded census on every mission, no guard stalls while a firing node is reachable',{timeout:60000},()=>{
   // tools/guard-census.mjs, 40 approaches a mission whose 0.75 m spot is solid: the
@@ -107,10 +107,24 @@ test('a guard whose animal was last seen in a doorway shut since closes on the d
 test('off the axis of a shut door, the guard takes the side it can walk to',()=>{
   // Road Checkpoint: heard shooting from the office's front doorway, which is then shut.
   // The nearest clear point in a straight line is inside the sealed office; each side
-  // gets a stand-in and the search takes the one it reaches, outside.
-  const lastKnown={x:117,y:115.3},{s,g}=approach('road-checkpoint',{x:20,y:20},{x:88,y:120},{lastKnown,heading:0,rounds:3});
-  assert.equal(freePoint(s,lastKnown,null,{units:false}),false);
-  assert.ok(distance(g,{x:88,y:120})>3&&g.y>115.5,`the guard ended at ${g.x.toFixed(2)},${g.y.toFixed(2)}`);
+  // gets a stand-in and the search takes the one it reaches, outside. At 0.29 m inside
+  // the door line the outside's clearance edge is 0.6 m off, past where a scan
+  // stopping 0.5 m beyond the first clear ring looks; that guard stayed put.
+  for(const y of [115.3,115.21]){
+    const lastKnown={x:117,y},{s,g}=approach('road-checkpoint',{x:20,y:20},{x:88,y:120},{lastKnown,heading:0,rounds:3});
+    assert.equal(freePoint(s,lastKnown,null,{units:false}),false);
+    assert.ok(distance(g,{x:88,y:120})>3&&g.y>115.5,`last seen at y ${y}: the guard ended at ${g.x.toFixed(2)},${g.y.toFixed(2)}`);
+  }
+  // From (88,120) a straight walk to the outside stand-in opens. From these spots none
+  // does, and the inside stand-in is the nearer in a straight line: the search picks the
+  // side. Road Checkpoint (100.3,116.2) goes outside; Night Ledger (7.8,12.2), north of
+  // the warehouse, goes to the outside of its door rather than round to the inside.
+  for(const [mission,heroAt,guardAt,lastKnown,outside] of [['road-checkpoint',{x:20,y:20},{x:100.3,y:116.2},{x:117,y:115.3},q=>q.y>115.5],['night-ledger',{x:33,y:5},{x:7.8,y:12.2},{x:7.75,y:18},q=>q.x<7.5]]){
+    const s=field(mission,heroAt,guardAt,{lastKnown}),g=s.units[1],[near,far]=[...standIns(s,lastKnown)].sort((a,b)=>distance(a,g)-distance(b,g)),path=approachPath(s,g,lastKnown);
+    assert.ok(!outside(near)&&outside(far)&&path?.length>1,`${mission}: the nearer stand-in is inside and the plan is a search (${JSON.stringify(path)})`);
+    const {g:end}=approach(mission,heroAt,guardAt,{lastKnown,heading:0,rounds:3});
+    assert.ok(distance(end,guardAt)>3&&outside(end),`${mission}: from ${guardAt.x},${guardAt.y} the guard ended at ${end.x.toFixed(2)},${end.y.toFixed(2)}`);
+  }
   // Night Ledger: a guard 2.5 m from the warehouse door outside takes the outside, not
   // the inside 10.5 m round by the south gap.
   const near=approach('night-ledger',{x:33,y:5},{x:7,y:20.5},{lastKnown:{x:7.75,y:18},heading:0,rounds:3});
@@ -122,6 +136,111 @@ test('stand-ins depend on the scenery alone, so a unit standing on one changes n
   const lastKnown={x:7.75,y:18},bare=createSoloGame(DEFAULT_BUILD,1947,'night-ledger'),expected=standIns(bare,lastKnown);
   assert.equal(expected.length,2,'one stand-in each side of the shut warehouse door');
   for(const spot of expected){const s=createSoloGame(DEFAULT_BUILD,1947,'night-ledger');Object.assign(s.units[1],spot);assert.deepEqual(standIns(s,lastKnown),expected);}
+});
+
+test('wherever the animal stood in a doorway shut since, each side of the door gets one stand-in at its edge',()=>{
+  // Every door on every mission, a 5 cm grid over the open doorway (0.30 m either side
+  // of the door line, 0.20 m along it): each point the shut door covers gets two
+  // stand-ins, one each side, each the innermost clear point, within a 5 cm ring of
+  // the clearance edge (0.31 m off the line). From 0.30 m inside, the far edge is
+  // 0.61 m away: a scan stopping 0.5 m past the first clear ring misses it.
+  let tested=0;
+  for(const mission of ['night-ledger','road-checkpoint','short-measure'])for(const door of createSoloGame(DEFAULT_BUILD,1947,mission).interactables.filter(o=>o.kind==='door')){
+    const make=open=>{const base=createSoloGame(DEFAULT_BUILD,1947,mission);if(open){base.interactables.find(o=>o.id===door.id).open=true;base.edges[door.edge]='door';}return {...base};};
+    const shut=make(false),open=make(true),n=door.edge.startsWith('e:')?{x:1,y:0}:{x:0,y:1},across=q=>(q.x-door.x)*n.x+(q.y-door.y)*n.y;
+    for(let a=-6;a<=6;a++)for(let l=-4;l<=4;l++){
+      const p={x:door.x+(n.x*a+n.y*l)*.05,y:door.y+(n.y*a+n.x*l)*.05};
+      if(!freePoint(open,p,null,{units:false})||freePoint(shut,p,null,{units:false}))continue;tested++;
+      const stands=standIns(shut,p),where=`${door.id}, last seen ${(a*.05).toFixed(2)} m across: ${JSON.stringify(stands.map(q=>across(q).toFixed(2)))}`;
+      assert.equal(stands.length,2,where);
+      assert.deepEqual(stands.map(q=>Math.sign(across(q))).sort(),[-1,1],where);
+      for(const q of stands)assert.ok(Math.abs(across(q))<.4,where);
+    }
+  }
+  assert.ok(tested>=1000,`only ${tested} points`);
+});
+
+test('under an open leaf, the stand-ins sit on its two faces and none behind the wall',()=>{
+  // The warehouse door swung open over the spot the animal stood on, beside its hinge.
+  // A clear point behind the warehouse wall is near it in a straight line but could never
+  // see it; guards outside walked there and stood blind beside the doorway. Now the
+  // stand-ins are those that would see the spot but for the leaf, and the guards look in.
+  for(const lastKnown of [{x:7.83,y:17.14},{x:7.83,y:17.3}]){
+    const s=field('night-ledger',{x:33,y:5},{x:20,y:5},{doors:true}),stands=standIns(s,lastKnown);
+    assert.equal(freePoint(s,lastKnown,null,{units:false}),false);
+    assert.equal(stands.length,2,JSON.stringify(stands));
+    assert.ok(stands.every(q=>q.x>7.58)&&stands.some(q=>q.y<17.36)&&stands.some(q=>q.y>17.52),`stand-ins ${JSON.stringify(stands)}`);
+    for(const guardAt of [{x:6.5,y:15},{x:4,y:14},{x:5,y:20.5}]){
+      const {s:play,g}=approach('night-ledger',{x:33,y:5},guardAt,{lastKnown,heading:0,doors:true,rounds:3});
+      assert.ok(stands.some(q=>lineClear(play,{...g,stance:'standing'},{...q,stance:'standing'})),`from ${guardAt.x},${guardAt.y} the guard ended at ${g.x.toFixed(2)},${g.y.toFixed(2)}, seeing neither face of the leaf`);
+    }
+  }
+});
+
+test('stand-ins are kept per point and per geometry',()=>{
+  // Two last-seen points in one grid cell keep their own stand-ins, and a door opening
+  // over a point gives it new ones: shut, one each side of the door line (x 7.5); open,
+  // one each face of the leaf (y 17.36-17.52), both inside the warehouse.
+  const a={x:7.6,y:17.8},b={x:7.6,y:18.3},s=createSoloGame(DEFAULT_BUILD,1947,'night-ledger'),u=hero(s);
+  standIns(s,a);assert.deepEqual(standIns(s,b),standIns(createSoloGame(DEFAULT_BUILD,1947,'night-ledger'),b));
+  const p={x:7.8,y:17.68},shut=standIns(s,p);
+  assert.ok(shut.some(q=>q.x<7.5)&&shut.some(q=>q.x>7.5),`door shut: ${JSON.stringify(shut)}`);
+  Object.assign(u,{x:7,y:18});assert.ok(Core.performInteraction(s,'warehouse-door','open').ok);
+  const open=standIns(s,p);
+  assert.ok(open.length===2&&open.every(q=>q.x>7.58)&&open.some(q=>q.y<17.36)&&open.some(q=>q.y>17.52),`door open: ${JSON.stringify(open)}`);
+});
+
+test('the straight walk takes the nearest stand-in it can walk straight to',()=>{
+  // Road Checkpoint, the front door shut over the last-seen point: from (105,117) the
+  // stand-in inside the sealed office is 0.11 m nearer in a straight line, but only the
+  // outside one has a straight walk; the guard takes it rather than a search that stops
+  // at a node up to 2 m off.
+  const short=(path,q)=>path?.length===1&&Math.abs(distance(path[0],q)-.75)<1e-9;
+  const lastKnown={x:117,y:115.3},s=field('road-checkpoint',{x:20,y:20},{x:105,y:117},{lastKnown}),g=s.units[1],[inside,outside]=standIns(s,lastKnown);
+  assert.ok(inside.y<115.5&&outside.y>115.5&&distance(g,inside)<distance(g,outside),'the inside stand-in is the nearer');
+  assert.ok(short(approachPath(s,g,lastKnown),outside),JSON.stringify(approachPath(s,g,lastKnown)));
+  // Night Ledger, the warehouse door's leaf open over the point: with straight walks to
+  // both faces open (each checked alone as a last-seen point), a guard takes the
+  // nearer, whether it comes first in the list or second.
+  const leaf={x:8.6,y:17.7};
+  for(const guardAt of [{x:9.5,y:16.5},{x:9.75,y:18}]){
+    const s=field('night-ledger',{x:33,y:5},guardAt,{lastKnown:leaf,doors:true}),g=s.units[1],stands=standIns(s,leaf);
+    const [near,far]=[...stands].sort((a,b)=>distance(a,g)-distance(b,g));
+    assert.ok(stands.length===2&&distance(g,far)-distance(g,near)>.3&&stands.every(q=>short(approachPath(s,g,q),q)),`from ${guardAt.x},${guardAt.y}: ${JSON.stringify(stands)}`);
+    assert.ok(short(approachPath(s,g,leaf),near),`from ${guardAt.x},${guardAt.y}: ${JSON.stringify(approachPath(s,g,leaf))}`);
+  }
+});
+
+test('a guard that steps into a strip no grid node is a straight walk from walks on through it',()=>{
+  // Short Measure: between the ration room's south wall and the sealed-load-arrival prop
+  // runs a strip 13 cm wide for a body's centre, and from most of it no grid node is a
+  // straight walk. A route smoothed along it led the guard in; its next plan found no
+  // node to start from, its turn ended there, and it stood there until its alert
+  // lapsed. It now walks first to the nearest point a node is a straight walk from.
+  const base=createSoloGame(DEFAULT_BUILD,1947,'short-measure');
+  for(const o of base.interactables)if(o.kind==='door'&&['ration-west','ration-east','packing-west','packing-east','dispatch-west'].includes(o.id)){o.open=true;base.edges[o.edge]='door';}
+  const s={...base},u=hero(s),g=s.units[2],lastKnown={x:2.074,y:18.537};for(const other of s.units.slice(1))if(other!==g)other.hp=0;
+  Object.assign(u,{x:33,y:24,ap:20,hp:10000,maxHp:10000});Object.assign(g,{x:8.367,y:22.905,heading:180,alert:true,lastKnown:{...lastKnown},alertAge:0});
+  assert.ok(freePoint(s,g,g.id)&&!navigationPath(s,g,lastKnown.x,lastKnown.y),'the strip still has no grid node a straight walk away');
+  const out=approachPath(s,g,lastKnown);
+  assert.ok(out?.length&&walkSegment(s,g,out[0],g.id),`inside the strip the plan's first leg is a straight walk: ${JSON.stringify(out?.[0])}`);
+  Object.assign(g,{x:9.806,y:22.865});s.engaged=true;s.phase='player';Core.refresh(s,{forceFog:true});
+  const ends=[];for(let round=0;round<3;round++){s.phase='player';s.engaged=true;Core.endTurn(s);for(let frame=0;s.phase==='enemy'&&frame<2000;frame++)tick(s,.05);ends.push(`${g.x.toFixed(2)},${g.y.toFixed(2)}`);}
+  assert.ok(distance(g,lastKnown)<.75+.08,`the guard ended its rounds at ${ends.join(' | ')}`);
+});
+
+test('the way out of such a strip is a straight walk, even where no node of the route beyond is one',()=>{
+  // Crates on open Night Ledger ground leave a strip 6 cm wide for a body's centre, shut
+  // at its west end and halfway between two rows of grid nodes. 1.1 m inside it neither
+  // a node nor any later point of the route is a straight walk away, so the plan's first
+  // leg runs along the strip to its mouth.
+  const base=createSoloGame(DEFAULT_BUILD,1947,'night-ledger'),radius=.23;
+  base.obstacles=[...(base.obstacles||[]),{x0:23,x1:26,y0:18.6,y1:19.5-.03-radius,height:1,kind:'crate'},{x0:23,x1:26,y0:19.5+.03+radius,y1:20.4,height:1,kind:'crate'},{x0:22.6,x1:23,y0:18.6,y1:20.4,height:1,kind:'crate'}];
+  const s={...base},g=s.units[1],lastKnown={x:29,y:22};for(const other of s.units.slice(2))other.hp=0;Object.assign(hero(s),{x:33,y:5});
+  Object.assign(g,{x:24.9,y:19.5,alert:true,lastKnown:{...lastKnown},alertAge:0});
+  assert.ok(freePoint(s,g,g.id)&&!navigationPath(s,g,lastKnown.x,lastKnown.y),'no grid node is a straight walk from the guard');
+  const path=approachPath(s,g,lastKnown);
+  assert.ok(path?.length>1&&walkSegment(s,g,path[0],g.id)&&path[0].x>25.99,`first legs ${JSON.stringify(path?.slice(0,2))}`);
 });
 
 test('a last-seen point inside a prop an old save predates still draws the guard to it',()=>{

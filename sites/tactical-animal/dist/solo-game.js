@@ -462,45 +462,63 @@ function wideSight(s,a,b,margin){return !geometryNear(s,a,b,margin,'wall').some(
 // that spot, and a clear line from it to the quarry, it walks straight there.
 // Otherwise one search takes it to the nearest node, by walking distance, that
 // stands within QUARRY_REACH of the quarry and sees it past the walls; from there
-// the straight walk usually opens. The goal set depends on the quarry alone (for a
-// last-seen point inside scenery, also on which side of it the guard stands), not
-// on where the guard stands, so a step cannot flip the plan, and no single solid
-// or cut-off spot can freeze the guard. Sight is tested with walls grown by
-// ARRIVED, so it holds wherever the guard stops. Nothing is held between ticks: a
-// resumed save plans exactly the same route.
+// the straight walk usually opens. The goal set depends on the quarry and the
+// scenery alone, not on where the guard stands, so a step cannot flip the plan, and
+// no single solid or cut-off spot can freeze the guard. Sight is tested with walls
+// grown by ARRIVED, so it holds wherever the guard stops. Nothing is held between
+// ticks: a resumed save plans exactly the same route.
 export const QUARRY_REACH=2;
 const SEALED_BUDGET=128;
 // A last-seen point inside scenery (a door shut over it, a leaf swung onto it, a prop
 // an old save predates) is no spot an animal could stand on, and close to it nothing
-// can see it. Its stand-ins are clear points scanned in 5 cm rings (32 bearings), out
-// to 0.7 m beyond the first ring that has one (a shut door's clearance is 0.62 m
-// across, so the far side is always reached) and at most 1.5 m: one for each group of
-// them that see one another past the walls, the innermost of each. The search takes
-// goals round every stand-in, so a guard walks to whichever side of a shut door it
-// reaches first. Units are left out, so nobody's body pushes a stand-in away, and the
-// stand-ins depend on the point and the scenery alone; they are kept per geometry.
+// can see it. Its stand-ins are clear points that would see it but for what covers it
+// (the boxes within a body's radius of it), scanned in 5 cm rings (32 bearings) out to
+// 0.7 m beyond the first ring that has one (a shut door's clearance is 0.62 m across,
+// so the far side is always reached) and at most 1.5 m: one for each group of them
+// that see one another past the walls, the innermost of each. A shut door gets one on
+// each side, an open leaf one on each face, and nothing behind a wall gets one. The
+// search takes goals round every stand-in, so a guard walks to whichever side of a
+// shut door it reaches first. Units are left out, so nobody's body pushes a stand-in
+// away, and the stand-ins depend on the point and the scenery alone; they are kept
+// per geometry.
 export function standIns(s,p){
   if(freePoint(s,p,null,{units:false}))return [p];
   const grid=sceneryGrid(s),k=`${p.x},${p.y}`;if(grid.standIns.has(k))return grid.standIns.get(k);
+  const cover=new Set(geometryNear(s,p,p,RADIUS,'walk').filter(box=>pointBoxDistance(p,box)<RADIUS-EPS));
+  const seesPast=q=>!geometryNear(s,p,q,0,'wall').some(box=>!cover.has(box)&&intersectsBox(p,q,box));
   let clear=[];
   for(let ring=1,last=30;ring<=last;ring++){
-    for(let i=0;i<32;i++){const a=i/32*Math.PI*2,q={x:p.x+Math.cos(a)*ring*.05,y:p.y+Math.sin(a)*ring*.05};if(freePoint(s,q,null,{units:false}))clear.push(q);}
+    for(let i=0;i<32;i++){const a=i/32*Math.PI*2,q={x:p.x+Math.cos(a)*ring*.05,y:p.y+Math.sin(a)*ring*.05};if(freePoint(s,q,null,{units:false})&&seesPast(q))clear.push(q);}
     if(clear.length&&last===30)last=Math.min(30,ring+14);
   }
   const stands=[],sees=(a,b)=>lineClear(s,{...a,stance:'standing'},{...b,stance:'standing'});
   while(clear.length){const q=clear[0];stands.push(q);clear=clear.filter(r=>!sees(r,q));}
-  grid.standIns.set(k,stands);return stands;
+  grid.standIns.set(k,Object.freeze(stands));return stands;
+}
+// The node a guard's search starts from. A route smoothed along a wall can cross a
+// strip so narrow that no node is a straight walk from it (Short Measure has one,
+// between the ration room's south wall and the sealed-load-arrival prop); a guard that
+// stands in it walks first to the nearest point, in 10-150 cm rings, from which one is.
+function searchStart(s,g){
+  const node=gridNodesAround(s,g,g)[0];if(node)return {node};
+  for(let ring=2;ring<=30;ring++)for(let i=0;i<32;i++){
+    const a=i/32*Math.PI*2,q={x:g.x+Math.cos(a)*ring*.05,y:g.y+Math.sin(a)*ring*.05};
+    if(!freePoint(s,q,g.id)||!walkSegment(s,g,q,g.id))continue;
+    const node=gridNodesAround(s,g,q)[0];if(node)return {node,via:q};
+  }
+  return null;
 }
 export function approachPath(s,g,lastSeen){
   const quarries=standIns(s,lastSeen);if(!quarries.length)return null;
-  // The straight walk aims at the nearest stand-in; the search weighs them all.
-  const quarry=quarries.reduce((best,q)=>distance(q,g)<distance(best,g)?q:best);
-  const range=distance(g,quarry),offset=Math.min(.75,range),aim={x:quarry.x-(quarry.x-g.x)/Math.max(range,.001)*offset,y:quarry.y-(quarry.y-g.y)/Math.max(range,.001)*offset};
-  if(wideSight(s,aim,quarry,ARRIVED)&&freePoint(s,aim,g.id)&&walkSegment(s,g,aim,g.id))return [{...aim,z:0,cost:distance(g,aim)*movementRate(g)}];
+  // The straight walk tries the stand-ins nearest first; the search weighs them all.
+  for(const quarry of [...quarries].sort((a,b)=>distance(a,g)-distance(b,g))){
+    const range=distance(g,quarry),offset=Math.min(.75,range),aim={x:quarry.x-(quarry.x-g.x)/Math.max(range,.001)*offset,y:quarry.y-(quarry.y-g.y)/Math.max(range,.001)*offset};
+    if(wideSight(s,aim,quarry,ARRIVED)&&freePoint(s,aim,g.id)&&walkSegment(s,g,aim,g.id))return [{...aim,z:0,cost:distance(g,aim)*movementRate(g)}];
+  }
   const goals=[],taken=new Set(),grid=sceneryGrid(s);
   const reach=QUARRY_REACH+EPS;
   for(const q of quarries)for(let y=Math.ceil(q.y-reach);y<=q.y+reach;y++)for(let x=Math.ceil(q.x-reach);x<=q.x+reach;x++){const p={x,y},pk=key(x,y);if(!taken.has(pk)&&distance(p,q)<=reach&&nodeClear(s,grid,p,g.id)&&wideSight(s,p,q,ARRIVED)){taken.add(pk);goals.push(p);}}
-  const start=goals.length&&gridNodesAround(s,g,g)[0];if(!start)return null;
+  const start=goals.length&&searchStart(s,g);if(!start)return null;
   // A quarry behind closed doors sits in a small pocket: after SEALED_CHECK nodes
   // without reaching it, flood back from its goals, and when that flood runs dry
   // within SEALED_BUDGET nodes without meeting the guard's search, stop there
@@ -516,9 +534,9 @@ export function approachPath(s,g,lastSeen){
     }
     return true;
   };
-  const estimate=quarries.length===1?q=>Math.max(0,distance(q,quarry)-QUARRY_REACH):q=>Math.min(...quarries.map(c=>Math.max(0,distance(q,c)-QUARRY_REACH)));
-  const raw=gridSearch(s,g,start,(p,pk)=>goalKeys.has(pk),estimate,sealed);
-  return raw&&smoothRoute(s,g,raw);
+  const estimate=quarries.length===1?q=>Math.max(0,distance(q,quarries[0])-QUARRY_REACH):q=>Math.min(...quarries.map(c=>Math.max(0,distance(q,c)-QUARRY_REACH)));
+  const raw=gridSearch(s,g,start.node,(p,pk)=>goalKeys.has(pk),estimate,sealed);
+  return raw&&smoothRoute(s,g,start.via?[start.via,...raw]:raw);
 }
 // A save written before a prop became solid may store a living animal inside it
 // (Short Measure's ration scale stands where its clue marker once had no

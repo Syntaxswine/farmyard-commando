@@ -52,10 +52,10 @@ Beside the props, PR #21's own censuses (the animal 0.24–0.74 m from a prop, t
 
 | Census | PR #21 | Now |
 | --- | --- | --- |
-| Tuning seed 77, 1,000 approaches | 2 | 1 |
-| Held-out seed 9001, 800 approaches | 9 | 2 |
+| Tuning seed 77, 1,000 approaches | 2 | 0 |
+| Held-out seed 9001, 800 approaches | 9 | 1 |
 
-Two of the three are census placements inside the clearance of the open west leaf, which play cannot produce: a door does not open onto a unit, and a save storing one is released. The third is a door detour around the arrival bay, longer than the guard's alert lasts.
+The one left is a door detour around the arrival bay, longer than the guard's alert lasts; main's guard, on another line, fired from 6.8 m.
 
 Only the simulation's data modules (`mission-scenery.js`, `solids.js`) load in every mission. The kit, its inherited model modules and the paper art load for Short Measure alone. Before the kit's model is in the scene, the inherited cargo keeps drawing the sealed load's crates, so a failed or refused kit never leaves an invisible collider. The four new props have no inherited art at all. If the kit fails, the field shows an error banner, but the banner does not block input: play can continue with those four props solid and unseen until a reload. On main, a failed cargo atlas leaves every crate in the same state.
 

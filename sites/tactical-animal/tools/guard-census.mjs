@@ -19,6 +19,16 @@
 //               guard stands anywhere free 2-15 m off. Each guard fired (it saw the
 //               animal), moved, stayed put though some side of the door was a walk
 //               away, or stayed put with no side reachable.
+//      play:    whole-mission play, <cases> runs of 12 rounds (the first checkout
+//               named only). Every guard plays; the animal, unhurt, walks a random
+//               3-12 m route each round (two in five through the nearest doorway), is
+//               heard firing by every guard within twice its weapon's range (two in
+//               five rounds) and toggles the nearest door when no unit stands in its
+//               swing (about one round in three; a quarter of those any door). A guard
+//               turn that starts alert and ends without a shot, a sight of the animal
+//               or a new last-seen point is judged by its first plan: with the other
+//               units where they stand, against with them gone. It counts the turns
+//               left with no plan, or with one over a metre longer, by who is in the way.
 // With no checkout named, this one is censused; the first named checkout places
 // the cases and runs the oracle. A case is FROZEN when the guard never fires and its
 // alert lapses; STALLED when a turn ends with AP left, no shot, no step and no
@@ -27,7 +37,7 @@
 import path from 'node:path';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 const [mission,mode,seedArg,casesArg,...named]=process.argv.slice(2);
-if(!mission||!['blocked','near','props','doorway','doorshot'].includes(mode)||!Number.isFinite(+seedArg)||!(+casesArg>0))throw Error('usage: guard-census.mjs <mission> <blocked|near|props|doorway|doorshot> <seed> <cases> [name=checkout ...]');
+if(!mission||!['blocked','near','props','doorway','doorshot','play'].includes(mode)||!Number.isFinite(+seedArg)||!(+casesArg>0))throw Error('usage: guard-census.mjs <mission> <blocked|near|props|doorway|doorshot|play> <seed> <cases> [name=checkout ...]');
 const here=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..');
 const trees=named.length?named.map(a=>a.split(/=(.*)/s).slice(0,2)):[['this',here]];
 const M={};for(const [name,root] of trees)M[name]=await import(pathToFileURL(path.join(root,'sites/tactical-animal/dist/solo-game.js')).href);
@@ -123,7 +133,51 @@ function doorshots(){
   console.log(`${mission} doorshot seed ${seedArg}: ${cases.length} cases`);
   for(const k of Object.keys(ends).sort())console.log(`${k} ${ends[k]}`);
 }
-if(mode==='doorway')doorways();else if(mode==='doorshot')doorshots();else census();
+async function plays(){
+  const {doorFootprint}=await import(pathToFileURL(path.join(trees[0][1],'sites/tactical-animal/dist/interactions.js')).href);
+  const T=ref,tally={turns:0,engaged:0,judged:0,noPlanGuards:0,noPlanAnimal:0,longerGuards:0,longerAnimal:0};
+  for(let run=0;run<+casesArg;run++){
+    let s=field(T,false);for(const o of s.interactables)if(o.kind==='door'&&random()<.5){o.open=true;s.edges[o.edge]='door';}s={...s};
+    const u=T.hero(s),guards=s.units.filter(g=>g.team==='guard'&&g.hp>0),doors=s.interactables.filter(o=>o.kind==='door');
+    Object.assign(u,{hp:1e9,maxHp:1e9});for(const g of guards)g.hp=1e9;
+    for(let k=0;k<500;k++){const g=guards[Math.floor(random()*guards.length)],a=random()*Math.PI*2,r=4+random()*16,p={x:g.x+Math.cos(a)*r,y:g.y+Math.sin(a)*r};if(T.freePoint(s,p,u.id)){Object.assign(u,p);break;}}
+    T.Core.refresh(s,{forceFog:true});
+    for(let round=0;round<12;round++){
+      let target;
+      if(random()<.4&&doors.length){const o=doors.reduce((a,b)=>dist(a,u)<dist(b,u)?a:b),n=o.edge.startsWith('e:')?{x:1,y:0}:{x:0,y:1},side=Math.sign((u.x-o.x)*n.x+(u.y-o.y)*n.y)||1,d=1+random()*2;target={x:o.x-n.x*side*d+(random()-.5)*.6,y:o.y-n.y*side*d+(random()-.5)*.6};}
+      else{const a=random()*Math.PI*2,r=3+random()*9;target={x:u.x+Math.cos(a)*r,y:u.y+Math.sin(a)*r};}
+      const route=T.freePoint(s,target,u.id)?T.navigationPath(s,u,target.x,target.y):null;
+      if(route){let at={x:u.x,y:u.y};for(const w of route){const n=Math.max(1,Math.ceil(dist(at,w)/.06));for(let i=1;i<=n;i++){u.x=at.x+(w.x-at.x)*i/n;u.y=at.y+(w.y-at.y)*i/n;T.Core.refresh(s);}at={x:w.x,y:w.y};}}
+      if(random()<.4){const range=T.Core.WEAPONS[u.weapon].range*2;for(const g of guards)if(dist(g,u)<=range){g.alert=true;g.lastKnown={x:u.x,y:u.y};g.alertAge=0;}}
+      if(random()<.35&&doors.length){const o=random()<.75?doors.reduce((a,b)=>dist(a,u)<dist(b,u)?a:b):doors[Math.floor(random()*doors.length)],swing=doorFootprint(o,!o.open);
+        if(!s.units.some(x=>x.hp>0&&Math.hypot(Math.max(swing.x0-x.x,0,x.x-swing.x1),Math.max(swing.y0-x.y,0,x.y-swing.y1))<.23)){o.open=!o.open;s.edges[o.edge]=o.open?'door':'closed-door';s={...s};T.Core.refresh(s,{forceFog:true});}}
+      s.phase='player';s.engaged=true;u.ap=20;T.Core.endTurn(s);
+      const turns=new Map();
+      for(let f=0;s.phase==='enemy'&&f<40000;f++){
+        const g=s.units[s.enemyIndex];
+        if(g?.team==='guard'&&g.hp>0&&g.alert&&g.lastKnown&&!turns.has(g.id)&&s.enemyDelay<=.05&&g.ap>=g.maxAp-1e-9){
+          // its first plan: with every unit where it stands, with none, and with the guards but not the animal
+          const L={...g.lastKnown},others=s.units.filter(x=>x!==g&&x.hp>0),hp=others.map(x=>x.hp),plan=()=>{const p=T.approachPath(s,g,L);return p?p.reduce((t,w,i)=>t+dist(w,i?p[i-1]:g),0):Infinity;};
+          const crowded=plan();others.forEach(x=>x.hp=0);const clear=plan();others.forEach((x,i)=>x.hp=hp[i]);u.hp=0;const guardsOnly=plan();u.hp=1e9;
+          turns.set(g.id,{L,crowded,clear,guardsOnly,fired:false,saw:false});
+        }
+        const rec=g&&turns.get(g.id),effect=s.effect;T.tick(s,.05);
+        if(rec){rec.saw||=T.canSee(s,g,u);if(s.effect!==effect&&s.effect?.sequence?.[0]?.shooter===g.id)rec.fired=true;}
+      }
+      for(const [id,rec] of turns){
+        const g=s.units.find(x=>x.id===id);tally.turns++;
+        if(rec.fired||rec.saw||g.lastKnown?.x!==rec.L.x||g.lastKnown?.y!==rec.L.y){tally.engaged++;continue;}
+        if(!(rec.clear>.3&&rec.clear<Infinity))continue;tally.judged++;
+        const by=rec.guardsOnly<=rec.clear+1?'Animal':'Guards';
+        if(rec.crowded===Infinity)tally['noPlan'+by]++;else if(rec.crowded>rec.clear+1)tally['longer'+by]++;
+      }
+    }
+  }
+  console.log(`${mission} play seed ${seedArg}: ${casesArg} runs of 12 rounds, ${tally.turns} guard turns (${tally.engaged} fired, saw the animal or heard it anew; ${tally.judged} with a plan of over 0.3 m once the way is clear)`);
+  console.log(`no plan until the way is clear: other guards in it ${tally.noPlanGuards}, the animal ${tally.noPlanAnimal}`);
+  console.log(`a plan over a metre longer: other guards in the way ${tally.longerGuards}, the animal ${tally.longerAnimal}`);
+}
+if(mode==='doorway')doorways();else if(mode==='doorshot')doorshots();else if(mode==='play')await plays();else census();
 function census(){
 const aimOf=c=>({x:c.heroAt.x-(c.heroAt.x-c.guardAt.x)/c.radius*.75,y:c.heroAt.y-(c.heroAt.y-c.guardAt.y)/c.radius*.75});
 const shut=field(ref,false),opened=field(ref,true),cases=[];

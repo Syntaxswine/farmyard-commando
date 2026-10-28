@@ -8,6 +8,12 @@
 //               PR #21's doors-shut placement check, so a few placements stand inside
 //               an open leaf's clearance, where play cannot put a unit; they show up
 //               as stalls with a firing node reachable, in every version.
+//      doorway: the animal walks through an open door in 6 cm steps while a guard 3-10 m
+//               off on the near side watches it (lastKnown is the last spot it saw),
+//               then the door shuts with the other doors; <cases> cases that leave
+//               lastKnown inside the shut door play three rounds, and each guard ends
+//               at the door on its own side (within 1.5 m of the spot), elsewhere on
+//               its side, round on the far side, or where it started.
 // With no checkout named, this one is censused; the first named checkout places
 // the cases and runs the oracle. A case is FROZEN when the guard never fires and its
 // alert lapses; STALLED when a turn ends with AP left, no shot, no step and no
@@ -16,7 +22,7 @@
 import path from 'node:path';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 const [mission,mode,seedArg,casesArg,...named]=process.argv.slice(2);
-if(!mission||!['blocked','near','props'].includes(mode)||!Number.isFinite(+seedArg)||!(+casesArg>0))throw Error('usage: guard-census.mjs <mission> <blocked|near|props> <seed> <cases> [name=checkout ...]');
+if(!mission||!['blocked','near','props','doorway'].includes(mode)||!Number.isFinite(+seedArg)||!(+casesArg>0))throw Error('usage: guard-census.mjs <mission> <blocked|near|props|doorway> <seed> <cases> [name=checkout ...]');
 const here=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..');
 const trees=named.length?named.map(a=>a.split(/=(.*)/s).slice(0,2)):[['this',here]];
 const M={};for(const [name,root] of trees)M[name]=await import(pathToFileURL(path.join(root,'sites/tactical-animal/dist/solo-game.js')).href);
@@ -53,6 +59,38 @@ function place(b){
   const angle=random()*Math.PI*2,radius=2+random()*7;
   return {heroAt,guardAt:{x:heroAt.x+Math.cos(angle)*radius,y:heroAt.y+Math.sin(angle)*radius},heading:random()*360,doors:random()<.7,radius,box:b.kind+(b.interactionId?':'+b.interactionId:b.placementId?':'+b.placementId:'')};
 }
+function doorways(){
+  const doors=ref.createSoloGame(ref.DEFAULT_BUILD,1947,mission).interactables.filter(o=>o.kind==='door');
+  if(!doors.length)throw Error(`${mission} has no doors`);
+  const only=(T,id,open)=>{const s=T.createSoloGame(T.DEFAULT_BUILD,1947,mission);for(const o of s.interactables)if(o.kind==='door'&&o.id===id&&open){o.open=true;s.edges[o.edge]='door';}return {...s};};
+  const cases=[];
+  for(let k=0;k<+casesArg*20&&cases.length<+casesArg;k++){
+    const o=doors[Math.floor(random()*doors.length)],east=o.edge.startsWith('e:'),n=east?{x:1,y:0}:{x:0,y:1},t=east?{x:0,y:1}:{x:1,y:0};
+    const side=random()<.5?-1:1,off=(random()*2-1)*.15,from={x:o.x+n.x*side+t.x*off,y:o.y+n.y*side+t.y*off},to={x:o.x-n.x*side+t.x*off,y:o.y-n.y*side+t.y*off};
+    const s=only(ref,o.id,true),u=ref.hero(s),g=s.units[1];for(const other of s.units.slice(2))other.hp=0;
+    if(!ref.freePoint(s,from,null,{units:false})||!ref.freePoint(s,to,null,{units:false})||!ref.walkSegment(s,from,to,null))continue;
+    const a=random()*Math.PI*2,r=3+random()*7,G={x:from.x+Math.cos(a)*r,y:from.y+Math.sin(a)*r};
+    if(((G.x-o.x)*n.x+(G.y-o.y)*n.y>0)!==(side>0)||!ref.freePoint(s,G,null,{units:false}))continue;
+    Object.assign(u,from);Object.assign(g,{...G,heading:Math.atan2(from.y-G.y,from.x-G.x)*180/Math.PI,alert:false,lastKnown:null});
+    ref.Core.refresh(s,{forceFog:true});if(!g.alert)continue;
+    const steps=Math.ceil(dist(from,to)/.06);for(let i=1;i<=steps;i++){u.x=from.x+(to.x-from.x)*i/steps;u.y=from.y+(to.y-from.y)*i/steps;ref.Core.refresh(s);}
+    if(ref.canSee(s,g,u))continue;   // still in view beyond the door
+    const L={...g.lastKnown};if(ref.freePoint(only(ref,o.id,false),L,null,{units:false}))continue;
+    cases.push({door:o.id,L,G,heading:g.heading,to,side,n,o:{x:o.x,y:o.y},half:Math.sign((L.x-o.x)*n.x+(L.y-o.y)*n.y)===side?'guard':'far'});
+  }
+  const ends={};
+  for(const c of cases)for(const name of names){
+    const T=M[name],s=only(T,c.door,false),u=T.hero(s),g=s.units[1];for(const other of s.units.slice(2))other.hp=0;
+    Object.assign(u,{...c.to,ap:20,hp:1e6,maxHp:1e6});Object.assign(g,{...c.G,heading:c.heading,alert:true,lastKnown:{...c.L},alertAge:0,hp:1e6});T.Core.refresh(s,{forceFog:true});
+    for(let round=0;round<3;round++){s.phase='player';s.engaged=true;T.Core.endTurn(s);for(let f=0;s.phase==='enemy'&&f<3000;f++)T.tick(s,.05);}
+    const own=Math.sign((g.x-c.o.x)*c.n.x+(g.y-c.o.y)*c.n.y)===c.side,end=dist(g,c.G)<.1?'where it started':own&&dist(g,c.L)<1.5?'at the door':own?'elsewhere on its side':'round on the far side';
+    ends[`${name}: ${end}`]=(ends[`${name}: ${end}`]||0)+1;
+  }
+  console.log(`${mission} doorway seed ${seedArg}: ${cases.length} cases (last seen in the guard's half of the doorway ${cases.filter(c=>c.half==='guard').length}, the far half ${cases.filter(c=>c.half==='far').length})`);
+  for(const k of Object.keys(ends).sort())console.log(`${k} ${ends[k]}`);
+}
+if(mode==='doorway')doorways();else census();
+function census(){
 const aimOf=c=>({x:c.heroAt.x-(c.heroAt.x-c.guardAt.x)/c.radius*.75,y:c.heroAt.y-(c.heroAt.y-c.guardAt.y)/c.radius*.75});
 const shut=field(ref,false),opened=field(ref,true),cases=[];
 if(mode==='props'){
@@ -81,3 +119,4 @@ const q=(a,p)=>a.length?+Float64Array.from(a).sort()[Math.min(a.length-1,Math.fl
 console.log(`${mission} ${mode} seed ${seedArg}: ${cases.length} approaches`);
 for(const n of names){const S=sum[n];console.log(`${n}: fired ${S.fired}, frozen ${S.frozen} (stalled ${S.stalled}, ${S.stuck} of them with a firing node reachable; firing node within a 10 m walk ${S.reachable}), turned back >3 times ${S.jitter} | tick ms p99 ${q(S.ticks,.99)} p999 ${q(S.ticks,.999)} max ${q(S.ticks,1)}, stepping p50 ${q(S.stepping,.5)} p99 ${q(S.stepping,.99)}`);}
 if(names.length>1)console.log(`engaged only in ${names[0]} ${onlyFirst}, only in ${names[1]} ${onlySecond}; both in ${both}, shots ${shots[0]} / ${shots[1]}`);
+}

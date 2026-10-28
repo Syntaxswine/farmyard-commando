@@ -9,13 +9,13 @@ A guard that cannot fire walks toward where it last saw or heard the animal, and
 1. **Straight walk.** If it can walk straight to the spot 0.75 m short on its own line, and that spot sees the animal past the walls, it walks straight there. This is main's move. Only the sight test is new, and with the margin in rule 3 it sends about 1 straight approach in 500 to the search instead. None of those searched routes is more than 1.5 times the straight walk.
 2. **Search.** Otherwise one A* search takes it to the nearest grid node, by walking distance, that stands within `QUARRY_REACH` (2 m) of the animal and sees it. From that node the straight walk usually opens. Where it never does, the guard stops at the node, up to 2 m from the animal.
 3. **Sight with a margin.** A goal's line to the animal must clear every wall grown by 8 cm. That is `ARRIVED`, the distance at which a guard counts as arrived, so the view holds wherever the guard actually stops.
-4. **A last-seen point inside scenery.** When a door has been shut over the point, or a leaf swung onto it, nothing can see it. The guard closes on the nearest clear point instead, scanned outward in 5 cm rings, taking the one nearest itself within a ring.
+4. **A last-seen point inside scenery.** When a door has been shut over the point, or a leaf swung onto it, no animal could stand there, and within 8 cm of the leaf nothing can see it. The guard closes instead on a clear point within 0.7 m of it, scanned in 5 cm rings. The clear point nearest the guard fixes the guard's side. The stand-in is then the clear point nearest the last-seen spot with a wall-clear line to that one. Whichever half of the doorway the spot fell in, the guard walks to the door on its own side. Units are left out of the scan, so the guard's own body never pushes the point through the door.
 5. **Sealed pockets.** After 256 expansions without reaching a goal, the search floods back from the goals. If that flood runs dry within 128 nodes without meeting the guard's search, the animal is shut away and the search stops. This changes no outcome, only the cost.
 6. **A route opening at the guard's feet.** When a route's first waypoint lies within 8 cm of the guard, it walks on to the next one instead of ending its turn there.
 
 Nothing about the approach is held between ticks, so a resumed save plans exactly the same route.
 
-**Why one goal set.** The goals depend on the animal alone, not on where the guard stands. A first version kept main's route to the 0.75 m spot whenever that spot saw the animal, and searched only otherwise. Beside the ration scale the spot sits on the edge of the scale's clearance, so it flipped between free and solid with each 18 cm step. The two plans ran east and west, and the guard walked back and forth on the spot.
+**Why one goal set.** The goals depend on the animal alone, not on where the guard stands. For a last-seen point inside scenery they also depend on which side of it the guard stands, which only changes if the guard walks round to the other side. A first version kept main's route to the 0.75 m spot whenever that spot saw the animal, and searched only otherwise. Beside the ration scale the spot sits on the edge of the scale's clearance, so it flipped between free and solid with each 18 cm step. The two plans ran east and west, and the guard walked back and forth on the spot.
 
 **Why the margin.** In Short Measure, node (34, 12) sees an animal past a wall end by a hair. A guard stopping 6 cm off that node could not, and froze there.
 
@@ -61,7 +61,9 @@ Where both versions engage, they engage alike. Shots fired match within one in e
 
 - **Straight approaches keep main's move to the same spot.** The exception, about 1 in 500, is a spot that sees the animal only past a wall edge closer than 8 cm; those approaches take the search.
 - **Routed approaches change.** A routed approach now heads for the nearest node that sees the animal, where main headed for its 0.75 m spot; from there it usually walks straight to that spot. The guard ends in the same place by a different route, or reaches the animal where main froze. Where no straight walk opens from the goal node, it stops at the node, up to 2 m away.
-- **A guard whose animal was last seen in a doorway shut since** walks to the door, as main's did.
+- **A guard whose animal was last seen in a doorway shut since** walks to the door on its own side. In the census's `doorway` mode (seed 2, 150 cases a mission, other doors shut), the guard watches the animal walk through a door, and the animal then shuts it:
+  - Short Measure: 148 guards reach the door and 2 stop elsewhere on their side. PR #21's tip left 128 where they started.
+  - Road Checkpoint: all 150 reach the door. PR #21's tip left 120 where they started.
 - **Seeded random play diverges** from the PR #21 tip, always at the end of a turn. A lockstep fuzz of 8 seeds × 300 commands diverged in 7 of 8 Night Ledger runs (between commands 8 and 106), 3 of 8 Road Checkpoint runs and 4 of 8 Short Measure runs. `tests/scenery-neutrality-baseline.json` is re-recorded from this change.
 
 ## Cost
@@ -92,4 +94,4 @@ node sites/tactical-animal/tools/guard-census.mjs night-ledger near 1 300 before
 node sites/tactical-animal/tools/guard-census.mjs short-measure props 77 250 after=. main=../pre-prop-checkout
 ```
 
-Modes are `blocked` (the spot solid), `near` (any spot) and `props` (PR #21's census beside the Short Measure props). The first checkout named places the cases and runs the reachability check, so for `props` it must be one with the props. `ROWS=1` prints every frozen case.
+Modes are `blocked` (the spot solid), `near` (any spot), `props` (PR #21's census beside the Short Measure props) and `doorway` (the animal last seen in a doorway it then shut). The first checkout named places the cases and runs the reachability check, so for `props` it must be one with the props. `ROWS=1` prints every frozen case.

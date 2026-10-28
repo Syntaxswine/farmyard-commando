@@ -86,12 +86,22 @@ test('a goal keeps its view of the animal wherever the guard stops beside it',()
   assert.ok(firing>=1,`the guard never fired, ending at ${g.x.toFixed(2)},${g.y.toFixed(2)}`);
 });
 
-test('a guard whose animal was last seen in a doorway shut since closes on the door',()=>{
-  // The last-seen point is now inside the shut warehouse door, where no node can see
-  // it; the guard heads for the nearest clear point on its own side instead.
-  const door={x:7.5,y:18},{s,g}=approach('night-ledger',{x:33,y:5},{x:4.5,y:18},{lastKnown:door,heading:0,rounds:3});
-  assert.equal(freePoint(s,door,null,{units:false}),false);
-  assert.ok(distance(g,{x:4.5,y:18})>1&&distance(g,door)<QUARRY_REACH+.5,`the guard ended at ${g.x.toFixed(2)},${g.y.toFixed(2)}`);
+test('a guard whose animal was last seen in a doorway shut since closes on the door from its own side',()=>{
+  // The last-seen point lies inside the shut warehouse door (wall line x = 7.5), where
+  // nothing can see it. Whichever half of the doorway it fell in, each guard closes on
+  // the clear point nearest it on its own side: west guards stay west, east guards east.
+  for(const x of [7.4,7.6])for(const [guardAt,west] of [[{x:4.5,y:18},true],[{x:10.5,y:18},false]]){
+    const lastKnown={x,y:18},{s,g}=approach('night-ledger',{x:33,y:5},guardAt,{lastKnown,heading:0,rounds:3});
+    assert.equal(freePoint(s,lastKnown,null,{units:false}),false);
+    const where=`last seen at x ${x}, guard from ${guardAt.x}: ended at ${g.x.toFixed(2)},${g.y.toFixed(2)}`;
+    assert.ok(distance(g,guardAt)>1&&distance(g,{x:7.5,y:18})<QUARRY_REACH+.5,where);
+    assert.equal(g.x<7.5,west,where);
+  }
+  // A guard already beside the door, closer than 0.75 m to the clear point, stays put. Its
+  // own body must not push that point through to the far side: counting it set the
+  // guard walking round the warehouse until a step uncovered its own side again.
+  const {g}=approach('night-ledger',{x:33,y:5},{x:7.18,y:18},{lastKnown:{x:7.75,y:18},heading:0,rounds:2});
+  assert.ok(distance(g,{x:7.18,y:18})<.05,`the guard at the door wandered to ${g.x.toFixed(2)},${g.y.toFixed(2)}`);
 });
 
 test('the shared scenery table holds no unit: a unit beside a walk blocks it, and a doorway reopens once it leaves',()=>{
@@ -159,7 +169,7 @@ test('a door opening between searches reopens the route at once',()=>{
 test('a save taken mid-approach resumes on exactly the same route',()=>{
   // Nothing about the approach is held between ticks: saved and reloaded at any
   // tick of its turn, a guard walks on exactly as the one never saved.
-  const cases=[['short-measure',{x:19.494,y:7.176},{x:20.56,y:12.21},{heading:274.2,doors:true}],['night-ledger',{x:22.788,y:15.948},{x:19.283,y:13.6},{heading:296.3}],['night-ledger',{x:5,y:24},{x:19.933,y:18.749},{heading:0,lastKnown:{x:23.324,y:23.319}}]];
+  const cases=[['short-measure',{x:19.494,y:7.176},{x:20.56,y:12.21},{heading:274.2,doors:true}],['night-ledger',{x:22.788,y:15.948},{x:19.283,y:13.6},{heading:296.3}],['night-ledger',{x:5,y:24},{x:19.933,y:18.749},{heading:0,lastKnown:{x:23.324,y:23.319}}],['night-ledger',{x:33,y:5},{x:10.5,y:18},{heading:0,lastKnown:{x:7.4,y:18}}]];
   const walk=(s,ticks)=>{const g=s.units[1],trail=[];for(let i=0;i<ticks;i++){if(s.phase!=='enemy'){s.phase='player';s.engaged=true;Core.endTurn(s);}tick(s,.05);trail.push([g.x,g.y]);}return trail;};
   for(const [mission,heroAt,guardAt,options] of cases)for(const at of [10,16,24]){
     const s=field(mission,heroAt,guardAt,options);Core.endTurn(s);walk(s,at);

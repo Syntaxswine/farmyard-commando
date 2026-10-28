@@ -461,24 +461,28 @@ function wideSight(s,a,b,margin){return !geometryNear(s,a,b,margin,'wall').some(
 // that spot, and a clear line from it to the quarry, it walks straight there.
 // Otherwise one search takes it to the nearest node, by walking distance, that
 // stands within QUARRY_REACH of the quarry and sees it past the walls; from there
-// the straight walk usually opens. The goal set depends on the quarry alone, not
+// the straight walk usually opens. The goal set depends on the quarry alone (for a
+// last-seen point inside scenery, also on which side of it the guard stands), not
 // on where the guard stands, so a step cannot flip the plan, and no single solid
 // or cut-off spot can freeze the guard. Sight is tested with walls grown by
 // ARRIVED, so it holds wherever the guard stops. Nothing is held between ticks: a
 // resumed save plans exactly the same route.
 export const QUARRY_REACH=2;
 const SEALED_BUDGET=128;
-// A last-seen point inside scenery (a door shut over it, a leaf swung onto it) can
-// be seen from nowhere, so the guard closes on the nearest clear point instead,
-// scanned outward in 5 cm rings, taking the one nearest itself within a ring.
+// A last-seen point inside scenery (a door shut over it, a leaf swung onto it) is no
+// spot an animal could stand on, and close to the leaf nothing can see it. The guard
+// closes instead on a clear point within 0.7 m of it (5 cm rings, 32 bearings): the
+// clear point nearest the guard fixes the guard's side, and the quarry is the one
+// nearest the last-seen point with a wall-clear line to it. That stays put while the
+// guard walks, whichever half of the doorway the point fell in. Units are left out,
+// so the guard's own body never pushes the point away.
 function clearQuarry(s,p,g){
   if(freePoint(s,p,null,{units:false}))return p;
-  for(let ring=1;ring<=20;ring++){
-    let best=null;
-    for(let i=0;i<32;i++){const a=i/32*Math.PI*2,q={x:p.x+Math.cos(a)*ring*.05,y:p.y+Math.sin(a)*ring*.05};if(freePoint(s,q,null,{units:false})&&(!best||distance(q,g)<distance(best,g)))best=q;}
-    if(best)return best;
-  }
-  return null;
+  const clear=[];
+  for(let ring=1;ring<=14;ring++)for(let i=0;i<32;i++){const a=i/32*Math.PI*2,q={x:p.x+Math.cos(a)*ring*.05,y:p.y+Math.sin(a)*ring*.05};if(freePoint(s,q,null,{units:false}))clear.push(q);}
+  if(!clear.length)return null;
+  const side=clear.reduce((best,q)=>distance(q,g)<distance(best,g)?q:best);
+  return clear.find(q=>lineClear(s,{...q,stance:'standing'},{...side,stance:'standing'}));
 }
 export function approachPath(s,g,lastSeen){
   const quarry=clearQuarry(s,lastSeen,g);if(!quarry)return null;

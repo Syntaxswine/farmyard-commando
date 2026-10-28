@@ -401,13 +401,13 @@ function nearestStanding(s,p,ignoreId,maxRadius){
   for(let ring=1;ring*.05<=maxRadius+EPS;ring++){const r=ring*.05;for(let i=0;i<32;i++){const a=i/32*Math.PI*2,q={x:p.x+Math.cos(a)*r,y:p.y+Math.sin(a)*r};if(freePoint(s,q,ignoreId))return q;}}
   return null;
 }
-// Can the pathfinder end a route at q? navigationPath needs a straight walk from
-// the unit or a free grid neighbour joined to q by one; a free spot boxed into a
-// narrow strip has neither, and a guard sent there would freeze all the same.
-function routeEnd(s,from,q,ignoreId){
-  // Grid neighbours first: their walks are short; the walk from the guard is not.
+// Can the pathfinder end a route at q? Its goal test needs a free grid neighbour
+// joined to q by a straight walk; a free spot boxed into a narrow strip has none,
+// and a guard sent there would freeze all the same. (Also accepting a direct walk
+// from the guard changed no outcome in two censuses and cost time.)
+function routeEnd(s,q,ignoreId){
   for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const n={x:Math.round(q.x)+dx,y:Math.round(q.y)+dy};if(freePoint(s,n,ignoreId)&&walkSegment(s,q,n,ignoreId))return true;}
-  return walkSegment(s,from,q,ignoreId);
+  return false;
 }
 // Up to three standing spots around the aim, nearest first and 0.3 m apart, each
 // one a route can end on, held per guard for as long as its quarry and the
@@ -421,7 +421,7 @@ function spotsNear(s,g,target){
   const spots=[];
   for(let ring=1;ring*.05<=2+EPS&&spots.length<3;ring++){const r=ring*.05;
     for(let i=0;i<32&&spots.length<3;i++){const a=i/32*Math.PI*2,q={x:target.x+Math.cos(a)*r,y:target.y+Math.sin(a)*r};
-      if(!spots.some(spot=>distance(spot,q)<.3)&&freePoint(s,q,g.id)&&routeEnd(s,g,q,g.id))spots.push(q);}}
+      if(!spots.some(spot=>distance(spot,q)<.3)&&freePoint(s,q,g.id)&&routeEnd(s,q,g.id))spots.push(q);}}
   const fresh={key,geometry:geometryKey,spots,dead:new Set(),exhaustedRound:null};approachSpots.set(g,fresh);return fresh;
 }
 // A guard closing on its quarry aims 0.75 m short of it. When that spot is inside

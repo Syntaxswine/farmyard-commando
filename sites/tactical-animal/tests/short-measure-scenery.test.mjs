@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from '../dist/aft/tactics/vendor/three.module.js';
 import {createSoloGame,DEFAULT_BUILD,Core,hero,distance,geometry,freePoint,walkSegment,lineClear,navigationPath,previewGrenade,encodeSave,decodeSave,tick,getMission} from '../dist/solo-game.js';
-import {missionScenery,missionArtBindings,clueAnchorHeight} from '../dist/mission-scenery.js';
+import {missionScenery,missionArtBindings,clueAnchorHeight,SCENERY_DIGEST} from '../dist/mission-scenery.js';
 import {SHORT_MEASURE_SOLIDS,SOLIDS_VERSION,SOLIDS_DIGEST} from '../dist/mission-art/short-measure/solids.js';
 import {solidPartBoxes} from '../dist/mission-art/short-measure/solid-parts.js';
 import {PLACEMENTS,ART_VERSION,bindingFor} from '../dist/mission-art/short-measure/manifest.js';
@@ -212,9 +212,11 @@ test('census cases pin the two approach rules that each prevent freezes',()=>{
   }
 });
 
-test('around every prop, a guard whose aim lands inside it moves or fires whenever a reachable spot exists',()=>{
+test('in a seeded sample beside every prop, no guard freezes while a standing spot near its aim is reachable',()=>{
   // Seeded sample of review round 2's approach census: the animal 0.24-0.74 m from
   // a prop face, the guard 2-9 m off at any bearing and heading, doors open 70%.
+  // This pins the sample, not a law: a held-out census of 800 approaches still
+  // finds about 1% that freeze with a spot reachable (docs/short-measure-runtime.md).
   const random=(seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;})(2026);
   const probe=mill(),props=geometry(probe).filter(box=>box.kind==='prop');let cases=0;
   for(const p of props)for(let tries=0,taken=0;tries<400&&taken<10;tries++){
@@ -233,6 +235,21 @@ test('around every prop, a guard whose aim lands inside it moves or fires whenev
     assert.equal(reachable,null,`${p.placementId}: guard froze at ${guardAt.x.toFixed(2)},${guardAt.y.toFixed(2)} though (${reachable?.x.toFixed(2)},${reachable?.y.toFixed(2)}) was reachable`);
   }
   assert.ok(cases>=36,`only ${cases} approaches sampled`);
+});
+
+test('a guard that re-sights its quarry mid-approach heads for the new position, not spots near the old one',()=>{
+  // Round one caches spots beside the scale; then the animal is seen behind the
+  // dispatch desk, where the 0.75 m aim again falls inside a prop.
+  const base=mill();for(const o of base.interactables)if(o.kind==='door'){o.open=true;base.edges[o.edge]='door';}
+  const s={...base},u=hero(s),g=s.units[1];
+  for(const other of s.units.slice(2))other.hp=0;
+  Object.assign(u,{x:8,y:21,ap:20,hp:10000,maxHp:10000});Object.assign(g,{x:7.6,y:18.2,alert:true,lastKnown:{x:8,y:21},alertAge:0});
+  s.engaged=true;s.phase='player';Core.refresh(s,{forceFog:true});
+  Core.endTurn(s);for(let frame=0;s.phase==='enemy'&&frame<2000;frame++)tick(s,.05);
+  Object.assign(u,{x:32,y:5.3});g.lastKnown={x:32,y:5.3};g.alertAge=0;
+  const before=distance(g,u);
+  s.phase='player';s.engaged=true;Core.endTurn(s);for(let frame=0;s.phase==='enemy'&&frame<2000;frame++)tick(s,.05);
+  assert.ok(before-distance(g,u)>1,`guard closed only ${(before-distance(g,u)).toFixed(2)} m on the new position`);
 });
 
 test('a save that stood on the old scale marker loads beside the scale and walks away; nothing else moves',()=>{
@@ -317,6 +334,10 @@ test('a kit that fails to load, refuses a stale table or arrives late leaves eve
   const stale=bareView(mill(),async()=>({createMissionArt:(state,options)=>real.createMissionArt(state,{...options,expectDigest:'an older table'})}));
   stale.view.buildEnvironment(stale.view.state);
   assert.ok(await stale.view.missionArtReady===null);assert.deepEqual([...stale.view.art.replaced],[]);assert.match(stale.errors[0],/Reload/);stale.view.clearEnvironment();
+  // That refusal only works if the field hands over its own simulation's digest.
+  let handed;const watching=bareView(mill(),async()=>({createMissionArt:(state,options)=>{handed=options.expectDigest;return null;}}));
+  watching.view.buildEnvironment(watching.view.state);await watching.view.missionArtReady;
+  assert.equal(handed,SCENERY_DIGEST);watching.view.clearEnvironment();
   const late=bareView(mill());late.view.buildEnvironment(late.view.state);late.view.generation++;
   assert.ok(await late.view.missionArtReady===null&&late.view.missionArt===undefined);assert.deepEqual([...late.view.art.replaced],[]);late.view.clearEnvironment();
   // Night Ledger never asks for the kit at all.
@@ -332,9 +353,11 @@ test('replaced crate tiles stop drawing and every other crate still draws',()=>{
   const proto=new T.Group();proto.add(new T.Mesh(new T.BoxGeometry(),new T.MeshBasicMaterial()));proto.updateMatrixWorld(true);
   env.library={build:()=>({root:proto,bounds:new T.Box3(new T.Vector3(-.5,0,-.5),new T.Vector3(.5,.92,.5))}),dispose(){}};
   for(const chunk of env.chunks.values())env.buildCargo(chunk);
-  const drawn=()=>{env.update(s,hero(s),env.window);return [...env.chunks.values()].flatMap(chunk=>chunk.cargo).reduce((n,{mesh})=>n+mesh.count,0);};
+  const drawn=()=>[...env.chunks.values()].flatMap(chunk=>chunk.cargo).reduce((n,{mesh})=>n+mesh.count,0);
   const crates=s.map.flat().filter(tile=>tile==='crate').length;
-  assert.equal(drawn(),crates);env.replace(SEALED);assert.equal(drawn(),crates-4);
+  env.update(s,hero(s),env.window);assert.equal(drawn(),crates);
+  // replace() redraws at once: the kit may arrive while the player stands still.
+  env.replace(SEALED);assert.equal(drawn(),crates-4);
   env.dispose();
 });
 

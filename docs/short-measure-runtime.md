@@ -50,9 +50,27 @@ A guard closing on an animal aims 0.75 m short of it. Beside a prop that spot is
 
 Here, the guard instead takes up to three clear spots near the aim, nearest first and 0.3 m apart, that a route can actually end on, and walks to the first one it can reach. It also drops a route waypoint it is already standing on. The choice is held until its quarry moves or a door changes. Crates and walls keep main's behaviour on purpose: changing them is an AI change for every mission.
 
-In a seeded census of 1,000 approaches, freezes where main's guard would fire fell from 40 to 2. In both remaining cases the animal itself stands in the 1.2 m gap between the arrival bay and the freight scale, blocking the short way round; the guard takes the long way and its alert lapses on the way.
+Measured on seeded approach censuses: the animal 0.24–0.74 m from a prop, the guard 2–9 m off at any bearing. A case counts when main's guard engages but ours freezes until its alert lapses.
 
-Only the simulation's data modules (`mission-scenery.js`, `solids.js`) load in every mission. The kit, its inherited model modules and the paper art load for Short Measure alone. Before the kit's model is in the scene, the inherited cargo keeps drawing the sealed load's crates, so a failed or refused kit never leaves an invisible collider. The four new props have no inherited art at all; if the kit fails, the field shows an error rather than play on with them unseen.
+| Census | First fallback (round 1) | Now |
+| --- | --- | --- |
+| Tuning seed 77, 1,000 approaches | 40 | 2 |
+| Held-out seed 9001, 800 approaches | 38 | 9 |
+
+The tuning residuals are geometry. The animal itself stands in the 1.2 m gap between the arrival bay and the freight scale, the guard takes the long way round, and its alert lapses on the way.
+
+The held-out residuals are not all geometry. In about six of the nine a standing spot was reachable, and the guard still froze for one of three reasons:
+- its three nearest spots were all cut off (for example by both open shed leaves and the animal);
+- its aim fell just outside a prop, where main's freeze rule still applies;
+- main's own 8 cm arrival rule ended the turn on a route to the aim.
+
+A single multi-goal search, from the guard to any free node within about 1.5 m of the aim, would fix all three in one search. That changes guard AI and costs a search per tick, so it is left for a separate change; the same search would also fix main's freezes against crates and walls.
+
+Other known costs of the fallback:
+- **Timing.** The review measured p99 tick time of about 0.9 ms against main's 0.45 ms, and p999 of 12–13 ms against main's 4 ms (desktop). About a quarter of approaches at the scale have a tick over 8 ms; on main, 0.5%. Phones will show it as a stutter. Dropping a redundant check has since trimmed about 3 ms from the worst tick.
+- **Saves.** The held spots are not part of a save, so a guard resumed mid-approach may choose slightly differently. That happened in 1 of 160 resumed approaches, ending 2 cm apart.
+
+Only the simulation's data modules (`mission-scenery.js`, `solids.js`) load in every mission. The kit, its inherited model modules and the paper art load for Short Measure alone. Before the kit's model is in the scene, the inherited cargo keeps drawing the sealed load's crates, so a failed or refused kit never leaves an invisible collider. The four new props have no inherited art at all. If the kit fails, the field shows an error banner, but the banner does not block input: play can continue with those four props solid and unseen until a reload. On main, a failed cargo atlas leaves every crate in the same state.
 
 Known limitation, older than this change: the hit-chance preview ignores scenery that physically stops the round. Main shows 70% for a target directly behind a crate that no round can reach, and crates at least add the −20 cover hint. A shot whose line runs through a prop's solid part shows its full chance and then strikes the part.
 

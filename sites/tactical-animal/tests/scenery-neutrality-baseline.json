@@ -4,26 +4,26 @@
     {
       "missionId": "night-ledger",
       "seed": 3,
-      "steps": 60,
-      "hash": "71ee511d51431aa0f16a1f5402db5c3b32fad9ebc9653e7b631fc75f986209f6"
+      "steps": 150,
+      "hash": "5e3d287f3a1b9faaeebc15429a416bdec35bb6dafa6f8e87327844447e802165"
     },
     {
       "missionId": "night-ledger",
       "seed": 4,
-      "steps": 60,
-      "hash": "b163fcc2eb203bc279165b1556c50154eb6301a0a8bd50384678fdf6189fecda"
+      "steps": 150,
+      "hash": "5aff491fcae7807e14d50d052c8831339480461a5cd4bd35b7bf15bc0323a1a8"
     },
     {
       "missionId": "night-ledger",
       "seed": 6,
-      "steps": 60,
-      "hash": "e401fe50a329f46c2191289fafd501a767166e43ae2dfe0885945aedf2211aef"
+      "steps": 150,
+      "hash": "4cb29fb84135a997ce642cff3d385df9c7be57e972cce95ac606e64b71f18eb7"
     },
     {
       "missionId": "night-ledger",
       "seed": 8,
-      "steps": 60,
-      "hash": "16f56f69d1fcb915b084ea686ac14d7df88e57e0ac9e8ea7ddce93c23d840c8b"
+      "steps": 200,
+      "hash": "d0501ecab071daf1630205d9cd1342fb5f21348c462082e0f1f9517c6169aa44"
     },
     {
       "missionId": "road-checkpoint",

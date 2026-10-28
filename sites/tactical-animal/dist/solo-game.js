@@ -221,15 +221,16 @@ function gridNodesAround(s,u,p){
   }
   return a.sort((a,b)=>distance(a,p)-distance(b,p));
 }
-// A* over integer grid nodes joined by straight walks, from start to the first
-// node isGoal accepts. Returns the nodes walked, start first, or null. A caller
-// may pass sealed(reached), asked once after SEALED_CHECK expansions: true ends
-// the search as unreachable.
+// A* over integer grid nodes joined by straight walks, from the start nodes (each
+// entered at its cost, 0 if it has none) to the first node isGoal accepts. Returns
+// the nodes walked, a start first, or null. A caller may pass sealed(reached), asked
+// once after SEALED_CHECK expansions: true ends the search as unreachable.
 const SEALED_CHECK=256;
-function gridSearch(s,u,start,isGoal,estimate,sealed=null){
-  const open=new PathFrontier(),startKey=key(start.x,start.y),grid=sceneryGrid(s);
-  const cost=new Map([[startKey,0]]),parents=new Map(),points=new Map([[startKey,start]]),links=new Map(),passable=new Map();
-  open.push({...start,g:0,f:estimate(start)});let found=null,expanded=0;
+function gridSearch(s,u,starts,isGoal,estimate,sealed=null){
+  const open=new PathFrontier(),grid=sceneryGrid(s);
+  const cost=new Map(),parents=new Map(),points=new Map(),links=new Map(),passable=new Map();
+  for(const start of starts){const sk=key(start.x,start.y),g=start.cost??0;if(g>=(cost.get(sk)??Infinity))continue;cost.set(sk,g);points.set(sk,{x:start.x,y:start.y});open.push({x:start.x,y:start.y,g,f:g+estimate(start)});}
+  let found=null,expanded=0;
   while(open.items.length&&expanded<NAVIGATION_NODE_LIMIT){
     const p=open.pop(),pk=key(p.x,p.y);if(p.g>(cost.get(pk)??Infinity))continue;
     if(isGoal(p,pk)){found=p;break;}expanded++;
@@ -258,7 +259,7 @@ export function navigationPath(s,u,x,y){
   const end={x,y};if(!freePoint(s,end,u.id))return null;
   if(walkSegment(s,u,end,u.id))return [{...end,z:0,cost:distance(u,end)*movementRate(u)}];
   const start=gridNodesAround(s,u,u)[0],goals=gridNodesAround(s,u,end);if(!start||!goals.length)return null;
-  const goalKeys=new Set(goals.map(p=>key(p.x,p.y))),raw=gridSearch(s,u,start,(p,pk)=>goalKeys.has(pk),q=>distance(q,end));
+  const goalKeys=new Set(goals.map(p=>key(p.x,p.y))),raw=gridSearch(s,u,[start],(p,pk)=>goalKeys.has(pk),q=>distance(q,end));
   return raw&&smoothRoute(s,u,[...raw,end]);
 }
 export function move(s,u,x,y){if(!canControl(s,u))return false;const path=navigationPath(s,u,x,y);if(!path?.length)return false;s.queue=path;s.revision++;return true;}
@@ -495,18 +496,28 @@ export function standIns(s,p){
   while(clear.length){const q=clear[0];stands.push(q);clear=clear.filter(r=>!sees(r,q));}
   grid.standIns.set(k,Object.freeze(stands));return stands;
 }
-// The node a guard's search starts from. A route smoothed along a wall can cross a
-// strip so narrow that no node is a straight walk from it (Short Measure has one,
-// between the ration room's south wall and the sealed-load-arrival prop); a guard that
-// stands in it walks first to the nearest point, in 10-150 cm rings, from which one is.
-function searchStart(s,g){
-  const node=gridNodesAround(s,g,g)[0];if(node)return {node};
-  for(let ring=2;ring<=30;ring++)for(let i=0;i<32;i++){
-    const a=i/32*Math.PI*2,q={x:g.x+Math.cos(a)*ring*.05,y:g.y+Math.sin(a)*ring*.05};
-    if(!freePoint(s,q,g.id)||!walkSegment(s,g,q,g.id))continue;
-    const node=gridNodesAround(s,g,q)[0];if(node)return {node,via:q};
+// The nodes a guard's search starts from: normally the nearest node it can walk
+// straight to. A route smoothed along a wall can cross a strip so narrow that no node
+// is a straight walk from it (Short Measure has one, between the ration room's south
+// wall and the sealed-load-arrival prop). A guard standing in one may leave along any
+// of 32 bearings: on each, the first point 10-150 cm out from which a node is a
+// straight walk starts the search at the cost of walking there and on to the node, so
+// the guard leaves by the way that is shortest to walk, as it takes a door's side.
+function searchStarts(s,g){
+  const node=gridNodesAround(s,g,g)[0];if(node)return [{...node,cost:0}];
+  const starts=new Map();
+  for(let i=0;i<32;i++){
+    const a=i/32*Math.PI*2;
+    for(let ring=2;ring<=30;ring++){
+      const q={x:g.x+Math.cos(a)*ring*.05,y:g.y+Math.sin(a)*ring*.05};
+      if(!freePoint(s,q,g.id)||!walkSegment(s,g,q,g.id))break;
+      const node=gridNodesAround(s,g,q)[0];if(!node)continue;
+      const k=key(node.x,node.y),cost=distance(g,q)+distance(q,node);
+      if(!(starts.get(k)?.cost<=cost))starts.set(k,{...node,cost,via:q});
+      break;
+    }
   }
-  return null;
+  return [...starts.values()];
 }
 export function approachPath(s,g,lastSeen){
   const quarries=standIns(s,lastSeen);if(!quarries.length)return null;
@@ -518,7 +529,7 @@ export function approachPath(s,g,lastSeen){
   const goals=[],taken=new Set(),grid=sceneryGrid(s);
   const reach=QUARRY_REACH+EPS;
   for(const q of quarries)for(let y=Math.ceil(q.y-reach);y<=q.y+reach;y++)for(let x=Math.ceil(q.x-reach);x<=q.x+reach;x++){const p={x,y},pk=key(x,y);if(!taken.has(pk)&&distance(p,q)<=reach&&nodeClear(s,grid,p,g.id)&&wideSight(s,p,q,ARRIVED)){taken.add(pk);goals.push(p);}}
-  const start=goals.length&&searchStart(s,g);if(!start)return null;
+  const starts=goals.length?searchStarts(s,g):[];if(!starts.length)return null;
   // A quarry behind closed doors sits in a small pocket: after SEALED_CHECK nodes
   // without reaching it, flood back from its goals, and when that flood runs dry
   // within SEALED_BUDGET nodes without meeting the guard's search, stop there
@@ -535,8 +546,9 @@ export function approachPath(s,g,lastSeen){
     return true;
   };
   const estimate=quarries.length===1?q=>Math.max(0,distance(q,quarries[0])-QUARRY_REACH):q=>Math.min(...quarries.map(c=>Math.max(0,distance(q,c)-QUARRY_REACH)));
-  const raw=gridSearch(s,g,start.node,(p,pk)=>goalKeys.has(pk),estimate,sealed);
-  return raw&&smoothRoute(s,g,start.via?[start.via,...raw]:raw);
+  const raw=gridSearch(s,g,starts,(p,pk)=>goalKeys.has(pk),estimate,sealed);if(!raw)return null;
+  const via=starts.find(p=>p.x===raw[0].x&&p.y===raw[0].y).via;
+  return smoothRoute(s,g,via?[via,...raw]:raw);
 }
 // A save written before a prop became solid may store a living animal inside it
 // (Short Measure's ration scale stands where its clue marker once had no

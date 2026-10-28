@@ -43,7 +43,8 @@ export function playRoute(state,steps,{onStep=()=>{}}={}){
 
 export const SHORT_MEASURE_ROUTE=[
   {x:4,y:23.2},{id:'supply-chest',action:'open'},{id:'supply-chest',action:'take-all'},
-  {x:4.4,y:20},{id:'ration-west',action:'open'},{x:8,y:20},{id:'worker-scale',action:'inspect'},
+  // The ration scale is solid around its clue anchor (8,20): stand south of it and reach in.
+  {x:4.4,y:20},{id:'ration-west',action:'open'},{x:8,y:21},{id:'worker-scale',action:'inspect'},
   {x:10.4,y:20},{id:'ration-east',action:'open'},
   {x:19,y:18.6},{id:'packing-south',action:'open'},{x:19,y:13},
   {x:23.4,y:13},{id:'packing-east',action:'open'},{x:25.6,y:13},

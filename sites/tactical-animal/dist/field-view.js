@@ -9,6 +9,8 @@ import {OriginalEnvironment} from './original-art.js';
 import {hero, Core, missionForState, objectiveSecured} from './solo-game.js';
 import {FIELD_CAMERA,grenadeCameraFrame} from './grenade-controls.js';
 import {InteractionScenery} from './interaction-view.js';
+import {createMissionArt} from './mission-art-view.js';
+import {clueAnchorHeight} from './mission-scenery.js';
 import {SoloFlameEffects} from './flame-effects.js';
 import {SoloBurnEffects} from './burn-effects.js';
 import {SoloTankEffects} from './tank-effects.js';
@@ -16,6 +18,7 @@ import {createFlameOperator} from './flame-pose.js';
 import {FlameConePreview} from './flame-aim-view.js';
 import {blockWindow,pointInWorldRect,worldBounds} from './world-grid.js';
 import {clampCameraPoint,residentCameraSpan} from './render-residency.js';
+import {SearchHalo,searchHaloCandidates,searchHaloTarget} from './search-halo.js';
 
 const V = (x=0,y=0,z=0) => new T.Vector3(x,y,z);
 // Distinct tracer pulses make each committed burst round readable. A shorter
@@ -60,7 +63,7 @@ export class FieldView {
   center(){if(this.grenadeCamera)this.endGrenadeAim();this.focusedId=null;this.follow=true;if(this.state){const u=hero(this.state);this.target.set(u.x,0,u.y);this.updateCamera();}}
   focusOpponent(id){const u=this.state?.units.find(v=>v.id===id&&v.team==='guard'&&Core.alive(v)&&this.state.detected.has(v.id));if(!u)return false;if(this.grenadeCamera)this.endGrenadeAim();this.focusedId=id;this.follow=false;this.target.set(u.x,0,u.y);this.updateCamera();return true;}
   ground(clientX,clientY){const r=this.container.getBoundingClientRect();this.ray.setFromCamera(new T.Vector2((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1),this.camera);return this.ray.ray.intersectPlane(this.plane,V());}
-  interactionAnchor(object){const height=object.anchorHeight??(object.kind==='door'?2.15:object.kind==='chest'?1.15:.7),point=V(object.x,height,object.y).project(this.camera);return {x:(point.x+1)*this.container.clientWidth/2,y:(1-point.y)*this.container.clientHeight/2,visible:Math.abs(point.x)<.95&&Math.abs(point.y)<.95&&Math.abs(point.z)<1};}
+  interactionAnchor(object){const height=clueAnchorHeight(missionForState(this.state),object,object.kind==='door'?2.15:object.kind==='chest'?1.15:.7),point=V(object.x,height,object.y).project(this.camera);return {x:(point.x+1)*this.container.clientWidth/2,y:(1-point.y)*this.container.clientHeight/2,visible:Math.abs(point.x)<.95&&Math.abs(point.y)<.95&&Math.abs(point.z)<1};}
   down(e){if(e.button!==0||this.grenadeCamera)return;this.container.setPointerCapture(e.pointerId);this.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(this.pointers.size===1)this.gesture={x:e.clientX,y:e.clientY,target:this.target.clone(),moved:false,at:performance.now()};if(this.pointers.size===2){const [a,b]=[...this.pointers.values()];this.pinch={distance:Math.hypot(a.x-b.x,a.y-b.y),span:this.span};this.gesture.moved=true;}}
   drag(e){const point=this.pointers.get(e.pointerId);if(!point)return;point.x=e.clientX;point.y=e.clientY;
     if(this.pointers.size===2&&this.pinch){const [a,b]=[...this.pointers.values()];this.returnSpan=null;this.requestedSpan=T.MathUtils.clamp(this.pinch.span*this.pinch.distance/Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),6,35);this.resize();return;}
@@ -79,14 +82,21 @@ export class FieldView {
   clearEffects(){this.tankEffects?.dispose();this.tankEffects=null;this.burnEffects?.dispose();this.burnEffects=null;for(const effect of this.effects){this.scene.remove(effect.line);effect.line.geometry.dispose();effect.line.material.dispose();}this.effects=[];this.flameEffects?.dispose();this.flameEffects=null;this.flameCone?.dispose();this.flameCone=null;this.flameAim=null;this.lastEffect=null;}
   clearGestures(){for(const id of this.pointers.keys())if(this.container.hasPointerCapture(id))this.container.releasePointerCapture(id);this.pointers.clear();this.gesture=null;this.pinch=null;this.grenadeCamera=null;this.flameAim=null;this.flameCone?.hide();this.returnSpan=null;this.focusedId=null;}
   setGame(s){this.generation++;this.clearGestures();this.clearEffects();this.span=this.requestedSpan=13;this.state=s;this.residentWindow=null;this.lastWindowKey=null;this.samples.clear();this.failed.clear();for(const a of [...this.actors.values(),...(this.parkedActors?.values()||[])])this.disposeActor(a);this.actors.clear();this.parkedActors?.clear();this.pending.clear();this.clearEnvironment();this.buildEnvironment(s);this.center();this.resize();this.lastRevision=-1;this.lastLightAt=undefined;this.lastEffect=s.effect||null;this.route([]);}
-  reportLoading(){this.onLoading(this.artBusy||this.propBusy||this.pending.size>0||this.failed.size>0);}
-  clearEnvironment(){this.interactionArt?.dispose();this.interactionArt=null;this.art?.dispose();this.art=null;this.environment.traverse(o=>{o.geometry?.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});this.environment.clear();for(const t of this.disposables)t.dispose();this.disposables=[];}
+  reportLoading(){this.onLoading(this.artBusy||this.propBusy||this.missionArtBusy||this.pending.size>0||this.failed.size>0);}
+  // Mission art owns its geometry; detach it before the generic traversal below.
+  clearEnvironment(){this.searchHalo?.dispose();this.searchHalo=null;this.missionArt?.dispose();this.missionArt=null;this.missionArtBusy=false;this.interactionArt?.dispose();this.interactionArt=null;this.art?.dispose();this.art=null;this.environment.traverse(o=>{o.geometry?.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});this.environment.clear();for(const t of this.disposables)t.dispose();this.disposables=[];}
   buildEnvironment(s){
-    const generation=this.generation;this.artBusy=true;
-    this.art=new OriginalEnvironment(this.renderer,s,{
+    const generation=this.generation;this.artBusy=true;this.missionArtBusy=false;this.searchHalo=new SearchHalo();
+    // Bespoke mission art first: an accepted cover replacement takes over its crate tiles.
+    this.missionArt=createMissionArt(s,{
+      onLoading:busy=>{if(generation===this.generation){this.missionArtBusy=busy;this.reportLoading();}},
+      onError:message=>{if(generation===this.generation){this.failed.add('mission-art');this.onError(message);}},
+    });
+    this.art=new OriginalEnvironment(this.renderer,s,{replacedCells:this.missionArt?.replacedCells,
       onLoading:busy=>{if(generation===this.generation){this.artBusy=busy;this.reportLoading();}},
       onError:message=>{if(generation===this.generation){this.failed.add('environment');this.onError(message);}},
     });this.environment.add(this.art.root);
+    if(this.missionArt)this.environment.add(this.missionArt.root);
     this.propBusy=true;this.interactionArt=new InteractionScenery(s,{
       onLoading:busy=>{if(generation===this.generation){this.propBusy=busy;this.reportLoading();}},
       onError:message=>{if(generation===this.generation){this.failed.add('interaction-art');this.onError(message);}},
@@ -221,13 +231,17 @@ export class FieldView {
       if(a.signature!==signature||fire||a.hadFlame){a.signature=signature;a.hadFlame=!!fire;if(a.weapon!==displayedWeapon){this.burnEffects?.release(v.id);const old=a.equipment;a.equipment=createWeaponModel(displayedWeapon);a.worker.equipWeapon(a.equipment);old.dispose();a.weapon=displayedWeapon;}
         a.root.position.set(0,0,0);a.locomotion?.apply({...sample,blend:sample.pose?.prone||sample.pose?.down?0:sample.blend});a.posture.apply(sample);if(sample.pose.down)a.posture.ground();}
       a.root.position.set(sample.x,0,sample.y);a.root.updateMatrixWorld(true);a.worker.skeleton.update();if(fire)this.flameEffects.captureMuzzle(fire,a.flameOperator.apply({...sample,hp:operator.hp},fire.seconds,fire.reduced));this.burnEffects?.pose(a,v,this.camera);}
-    if(s.revision!==this.lastRevision||window.key!==this.lastWindowKey){this.lastRevision=s.revision;this.lastWindowKey=window.key;this.art.update(s,u,window);this.interactionArt.update(s,window);
+    if(s.revision!==this.lastRevision||window.key!==this.lastWindowKey){this.lastRevision=s.revision;this.lastWindowKey=window.key;this.art.update(s,u,window);this.interactionArt.update(s,window);this.missionArt?.update(s,window);
       const mission=missionForState(s);this.objectivePin.visible=!objectiveSecured(s)&&pointInWorldRect(mission.objective,window);this.extractionPin.visible=pointInWorldRect(mission.extraction,window);
     }
     this.animateEffects(now);
     this.flameEffects?.draw(s,this.camera);this.tankEffects?.draw(this.camera);
     if(this.lastLightAt===undefined||now-this.lastLightAt>=200){this.daylight.update(480,this.camera,now,true);this.lastLightAt=now;}
-    this.marker.rotation.z=now*.0005;this.renderer.render(this.scene,this.camera);
+    this.marker.rotation.z=now*.0005;
+    if(this.searchHalo){
+      const targets=this.artBusy||this.propBusy?[]:searchHaloCandidates(s,window).map(object=>searchHaloTarget(object,this)).filter(target=>target.root);
+      this.searchHalo.render(this.renderer,this.scene,this.camera,targets,now);
+    }else this.renderer.render(this.scene,this.camera);
   }
   dispose(){this.generation++;this.clearGestures();this.clearEffects();this.pending.clear();this.resizeObserver.disconnect();this.container.removeEventListener('pointerdown',this.pointerDown);this.container.removeEventListener('pointermove',this.pointerMove);this.container.removeEventListener('pointerup',this.pointerUp);this.container.removeEventListener('pointercancel',this.pointerUp);this.container.removeEventListener('wheel',this.wheel);for(const a of [...this.actors.values(),...this.parkedActors.values()])this.disposeActor(a);this.actors.clear();this.parkedActors.clear();this.clearEnvironment();this.daylight.dispose();this.marker.geometry.dispose();this.marker.material.dispose();this.blastMarker.geometry.dispose();this.blastMarker.material.dispose();this.blastArea.geometry.dispose();this.blastArea.material.dispose();this.pathLine.geometry.dispose();this.pathLine.material.dispose();this.renderer.dispose();this.renderer.domElement.remove();}
 }

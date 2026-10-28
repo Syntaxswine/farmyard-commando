@@ -1,6 +1,10 @@
 # Short Measure environment art
 
-First pass for the east feed mill, based on the architect's blockout at design commit `5524d91b3971328f27ccc9bb50b41ce7d2a19482`. This branch starts at public `origin/main` commit `85c8a2e`. It adds an art kit and review page; it does not install a runtime mission, change controls, merge the switch study, or publish the game.
+The east feed mill art kit is based on the architect's blockout at design commit `5524d91b3971328f27ccc9bb50b41ce7d2a19482`. Its initial art-only handoff started at public `origin/main` commit `85c8a2e`. The runtime integration below now installs the kit in the playable Short Measure operation.
+
+**Installed in play (2026-10-28).** `mission-scenery.js` now registers every solid below with the simulation, and `mission-art-view.js` draws the kit in Short Measure. See [Environment art in play](../../short-measure-runtime.md#environment-art-in-play). Two authoring changes came with the installation:
+- The sealed load is sized to the runtime crate collider (1.96 × 1.96 × 0.92 m). The 2 × 2 × 1 m proposal could never bind.
+- The full loads' corner posts end at the load height. A fixed post reached 0.935 m.
 
 The worker station has an empty platform, a bent ivory beam and a red welded stop. The matching freight station has a level beam, intact counterweight and a full sack. Collapsed pale sacks sit beside a full outbound cargo bin. The same seven-in-a-square stencil appears on the scales, sacks, cargo seal and dispatch paper. Broad shapes and inherited materials carry the story at phone scale.
 
@@ -20,10 +24,10 @@ Coordinates below are blockout `(x,y)` / renderer `(x,z)`, with north at the top
 
 | Stable art ID | Anchor / visual center | Size | Navigation reservation | Status |
 | --- | --- | --- | --- | --- |
-| `worker-scale` | `(8,20)` | 1.7 × 1.1 × 1.72 | `[7.15,19.45,8.85,20.55]` | New solid; replaces the decorative story marker only after binding |
-| `freight-scale` | `(10.7,24)` | 1.7 × 1.1 × 1.72 | `[9.85,23.45,11.55,24.55]` | Optional new solid beside outbound lane |
-| `sealed-load-arrival` | `(7.9,23.8)` | 1.5 × 1.25 × 0.95 | `[7.15,23.175,8.65,24.425]` | Optional new solid; shares `sealed-load` story identity |
-| `sealed-load` | Anchor `(28,20)`; art center `(27.5,19.5)` | 2 × 2 × 1 | `[26.5,18.5,28.5,20.5]` | Replacement for cover rectangle `[27,19,2,2]`, conditional on height and occlusion agreement |
+| `worker-scale` | `(8,20)` | 1.7 × 1.1 × 1.72 | `[7.15,19.45,8.85,20.55]` | Registered solid; its clue marker floats above it |
+| `freight-scale` | `(10.7,24)` | 1.7 × 1.1 × 1.72 | `[9.85,23.45,11.55,24.55]` | Registered solid beside outbound lane |
+| `sealed-load-arrival` | `(7.9,23.8)` | 1.5 × 1.25 × 0.95 | `[7.15,23.175,8.65,24.425]` | Registered solid; shares `sealed-load` story identity; crate cover |
+| `sealed-load` | Anchor `(28,20)`; art center `(27.5,19.5)` | 1.96 × 1.96 × 0.92 | `[26.52,18.52,28.48,20.48]` | Replaces the visual of cover rectangle `[27,19,2,2]`; its four crate cells remain the collider |
 | `worker-empty-sacks` | `(6,23.2)` | 1.8 × 0.6 × 0.055 | None; visual bounds `[5.1,22.9,6.9,23.5]` | Decorative ground dressing |
 | `shipping-manifest` | Use point `(32,7)`; desk center `(32,6.1)` | 2 × 1 × 1.05 | `[31,5.6,33,6.6]` | New solid behind the unchanged objective use point |
 
@@ -33,17 +37,26 @@ Height is an envelope, **not an opaque box**. The scale beams and desk legs cont
 
 ## Adapter handoff
 
+**Where each numbered step below now lives at runtime:**
+1. `createMissionArt` returns `null` off Short Measure.
+2. `missionScenery()` registers each new prop's ground reservation and all 108 solid parts.
+3. `missionArtBindings()` reports exactly what was registered. For `sealed-load` it reports the envelope of the crate cells actually on the map.
+4. `tools/short-measure-art.mjs` precomputes `solidParts()` into `solids.js`, and a test rebuilds it from the kit.
+5. The four crate tiles are handed to the kit only when it accepts the model.
+6. `setCollected` follows the objective on every view update, including resume.
+7. `FieldView.clearEnvironment` disposes the mission art before its generic traversal. The paper texture belongs to the view.
+
 The kit lives in [kit.js](../../../sites/tactical-animal/dist/mission-art/short-measure/kit.js). It imports inherited primitive/model/material modules, generates eight small deterministic material textures in memory and uses no AFT PNG catalog fetch. The only optional external texture is the supplied `shipping-manifest.svg`. The standalone `reserve-7.svg` is reusable at any resolution; model seals use matching native geometry.
 
 1. Select `short-measure` before importing/creating this kit. Other missions should not request these assets. The convenience `createShortMeasureArt({missionId,...})` returns `null` for a different mission.
-2. Register matching navigation and per-part occlusion geometry in the authoritative simulation. The existing solo renderer has no such mission-art registration hook; that adapter is still required. Do not derive permission to draw a solid from a story marker's decorative status.
-3. Only after registration, supply `bindings[id]` with `{owner, footprint, height, occlusion:{mode:'solid-mesh-parts',shapeKey}}`, using the exact manifest values. `bindingFor(placement)` describes the expected contract; it does **not** create or verify live simulation collision. The review uses these declarations as proposed bindings in a nonplayable scene. Unbound/mismatched solids return `null` and are reported in `skipped`; safe flat dressing remains available.
+2. Register matching navigation and per-part occlusion geometry in the authoritative simulation. Farmyard does this in `mission-scenery.js`, and `mission-art-view.js` supplies its accepted bindings to the renderer. A story marker alone does not register a solid.
+3. Only after registration, supply `bindings[id]` with `{owner, footprint, height, occlusion:{mode:'solid-mesh-parts',shapeKey}}`, using the exact manifest values. `bindingFor(placement)` describes the expected contract; it does **not** create or verify live simulation collision. The standalone art review uses proposed bindings; the playable adapter uses `missionArtBindings()`. Unbound/mismatched solids return `null` and are reported in `skipped`; safe flat dressing remains available.
 4. `createShortMeasureKit()` exposes `createProp(kind,{size})` for authoring and `place(id,{binding,collected})` for placement. To register geometry before placing it in the scene, create the model off-scene, copy the manifest translation/yaw, and call `solidParts(model)`. Each result supplies borrowed `geometry`, copied `matrixWorld` and primitive `shape`; do not dispose the borrowed buffers. No single opaque envelope should replace these parts for LOS/projectiles.
-5. Replace only the visual owned by `cover:27,19,2,2` for `sealed-load`. Preserve its inspect point `(28,20)`. Hide the old cargo visual only after accepting the new model and occlusion binding. Never render both. If the runtime's cover height differs from 1 m, the binding deliberately fails until the authoring dimensions and simulation agree.
+5. Replace only the visual owned by `cover:27,19,2,2` for `sealed-load`. Preserve its inspect point `(28,20)`. Hide the old cargo visual only after accepting the new model and occlusion binding. Never render both. The current binding agrees with the runtime's 0.92 m crate height; any later dimension change must update both authoring and simulation.
 6. Keep collection at `(32,7)`, 0.4 m south of the desk footprint. The paper center is `(32,6.18)` at roughly 1 m. Call `setCollected(true)` on the art adapter, or `kit.setCollected(desk,true)`, when collected and on saved resume. This hides only paper and its red tab; the desk and its collision remain.
 7. On mission switch, unregister physics/occlusion parts first, remove the art, then call `dispose()`. Disposal is idempotent. The kit owns its geometry, materials and generated textures; an optional `paperTexture` belongs to the caller. The review closes its renderer, shadow map and borrowed texture on `pagehide`.
 
-The additional freight scale and arrival bay are proposals requiring architect/coder acceptance. The original mission remains completable with inherited cargo while these assets are reviewed. No action text, AP rule, save migration, minimap, door state or mission objective is implemented by the art kit.
+The additional freight scale and arrival bay are installed through the registered runtime bindings above. The art kit owns their presentation; the solo simulation and interaction system own action text, AP, save migration, minimap, door state and mission progress.
 
 ## Source and rights record
 
@@ -62,6 +75,6 @@ npm run build
 npm run serve
 ```
 
-Open `/mission-art/short-measure/review.html` on the local preview. The generator rebuilds `placements.json` and both copies of the top-down SVG from the authored manifest and frozen Short Measure blockout. The preview is separate from `game.html`; no public entry point imports it.
+Open `/mission-art/short-measure/review.html` on the local preview. The generator rebuilds `placements.json`, both copies of the top-down SVG and the simulation's `solids.js` from the authored manifest, the kit's models and the frozen Short Measure blockout. The review page itself stays separate from `game.html`; the game imports the kit through `mission-art-view.js`.
 
 Validation and browser evidence are recorded in [review.json](review.json). Preview helpers are stopped after QA; no server is retained for this handoff.

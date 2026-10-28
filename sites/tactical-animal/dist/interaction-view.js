@@ -1,6 +1,8 @@
 import * as T from './aft/tactics/vendor/three.module.js';
 import {PROP_ART} from './aft/tactics/prop-art.js';
 import {doorFootprint} from './interactions.js';
+import {missionForState} from './missions.js';
+import {clueAnchorHeight} from './mission-scenery.js';
 import {blockWindow,pointInWorldRect} from './world-grid.js';
 
 // Reuse the parent game's chest paintings and timber surface. The simulation
@@ -52,7 +54,7 @@ export class InteractionScenery {
       }else if(record.leaf){
         const box=doorFootprint(object);record.leaf.visible=known;record.leaf.position.set((box.x0+box.x1)/2,box.height/2,(box.y0+box.y1)/2);record.leaf.scale.set(box.x1-box.x0,box.height,box.y1-box.y0);
       }else{
-        record.marker.visible=known;record.marker.position.set(object.x,object.anchorHeight??.8,object.y);record.marker.material.color.setHex(state.solo.inspected?.includes(object.id)?0xaab68a:0xe0c17b);record.marker.material.color.multiplyScalar(visible?1:.38);
+        record.marker.visible=known;record.marker.position.set(object.x,clueAnchorHeight(missionForState(state),object,.8),object.y);record.marker.material.color.setHex(state.solo.inspected?.includes(object.id)?0xaab68a:0xe0c17b);record.marker.material.color.multiplyScalar(visible?1:.38);
       }
     }
   }

@@ -1,0 +1,41 @@
+{
+  "source": "origin/main fb386a5 (unmodified checkout); replayed on the branch by tests/scenery-neutrality.test.mjs",
+  "rows": [
+    {
+      "missionId": "night-ledger",
+      "seed": 3,
+      "steps": 60,
+      "hash": "71ee511d51431aa0f16a1f5402db5c3b32fad9ebc9653e7b631fc75f986209f6"
+    },
+    {
+      "missionId": "night-ledger",
+      "seed": 4,
+      "steps": 60,
+      "hash": "b163fcc2eb203bc279165b1556c50154eb6301a0a8bd50384678fdf6189fecda"
+    },
+    {
+      "missionId": "night-ledger",
+      "seed": 6,
+      "steps": 60,
+      "hash": "e401fe50a329f46c2191289fafd501a767166e43ae2dfe0885945aedf2211aef"
+    },
+    {
+      "missionId": "night-ledger",
+      "seed": 8,
+      "steps": 60,
+      "hash": "16f56f69d1fcb915b084ea686ac14d7df88e57e0ac9e8ea7ddce93c23d840c8b"
+    },
+    {
+      "missionId": "road-checkpoint",
+      "seed": 1,
+      "steps": 40,
+      "hash": "8515e17c10b47759885e424d05a49eb8e609939cbc407a4e7a36b265692f274d"
+    },
+    {
+      "missionId": "road-checkpoint",
+      "seed": 2,
+      "steps": 40,
+      "hash": "01c0910232b318a1b75690b3ade8ee8cbe221842ab99119fc0098db4d680473f"
+    }
+  ]
+}

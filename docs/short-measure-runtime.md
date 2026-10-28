@@ -34,7 +34,7 @@ The `sealed-load` clue at `(28,20)` belongs to the cargo rectangle above; reachi
 | `freight-scale` | `[9.85,23.45,11.55,24.55]` | 1.72 m | Outbound lane, south of the shed. |
 | `sealed-load-arrival` | `[7.15,23.175,8.65,24.425]` | 0.95 m | Full sacks beside the arrival lane. They give crate cover. |
 | `shipping-manifest` desk | `[31,5.6,33,6.6]` | 1.05 m | Behind the unchanged use point `(32,7)`. The paper hides once collected. |
-| `sealed-load` | the four crate cells above | 0.92 m | The crate cells stay the collider and reservation. Its 24 parts are registered as well, but they sit inside that envelope and never change an outcome. |
+| `sealed-load` | the four crate cells above | 0.92 m | The crate cells stay the collider and reservation. Its 24 parts sit inside that envelope; their one effect is to close the 4 cm seams between the cells to prone-to-prone sight, which were open before. |
 
 The geometry rules:
 - **Ground reservations** block walking, grenade landings and reach. They never block sight or projectiles.
@@ -46,7 +46,13 @@ The geometry rules:
 
 Each part is an axis-aligned box around one primitive of the model. For the bent beam and the cylinders that box is a little larger than the visible piece: the tilted beam's box is 0.24 m tall where the beam is 0.10 m. That is conservative, but it is a known approximation.
 
-A guard closing on an animal aims 0.75 m short of it. Beside a prop that spot is often inside the reservation, so the guard heads for the nearest clear spot instead. Before this rule, such a guard stood frozen until its alert lapsed; the same could already happen beside a crate.
+A guard closing on an animal aims 0.75 m short of it. Beside a prop that spot is often inside the reservation. Without a fallback, the guard stood frozen until its alert lapsed; on main the same still happens beside a crate or a wall.
+
+Here, the guard instead takes up to three clear spots near the aim, nearest first and 0.3 m apart, that a route can actually end on, and walks to the first one it can reach. It also drops a route waypoint it is already standing on. The choice is held until its quarry moves or a door changes. Crates and walls keep main's behaviour on purpose: changing them is an AI change for every mission.
+
+In a seeded census of 1,000 approaches, freezes where main's guard would fire fell from 40 to 2. In both remaining cases the animal itself stands in the 1.2 m gap between the arrival bay and the freight scale, blocking the short way round; the guard takes the long way and its alert lapses on the way.
+
+Only the simulation's data modules (`mission-scenery.js`, `solids.js`) load in every mission. The kit, its inherited model modules and the paper art load for Short Measure alone. Before the kit's model is in the scene, the inherited cargo keeps drawing the sealed load's crates, so a failed or refused kit never leaves an invisible collider. The four new props have no inherited art at all; if the kit fails, the field shows an error rather than play on with them unseen.
 
 Known limitation, older than this change: the hit-chance preview ignores scenery that physically stops the round. Main shows 70% for a target directly behind a crate that no round can reach, and crates at least add the −20 cover hint. A shot whose line runs through a prop's solid part shows its full chance and then strikes the part.
 

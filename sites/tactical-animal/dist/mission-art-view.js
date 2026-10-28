@@ -1,6 +1,7 @@
 import * as T from './aft/tactics/vendor/three.module.js';
 import {createShortMeasureArt} from './mission-art/short-measure/kit.js';
 import {PLACEMENTS,GROUND_MARKINGS} from './mission-art/short-measure/manifest.js';
+import {SOLIDS_DIGEST} from './mission-art/short-measure/solids.js';
 import {coverRect,missionArtBindings,missionHasArt} from './mission-scenery.js';
 import {missionForState,objectiveSecured} from './missions.js';
 import {pointInWorldRect} from './world-grid.js';
@@ -18,8 +19,12 @@ function tilesUnder([west,north,east,south]){
 // the collectible paper follows the objective. Returns null for missions
 // without art.
 // `bindings` defaults to what the simulation registered; tests pass others.
-export function createMissionArt(state,{onLoading=()=>{},onError=()=>{},loader,bindings:override}={}){
+// `expectDigest` is the solid table the running simulation loaded: a page left
+// open across a deploy can fetch this module newer than its rules, and must not
+// draw art for collision it does not have. Refusing keeps the inherited cargo.
+export function createMissionArt(state,{onLoading=()=>{},onError=()=>{},loader,bindings:override,expectDigest=SOLIDS_DIGEST}={}){
   const mission=missionForState(state);if(!missionHasArt(mission))return null;
+  if(expectDigest!==SOLIDS_DIGEST){onError('The game was updated while this page was open. Reload to continue.');return null;}
   let disposed=false;
   const manager=new T.LoadingManager();
   manager.onStart=()=>{if(!disposed)onLoading(true);};

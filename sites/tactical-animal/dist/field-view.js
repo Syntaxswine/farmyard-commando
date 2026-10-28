@@ -9,7 +9,7 @@ import {OriginalEnvironment} from './original-art.js';
 import {hero, Core, missionForState, objectiveSecured} from './solo-game.js';
 import {FIELD_CAMERA,grenadeCameraFrame} from './grenade-controls.js';
 import {InteractionScenery} from './interaction-view.js';
-import {clueAnchorHeight,missionHasArt,replacedCoverTiles} from './mission-scenery.js';
+import {clueAnchorHeight,missionHasArt,SCENERY_DIGEST} from './mission-scenery.js';
 import {SoloFlameEffects} from './flame-effects.js';
 import {SoloBurnEffects} from './burn-effects.js';
 import {SoloTankEffects} from './tank-effects.js';
@@ -85,13 +85,11 @@ export class FieldView {
   clearEnvironment(){this.missionArt?.dispose();this.missionArt=null;this.missionArtBusy=this.missionPaperBusy=false;this.interactionArt?.dispose();this.interactionArt=null;this.art?.dispose();this.art=null;this.environment.traverse(o=>{o.geometry?.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});this.environment.clear();for(const t of this.disposables)t.dispose();this.disposables=[];}
   buildEnvironment(s){
     const generation=this.generation,mission=missionForState(s);this.artBusy=true;this.missionArtBusy=this.missionPaperBusy=false;
-    // An accepted cover replacement takes over its crate tiles; never draw both.
-    const replaced=replacedCoverTiles(mission,s.map);
-    this.art=new OriginalEnvironment(this.renderer,s,{replacedCells:replaced,
+    this.art=new OriginalEnvironment(this.renderer,s,{
       onLoading:busy=>{if(generation===this.generation){this.artBusy=busy;this.reportLoading();}},
       onError:message=>{if(generation===this.generation){this.failed.add('environment');this.onError(message);}},
     });this.environment.add(this.art.root);
-    this.missionArtReady=missionHasArt(mission)?this.loadMissionArt(s,generation,replaced):Promise.resolve(null);
+    this.missionArtReady=missionHasArt(mission)?this.loadMissionArt(s,generation):Promise.resolve(null);
     this.propBusy=true;this.interactionArt=new InteractionScenery(s,{
       onLoading:busy=>{if(generation===this.generation){this.propBusy=busy;this.reportLoading();}},
       onError:message=>{if(generation===this.generation){this.failed.add('interaction-art');this.onError(message);}},
@@ -101,15 +99,19 @@ export class FieldView {
     if(!s.groundPalette)for(let x=3;x<37;x+=3){const mark=new T.Mesh(new T.PlaneGeometry(1.2,.06),new T.MeshBasicMaterial({color:0xb0a475,transparent:true,opacity:.16}));mark.rotation.x=-Math.PI/2;mark.position.set(x,.003,26.8);this.environment.add(mark);}
   }
   // The art kit and its inherited model modules load only for a mission with art.
-  loadMissionArt(s,generation,replaced){
+  // Inherited cargo keeps drawing a replaced crate until the kit's model is in the
+  // scene, so a slow, failed or refused kit never leaves an invisible collider.
+  loadMissionArt(s,generation){
     this.missionArtBusy=true;this.reportLoading();
     const fail=message=>{if(generation===this.generation){this.failed.add('mission-art');this.onError(message);}};
-    return import('./mission-art-view.js').then(({createMissionArt})=>{
+    const load=this.importMissionArt??(()=>import('./mission-art-view.js'));
+    return load().then(({createMissionArt})=>{
       if(generation!==this.generation)return null;
-      const art=createMissionArt(s,{onError:fail,onLoading:busy=>{if(generation===this.generation){this.missionPaperBusy=busy;this.reportLoading();}}});
-      if(art.replacedCells.size!==replaced.size||[...replaced].some(tile=>!art.replacedCells.has(tile)))fail('Mission art and inherited cargo disagree about which crates it replaces.');
+      const art=createMissionArt(s,{expectDigest:SCENERY_DIGEST,onError:fail,onLoading:busy=>{if(generation===this.generation){this.missionPaperBusy=busy;this.reportLoading();}}});
+      if(!art)return null;
       this.missionArt=art;this.environment.add(art.root);
       art.update(this.state,this.residentWindow||blockWindow(this.state,hero(this.state)));
+      this.art.replace(art.replacedCells);
       return art;
     }).catch(error=>{fail('Mission art could not load: '+error.message);return null;})
       .finally(()=>{if(generation===this.generation){this.missionArtBusy=false;this.reportLoading();}});

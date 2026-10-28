@@ -1,15 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from '../dist/aft/tactics/vendor/three.module.js';
-import {createSoloGame,DEFAULT_BUILD,Core,hero,geometry,freePoint,walkSegment,lineClear,navigationPath,previewGrenade,encodeSave,decodeSave,tick,getMission} from '../dist/solo-game.js';
+import {createSoloGame,DEFAULT_BUILD,Core,hero,distance,geometry,freePoint,walkSegment,lineClear,navigationPath,previewGrenade,encodeSave,decodeSave,tick,getMission} from '../dist/solo-game.js';
 import {missionScenery,missionArtBindings,clueAnchorHeight} from '../dist/mission-scenery.js';
-import {SHORT_MEASURE_SOLIDS,SOLIDS_VERSION} from '../dist/mission-art/short-measure/solids.js';
+import {SHORT_MEASURE_SOLIDS,SOLIDS_VERSION,SOLIDS_DIGEST} from '../dist/mission-art/short-measure/solids.js';
 import {solidPartBoxes} from '../dist/mission-art/short-measure/solid-parts.js';
 import {PLACEMENTS,ART_VERSION,bindingFor} from '../dist/mission-art/short-measure/manifest.js';
 import {createShortMeasureKit,createShortMeasureArt} from '../dist/mission-art/short-measure/kit.js';
 import {createMissionArt} from '../dist/mission-art-view.js';
 import {InteractionScenery} from '../dist/interaction-view.js';
 import {FieldView} from '../dist/field-view.js';
+import {OriginalEnvironment} from '../dist/original-art.js';
+import {createHash} from 'node:crypto';
 import {blockWindow} from '../dist/world-grid.js';
 
 const GRENADES={...DEFAULT_BUILD,utility:'grenade'};
@@ -21,6 +23,7 @@ test('the registered solid table is exactly what the kit builds today',()=>{
     const rebuilt=PLACEMENTS.filter(p=>p.owner).map(p=>{const b=bindingFor(p);return {id:p.id,owner:b.owner,footprint:b.footprint,height:b.height,shapeKey:b.occlusion.shapeKey,parts:solidPartBoxes(kit.solidParts(kit.place(p.id,{binding:b})))};});
     assert.deepEqual(rebuilt,SHORT_MEASURE_SOLIDS,'run node sites/tactical-animal/tools/short-measure-art.mjs');
     assert.equal(SOLIDS_VERSION,ART_VERSION);
+    assert.equal(SOLIDS_DIGEST,createHash('sha256').update(JSON.stringify(rebuilt)).digest('hex').slice(0,16));
   }finally{kit.dispose();}
 });
 
@@ -158,20 +161,25 @@ test('the ration scale is solid around its clue, which stays inspectable from ei
 });
 
 // A guard aims 0.75 m short of its quarry. Beside a prop that spot is solid ground.
-function standoff(heroAt,guardAt){
-  const s=mill(),u=hero(s),g=s.units[1];
+function standoff(heroAt,guardAt,{doors=false,heading,rounds=3}={}){
+  const base=mill();
+  if(doors)for(const o of base.interactables)if(o.kind==='door'){o.open=true;base.edges[o.edge]='door';}
+  const s={...base},u=hero(s),g=s.units[1];   // a fresh object: the opened doors rebuild geometry
   for(const other of s.units.slice(2))other.hp=0;
-  Object.assign(u,{...heroAt,ap:20,hp:10000,maxHp:10000});Object.assign(g,{...guardAt,alert:true,lastKnown:{...heroAt},alertAge:0});
+  Object.assign(u,{...heroAt,ap:20,hp:10000,maxHp:10000});Object.assign(g,{...guardAt,alert:true,lastKnown:{...heroAt},alertAge:0,...(heading===undefined?{}:{heading})});
   s.engaged=true;s.phase='player';Core.refresh(s,{forceFog:true});
   // Count the rounds in which the guard opens fire (each shot leaves a new
   // effect naming its shooter); a frozen guard never does.
   let firing=0;
-  for(let round=0;round<3;round++){
+  for(let round=0;round<rounds;round++){
+    // Each round is a fight round: without this a lapsed contact drops to free
+    // exploration, endTurn refuses, and later rounds silently never run.
+    s.phase='player';s.engaged=true;
     let fired=false,last=s.effect;Core.endTurn(s);
     for(let frame=0;s.phase==='enemy'&&frame<2000;frame++){tick(s,.05);if(s.effect!==last){last=s.effect;fired||=s.effect?.sequence?.[0]?.shooter===g.id;}}
     if(fired)firing++;
   }
-  return {g,firing};
+  return {s,g,firing,moved:distance(g,guardAt)};
 }
 test('a guard closing on an animal beside a prop finds the clear side instead of freezing',()=>{
   // Inspecting the scale from (8,21) with a guard north of it; hiding behind the desk.
@@ -180,6 +188,51 @@ test('a guard closing on an animal beside a prop finds the clear side instead of
     assert.equal(firing,3,`guard fired in ${firing} of 3 rounds, ending at ${g.x.toFixed(2)},${g.y.toFixed(2)}`);
     assert.equal(g.alert,true);
   }
+  // Review round 2's repros: the nearest free spot sat in a strip no route can end in
+  // (beside the arrival bay), or boxed in by the open west leaf and the scale.
+  for(const [heroAt,guardAt] of [[{x:9.11,y:23.68},{x:6.78,y:21.83}],[{x:6.5,y:20.01},{x:13.5,y:19.3}]]){
+    const {g,firing}=standoff(heroAt,guardAt,{doors:true});
+    assert.ok(firing>=1,`guard never fired; it ended at ${g.x.toFixed(2)},${g.y.toFixed(2)}`);assert.equal(g.alert,true);
+  }
+});
+
+test('census cases pin the two approach rules that each prevent freezes',()=>{
+  // Each froze (no shot, alert lapsed within four rounds) once its rule was
+  // removed, in the 1,000-approach census; with it the guard engages. Exact
+  // census values: these cases sit near decision edges, so rounding moves them.
+  const cases=[
+    ['route ends: a free spot no route can end on',{x:6.483179605067708,y:20.18899905295111},{x:13.743990889711291,y:18.425564061108183},53.496729796752334],
+    ['route ends',{x:6.8748554619634525,y:23.375523177045398},{x:9.85492917953809,y:21.460194110655912},299.40732984803617],
+    ['route ends',{x:6.809355099187233,y:23.353898395388388},{x:10.804398705091472,y:21.069675135676313},285.83095273934305],
+    ['reached waypoint: the route opens 4 cm from the guard',{x:7.919327088585123,y:18.790288305529394},{x:7.180232108991293,y:22.87409519878036},262.29286341927946],
+  ];
+  for(const [rule,heroAt,guardAt,heading] of cases){
+    const {g,firing}=standoff(heroAt,guardAt,{doors:true,heading,rounds:4});
+    assert.ok(firing>0||g.alert,`${rule}: guard froze at ${g.x.toFixed(2)},${g.y.toFixed(2)}`);
+  }
+});
+
+test('around every prop, a guard whose aim lands inside it moves or fires whenever a reachable spot exists',()=>{
+  // Seeded sample of review round 2's approach census: the animal 0.24-0.74 m from
+  // a prop face, the guard 2-9 m off at any bearing and heading, doors open 70%.
+  const random=(seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;})(2026);
+  const probe=mill(),props=geometry(probe).filter(box=>box.kind==='prop');let cases=0;
+  for(const p of props)for(let tries=0,taken=0;tries<400&&taken<10;tries++){
+    const side=Math.floor(random()*4),gap=.24+random()*.5,along=random(),angle=random()*Math.PI*2,radius=2+random()*7,heading=random()*360,doors=random()<.7;
+    const heroAt=[{x:p.x0+(p.x1-p.x0)*along,y:p.y0-gap},{x:p.x0+(p.x1-p.x0)*along,y:p.y1+gap},{x:p.x0-gap,y:p.y0+(p.y1-p.y0)*along},{x:p.x1+gap,y:p.y0+(p.y1-p.y0)*along}][side];
+    const guardAt={x:heroAt.x+Math.cos(angle)*radius,y:heroAt.y+Math.sin(angle)*radius};
+    if(!freePoint(probe,heroAt,null,{units:false})||!freePoint(probe,guardAt,null,{units:false}))continue;
+    const aim={x:heroAt.x-(heroAt.x-guardAt.x)/radius*.75,y:heroAt.y-(heroAt.y-guardAt.y)/radius*.75};
+    if(Math.hypot(Math.max(p.x0-aim.x,0,aim.x-p.x1),Math.max(p.y0-aim.y,0,aim.y-p.y1))>=.23)continue;
+    taken++;cases++;
+    const {s,g,firing,moved}=standoff(heroAt,guardAt,{doors,heading,rounds:1});
+    if(firing||moved>.05)continue;
+    // Frozen: legitimate only if no standing spot near the aim can be reached at all.
+    let reachable=null;
+    for(let ring=1;ring<=40&&!reachable;ring++)for(let i=0;i<16&&!reachable;i++){const q={x:aim.x+Math.cos(i/16*Math.PI*2)*ring*.05,y:aim.y+Math.sin(i/16*Math.PI*2)*ring*.05};if(freePoint(s,q,g.id)&&navigationPath(s,g,q.x,q.y))reachable=q;}
+    assert.equal(reachable,null,`${p.placementId}: guard froze at ${guardAt.x.toFixed(2)},${guardAt.y.toFixed(2)} though (${reachable?.x.toFixed(2)},${reachable?.y.toFixed(2)}) was reachable`);
+  }
+  assert.ok(cases>=36,`only ${cases} approaches sampled`);
 });
 
 test('a save that stood on the old scale marker loads beside the scale and walks away; nothing else moves',()=>{
@@ -218,45 +271,71 @@ test('a binding the kit refuses is reported, never hidden',()=>{
   bindings['worker-scale']={...bindings['worker-scale'],height:1.6};
   const art=createMissionArt(s,{loader:{load:()=>new T.Texture()},bindings,onError:message=>errors.push(message)});
   try{
-    assert.deepEqual(art.refused,['worker-scale']);assert.equal(art.root.getObjectByName('worker-scale'),undefined);
+    assert.deepEqual(art.refused,['worker-scale']);assert.ok(art.root.getObjectByName('worker-scale')===undefined);
     assert.equal(errors.length,1);assert.match(errors[0],/worker-scale/);
   }finally{art.dispose();}
 });
 
 // FieldView end to end without a GPU: images never finish loading, so only the
-// synchronous scene graph and the mission art's lifecycle are exercised.
-function bareView(state){
+// synchronous scene graph and the mission art's lifecycle are exercised. Three.js
+// objects are compared with ===: node:test walks whole scene graphs on a failure.
+function bareView(state,importMissionArt){
   const view=Object.create(FieldView.prototype),errors=[];
   Object.assign(view,{state,generation:1,renderer:{capabilities:{getMaxAnisotropy:()=>1}},environment:new T.Group(),failed:new Set(),disposables:[],residentWindow:null,onLoading(){},onError:message=>errors.push(message)});
+  if(importMissionArt)view.importMissionArt=importMissionArt;
   return {view,errors};
 }
-const crateCargo=view=>[...view.art.index.values()].flatMap(block=>block.cargo).filter(p=>p.form==='crate-square').map(p=>`${p.x},${p.y}`);
-test('the field draws each crate tile once: inherited cargo or the kit, and disposes the kit with the field',async()=>{
+async function withImages(run){
   const previous=globalThis.document;
   globalThis.document={createElementNS:()=>({style:{},addEventListener(){},removeEventListener(){},set src(value){}})};
-  try{
-    const s=mill(),{view,errors}=bareView(s);
-    view.buildEnvironment(s);const art=await view.missionArtReady;
-    assert.deepEqual(errors,[]);assert.equal(view.missionArt,art);assert.equal(art.root.parent,view.environment);
-    const cargo=crateCargo(view);
-    for(const tile of ['27,19','28,19','27,20','28,20'])assert.equal(cargo.includes(tile),false,tile);
-    assert.ok(cargo.includes('8,10')&&cargo.includes('31,17'));   // every other cover keeps its cargo
-    // The field's generic traversal frees materials but never their maps, so only
-    // the kit's own dispose frees its generated textures and the paper.
-    const counts=new Map();
-    art.root.traverse(mesh=>{if(!mesh.isMesh)return;for(const resource of [mesh.material,mesh.material.map].filter(Boolean))if(!counts.has(resource)){counts.set(resource,0);resource.addEventListener('dispose',()=>counts.set(resource,counts.get(resource)+1));}});
-    view.clearEnvironment();assert.equal(view.missionArt,null);
-    assert.ok([...counts.keys()].filter(resource=>resource.isTexture).length>=9);   // 8 surfaces + the paper
-    assert.ok([...counts.values()].every(n=>n===1),'every kit material and texture is disposed exactly once');
-    // A field replaced before the kit arrives never receives it.
-    const late=bareView(mill());late.view.buildEnvironment(late.view.state);late.view.generation++;
-    assert.equal(await late.view.missionArtReady,null);assert.equal(late.view.missionArt,undefined);
-    late.view.clearEnvironment();
-    // Night Ledger loads no kit and keeps all of its cargo.
-    const night=createSoloGame(),plain=bareView(night);plain.view.buildEnvironment(night);
-    assert.equal(await plain.view.missionArtReady,null);assert.equal(crateCargo(plain.view).length,night.map.flat().filter(t=>t==='crate').length);
-    plain.view.clearEnvironment();
-  }finally{if(previous===undefined)delete globalThis.document;else globalThis.document=previous;}
+  try{return await run();}finally{if(previous===undefined)delete globalThis.document;else globalThis.document=previous;}
+}
+const SEALED=['27,19','27,20','28,19','28,20'];
+test('the inherited cargo yields its crates only once the kit is in the scene, and the kit is disposed with the field',()=>withImages(async()=>{
+  const s=mill();s.seen=new Set(['4,25']);   // the desk is unexplored
+  const {view,errors}=bareView(s);view.buildEnvironment(s);
+  assert.deepEqual([...view.art.replaced],[],'nothing is hidden before the kit arrives');
+  const art=await view.missionArtReady;
+  assert.deepEqual(errors,[]);assert.ok(view.missionArt===art&&art.root.parent===view.environment);
+  assert.deepEqual([...view.art.replaced].sort(),SEALED);
+  assert.equal(art.root.getObjectByName('shipping-manifest').visible,false,'fog applies the moment the kit arrives');
+  // The field's generic traversal frees materials but never their maps, so only
+  // the kit's own dispose frees its generated textures and the paper.
+  const counts=new Map();
+  art.root.traverse(mesh=>{if(!mesh.isMesh)return;for(const resource of [mesh.material,mesh.material.map].filter(Boolean))if(!counts.has(resource)){counts.set(resource,0);resource.addEventListener('dispose',()=>counts.set(resource,counts.get(resource)+1));}});
+  view.clearEnvironment();assert.ok(view.missionArt===null);
+  assert.ok([...counts.keys()].filter(resource=>resource.isTexture).length>=9);   // 8 surfaces + the paper
+  assert.ok([...counts.values()].every(n=>n===1),'every kit material and texture is disposed exactly once');
+}));
+
+test('a kit that fails to load, refuses a stale table or arrives late leaves every inherited crate drawn',()=>withImages(async()=>{
+  const failing=bareView(mill(),()=>Promise.reject(Error('offline')));failing.view.buildEnvironment(failing.view.state);
+  assert.ok(await failing.view.missionArtReady===null);assert.deepEqual([...failing.view.art.replaced],[]);
+  assert.equal(failing.errors.length,1);assert.match(failing.errors[0],/could not load: offline/);failing.view.clearEnvironment();
+  // A page left open across a deploy fetches an art module with a newer table.
+  const real=await import('../dist/mission-art-view.js');
+  const stale=bareView(mill(),async()=>({createMissionArt:(state,options)=>real.createMissionArt(state,{...options,expectDigest:'an older table'})}));
+  stale.view.buildEnvironment(stale.view.state);
+  assert.ok(await stale.view.missionArtReady===null);assert.deepEqual([...stale.view.art.replaced],[]);assert.match(stale.errors[0],/Reload/);stale.view.clearEnvironment();
+  const late=bareView(mill());late.view.buildEnvironment(late.view.state);late.view.generation++;
+  assert.ok(await late.view.missionArtReady===null&&late.view.missionArt===undefined);assert.deepEqual([...late.view.art.replaced],[]);late.view.clearEnvironment();
+  // Night Ledger never asks for the kit at all.
+  let asked=0;const night=createSoloGame(),plain=bareView(night,()=>{asked++;return import('../dist/mission-art-view.js');});
+  plain.view.buildEnvironment(night);assert.ok(await plain.view.missionArtReady===null);
+  assert.equal(asked,0);assert.deepEqual(plain.errors,[]);plain.view.clearEnvironment();
+}));
+
+test('replaced crate tiles stop drawing and every other crate still draws',()=>{
+  const s=mill();for(let y=0;y<30;y++)for(let x=0;x<40;x++)s.seen.add(`${x},${y}`);
+  const env=new OriginalEnvironment({capabilities:{getMaxAnisotropy:()=>1}},s,{loader:{load:()=>new T.Texture(),loadAsync:()=>new Promise(()=>{})}});
+  // A one-mesh stand-in for the painted cargo library, which needs real images.
+  const proto=new T.Group();proto.add(new T.Mesh(new T.BoxGeometry(),new T.MeshBasicMaterial()));proto.updateMatrixWorld(true);
+  env.library={build:()=>({root:proto,bounds:new T.Box3(new T.Vector3(-.5,0,-.5),new T.Vector3(.5,.92,.5))}),dispose(){}};
+  for(const chunk of env.chunks.values())env.buildCargo(chunk);
+  const drawn=()=>{env.update(s,hero(s),env.window);return [...env.chunks.values()].flatMap(chunk=>chunk.cargo).reduce((n,{mesh})=>n+mesh.count,0);};
+  const crates=s.map.flat().filter(tile=>tile==='crate').length;
+  assert.equal(drawn(),crates);env.replace(SEALED);assert.equal(drawn(),crates-4);
+  env.dispose();
 });
 
 test('the interaction hand rises with the clue marker above the scale',()=>{

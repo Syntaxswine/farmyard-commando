@@ -401,16 +401,51 @@ function nearestStanding(s,p,ignoreId,maxRadius){
   for(let ring=1;ring*.05<=maxRadius+EPS;ring++){const r=ring*.05;for(let i=0;i<32;i++){const a=i/32*Math.PI*2,q={x:p.x+Math.cos(a)*r,y:p.y+Math.sin(a)*r};if(freePoint(s,q,ignoreId))return q;}}
   return null;
 }
+// Can the pathfinder end a route at q? navigationPath needs a straight walk from
+// the unit or a free grid neighbour joined to q by one; a free spot boxed into a
+// narrow strip has neither, and a guard sent there would freeze all the same.
+function routeEnd(s,from,q,ignoreId){
+  // Grid neighbours first: their walks are short; the walk from the guard is not.
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const n={x:Math.round(q.x)+dx,y:Math.round(q.y)+dy};if(freePoint(s,n,ignoreId)&&walkSegment(s,q,n,ignoreId))return true;}
+  return walkSegment(s,from,q,ignoreId);
+}
+// Up to three standing spots around the aim, nearest first and 0.3 m apart, each
+// one a route can end on, held per guard for as long as its quarry and the
+// scenery stay put (a door changing rebuilds the geometry and so the spots).
+// Ranking them by route length was tried and changed no outcome in a census of
+// 1,000 approaches, so they are taken nearest first.
+const approachSpots=new WeakMap();
+function spotsNear(s,g,target){
+  const geometryKey=geometry(s),goal=g.lastKnown||hero(s),key=`${goal.x},${goal.y}`,held=approachSpots.get(g);
+  if(held&&held.key===key&&held.geometry===geometryKey)return held;
+  const spots=[];
+  for(let ring=1;ring*.05<=2+EPS&&spots.length<3;ring++){const r=ring*.05;
+    for(let i=0;i<32&&spots.length<3;i++){const a=i/32*Math.PI*2,q={x:target.x+Math.cos(a)*r,y:target.y+Math.sin(a)*r};
+      if(!spots.some(spot=>distance(spot,q)<.3)&&freePoint(s,q,g.id)&&routeEnd(s,g,q,g.id))spots.push(q);}}
+  const fresh={key,geometry:geometryKey,spots,dead:new Set(),exhaustedRound:null};approachSpots.set(g,fresh);return fresh;
+}
 // A guard closing on its quarry aims 0.75 m short of it. When that spot is inside
 // a mission prop (the ration scale beside its inspect point, the dispatch desk),
-// it heads for the nearest clear spot instead of freezing until its alert lapses.
-// Crates and walls keep main's behaviour, where such a guard still freezes: fixing
-// that is an AI change for every mission, so it stays out of the art integration.
+// it heads for a reachable clear spot nearby instead of freezing until its alert
+// lapses. Crates and walls keep main's behaviour, where such a guard still
+// freezes: fixing that is an AI change for every mission, so it stays out here.
 function approachPath(s,g,target){
   const path=navigationPath(s,g,target.x,target.y);
   if(path||!geometryNear(s,target,target,RADIUS,'walk').some(box=>box.kind==='prop'&&pointBoxDistance(target,box)<RADIUS-EPS))return path;
-  const near=nearestStanding(s,target,g.id,2);
-  return near?navigationPath(s,g,near.x,near.y):null;
+  const held=spotsNear(s,g,target);if(held.exhaustedRound===s.round)return null;
+  // A spot whose search failed stays skipped while the quarry and scenery hold, so
+  // a guard on its way pays one A* per tick, as main's guards do.
+  for(const [index,spot] of held.spots.entries()){
+    if(held.dead.has(index)||!freePoint(s,spot,g.id))continue;
+    // A route may open at the guard's own grid node, under the 8 cm at which
+    // enemyStep ends the turn; skip that reached waypoint (fallback routes only,
+    // so main's own approaches stay byte-identical).
+    const route=navigationPath(s,g,spot.x,spot.y);if(route)return route.length>1&&distance(g,route[0])<.08?route.slice(1):route;
+    held.dead.add(index);
+  }
+  // Nothing reachable this round (a spot may be taken by another unit): retry
+  // every spot next round rather than repeat the searches every tick.
+  held.dead.clear();held.exhaustedRound=s.round;return null;
 }
 // A save written before a prop became solid may store a living animal inside it
 // (Short Measure's ration scale stands where its clue marker once had no

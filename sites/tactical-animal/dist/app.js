@@ -198,10 +198,11 @@ function renderContext(focusControl){if(!state)return;const u=hero(state),near=i
   if(target&&selected)aim=availableAim(Core.WEAPONS[u.weapon],u.ap,burst,aim);
   const p=target&&selected&&u.weapon!=='flamethrower'?Core.previewAttack(state,u,target,burst,zone,null,aim):null;
   const reload=triggerReloadStatus(u);
-  const sig=JSON.stringify([selected,near,aim,zone,burst,p,reload,u.ap.toFixed(2),u.weapon,u.ammo[u.weapon],state.phase,[...state.detected],Math.round(u.x*10),Math.round(u.y*10),target?.hp,target?.species,target?.stance,target?.weapon]);if(sig===contextKey)return;contextKey=sig;const root=$('context');root.replaceChildren();root.classList.toggle('shooting-panel',!!p);
+  const sig=JSON.stringify([selected,near,aim,zone,burst,p,reload,u.ap.toFixed(2),u.weapon,u.ammo[u.weapon],u.burningTurns,state.phase,[...state.detected],Math.round(u.x*10),Math.round(u.y*10),target?.hp,target?.species,target?.stance,target?.weapon]);if(sig===contextKey)return;contextKey=sig;const root=$('context');root.replaceChildren();root.classList.toggle('shooting-panel',!!p);
   if(state.phase==='enemy')return;
   function content(title,detail,label,fn,disabled=false){const copy=document.createElement('div');copy.className='context-copy';const h=document.createElement('strong');h.textContent=title;const small=document.createElement('small');small.textContent=detail;copy.append(h,small);root.append(copy);const b=document.createElement('button');b.textContent=label;b.disabled=disabled;b.onclick=()=>{closeDialog();act(fn);};root.append(b);return copy;}
-  if(u.weapon==='flamethrower'&&!selected?.point){const flame=Core.previewFlame(state,u,u.heading);content('Flamethrower cone',`${flame.range} m · ${flame.spread}° spread · ${flame.cost} AP${flame.reason?' · '+flame.reason:''}`,'Aim cone',()=>armFlame(),!flame.ok);}
+  if(u.burningTurns){content('On fire',`${u.burningTurns} panic turns before burning to ash. Panic advances automatically.`,'Continue panic',()=>Core.endTurn(state));}
+  else if(u.weapon==='flamethrower'&&!selected?.point){const flame=Core.previewFlame(state,u,u.heading);content('Flamethrower cone',`${flame.range} m · ${flame.spread}° spread · ${flame.cost} AP${flame.reason?' · '+flame.reason:''}`,'Aim cone',()=>armFlame(),!flame.ok);}
   else if(p){
     const w=Core.WEAPONS[u.weapon],choices=aimOptions(w,u.ap,burst),chosen=choices.find(option=>option.id===aim);
     const monitor=createTargetMonitor(state,target,p,zone);if(monitor)root.append(monitor);

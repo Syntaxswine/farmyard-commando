@@ -1,16 +1,17 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {createHash} from 'node:crypto';
 import {Core,encodeSave} from '../dist/solo-game.js';
 import {recordFlame,pointInFlame,flameFogMask,flameMaskRect} from '../dist/flame-event.js';
 import {flameScenario,gameplayReceipt} from './flame-scenarios.mjs';
 
-test('all 54 public-main outcomes retain identical AP, fuel, cone hits, damage, casualties, visibility, and RNG',()=>{
+test('all 54 legacy scenarios retain AP, fuel and RNG while exposed victims receive the restored lethal outcome',()=>{
   const baseline=JSON.parse(fs.readFileSync(new URL('./flame-gameplay-baseline.json',import.meta.url)));
   for(const row of baseline.rows){const {state,unit,target}=flameScenario(row),beforeFuel=unit.ammo.flamethrower,beforeAP=unit.ap,seed=state.seed,beforeHP=state.units.map(unit=>unit.hp);
     assert.equal(Core.attack(state,unit,target),true);
-    assert.equal(createHash('sha256').update(JSON.stringify(gameplayReceipt(state))).digest('hex'),row.hash,JSON.stringify(row));
+    assert.equal(state.units[1].hp,0);assert.equal(state.units[2].hp,0);assert.equal(state.units[3].hp,row.scene==='wall'?600:0);
+    for(const v of state.units.slice(1,4))if(!v.hp)assert.equal(v.burnedRemains,true);
+    assert.equal(unit.ap,row.ap);assert.equal(unit.ammo.flamethrower,row.fuel);assert.equal(state.seed,row.seed);
     assert.equal(unit.ap,beforeAP-6);assert.equal(unit.ammo.flamethrower,beforeFuel-1);assert.equal(state.seed,seed);
     const event=state.effect.sequence[0];assert.equal(event.flame.rays.length,37);assert.equal(event.flame.halfAngle,24*Math.PI/180);assert.equal(event.flame.range,10);
     assert.deepEqual(event.flame.source,{id:unit.id,species:unit.species,stance:unit.stance,heading:unit.heading,x:unit.x,y:unit.y});

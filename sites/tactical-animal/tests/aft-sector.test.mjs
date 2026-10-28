@@ -38,7 +38,7 @@ test('unsupported authored features fail explicitly rather than producing a misl
 });
 
 test('Road Checkpoint is an optional complete mission crossing multiple original blocks',()=>{
-  const mission=getMission('road-checkpoint'),world=missionMap(mission.id),objects=missionInteractables({missionId:mission.id});
+  const mission=getMission('road-checkpoint',1),world=missionMap(mission.id,1),objects=missionInteractables({missionId:mission.id,layoutVersion:1});
   assert.deepEqual(validateMission(mission),[]);assert.equal(world.terrain.length,240);
   assert.equal(mission.guards.length,6);assert.equal(objects.filter(o=>o.kind==='door').length,1);
   assert.equal(objects.find(o=>o.kind==='door').edge,'s:21:115');

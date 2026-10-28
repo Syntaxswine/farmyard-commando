@@ -1,6 +1,7 @@
 // Runtime definitions for the first playable slice of The First Shift.
 // Spatial source: design commit 5524d91, docs/missions/first-shift.maps.json.
 import {checkpointSource,checkpointMap} from './aft-sector.js';
+import {checkpointApproachMap} from './checkpoint-approaches.js';
 export const DEFAULT_MISSION_ID='night-ledger';
 const checkpoint=checkpointSource(),checkpointDoors=checkpointMap().doors;
 const bounds={x:1,y:1,w:38,h:28};
@@ -12,6 +13,23 @@ const chest=(x,y)=>({id:'supply-chest',kind:'chest',name:'Supply chest',x,y,rang
 ]});
 const guard=(name,weapon,x,y,heading)=>({name,weapon,x,y,heading,species:'pig-foreman'});
 const cover=(id,rect)=>({id,rect});
+// Version 1 remains resolvable for operations already saved on the old layout.
+const legacyCheckpoint={
+  id:'road-checkpoint',layoutVersion:1,title:'Road Checkpoint',name:'Road Checkpoint',location:'VALLEY ROAD / EAST RALLY POINT',
+  bounds:{x:0,y:0,w:240,h:240},sector:'aft-road-checkpoint',
+  briefing:'The checkpoint decides who leaves the valley. Take its travel orders from the office, then cross the open ground to the east rally point.',
+  spawn:{x:checkpoint.starts[0].x,y:checkpoint.starts[0].y,heading:0},
+  objective:{id:'travel-orders',kind:'objective',name:'Travel orders',x:21,y:112,range:.85,cost:2,
+    instruction:'Reach the checkpoint office and secure the travel orders.',after:'Cross the field to the east rally point with the orders.',
+    collected:'Every outbound wagon is diverted to Reserve 7. The roadblocks are keeping the workers in.'},
+  extraction:{x:64,y:120,name:'East rally point',label:'Extract with the travel orders',range:.85},
+  steps:['Pass the road checkpoint.','Take the travel orders from the office.','Cross to the east rally point.'],
+  rooms:[{id:'checkpoint-office',name:'Checkpoint office',rect:[17,109,8,7],doors:checkpointDoors}],
+  cover:[],guards:checkpoint.guards.map(g=>({...g,name:g.character.displayName,heading:g.heading??0})),
+  containers:[{...chest(4,125),name:'Abandoned road supplies'}],
+  clues:[{id:'checkpoint-road-sign',kind:'clue',name:'Outbound diversion sign',x:34,y:120,range:1.7,anchorHeight:.8,inventory:[],text:'The public road stops here. A fresh arrow sends all freight toward Reserve 7.'}],
+  result:{title:'The road is open.',summary:'carried the travel orders beyond the checkpoint.',epilogue:'The convoy route crosses open country. Now you know where the wagons are going.'},
+};
 const definitions=[
   {
     id:'night-ledger',title:'The Night Ledger',name:'The night ledger',location:'MILL 04 / RECORDS OFFICE',bounds,
@@ -57,21 +75,38 @@ const definitions=[
     result:{title:'The manifest is out.',summary:'left the feed mill with the shipping manifest.',epilogue:'The same office approves the district\'s water. Follow the service main to Pump Station 3.'},
   },
   {
-    id:'road-checkpoint',title:'Road Checkpoint',name:'Road Checkpoint',location:'VALLEY ROAD / EAST RALLY POINT',
-    bounds:{x:0,y:0,w:240,h:240},sector:'aft-road-checkpoint',
-    briefing:'The checkpoint decides who leaves the valley. Take its travel orders from the office, then cross the open ground to the east rally point.',
-    spawn:{x:checkpoint.starts[0].x,y:checkpoint.starts[0].y,heading:0},
-    objective:{id:'travel-orders',kind:'objective',name:'Travel orders',x:21,y:112,range:.85,cost:2,
-      instruction:'Reach the checkpoint office and secure the travel orders.',after:'Cross the field to the east rally point with the orders.',
+    id:'road-checkpoint',layoutVersion:2,title:'Road Checkpoint',name:'Road Checkpoint',location:'VALLEY ROAD / WEST APPROACH',
+    bounds:{x:0,y:0,w:240,h:240},briefingBounds:{x:40,y:76,w:161,h:88},sector:'aft-road-checkpoint-approaches',
+    briefing:'You arrive west of the roadblock, unseen. Take the travel orders from the office and reach the northeast rally point. The road is short and watched. The north service lane is screened by a brick wall; the longer southern freight yard has cover and abandoned supplies. You choose when to make contact.',
+    spawn:{x:48,y:120,heading:0},
+    objective:{id:'travel-orders',kind:'objective',name:'Travel orders',x:117,y:112,range:.85,cost:2,
+      instruction:'Scout the road, north service lane or south freight yard. Secure the travel orders in the office.',after:'Reach the northeast rally point with the orders. You do not need to clear the checkpoint.',
       collected:'Every outbound wagon is diverted to Reserve 7. The roadblocks are keeping the workers in.'},
-    extraction:{x:64,y:120,name:'East rally point',label:'Extract with the travel orders',range:.85},
-    steps:['Pass the road checkpoint.','Take the travel orders from the office.','Cross to the east rally point.'],
-    rooms:[{id:'checkpoint-office',name:'Checkpoint office',rect:[17,109,8,7],doors:checkpointDoors}],
-    cover:[],
-    guards:checkpoint.guards.map(g=>({...g,name:g.character.displayName,heading:g.heading??0})),
-    containers:[{...chest(4,125),name:'Abandoned road supplies'}],
-    clues:[{id:'checkpoint-road-sign',kind:'clue',name:'Outbound diversion sign',x:34,y:120,range:1.7,anchorHeight:.8,inventory:[],text:'The public road stops here. A fresh arrow sends all freight toward Reserve 7.'}],
-    result:{title:'The road is open.',summary:'carried the travel orders beyond the checkpoint.',epilogue:'The convoy route crosses open country. Now you know where the wagons are going.'},
+    extraction:{x:192,y:90,name:'Northeast rally point',label:'Extract with the travel orders',range:.85},
+    steps:['Scout and choose an approach.','Secure the travel orders; clearing the guards is optional.','Reach the northeast rally point.'],
+    rooms:[{id:'checkpoint-office',name:'Checkpoint office',rect:[113,109,8,7],doors:[
+      door('checkpoint-front-door','Checkpoint office front door','s',117,115.5),
+      door('checkpoint-service-door','Office service door','s',117,108.5),
+    ]}],
+    cover:[cover('west-verge',[57,125,3,2]),cover('road-west-barricade',[80,124,4,1]),cover('road-east-barricade',[97,125,3,1]),
+      cover('north-tools',[82,100,3,1]),cover('north-office-stack',[109,100,2,1]),cover('north-picket',[135,88,3,1]),
+      cover('freight-west-stack',[97,145,3,3]),cover('freight-middle-stack',[109,139,3,3]),cover('freight-east-stack',[126,141,3,3]),cover('freight-far-stack',[142,147,3,3]),
+      cover('east-road-stack',[162,124,3,2]),cover('rally-stones',[190,94,3,1])],
+    guards:[
+      {name:'Road sentry',species:'horse',weapon:'rifle',x:88,y:120,heading:180},
+      {name:'Barrier guard',species:'goat',weapon:'pistol',x:103,y:121,heading:180},
+      {name:'Orders courier',species:'pig-foreman',weapon:'pistol',x:141,y:110,heading:0},
+      {name:'North picket',species:'goat',weapon:'rifle',x:128,y:84,heading:0},
+      {name:'Freight sentry',species:'pig-foreman',weapon:'pistol',x:136,y:155,heading:270},
+      {name:'East road sentry',species:'horse',weapon:'rifle',x:174,y:120,heading:180},
+    ],
+    containers:[{...chest(53,125),name:'West approach cache'},{...chest(105,144),id:'freight-supplies',name:'Confiscated field supplies'}],
+    clues:[
+      {id:'approach-marker',kind:'clue',name:'Worker route marker',x:51,y:118,range:1.7,anchorHeight:.8,inventory:[],text:'Three chalk arrows: ROAD — shortest, watched. NORTH SERVICE LANE — brick wall, rear office door. SOUTH FREIGHT YARD — longer, confiscated supplies and firing cover. The rally point is northeast. The orders matter; the guard count does not.'},
+      {id:'checkpoint-road-sign',kind:'clue',name:'Outbound diversion sign',x:154,y:121,range:1.7,anchorHeight:.8,inventory:[],text:'The public road stops here. A fresh arrow sends all freight toward Reserve 7.'},
+      {id:'confiscation-list',kind:'clue',name:'Confiscation tally',x:123,y:149,range:1.7,anchorHeight:.8,inventory:[],text:'Boots, food, medicine. Every item taken from a departing worker is signed into the checkpoint stock. The extra field supplies were never issued to the road guards.'},
+    ],
+    result:{title:'The orders are out.',summary:'carried the travel orders beyond the checkpoint.',epilogue:'The convoy route crosses open country. Now you know where the wagons are going.'},
   },
 ];
 
@@ -98,17 +133,23 @@ export function validateMission(definition){
   return errors;
 }
 for(const definition of definitions){const errors=validateMission(definition);if(errors.length)throw Error(definition.id+': '+errors.join(' '));}
+freeze(legacyCheckpoint);
 export const MISSIONS=freeze(definitions);
-export function getMission(id=DEFAULT_MISSION_ID){const definition=MISSIONS.find(m=>m.id===id);if(!definition)throw Error('Unknown operation: '+String(id)+'.');return definition;}
-export const missionForState=state=>getMission(state.solo.missionId??DEFAULT_MISSION_ID);
+export function getMission(id=DEFAULT_MISSION_ID,layoutVersion){
+  const definition=id==='road-checkpoint'&&layoutVersion===1?legacyCheckpoint:MISSIONS.find(m=>m.id===id);
+  if(!definition)throw Error('Unknown operation: '+String(id)+'.');
+  if(layoutVersion!==undefined&&layoutVersion!==(definition.layoutVersion??1))throw Error('Unsupported operation layout.');
+  return definition;
+}
+export const missionForState=state=>getMission(state.solo.missionId??DEFAULT_MISSION_ID,state.solo.layoutVersion??1);
 export const objectiveSecured=state=>!!(state.solo.objectives?.[missionForState(state).objective.id]??(missionForState(state).id===DEFAULT_MISSION_ID&&state.solo.ledger));
 export const missionDestination=state=>objectiveSecured(state)?missionForState(state).extraction:missionForState(state).objective;
 
-export function missionMap(id=DEFAULT_MISSION_ID){
-  const mission=getMission(id);
+export function missionMap(id=DEFAULT_MISSION_ID,layoutVersion){
+  const mission=getMission(id,layoutVersion);
   if(mission.sector==='aft-road-checkpoint')return checkpointMap();
-  const map={name:mission.name,terrain:Array.from({length:30},()=>Array(40).fill('void')),edges:{}};
-  for(let y=1;y<=28;y++)for(let x=1;x<=38;x++)map.terrain[y][x]='yard';
+  const map=mission.sector==='aft-road-checkpoint-approaches'?checkpointApproachMap():{name:mission.name,terrain:Array.from({length:30},()=>Array(40).fill('void')),edges:{}};
+  if(!map.worldBounds)for(let y=1;y<=28;y++)for(let x=1;x<=38;x++)map.terrain[y][x]='yard';
   for(const room of mission.rooms){
     const [x,y,w,h]=room.rect;
     for(let cy=y;cy<y+h;cy++)for(let cx=x;cx<x+w;cx++)map.terrain[cy][cx]='floor';
@@ -118,10 +159,11 @@ export function missionMap(id=DEFAULT_MISSION_ID){
   }
   if(mission.divider){for(let y=5;y<=20;y++)map.edges[`e:20:${y}`]='wall';delete map.edges['e:20:13'];delete map.edges['e:20:14'];}
   for(const {rect:[x,y,w,h]}of mission.cover)for(let cy=y;cy<y+h;cy++)for(let cx=x;cx<x+w;cx++)map.terrain[cy][cx]='crate';
+  if(map.doors)map.doors=structuredClone(mission.rooms.flatMap(room=>room.doors));
   return map;
 }
-export function missionInteractables({missionId=DEFAULT_MISSION_ID,legacy=false}={}){
-  const mission=getMission(missionId);
+export function missionInteractables({missionId=DEFAULT_MISSION_ID,layoutVersion,legacy=false}={}){
+  const mission=getMission(missionId,layoutVersion);
   return structuredClone([
     ...mission.rooms.flatMap(room=>room.doors.filter(d=>d.interactive).map(({interactive,...d})=>({...d,open:legacy}))),
     ...mission.containers,...mission.clues,

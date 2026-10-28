@@ -44,9 +44,9 @@ function renderMissionPreparation(){
   $('mission-heading').textContent=mission.title;$('briefing-text').textContent=mission.briefing;
   $('mission-steps').innerHTML=mission.steps.map((step,i)=>`<li><b>${String(i+1).padStart(2,'0')}</b> ${safe(step)}</li>`).join('');
   $('deploy').setAttribute('aria-label','Deploy solo: '+mission.title);
-  const map=missionMap(mission.id),seen=new Set(),bounds=map.worldBounds||{x:1,y:1,w:map.terrain[0].length-2,h:map.terrain.length-2};
+  const map=missionMap(mission.id),seen=new Set(),bounds=mission.briefingBounds||map.worldBounds||{x:1,y:1,w:map.terrain[0].length-2,h:map.terrain.length-2};
   for(let y=bounds.y;y<bounds.y+bounds.h;y++)for(let x=bounds.x;x<bounds.x+bounds.w;x++)seen.add(Core.key(x,y));
-  drawMinimap($('mission-preview'),{...map,map:map.terrain,seen,detected:new Set(),units:[{id:0,team:'squad',hp:1,...mission.spawn}],solo:{missionId:mission.id,objectives:{}}});
+  drawMinimap($('mission-preview'),{...map,worldBounds:bounds,map:map.terrain,seen,detected:new Set(),units:[{id:0,team:'squad',hp:1,...mission.spawn}],solo:{missionId:mission.id,layoutVersion:mission.layoutVersion??1,objectives:{}}});
   $('mission-preview').setAttribute('aria-label',mission.title+' layout. Arrival, objective and extraction.');
 }
 function renderPrep(){renderMissionPreparation();const p=ANIMALS.find(a=>a.id===build.animal),stats=buildStats(build);$('hero-portrait').src=`aft/assets/characters/armed/${p.species}-rifle.png`;$('hero-portrait').alt=`${p.name}, the ${speciesLabel(p.species)} worker`;$('hero-name').textContent=p.name;$('hero-species').textContent=speciesLabel(p.species);$('hero-role').textContent=p.label;document.querySelector('.portrait-number').textContent=String(ANIMALS.indexOf(p)+1).padStart(2,'0');$('stats').innerHTML=[['HEALTH',stats.maxHp],['ACTION POINTS',stats.maxAp],['PERCEPTION',stats.perception]].map(([label,value])=>`<div class="stat"><strong>${value}</strong><span>${label}</span></div>`).join('');
@@ -58,7 +58,11 @@ function renderPrep(){renderMissionPreparation();const p=ANIMALS.find(a=>a.id===
   for(const {choice,slot,kind}of loadoutChoices)choice.setAttribute('aria-pressed',String(build[slot]===kind));
   $('utility').replaceChildren();for(const [k,label,detail] of [['dressing','Field dressing','×2'],['grenade','Frag grenades','×3']])button($('utility'),`<span>${label}</span><small>${detail}</small>`,'small-choice',k===build.utility,()=>{build.utility=k;renderPrep();});
   const skill=['hmg','rpg','flamethrower'].includes(build.primary)?'heavyWeapons':'firearms';$('primary-summary').textContent=`${skill==='firearms'?'FIREARMS':'HEAVY WEAPONS'} ${p.stats[skill]}`;$('equipment-note').textContent=`${Core.WEAPONS[build.primary].name}. ${p.name}'s ${skill==='firearms'?'firearms':'heavy weapons'} skill: ${p.stats[skill]}/100. Movement spends AP by distance, with no tile snapping.`;$('build-summary').textContent=`${p.name} / ${speciesLabel(p.species)} · ${short(build.primary)} + ${short(build.secondary)}`;
-  try{const saved=storage.read();$('resume').hidden=!saved||JSON.parse(saved).solo.status!=='active';$('resume').textContent='Resume '+getMission(selectedMissionId).title+' ↗';}catch(error){$('resume').hidden=true;toast('Could not read saved operations. You can still deploy and play in this tab.');}
+  try{
+    const text=storage.read(),saved=text?JSON.parse(text):null,mission=getMission(selectedMissionId),previous=saved&&(saved.solo.layoutVersion??1)!==(mission.layoutVersion??1);
+    $('resume').hidden=!saved||saved.solo.status!=='active';$('resume').textContent=previous?'Resume previous checkpoint ↗':'Resume '+mission.title+' ↗';
+    if(previous)$('briefing-text').textContent+=' Your save uses the previous checkpoint. Deploy Solo starts the new approach map; Resume keeps your existing progress.';
+  }catch(error){$('resume').hidden=true;toast('Could not read saved operations. You can still deploy and play in this tab.');}
   preparationBuilds[selectedMissionId]=normalizeBuild(build);
   try{operationStorage.savePreparation(selectedMissionId,build);}catch(error){storageWriteFailure('preparation changes',error);}
 }

@@ -28,8 +28,9 @@ export function createInteractionSystem({hero,canControl,combatCosts,distance,ge
   const epsilon=1e-7;
   function registerBody(state,unit){
     if(unit.team!=='guard'||unit.hp>0||state.interactables.some(object=>object.id==='body:'+unit.id))return;
-    const inventory=[{id:'weapon',type:'weapon',kind:unit.weapon,rounds:unit.ammo[unit.weapon]||0,condition:100}];
-    for(const [kind,quantity] of Object.entries(unit.ammoPouch||{}))if(quantity>0)inventory.push({id:'ammo:'+kind,type:'ammo',kind,quantity});
+    const kinds=[...new Set([unit.weapon,...(unit.pack||[]).filter(i=>i.type==='weapon').map(i=>i.kind)])].filter(kind=>kind!=='hands'&&weapons[kind]&&!(unit.tanksExploded&&kind==='flamethrower'));
+    const inventory=kinds.map((kind,index)=>({id:index?'weapon:'+kind:'weapon',type:'weapon',kind,rounds:unit.ammo[kind]||0,condition:unit.pack?.find(i=>i.type==='weapon'&&i.kind===kind)?.condition??100}));
+    for(const [kind,quantity] of Object.entries(unit.ammoPouch||{}))if(quantity>0&&!(unit.tanksExploded&&kind==='flamethrower'))inventory.push({id:'ammo:'+kind,type:'ammo',kind,quantity});
     state.interactables.push({id:'body:'+unit.id,kind:'body',unitId:unit.id,name:unit.name+' · fallen guard',range:1.7,searched:false,inventory});
   }
   function objects(state){

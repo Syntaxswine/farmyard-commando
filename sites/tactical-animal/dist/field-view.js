@@ -11,6 +11,7 @@ import {FIELD_CAMERA,grenadeCameraFrame} from './grenade-controls.js';
 import {InteractionScenery} from './interaction-view.js';
 import {SoloFlameEffects} from './flame-effects.js';
 import {SoloBurnEffects} from './burn-effects.js';
+import {SoloTankEffects} from './tank-effects.js';
 import {createFlameOperator} from './flame-pose.js';
 import {FlameConePreview} from './flame-aim-view.js';
 import {blockWindow,pointInWorldRect,worldBounds} from './world-grid.js';
@@ -75,7 +76,7 @@ export class FieldView {
     const hit=this.ray.intersectObjects(picks,false)[0];
     this.onPick(hit?hit.object.userData.interactionId?{interactionId:hit.object.userData.interactionId}:{unitId:hit.object.userData.unitId}:{x:point.x,y:point.z});
   }
-  clearEffects(){this.burnEffects?.dispose();this.burnEffects=null;for(const effect of this.effects){this.scene.remove(effect.line);effect.line.geometry.dispose();effect.line.material.dispose();}this.effects=[];this.flameEffects?.dispose();this.flameEffects=null;this.flameCone?.dispose();this.flameCone=null;this.flameAim=null;this.lastEffect=null;}
+  clearEffects(){this.tankEffects?.dispose();this.tankEffects=null;this.burnEffects?.dispose();this.burnEffects=null;for(const effect of this.effects){this.scene.remove(effect.line);effect.line.geometry.dispose();effect.line.material.dispose();}this.effects=[];this.flameEffects?.dispose();this.flameEffects=null;this.flameCone?.dispose();this.flameCone=null;this.flameAim=null;this.lastEffect=null;}
   clearGestures(){for(const id of this.pointers.keys())if(this.container.hasPointerCapture(id))this.container.releasePointerCapture(id);this.pointers.clear();this.gesture=null;this.pinch=null;this.grenadeCamera=null;this.flameAim=null;this.flameCone?.hide();this.returnSpan=null;this.focusedId=null;}
   setGame(s){this.generation++;this.clearGestures();this.clearEffects();this.span=this.requestedSpan=13;this.state=s;this.residentWindow=null;this.lastWindowKey=null;this.samples.clear();this.failed.clear();for(const a of [...this.actors.values(),...(this.parkedActors?.values()||[])])this.disposeActor(a);this.actors.clear();this.parkedActors?.clear();this.pending.clear();this.clearEnvironment();this.buildEnvironment(s);this.center();this.resize();this.lastRevision=-1;this.lastLightAt=undefined;this.lastEffect=s.effect||null;this.route([]);}
   reportLoading(){this.onLoading(this.artBusy||this.propBusy||this.pending.size>0||this.failed.size>0);}
@@ -168,7 +169,7 @@ export class FieldView {
   }
   disposeActor(a){for(const [id,session]of this.burnEffects?.sessions||[])if(session.actor===a)this.burnEffects.remove(id);this.scene.remove(a.root);a.flameOperator?.dispose();a.locomotion?.dispose();a.paint.dispose();a.equipment.dispose();a.worker.dispose();for(const o of [a.pick,a.ring,a.shadow]){o.geometry.dispose();o.material.dispose();}}
   queueEffects(effect,now){
-    let previousRound=null;
+    this.effectAt=now;let previousRound=null;
     for(const event of effect.sequence||[effect]){
       if(event.weapon==='flamethrower'||event.incendiary){
         if(event.flame){this.flameEffects ||= new SoloFlameEffects(this.scene);this.flameEffects.enqueue(event,now);}continue;
@@ -206,19 +207,25 @@ export class FieldView {
     if(s.effect&&s.effect!==this.lastEffect){this.lastEffect=s.effect;this.queueEffects(s.effect,now);}
     this.flameEffects?.beginFrame(now,s);
     if(s.fireAnimations?.length||s.units.some(u=>u.burnedRemains||u.burningTurns))this.burnEffects ||= new SoloBurnEffects(this.scene);
-    this.burnEffects?.observe(s,now,visible,(event)=>{const entry=this.flameEffects?.queue.find(e=>e.event.impacts?.some(hit=>hit.id===event.unitId));return entry?(entry.muzzle&&entry.last!==null?now+Math.max(0,.64-entry.elapsed)*1000:null):now;});
+    const burnStart=event=>{const entry=this.flameEffects?.queue.find(e=>e.event.fireSequences?.includes(event.sequence));if(entry)return entry.muzzle&&entry.last!==null?now+Math.max(0,.64-entry.elapsed)*1000:null;const shot=s.effect?.sequence?.find(e=>e.fireSequences?.includes(event.sequence));return shot?(this.effectAt??now)+(shot.shot||0)*BURST_SHOT_INTERVAL:now;};
+    if(s.fires?.length||s.fireAnimations?.some(e=>e.kind==='tank'))this.tankEffects ||= new SoloTankEffects(this.scene);
+    this.tankEffects?.observe(s,now,visible,burnStart);this.tankEffects?.captureOrigins(this.actors);
+    this.burnEffects?.observe(s,now,visible,burnStart);if(this.burnEffects)this.burnEffects.tankEffects=this.tankEffects;
     for(const [id,a] of this.actors)a.root.visible=visible.some(v=>v.id===id);
     for(const v of visible){let a=this.actors.get(v.id);if(!a){this.actor(v);continue;}const old=this.samples.get(v.id)||{blend:0,pose:{kneel:0,prone:0,down:v.hp<=0?1:0,dead:v.hp<=0?1:0}},blend=old.blend+((v.isMoving?1:0)-old.blend)*.2,goal={kneel:v.stance==='kneeling'?1:0,prone:v.stance==='prone'?1:0,down:v.hp<=0?1:0,dead:v.hp<=0?1:0};const pose=Object.fromEntries(Object.entries(goal).map(([k,value])=>[k,Math.abs(value-old.pose[k])<.005?value:old.pose[k]+(value-old.pose[k])*.15]));const sample={...v,distance:v.travelled,blend:blend<.001?0:blend,pose};this.samples.set(v.id,sample);a.root.visible=true;a.pick.visible=true;a.ring.visible=v.hp>0;a.pick.scale.set(v.hp>0?1:1.6,v.hp>0?1:.2,v.hp>0?1:1.6);a.pick.position.set(0,v.hp>0?.9:.18,0);a.ring.position.set(0,.018,0);a.shadow.position.set(0,.01,0);a.pick.userData.interactionId=v.hp<=0?'body:'+v.id:null;
       if(v.id===0&&this.flameAim)sample.heading=this.flameAim.heading;
-      const fire=v.id===0&&this.flameAim?null:this.flameEffects?.poseFor(v),signature=[v.weapon,sample.heading,sample.blend,sample.distance,JSON.stringify(sample.pose)].join(':');
-      if(a.signature!==signature||fire||a.hadFlame){a.signature=signature;a.hadFlame=!!fire;if(a.weapon!==v.weapon){const old=a.equipment;a.equipment=createWeaponModel(v.weapon);a.worker.equipWeapon(a.equipment);old.dispose();a.weapon=v.weapon;}
+      // An emitted spray may kill its own operator through a fuel blast. Fit
+      // the recorded pre-impact discharge without reviving simulation state.
+      const operator=v.hp<=0&&v.burnedRemains?{...v,hp:1}:v;
+      const displayedWeapon=this.burnEffects?.equipmentFor(v)??v.weapon,fire=v.id===0&&this.flameAim?null:this.flameEffects?.poseFor(operator),signature=[v.weapon,sample.heading,sample.blend,sample.distance,JSON.stringify(sample.pose)].join(':');
+      if(a.signature!==signature||fire||a.hadFlame){a.signature=signature;a.hadFlame=!!fire;if(a.weapon!==displayedWeapon){this.burnEffects?.release(v.id);const old=a.equipment;a.equipment=createWeaponModel(displayedWeapon);a.worker.equipWeapon(a.equipment);old.dispose();a.weapon=displayedWeapon;}
         a.root.position.set(0,0,0);a.locomotion?.apply({...sample,blend:sample.pose?.prone||sample.pose?.down?0:sample.blend});a.posture.apply(sample);if(sample.pose.down)a.posture.ground();}
-      a.root.position.set(sample.x,0,sample.y);a.root.updateMatrixWorld(true);a.worker.skeleton.update();if(fire)this.flameEffects.captureMuzzle(fire,a.flameOperator.apply(sample,fire.seconds,fire.reduced));this.burnEffects?.pose(a,v,this.camera);}
+      a.root.position.set(sample.x,0,sample.y);a.root.updateMatrixWorld(true);a.worker.skeleton.update();if(fire)this.flameEffects.captureMuzzle(fire,a.flameOperator.apply({...sample,hp:operator.hp},fire.seconds,fire.reduced));this.burnEffects?.pose(a,v,this.camera);}
     if(s.revision!==this.lastRevision||window.key!==this.lastWindowKey){this.lastRevision=s.revision;this.lastWindowKey=window.key;this.art.update(s,u,window);this.interactionArt.update(s,window);
       const mission=missionForState(s);this.objectivePin.visible=!objectiveSecured(s)&&pointInWorldRect(mission.objective,window);this.extractionPin.visible=pointInWorldRect(mission.extraction,window);
     }
     this.animateEffects(now);
-    this.flameEffects?.draw(s,this.camera);
+    this.flameEffects?.draw(s,this.camera);this.tankEffects?.draw(this.camera);
     if(this.lastLightAt===undefined||now-this.lastLightAt>=200){this.daylight.update(480,this.camera,now,true);this.lastLightAt=now;}
     this.marker.rotation.z=now*.0005;this.renderer.render(this.scene,this.camera);
   }

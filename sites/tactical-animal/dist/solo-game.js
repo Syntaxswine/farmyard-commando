@@ -41,15 +41,15 @@ function mapMetadata(state,map){
     else state[name]=structuredClone(map[name]);
   }
 }
-export function createSoloGame(build=DEFAULT_BUILD,seed=1947,missionId=DEFAULT_MISSION_ID){
+export function createSoloGame(build=DEFAULT_BUILD,seed=1947,missionId=DEFAULT_MISSION_ID,{layoutVersion}={}){
   if(!validBuild(build))throw Error('Choose a valid animal and loadout.');
-  const mission=getMission(missionId),p=ANIMALS.find(a=>a.id===build.animal),m=missionMap(mission.id),u=makeUnit(0,'squad',p.name,p.species,build.primary,mission.spawn.x,mission.spawn.y,mission.spawn.heading,p.stats);
+  const mission=getMission(missionId,layoutVersion),p=ANIMALS.find(a=>a.id===build.animal),m=missionMap(mission.id,mission.layoutVersion??1),u=makeUnit(0,'squad',p.name,p.species,build.primary,mission.spawn.x,mission.spawn.y,mission.spawn.heading,p.stats);
   u.slots=[build.primary,build.secondary];const kinds=[...u.slots,...(build.utility==='grenade'?['grenade']:[])];
   u.ammo=Object.fromEntries(kinds.map(k=>[k,WEAPONS[k].mag]));u.pack=kinds.map(kind=>({type:'weapon',kind,rounds:u.ammo[kind],condition:100}));if(build.secondary==='pistol')u.ammoPouch.pistol=24;
   const stats={strength:10,endurance:20,agility:22,firearms:35,perception:35,dexterity:35};
   const units=[u,...mission.guards.map((g,i)=>makeUnit(i+1,'guard',g.name,g.species,g.weapon,g.x,g.y,g.heading,stats))];
   if(mission.fallen){const f=mission.fallen,fallen=makeUnit(units.length,'guard',f.name,f.species,f.weapon,f.x,f.y,f.heading,stats);fallen.hp=0;fallen.casualty='dead';units.push(fallen);}
-  const s={map:m.terrain,edges:m.edges,units,interactables:missionInteractables({missionId:mission.id}),phase:'explore',round:0,selected:0,visible:new Set(),seen:new Set(),detected:new Set(),log:[],seed,revision:0,queue:[],enemyIndex:1,enemyDelay:0,elapsed:0,solo:{version:2,missionId:mission.id,build:{...build},objectives:{},inspected:[],ledger:false,status:'active',dressings:build.utility==='dressing'?2:0,distance:0,apDistance:0}};
+  const s={map:m.terrain,edges:m.edges,units,interactables:missionInteractables({missionId:mission.id,layoutVersion:mission.layoutVersion??1}),phase:'explore',round:0,selected:0,visible:new Set(),seen:new Set(),detected:new Set(),log:[],seed,revision:0,queue:[],enemyIndex:1,enemyDelay:0,elapsed:0,solo:{version:2,missionId:mission.id,layoutVersion:mission.layoutVersion??1,build:{...build},objectives:{},inspected:[],ledger:false,status:'active',dressings:build.utility==='dressing'?2:0,distance:0,apDistance:0}};
   mapMetadata(s,m);interactionRules.restore(s);refresh(s);log(s,mission.briefing);return s;
 }
 const geometryCache=new WeakMap(),GEOMETRY_BUCKET=8;
@@ -303,8 +303,8 @@ export function encodeSave(s){return JSON.stringify(s,(_,v)=>v instanceof Set?{$
 export function decodeSave(text){
   const s=JSON.parse(text,(_,v)=>v&&Array.isArray(v.$set)?new Set(v.$set):v);
   if(s?.solo?.version!==2||!validBuild(s.solo.build)||!Array.isArray(s.units)||s.units.filter(u=>u?.team==='squad').length!==1||!['active','extracted','lost'].includes(s.solo.status)||!['visible','seen','detected'].every(k=>s[k] instanceof Set))throw Error('Unsupported solo save.');
-  const mission=getMission(s.solo.missionId??DEFAULT_MISSION_ID);s.solo.missionId=mission.id;
-  const map=missionMap(mission.id),{width,height}=gridDimensions(map),canonical={map:map.terrain,worldBounds:map.worldBounds};
+  const mission=missionForState(s);s.solo.missionId=mission.id;
+  const map=missionMap(mission.id,mission.layoutVersion??1),{width,height}=gridDimensions(map),canonical={map:map.terrain,worldBounds:map.worldBounds};
   if(!Array.isArray(s.map)||s.map.length!==height||s.map.some(row=>!Array.isArray(row)||row.length!==width)||s.units.some(u=>!u||!insideWorld(canonical,u)||!Number.isFinite(u.hp)||!Number.isFinite(u.ap)||u.lastKnown&&!insideWorld(canonical,u.lastKnown)))throw Error('Unsupported solo save.');
   if(s.fogAt&&!insideWorld(canonical,s.fogAt))throw Error('Unsupported visibility save.');
   const validCell=value=>{if(typeof value!=='string'||!/^\d+,\d+$/.test(value))return false;const [x,y]=value.split(',').map(Number);return x<width&&y<height&&insideWorld(canonical,{x,y});};

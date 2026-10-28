@@ -4,6 +4,10 @@ Farmyard Commando keeps a complete AFT sector in world coordinates and renders a
 
 ## First playable sector
 
+This section records the original layout 1 foundation. Fresh operations now use
+the [Road Checkpoint approach redesign](road-checkpoint-approaches.md); saved
+layout 1 operations still resume the original encounter described here.
+
 **Road Checkpoint** adapts the original `opening-checkpoint/foundation-1.json`, pinned at AFT revision `a20b343a0234b5d8b365a4e1668961ca1bf37653`. This is an in-progress foundation sector, not a claim that the original campaign/tutorial is complete. All 57,600 terrain cells, the office footprint, six guard placements and three prop placements are retained. Farmyard adds travel orders, a supply chest, a diversion-sign clue and an east rally point beyond the first two block seams. The existing Night Ledger and Short Measure missions remain available in their existing save slots.
 
 The source is preserved in the designer snapshot. `node sites/tactical-animal/tools/import-aft-sector.mjs` losslessly packs that export into `aft-checkpoint-data.js`; `--check` verifies reproduction. The generated module records the original path, commit, byte length and SHA-256. `aft-sector.js` accepts supported flat version-2 maps and rejects unsupported terrain, props or vertical traversal explicitly. The editor's portable JSON format remains the authoring source; the packed module is a deployment representation.

@@ -4,7 +4,9 @@ import {Core,DEFAULT_BUILD,NAVIGATION_NODE_LIMIT,createSoloGame,hero,geometry,ge
 import {blockWindow,pointInWorldRect} from '../dist/world-grid.js';
 import {playRoute} from './operation-scenarios.mjs';
 
-const sector=()=>createSoloGame(DEFAULT_BUILD,1947,'road-checkpoint');
+// Pin the original imported fixture for geometry and old-save regressions.
+// The redesigned operation has separate legal-route acceptance tests.
+const sector=()=>createSoloGame(DEFAULT_BUILD,1947,'road-checkpoint',{layoutVersion:1});
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-6,`${a} != ${b}`);
 function field(){
   const s={...sector(),edges:{},obstacles:[],interactables:[]},u=hero(s);
@@ -14,7 +16,7 @@ function field(){
 }
 
 test('sector state carries the whole immutable map metadata with independent instances',()=>{
-  const s=sector(),map=missionMap('road-checkpoint');
+  const s=sector(),map=missionMap('road-checkpoint',1);
   for(const name of ['props','obstacles','worldBounds','groundPalette'])assert.deepEqual(s[name],map[name]);
   assert.equal(s.map.length,240);assert.equal(s.map[0].length,240);assert.equal(s.units.length,7);
   s.props[0].x=200;s.obstacles[0].height=99;s.worldBounds.w=3;

@@ -15,7 +15,7 @@ function assets(){
 // The inherited cargo label is a canvas painting. Geometry tests need only its
 // real library and material/texture ownership, without a browser rasterizer.
 const canvasDocument={createElement:()=>({getContext:()=>new Proxy({},{get:(target,key)=>target[key]??(()=>{}),set:(target,key,value)=>(target[key]=value,true)})})};
-const checkpoint=()=>createSoloGame(DEFAULT_BUILD,1947,'road-checkpoint');
+const checkpoint=()=>createSoloGame(DEFAULT_BUILD,1947,'road-checkpoint',{layoutVersion:1});
 
 test('actual checkpoint scenery streams nine blocks, retains six across an interior seam, and never reloads shared art',async()=>{
   const prior=globalThis.document;globalThis.document=canvasDocument;

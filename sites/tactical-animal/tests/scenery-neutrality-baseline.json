@@ -1,0 +1,41 @@
+{
+  "source": "claude/guard-multigoal (the guard approach search changed seeded play on purpose); replaces PR #21's recording from origin/main fb386a5; replayed by tests/scenery-neutrality.test.mjs",
+  "rows": [
+    {
+      "missionId": "night-ledger",
+      "seed": 3,
+      "steps": 150,
+      "hash": "20c8a8c94c8f19834ffe6764460ce2c39cadb7adb67240351747f349daff82a7"
+    },
+    {
+      "missionId": "night-ledger",
+      "seed": 4,
+      "steps": 150,
+      "hash": "66f5a342607ceb07027432a86e8b5078ce7e8e6c60f0527c522a2e6506fa655d"
+    },
+    {
+      "missionId": "night-ledger",
+      "seed": 6,
+      "steps": 150,
+      "hash": "b7a1b19cd13908d30a99e6644fceadf23595a0422f0663bd2a64b2df67713e2c"
+    },
+    {
+      "missionId": "night-ledger",
+      "seed": 8,
+      "steps": 200,
+      "hash": "80691eebc6b3311b30c3cbdcb3941eb15a724286f01da7f4efdddc83a35c383b"
+    },
+    {
+      "missionId": "road-checkpoint",
+      "seed": 1,
+      "steps": 40,
+      "hash": "8515e17c10b47759885e424d05a49eb8e609939cbc407a4e7a36b265692f274d"
+    },
+    {
+      "missionId": "road-checkpoint",
+      "seed": 2,
+      "steps": 40,
+      "hash": "01c0910232b318a1b75690b3ade8ee8cbe221842ab99119fc0098db4d680473f"
+    }
+  ]
+}

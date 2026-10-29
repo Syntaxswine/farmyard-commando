@@ -4,7 +4,11 @@ The east feed mill art kit is based on the architect's blockout at design commit
 
 **Installed in play (2026-10-28).** `mission-scenery.js` now registers every solid below with the simulation, and `mission-art-view.js` draws the kit in Short Measure. See [Environment art in play](../../short-measure-runtime.md#environment-art-in-play). Two authoring changes came with the installation:
 - The sealed load is sized to the runtime crate collider (1.96 × 1.96 × 0.92 m). The 2 × 2 × 1 m proposal could never bind.
-- The full loads' corner posts end at the load height. A fixed post reached 0.935 m.
+- The full loads' corner posts stop at the lower of 0.935 m and the load height. The fixed post reached 0.935 m and stood above the 0.92 m sealed load. The 0.95 m arrival bay is unchanged.
+
+Two contract decisions are recorded here rather than worded away:
+- **The optional freight scale and arrival bay are installed.** This is coder acceptance, given after checking routes, doors (including open leaves), spawn and guard posts. The tightest gap is 0.53 m, between the open west leaf and the scale, against a 0.46 m animal. The architect then approved both in the combined candidate shipped as PR #20.
+- **The worker scale's clue marker stays.** The handoff said the scale "supersedes the decorative story marker only after binding". The marker is the game's clue affordance (a tap target that changes colour once inspected), so it is kept and lifted to 2 m above the scale instead of being removed.
 
 The worker station has an empty platform, a bent ivory beam and a red welded stop. The matching freight station has a level beam, intact counterweight and a full sack. Collapsed pale sacks sit beside a full outbound cargo bin. The same seven-in-a-square stencil appears on the scales, sacks, cargo seal and dispatch paper. Broad shapes and inherited materials carry the story at phone scale.
 

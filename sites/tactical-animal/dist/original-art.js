@@ -40,10 +40,9 @@ export function foregroundWall(wall,unit){
 // Chunk meshes own instance buffers. Painted textures, cargo prototypes,
 // materials and geometry belong to the environment for the whole operation.
 export class OriginalEnvironment {
-  // replacedCells: crate tiles whose visual now belongs to accepted mission art.
-  constructor(renderer,state,{onLoading=()=>{},onError=()=>{},loader,replacedCells=new Set()}={}){
+  constructor(renderer,state,{onLoading=()=>{},onError=()=>{},loader}={}){
     this.root=new T.Group();this.root.name='Animal Factory Tactics original art';
-    Object.assign(this,{state,disposed:false,materials:[],textures:[],chunks:new Map(),index:new Map(),prototypes:new Map(),materialCache:new Map(),texturesByKind:{},stats:{created:0,disposed:0}});
+    Object.assign(this,{state,disposed:false,materials:[],textures:[],chunks:new Map(),index:new Map(),prototypes:new Map(),materialCache:new Map(),texturesByKind:{},stats:{created:0,disposed:0},replaced:new Set()});
     const manager=new T.LoadingManager();
     manager.onStart=()=>{if(!this.disposed)onLoading(true);};
     manager.onLoad=()=>{if(!this.disposed)onLoading(false);};
@@ -66,7 +65,7 @@ export class OriginalEnvironment {
     const used=new Set(['brick','concrete']),bounds=worldBounds(state);
     for(let y=bounds.y;y<bounds.y+bounds.h;y++)for(let x=bounds.x;x<bounds.x+bounds.w;x++){
       used.add(groundSurface(state,x,y));
-      if(state.map[y][x]==='crate'&&!occupied.has(key(x,y))&&!replacedCells.has(key(x,y)))bucket({x,y}).cargo.push({x,y,form:'crate-square'});
+      if(state.map[y][x]==='crate'&&!occupied.has(key(x,y)))bucket({x,y}).cargo.push({x,y,form:'crate-square'});
     }
     for(const kind of used)this.material(kind);
     this.material('brick',true);this.material('concrete',true);
@@ -86,6 +85,10 @@ export class OriginalEnvironment {
     }).catch(error=>{if(!this.disposed)onError(error.message||'Cargo artwork could not load.');});
   }
   load(file){const texture=this.loader.load(file);this.textures.push(texture);return texture;}
+  // Crate tiles whose cargo accepted mission art now draws. The field calls this
+  // only once that art is in the scene, so a late or failed kit leaves the
+  // inherited cargo standing instead of an invisible collider.
+  replace(tiles){for(const tile of tiles)this.replaced.add(tile);if(this.window)this.update(this.state,this.unit,this.window);}
   material(kind,faded=false){
     const id=`${kind}:${faded}`;if(this.materialCache.has(id))return this.materialCache.get(id);
     const surface=surfaces[kind];let texture=this.texturesByKind[kind];
@@ -173,7 +176,7 @@ export class OriginalEnvironment {
       }
       for(const {mesh,records}of chunk.cargo){
         let count=0;
-        for(const {p,matrix}of records){if(!state.seen.has(key(p.x,p.y)))continue;mesh.setMatrixAt(count,matrix);mesh.setColorAt(count++,color.setScalar(state.groundPalette!=='aft-sector'||state.visible.has(key(p.x,p.y))?1:.38));}
+        for(const {p,matrix}of records){if(!state.seen.has(key(p.x,p.y))||this.replaced.has(key(p.x,p.y)))continue;mesh.setMatrixAt(count,matrix);mesh.setColorAt(count++,color.setScalar(state.groundPalette!=='aft-sector'||state.visible.has(key(p.x,p.y))?1:.38));}
         mesh.count=count;mesh.instanceMatrix.needsUpdate=true;mesh.instanceColor.needsUpdate=true;mesh.computeBoundingSphere();
       }
       for(const {sprite,p}of chunk.sandbags){sprite.visible=state.seen.has(key(p.x,p.y));sprite.material.color.setScalar(state.visible.has(key(p.x,p.y))?1:.38);}

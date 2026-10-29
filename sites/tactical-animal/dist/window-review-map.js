@@ -24,5 +24,7 @@ export function windowReviewSource(){
   // Deliberately retain old wall/window source edges under this sheet. Both
   // the editor and runtime must suppress the whole span, including its seam.
   for(let x=15;x<35;x++)edges[`s:${x}:12`]=x%2?'wall-brick':'window-concrete';
-  return {version:2,name:'Window proving yard',width:240,height:240,terrain:Array.from({length:240},()=>Array(240).fill('ground-gravel')),edges,props:[],starts:[{x:20,y:25,z:0}],guards:structuredClone(WINDOW_REVIEW_MISSION.guards),exits:[],farmyardWindows:{version:1,instances}};
+  // The pinned designer requires the complete portable map schema, even for
+  // a ground-only playtest. Its other squad markers do not spawn solo actors.
+  return {version:2,name:'Window proving yard',width:240,height:240,levels:3,upper:[{},{}],stairs:[],climbs:[],terrain:Array.from({length:240},()=>Array(240).fill('ground-gravel')),edges,props:[],starts:[{x:20,y:25,z:0,heading:270},{x:19,y:25,z:0},{x:19,y:26,z:0},{x:21,y:25,z:0}],guards:structuredClone(WINDOW_REVIEW_MISSION.guards),exits:[{x:20,y:26,z:0}],farmyardWindows:{version:1,instances}};
 }

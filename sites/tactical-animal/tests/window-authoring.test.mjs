@@ -6,6 +6,14 @@ import {placedWindows,placeWindow,removeWindow} from '../dist/window-authoring.j
 import {adaptAftSector} from '../dist/aft-sector.js';
 import {createSoloGame,DEFAULT_BUILD,encodeSave,decodeSave} from '../dist/solo-game.js';
 import {clipLegacyWindowBox} from '../dist/window-system.js';
+import {windowReviewSource} from '../dist/window-review-map.js';
+
+test('proving yard opens in the pinned designer and exports a playable ground-only map',()=>{
+  const doc=new EditingDocument().open(JSON.stringify(windowReviewSource())),exported=doc.export(),reopened=new EditingDocument().open(exported),source=JSON.parse(exported);
+  assert.equal(reopened.map.name,'Window proving yard');assert.equal(reopened.map.starts.length,4);assert.equal(reopened.map.exits.length,1);assert.ok(reopened.map.upper.every(layer=>!Object.keys(layer).length));
+  assert.equal(placedWindows(reopened.map).length,9);assert.equal(adaptAftSector(source).windows.length,9);
+  const state=createSoloGame(DEFAULT_BUILD,1,'window-yard',{authoredMap:source});assert.equal(state.units.length,3);assert.deepEqual([state.units[0].x,state.units[0].y],[20,25]);assert.equal(state.windows.find(p=>p.id==='borderless-five-storeys').dimensions.height,10.6);
+});
 test('existing editor export, import, undo and redo retain window IDs and replacement walls',()=>{
   const source=blankMap('Window authoring');source.edges['s:20:21']='wall-brick';source.edges['s:21:21']='window-brick';source.edges['s:22:21']='wall-concrete';
   const doc=new EditingDocument().open(JSON.stringify(source)),before=doc.export(),selection={type:'edge',edge:'s:20:21',z:0};

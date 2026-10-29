@@ -36,6 +36,7 @@ test('actual window editor and FieldView compile shaders, pick, break, persist a
     const frame=editor.frameLocator('#designer');
     await expect.poll(()=>editor.locator('#playtest').isEnabled(),{timeout:45000}).toBe(true);
     await editor.locator('#review').click();await expect.poll(async()=>!(await editorState(frame)).loading,{timeout:45000}).toBe(true);
+    await expect(frame.locator('#name')).toHaveText('Window proving yard');await expect.poll(async()=>(await editorState(frame)).windows.length).toBe(9);
     report.editorWebGL=await frame.locator('#scene').evaluate(canvas=>{const gl=canvas.getContext('webgl2')||canvas.getContext('webgl');if(!gl)return {available:false};const e=gl.getExtension('WEBGL_debug_renderer_info'),renderer=e?gl.getParameter(e.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER);return {available:true,version:gl.getParameter(gl.VERSION),vendor:e?gl.getParameter(e.UNMASKED_VENDOR_WEBGL):gl.getParameter(gl.VENDOR),renderer,software:/swiftshader|llvmpipe|software/i.test(renderer)};});
     expect(report.editorWebGL.available).toBe(true);
     await frame.locator('[data-group="inspect"]').click();await frame.locator('#settings-button').click();await frame.locator('#pick-mode').selectOption('edge');await frame.locator('#camera').selectOption('top');await frame.locator('#zoom-out').click();await frame.locator('#zoom-out').click();await frame.locator('#close-settings').click();
@@ -69,7 +70,7 @@ test('actual window editor and FieldView compile shaders, pick, break, persist a
     for(const log of report.pages){expect(log.errors,JSON.stringify(log)).toEqual([]);expect(log.console.filter(m=>m.type==='error'),JSON.stringify(log)).toEqual([]);expect(log.requests.filter(r=>r.status||r.failure!=='net::ERR_ABORTED'),JSON.stringify(log)).toEqual([]);}report.passed=true;
   }catch(error){report.failure=String(error.stack||error);for(const [name,page]of [['editor-failure',editor],['field-failure',game]])if(page&&!page.isClosed())await shot(page,name).catch(()=>{});throw error;
   }finally{
-    try{if(editor&&!editor.isClosed())report.finalEditorProbe=await editor.frameLocator('#designer').locator('body').evaluate(()=>window.__windowNativeProbe.snapshot()).catch(()=>null);if(game&&!game.isClosed())report.finalProbe=await game.evaluate(()=>window.__windowNativeProbe.snapshot()).catch(()=>null);await fs.writeFile(path.join(output,'native-report.json'),JSON.stringify(report,null,2));await context?.tracing.stop({path:path.join(output,'native-trace.zip')});await testInfo.attach('native-report',{path:path.join(output,'native-report.json'),contentType:'application/json'});}
-    finally{try{await context?.close();}finally{await browser.close();}}
+    try{if(editor&&!editor.isClosed()){report.finalEditorProbe=await editor.frameLocator('#designer').locator('body').evaluate(()=>window.__windowNativeProbe.snapshot(),undefined,{timeout:5000}).catch(()=>null);report.finalEditorState=await editorState(editor.frameLocator('#designer')).catch(()=>null);}if(game&&!game.isClosed())report.finalProbe=await game.evaluate(()=>window.__windowNativeProbe.snapshot()).catch(()=>null);await context?.tracing.stop({path:path.join(output,'native-trace.zip')});}
+    finally{try{await context?.close();report.contextClosed=true;}finally{await browser.close();report.browserDisconnected=!browser.isConnected();await fs.writeFile(path.join(output,'native-report.json'),JSON.stringify(report,null,2));await testInfo.attach('native-report',{path:path.join(output,'native-report.json'),contentType:'application/json'});}}
   }
 });

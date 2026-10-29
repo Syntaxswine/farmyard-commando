@@ -19,6 +19,7 @@ import {FlameConePreview} from './flame-aim-view.js';
 import {blockWindow,pointInWorldRect,worldBounds} from './world-grid.js';
 import {clampCameraPoint,residentCameraSpan} from './render-residency.js';
 import {SearchHalo,searchHaloCandidates,searchHaloTarget} from './search-halo.js';
+import {WindowScenery,WindowEffects} from './window-view.js';
 
 const V = (x=0,y=0,z=0) => new T.Vector3(x,y,z);
 // Distinct tracer pulses make each committed burst round readable. A shorter
@@ -64,7 +65,7 @@ export class FieldView {
   focusOpponent(id){const u=this.state?.units.find(v=>v.id===id&&v.team==='guard'&&Core.alive(v)&&this.state.detected.has(v.id));if(!u)return false;if(this.grenadeCamera)this.endGrenadeAim();this.focusedId=id;this.follow=false;this.target.set(u.x,0,u.y);this.updateCamera();return true;}
   ground(clientX,clientY){const r=this.container.getBoundingClientRect();this.ray.setFromCamera(new T.Vector2((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1),this.camera);return this.ray.ray.intersectPlane(this.plane,V());}
   interactionAnchor(object){const height=clueAnchorHeight(missionForState(this.state),object,object.kind==='door'?2.15:object.kind==='chest'?1.15:.7),point=V(object.x,height,object.y).project(this.camera);return {x:(point.x+1)*this.container.clientWidth/2,y:(1-point.y)*this.container.clientHeight/2,visible:Math.abs(point.x)<.95&&Math.abs(point.y)<.95&&Math.abs(point.z)<1};}
-  down(e){if(e.button!==0||this.grenadeCamera)return;this.container.setPointerCapture(e.pointerId);this.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(this.pointers.size===1)this.gesture={x:e.clientX,y:e.clientY,target:this.target.clone(),moved:false,at:performance.now()};if(this.pointers.size===2){const [a,b]=[...this.pointers.values()];this.pinch={distance:Math.hypot(a.x-b.x,a.y-b.y),span:this.span};this.gesture.moved=true;}}
+  down(e){if(e.button!==0||this.grenadeCamera)return;this.unlockSound();this.container.setPointerCapture(e.pointerId);this.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(this.pointers.size===1)this.gesture={x:e.clientX,y:e.clientY,target:this.target.clone(),moved:false,at:performance.now()};if(this.pointers.size===2){const [a,b]=[...this.pointers.values()];this.pinch={distance:Math.hypot(a.x-b.x,a.y-b.y),span:this.span};this.gesture.moved=true;}}
   drag(e){const point=this.pointers.get(e.pointerId);if(!point)return;point.x=e.clientX;point.y=e.clientY;
     if(this.pointers.size===2&&this.pinch){const [a,b]=[...this.pointers.values()];this.returnSpan=null;this.requestedSpan=T.MathUtils.clamp(this.pinch.span*this.pinch.distance/Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),6,35);this.resize();return;}
     if(!this.gesture)return;const dx=e.clientX-this.gesture.x,dy=e.clientY-this.gesture.y;if(Math.hypot(dx,dy)<8&&!this.gesture.moved)return;this.gesture.moved=true;this.follow=false;this.focusedId=null;
@@ -75,17 +76,19 @@ export class FieldView {
   up(e){if(!this.pointers.has(e.pointerId))return;this.pointers.delete(e.pointerId);if(this.pointers.size){this.gesture.moved=true;return;}
     const g=this.gesture;this.gesture=null;this.pinch=null;if(!g||g.moved||e.type==='pointercancel')return;
     const point=this.ground(e.clientX,e.clientY);if(!point)return;
-    const picks=[...this.actors.values()].filter(a=>a.root.visible&&a.pick.visible).map(a=>a.pick).concat(this.interactionArt?.picks||[]);
-    const hit=this.ray.intersectObjects(picks,false)[0];
-    this.onPick(hit?hit.object.userData.interactionId?{interactionId:hit.object.userData.interactionId}:{unitId:hit.object.userData.unitId}:{x:point.x,y:point.z});
+    const picks=[...this.actors.values()].filter(a=>a.root.visible&&a.pick.visible).map(a=>a.pick).concat(this.interactionArt?.picks||[],this.windowArt?.picks||[]);
+    const hits=this.ray.intersectObjects(picks,false),hit=hits[0]?.object.userData.windowPaneId?hits.find(h=>h.object.userData.unitId!==undefined)||hits[0]:hits[0];
+    this.onPick(hit?hit.object.userData.windowId?{windowId:hit.object.userData.windowId,paneId:hit.object.userData.windowPaneId,ground:true,x:hit.point.x,y:hit.point.z,h:hit.point.y}:hit.object.userData.interactionId?{interactionId:hit.object.userData.interactionId}:{unitId:hit.object.userData.unitId}:{x:point.x,y:point.z});
   }
-  clearEffects(){this.tankEffects?.dispose();this.tankEffects=null;this.burnEffects?.dispose();this.burnEffects=null;for(const effect of this.effects){this.scene.remove(effect.line);effect.line.geometry.dispose();effect.line.material.dispose();}this.effects=[];this.flameEffects?.dispose();this.flameEffects=null;this.flameCone?.dispose();this.flameCone=null;this.flameAim=null;this.lastEffect=null;}
+  unlockSound(){this.windowEffects?.unlock();}
+  clearEffects(){this.windowEffects?.dispose();this.windowEffects=null;this.shotVisuals?.clear();this.tankEffects?.dispose();this.tankEffects=null;this.burnEffects?.dispose();this.burnEffects=null;for(const effect of this.effects){this.scene.remove(effect.line);effect.line.geometry.dispose();effect.line.material.dispose();}this.effects=[];this.flameEffects?.dispose();this.flameEffects=null;this.flameCone?.dispose();this.flameCone=null;this.flameAim=null;this.lastEffect=null;}
   clearGestures(){for(const id of this.pointers.keys())if(this.container.hasPointerCapture(id))this.container.releasePointerCapture(id);this.pointers.clear();this.gesture=null;this.pinch=null;this.grenadeCamera=null;this.flameAim=null;this.flameCone?.hide();this.returnSpan=null;this.focusedId=null;}
   setGame(s){this.generation++;this.clearGestures();this.clearEffects();this.span=this.requestedSpan=13;this.state=s;this.residentWindow=null;this.lastWindowKey=null;this.samples.clear();this.failed.clear();for(const a of [...this.actors.values(),...(this.parkedActors?.values()||[])])this.disposeActor(a);this.actors.clear();this.parkedActors?.clear();this.pending.clear();this.clearEnvironment();this.buildEnvironment(s);this.center();this.resize();this.lastRevision=-1;this.lastLightAt=undefined;this.lastEffect=s.effect||null;this.route([]);}
   reportLoading(){this.onLoading(this.artBusy||this.propBusy||this.missionArtBusy||this.pending.size>0||this.failed.size>0);}
   // Mission art owns its geometry; detach it before the generic traversal below.
-  clearEnvironment(){this.searchHalo?.dispose();this.searchHalo=null;this.missionArt?.dispose();this.missionArt=null;this.missionArtBusy=false;this.interactionArt?.dispose();this.interactionArt=null;this.art?.dispose();this.art=null;this.environment.traverse(o=>{o.geometry?.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});this.environment.clear();for(const t of this.disposables)t.dispose();this.disposables=[];}
+  clearEnvironment(){this.windowArt?.dispose();this.windowArt=null;this.windowEffects?.dispose();this.windowEffects=null;this.searchHalo?.dispose();this.searchHalo=null;this.missionArt?.dispose();this.missionArt=null;this.missionArtBusy=false;this.interactionArt?.dispose();this.interactionArt=null;this.art?.dispose();this.art=null;this.environment.traverse(o=>{o.geometry?.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});this.environment.clear();for(const t of this.disposables)t.dispose();this.disposables=[];}
   buildEnvironment(s){
+    this.windowArt=new WindowScenery(s);this.environment.add(this.windowArt.root);this.windowEffects=new WindowEffects(this.scene,s);
     const generation=this.generation;this.artBusy=true;this.missionArtBusy=false;this.searchHalo=new SearchHalo();
     // Bespoke mission art first: an accepted cover replacement takes over its crate tiles.
     this.missionArt=createMissionArt(s,{
@@ -185,9 +188,10 @@ export class FieldView {
         if(event.flame){this.flameEffects ||= new SoloFlameEffects(this.scene);this.flameEffects.enqueue(event,now);}continue;
       }
       const thrown=event.weapon==='grenade',burst=event.shots>1,at=now+(burst?event.shot*BURST_SHOT_INTERVAL:0);
-      const points=thrown?Core.grenadeTrajectory({x:event.ax,y:event.ay},{x:event.bx,y:event.by}).map(p=>V(p.x,p.z,p.y)):[V(event.ax,1.1,event.ay),V(event.bx,.9,event.by)];
+      const points=thrown?Core.grenadeTrajectory({x:event.ax,y:event.ay},{x:event.bx,y:event.by}).map(p=>V(p.x,p.z,p.y)):[V(event.ax,1.1,event.ay),V(event.bx,event.bh??.9,event.by)];
       const line=new T.Line(new T.BufferGeometry().setFromPoints(points),new T.LineBasicMaterial({color:event.incendiary?0xff7835:0xf6d68c,transparent:true,opacity:.9}));
-      const visual={line,at,ttl:thrown?700:burst?BURST_TRACER_DURATION:240,started:!burst,previous:burst?previousRound:null};
+      const visual={event,line,at,ttl:thrown?700:burst?BURST_TRACER_DURATION:240,started:!burst,previous:burst?previousRound:null};
+      (this.shotVisuals??=new Map()).set(event,visual);
       line.visible=at<=now;this.scene.add(line);this.effects.push(visual);if(burst)previousRound=visual;
       if(thrown){const ring=new T.Mesh(new T.RingGeometry(event.blast-.07,event.blast,64),new T.MeshBasicMaterial({color:0xf4a568,side:T.DoubleSide,transparent:true,opacity:.8,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.set(event.bx,.07,event.by);this.scene.add(ring);this.effects.push({line:ring,at,ttl:700});}
     }
@@ -204,7 +208,7 @@ export class FieldView {
       const age=now-effect.at;
       if(age<0){effect.line.visible=false;return true;}
       if(age<effect.ttl){effect.line.visible=true;effect.line.material.opacity=1-age/effect.ttl;return true;}
-      this.scene.remove(effect.line);effect.line.geometry.dispose();effect.line.material.dispose();return false;
+      this.shotVisuals?.delete(effect.event);this.scene.remove(effect.line);effect.line.geometry.dispose();effect.line.material.dispose();return false;
     });
   }
   sync(s,now){this.state=s;const u=hero(s);
@@ -235,6 +239,8 @@ export class FieldView {
       const mission=missionForState(s);this.objectivePin.visible=!objectiveSecured(s)&&pointInWorldRect(mission.objective,window);this.extractionPin.visible=pointInWorldRect(mission.extraction,window);
     }
     this.animateEffects(now);
+    const windowStart=event=>{const shot=s.effect?.sequence?.find(e=>e.windowSequences?.includes(event.sequence));if(!shot)return now;const flame=this.flameEffects?.queue.find(e=>e.event===shot);if(flame)return flame.muzzle&&flame.last!==null?now+Math.max(0,.64-flame.elapsed)*1000:null;const visual=this.shotVisuals?.get(shot);if(visual?.started===false)return null;return (visual?.at??this.effectAt??now)+(shot.weapon==='grenade'?500:0);};
+    this.windowEffects?.observe(s,now,window,windowStart);this.windowArt?.update(s,window,(id,pane)=>this.windowEffects?.holds(id,pane));
     this.flameEffects?.draw(s,this.camera);this.tankEffects?.draw(this.camera);
     if(this.lastLightAt===undefined||now-this.lastLightAt>=200){this.daylight.update(480,this.camera,now,true);this.lastLightAt=now;}
     this.marker.rotation.z=now*.0005;

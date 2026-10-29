@@ -17,6 +17,9 @@ test('a nested mission-art change versions its kit, manifest and game together w
     write('mission-art/test/kit.js',"import {version} from './manifest.js'; import '../../app.js'; export const art=version;");
     write('mission-art/test/manifest.js',"export const version=1;");
     write('mission-art/test/review.html',"<script type=module>import './kit.js';</script>");
+    write('art/windows/catalog.js',"export const paneVersion=1;");
+    write('window-yard.js',"import {paneVersion} from './art/windows/catalog.js';");
+    write('window-yard.html','<script type="module" src="window-yard.js"></script>');
     write('aft/pinned.js',"export const pinned=true;");
     for(const asset of ['style.css','touch-controls.css','original-art.css','title-screen.css','map-frame.css','industrial-switches.css','field-hardware.css','icon.svg'])write(asset,'fixture');
     const before=build();
@@ -30,6 +33,11 @@ test('a nested mission-art change versions its kit, manifest and game together w
     assert.ok(read('app.js').includes(`'./mission-art/test/kit.js?v=${after}'`));
     assert.ok(read('mission-art/test/kit.js').includes(`'./manifest.js?v=${after}'`));
     assert.ok(!read('mission-art/test/kit.js').includes(`?v=${before}`));
+    assert.ok(read('window-yard.js').includes(`'./art/windows/catalog.js?v=${after}'`));
+    assert.ok(read('window-yard.html').includes(`src="window-yard.js?v=${after}"`));
+    write('art/windows/catalog.js',"export const paneVersion=2;");
+    const withWindows=build();assert.notEqual(withWindows,after,'an independent artist catalogue change also invalidates combat and editor imports');
+    assert.ok(read('window-yard.js').includes(`'./art/windows/catalog.js?v=${withWindows}'`));
   }finally{
     if(path.dirname(path.resolve(fixture))!==parent||!path.basename(fixture).startsWith('farmyard-module-cache-'))throw Error('Unsafe cache-test cleanup path');
     fs.rmSync(fixture,{recursive:true,force:true});

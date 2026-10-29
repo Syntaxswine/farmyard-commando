@@ -27,7 +27,7 @@ function ownedFiles(directory,prefix=''){
     return entry.isDirectory()?ownedFiles(path.join(directory,entry.name),name+'/'):[name];
   });
 }
-const missionFiles=ownedFiles(path.join(source,'mission-art'),'mission-art/');
+const missionFiles=[...ownedFiles(path.join(source,'mission-art'),'mission-art/'),...ownedFiles(path.join(source,'art/windows'),'art/windows/')];
 modules.push(...missionFiles.filter(file=>file.endsWith('.js')));modules.sort();
 const moduleSet=new Set(modules);
 const moduleHash=createHash('sha256');
@@ -45,6 +45,7 @@ for(const file of modules){
 for(const file of [...fs.readdirSync(source).filter(file=>file.endsWith('.html')),...missionFiles.filter(file=>file.endsWith('.html'))]){
   const entry=path.join(destination,file);
   let html=versionImports(fs.readFileSync(entry,'utf8'),file).replace('src="app.js"',`src="app.js?v=${moduleVersion}"`);
+  html=html.replace(/\bsrc="([^"?#]+\.js)"/g,(match,specifier)=>moduleSet.has(path.posix.normalize(path.posix.join(path.posix.dirname(file),specifier)))?`src="${specifier}?v=${moduleVersion}"`:match);
   for(const asset of ['style.css','touch-controls.css','original-art.css','title-screen.css','map-frame.css','industrial-switches.css','field-hardware.css','icon.svg']){
     const version=createHash('sha256').update(fs.readFileSync(path.join(destination,asset))).digest('hex').slice(0,12);
     html=html.replace(`href="${asset}"`,`href="${asset}?v=${version}"`);

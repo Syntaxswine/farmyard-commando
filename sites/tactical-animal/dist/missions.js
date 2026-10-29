@@ -2,6 +2,8 @@
 // Spatial source: design commit 5524d91, docs/missions/first-shift.maps.json.
 import {checkpointSource,checkpointMap} from './aft-sector.js';
 import {checkpointApproachMap} from './checkpoint-approaches.js';
+import {WINDOW_REVIEW_ID,WINDOW_REVIEW_MISSION,windowReviewSource} from './window-review-map.js';
+import {adaptAftSector} from './aft-sector.js';
 export const DEFAULT_MISSION_ID='night-ledger';
 const checkpoint=checkpointSource(),checkpointDoors=checkpointMap().doors;
 const bounds={x:1,y:1,w:38,h:28};
@@ -136,7 +138,7 @@ for(const definition of definitions){const errors=validateMission(definition);if
 freeze(legacyCheckpoint);
 export const MISSIONS=freeze(definitions);
 export function getMission(id=DEFAULT_MISSION_ID,layoutVersion){
-  const definition=id==='road-checkpoint'&&layoutVersion===1?legacyCheckpoint:MISSIONS.find(m=>m.id===id);
+  const definition=id===WINDOW_REVIEW_ID?WINDOW_REVIEW_MISSION:id==='road-checkpoint'&&layoutVersion===1?legacyCheckpoint:MISSIONS.find(m=>m.id===id);
   if(!definition)throw Error('Unknown operation: '+String(id)+'.');
   if(layoutVersion!==undefined&&layoutVersion!==(definition.layoutVersion??1))throw Error('Unsupported operation layout.');
   return definition;
@@ -147,6 +149,7 @@ export const missionDestination=state=>objectiveSecured(state)?missionForState(s
 
 export function missionMap(id=DEFAULT_MISSION_ID,layoutVersion){
   const mission=getMission(id,layoutVersion);
+  if(mission.id===WINDOW_REVIEW_ID)return adaptAftSector(windowReviewSource());
   if(mission.sector==='aft-road-checkpoint')return checkpointMap();
   const map=mission.sector==='aft-road-checkpoint-approaches'?checkpointApproachMap():{name:mission.name,terrain:Array.from({length:30},()=>Array(40).fill('void')),edges:{}};
   if(!map.worldBounds)for(let y=1;y<=28;y++)for(let x=1;x<=38;x++)map.terrain[y][x]='yard';

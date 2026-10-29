@@ -5,9 +5,10 @@ export function tankExplosionChance(unit,zone){
   if(!carrying||unit.tanksExploded||(unit.ammo?.flamethrower??0)<=0)return 0;
   return zone==='torso'?.25:zone==='weapon'&&unit.weapon==='flamethrower'?.9:0;
 }
-export function createFuelRules({kill,ignite,recordBurn,inside,log}){
+export function createFuelRules({kill,ignite,recordBurn,inside,log,windowBlast=()=>{}}){
   function explode(s,wearer){
     const weapon=wearer.weapon,origin={x:wearer.x,y:wearer.y,z:wearer.z||0};
+    windowBlast(s,origin,FUEL_BLAST_RADIUS,{ignoreWalls:true});
     wearer.tanksExploded=true;wearer.ammo.flamethrower=0;wearer.ammoPouch.flamethrower=0;
     wearer.pack=(wearer.pack||[]).filter(i=>i.kind!=='flamethrower');wearer.slots=(wearer.slots||[]).filter(id=>id!=='flamethrower');
     if(wearer.weapon==='flamethrower')wearer.weapon='hands';

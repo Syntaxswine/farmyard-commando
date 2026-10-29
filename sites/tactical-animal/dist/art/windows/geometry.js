@@ -18,7 +18,7 @@ export function createWindowLibrary(){
   const f=WINDOW_FINISHES.find(f=>f.id===finish);if(!f||!WINDOW_WALLS.includes(wall)||![0,90,180,270].includes(rotation))throw Error('Invalid window finish, wall or quarter-turn');
   const spec=describeWindow(definitionId,joins),root=new T.Group(),panes=new Map(),solidMeshes=[],ownedGeometry=[];
   root.name=definitionId;root.rotation.y=rotation*Math.PI/180;root.userData={windowDefinitionId:definitionId,windowContractVersion:spec.version,joins:spec.joins};
-  const body=paint(finish+':frame',{color:f.color,roughness:.82,metalness:.32}),edge=paint(finish+':edge',{color:f.edge,roughness:.7,metalness:.35});
+  const body=paint(finish+':frame',{color:f.color,roughness:.82,metalness:.32}),edge=paint(finish+':edge',{color:f.edge,roughness:.7,metalness:.35,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
   function box(parent,name,b,material,geometry=cube){
    const mesh=new T.Mesh(geometry,material);mesh.name=name;mesh.position.set(...b.min.map((v,i)=>(v+b.max[i])/2));mesh.scale.set(...b.min.map((v,i)=>b.max[i]-v));mesh.castShadow=mesh.receiveShadow=true;parent.add(mesh);return mesh;
   }

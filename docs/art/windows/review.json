@@ -1,0 +1,225 @@
+{
+  "schema": 1,
+  "reviewedAt": "2026-10-29T07:41:00.269Z",
+  "branch": "codex/window-family",
+  "baseCommit": "6e47587",
+  "modelVersion": "industrial-windows/1",
+  "collection": {
+    "definitions": 36,
+    "heights": [
+      "full",
+      "waist"
+    ],
+    "spansMetres": [
+      1,
+      2,
+      3
+    ],
+    "patterns": [
+      "clear",
+      "vertical-2",
+      "vertical-3",
+      "horizontal-2",
+      "grid-2x2",
+      "grid-3x2"
+    ],
+    "finishes": [
+      "steel",
+      "sage",
+      "ivory"
+    ],
+    "lowerWalls": [
+      "brick",
+      "concrete",
+      "corrugated"
+    ],
+    "definitionJoinRotationCases": 576
+  },
+  "checks": {
+    "build": "npm run build: passed",
+    "repository": "npm run check: 304 passed, 0 failed",
+    "windowTests": 8,
+    "visualPaneRemoval": "Clear sheet disappears in full; divided cell and its reflections disappear independently; frames, mullions, neighbouring panes and lower walls survive.",
+    "browser": {
+      "surface": "Codex in-app browser",
+      "previewMode": "software",
+      "status": "36 designs · 72 window states · software preview · ready",
+      "pairImages": 36,
+      "windowStates": 72,
+      "allImagesLoaded": true,
+      "thumbnailPixels": [
+        768,
+        480
+      ],
+      "consoleErrors": 0,
+      "consoleWarnings": 0,
+      "viewsReviewed": [
+        "front",
+        "back",
+        "oblique"
+      ],
+      "mobileViewport": [
+        390,
+        844
+      ],
+      "mobileDocumentWidth": 375,
+      "mobileCardBounds": [
+        16,
+        359
+      ],
+      "horizontalOverflow": false,
+      "mobileDefinition": "window.waist.grid-3x2.3m",
+      "mobileRemovedPane": "r1c1",
+      "mobileFinish": "ivory",
+      "mobileWall": "brick",
+      "webglVisuallyVerified": false,
+      "lighting": "Software rasterization of actual native triangles, generated texture pixels, alpha glass and reflection lines. Lighting is approximate; native WebGL shading and in-game shadows remain for runtime review."
+    }
+  },
+  "integration": {
+    "nativeThreeFactory": true,
+    "independentPaneHandles": true,
+    "wholeSpanClearPane": true,
+    "gameplayShatterAdaptationOwnedByCoder": true,
+    "missionPlacementsChanged": false,
+    "upstreamSnapshotChanged": false,
+    "sharedContractCommit": "46a224b76ddeaf47156a7a118359530cc15cdd30"
+  },
+  "provenance": {
+    "baseFarmyardCommit": "6e47587",
+    "studyRepository": "https://github.com/Syntaxswine/animal-factory-tactics-3d",
+    "studyCommit": "ebf51393909040b61a7c40649d9d5f0ac3678735",
+    "studyFile": "dist/tactics/window-shatter.js",
+    "style": "Cyan translucent glass, pale reflection strokes, oiled metal; source effect remains with gameplay integration.",
+    "rights": "Inherited study/art license not declared; new geometry is a project contribution; Three.js has its separate MIT notice.",
+    "inherited": [
+      {
+        "path": "aft/tactics/hybrid-materials.js",
+        "sha256": "1dca85ff2eeb36cf61bc1ae7e16ccae7c82ec9fb7f624b13dadc7b4c65954953"
+      },
+      {
+        "path": "aft/tactics/diagonal-roads.js",
+        "sha256": "427e412356e9cdaa72a4ec581af1e2eb4b203357456f5ed562c7b4bdf99acaeb"
+      }
+    ],
+    "authored": [
+      {
+        "path": "art/windows/catalog.js",
+        "encoding": "UTF-8 with LF",
+        "sha256": "6012d2b656d420813de53dc7a1274d98dc76ee4f2e1dd83367533c597b9f6931"
+      },
+      {
+        "path": "art/windows/geometry.js",
+        "encoding": "UTF-8 with LF",
+        "sha256": "bcdc20ae63b056252919dddfce74b1ad3563634227e561b910410fcb5ec0ba39"
+      },
+      {
+        "path": "art/windows/preview-renderer.js",
+        "encoding": "UTF-8 with LF",
+        "sha256": "39f40b55ed5309e761bfe95f064a6b162e99e40b28968836f5031dce23cfa799"
+      },
+      {
+        "path": "art/windows/index.html",
+        "encoding": "UTF-8 with LF",
+        "sha256": "2ebc692756711679e55941033ff2a7fb6d56c45c50c0161f490e8f20bc3a1149"
+      },
+      {
+        "path": "art/windows/review.js",
+        "encoding": "UTF-8 with LF",
+        "sha256": "259d464c40a8bed2f9ccbbed5062b92c6f507589ae407896e4c785ef243d90a5"
+      },
+      {
+        "path": "art/windows/review.css",
+        "encoding": "UTF-8 with LF",
+        "sha256": "39d003b0ed1aad38edb1bd72dd164069b752b25ab79dbff4d14fd091e38bb9b2"
+      }
+    ]
+  },
+  "helper": {
+    "previewStopped": true,
+    "portReleased": true,
+    "ownedBrowserTabClosed": true,
+    "temporaryViewportReset": true
+  },
+  "sourceHashFormat": "Owned UTF-8 source normalized to LF; inherited AFT source hashes preserve bytes in catalog.json.",
+  "sourceHashes": [
+    {
+      "path": "sites/tactical-animal/dist/art/windows/catalog.js",
+      "sha256": "6012d2b656d420813de53dc7a1274d98dc76ee4f2e1dd83367533c597b9f6931"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/windows/catalog.json",
+      "sha256": "9bb0a7a49bf21cc8f11739f90368c522ae2578e7b7cd5d319f4960d536d5bea2"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/windows/geometry.js",
+      "sha256": "bcdc20ae63b056252919dddfce74b1ad3563634227e561b910410fcb5ec0ba39"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/windows/index.html",
+      "sha256": "2ebc692756711679e55941033ff2a7fb6d56c45c50c0161f490e8f20bc3a1149"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/windows/preview-renderer.js",
+      "sha256": "39f40b55ed5309e761bfe95f064a6b162e99e40b28968836f5031dce23cfa799"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/windows/review.css",
+      "sha256": "39d003b0ed1aad38edb1bd72dd164069b752b25ab79dbff4d14fd091e38bb9b2"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/windows/review.js",
+      "sha256": "259d464c40a8bed2f9ccbbed5062b92c6f507589ae407896e4c785ef243d90a5"
+    },
+    {
+      "path": "sites/tactical-animal/tests/window-art.test.mjs",
+      "sha256": "b5610ae797780ca0d65b6b52aa512bd3d4440a03199a8f4cf0444027e7b32f77"
+    },
+    {
+      "path": "sites/tactical-animal/tools/window-catalog.mjs",
+      "sha256": "77df8c5e16f2f501187cce39eee113de768800387209f1263ca3310c814a0186"
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "back-selected-pane.jpg",
+      "sha256": "c1f0c560382ec282d74f06bbc4084df4dae767f02ba170617c51f9ec5c33f360"
+    },
+    {
+      "file": "clear-heights-3m.jpg",
+      "sha256": "9218dd251f7d3cb8a06cc5f5fbd7cf738c9dbdae026a9698a71967e4510fdcd5"
+    },
+    {
+      "file": "front-selected-pane.jpg",
+      "sha256": "9ef63f9dcc3740a737288f78353d719a381e5baa085aab4e80719106861fb40e"
+    },
+    {
+      "file": "full-patterns-bottom.jpg",
+      "sha256": "fe8548e992737d0a7d53e330aa970ed0c2be58f620446a05be171fbfa175f256"
+    },
+    {
+      "file": "full-patterns.jpg",
+      "sha256": "01bc8a2b7a1eae936196d2346a4a5e132cbf0a2ca2cc1c2ff3279cc1973c9bb4"
+    },
+    {
+      "file": "ivory-concrete.jpg",
+      "sha256": "8327ab80238e8f007107b3ec38cb4fe81a6eb19f622c2ea889020b768b50c48a"
+    },
+    {
+      "file": "phone.jpg",
+      "sha256": "cc3f504425edc431eb4f93b4aa2892760d4a0a7bc94c66d697e8bee749b1ced9"
+    },
+    {
+      "file": "sage-corrugated.jpg",
+      "sha256": "e5c0bf1b2adcb3a2259f01b681c53c376bfff15b39cdd9bc5b4ffbb922082483"
+    },
+    {
+      "file": "waist-patterns-bottom.jpg",
+      "sha256": "a8091d875d42df63162bf12260df3a5cf6f0ab9be88ea1351eb821c44ddae0f7"
+    },
+    {
+      "file": "waist-patterns.jpg",
+      "sha256": "47db933e00faddabbacdd81c905943cbe25f670e67b9cffb0f618107c081852b"
+    }
+  ]
+}

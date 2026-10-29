@@ -5,7 +5,10 @@ import {describeWindow,WINDOW_FINISHES,WINDOW_WALLS} from './catalog.js';
 // Presentation handles only. The caller owns hit decisions, saved break state,
 // effect timing and sound. Importing this module creates no network requests.
 export function createWindowLibrary(){
- const cube=new T.BoxGeometry(1,1,1),materials=new Map(),textures=new Set(),assets=new Set();let disposed=false;
+ const cube=new T.BoxGeometry(1,1,1),sheet=cube.clone(),materials=new Map(),textures=new Set(),assets=new Set();let disposed=false;
+ // Keep only the two broad faces. Side/cap faces at touching sheets would draw
+ // darker seams along tile and storey boundaries in otherwise continuous glass.
+ sheet.setIndex(Array.from(cube.index.array).slice(24,36));sheet.clearGroups();
  function paint(key,options){if(materials.has(key))return materials.get(key);const m=new T.MeshStandardMaterial(options);m.name='window:'+key;materials.set(key,m);return m;}
  const glassPaint=()=>paint('glass',{color:0x8eafb0,roughness:.3,metalness:.25,transparent:true,opacity:.56,depthWrite:false});
  function wallPaint(kind){
@@ -13,10 +16,10 @@ export function createWindowLibrary(){
   const p=surfacePixels(kind==='corrugated'?'metal':kind,128),map=new T.DataTexture(p.data,p.width,p.height);map.colorSpace=T.SRGBColorSpace;map.wrapS=map.wrapT=T.RepeatWrapping;map.needsUpdate=true;textures.add(map);
   return paint('wall:'+kind,{map,roughness:.94,color:0xffffff});
  }
- function build(definitionId,{joins={},finish='steel',wall='brick',rotation=0}={}){
+ function build(definitionId,{joins={},finish='steel',wall='brick',rotation=0,dimensions}={}){
   if(disposed)throw Error('Window library is disposed');
   const f=WINDOW_FINISHES.find(f=>f.id===finish);if(!f||!WINDOW_WALLS.includes(wall)||![0,90,180,270].includes(rotation))throw Error('Invalid window finish, wall or quarter-turn');
-  const spec=describeWindow(definitionId,joins),root=new T.Group(),panes=new Map(),solidMeshes=[],ownedGeometry=[];
+  const spec=describeWindow(definitionId,joins,dimensions),root=new T.Group(),panes=new Map(),solidMeshes=[],ownedGeometry=[];
   root.name=definitionId;root.rotation.y=rotation*Math.PI/180;root.userData={windowDefinitionId:definitionId,windowContractVersion:spec.version,joins:spec.joins};
   const body=paint(finish+':frame',{color:f.color,roughness:.82,metalness:.32}),edge=paint(finish+':edge',{color:f.edge,roughness:.7,metalness:.35,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
   function box(parent,name,b,material,geometry=cube){
@@ -45,12 +48,15 @@ export function createWindowLibrary(){
   }
   for(const pane of spec.panes){
    const group=new T.Group();group.name='pane:'+pane.id;group.userData={windowPaneId:pane.id};root.add(group);
-   const glass=box(group,'glass:'+pane.id,pane.bounds,glassPaint());glass.castShadow=false;glass.userData={windowPaneId:pane.id};
+   const glass=box(group,'glass:'+pane.id,pane.bounds,glassPaint(),spec.borderless?sheet:cube);glass.castShadow=false;glass.userData={windowPaneId:pane.id};
+   let shine=null;
+   if(!spec.borderless){
    const points=[],[x0,y0]=pane.bounds.min,[x1,y1]=pane.bounds.max,w=x1-x0,h=y1-y0;
    for(const side of [-1,1])for(const [ax,ay,bx,by] of [[.16,.12,.40,.85],[.62,.18,.79,.70]])points.push(new T.Vector3(x0+w*ax,y0+h*ay,side*.003),new T.Vector3(x0+w*bx,y0+h*by,side*.003));
    const shineGeometry=new T.BufferGeometry().setFromPoints(points);ownedGeometry.push(shineGeometry);
    let shineMaterial=materials.get('shine');if(!shineMaterial){shineMaterial=new T.LineBasicMaterial({color:0xe2ebe0,transparent:true,opacity:.7,depthWrite:false});materials.set('shine',shineMaterial);}
-   const shine=new T.LineSegments(shineGeometry,shineMaterial);shine.name='shine:'+pane.id;group.add(shine);
+   shine=new T.LineSegments(shineGeometry,shineMaterial);shine.name='shine:'+pane.id;group.add(shine);
+   }
    panes.set(pane.id,{id:pane.id,root:group,glass,shine,bounds:pane.bounds,center:pane.center,width:pane.width,height:pane.height});
   }
   let assetDisposed=false;
@@ -66,6 +72,6 @@ export function createWindowLibrary(){
    get disposed(){return assetDisposed;},
   };assets.add(result);return result;
  }
- function dispose(){if(disposed)return;for(const asset of [...assets])asset.dispose();disposed=true;cube.dispose();for(const material of materials.values())material.dispose();for(const texture of textures)texture.dispose();materials.clear();textures.clear();}
+ function dispose(){if(disposed)return;for(const asset of [...assets])asset.dispose();disposed=true;cube.dispose();sheet.dispose();for(const material of materials.values())material.dispose();for(const texture of textures)texture.dispose();materials.clear();textures.clear();}
  return {build,dispose,stats:()=>({assets:assets.size,materials:materials.size,textures:textures.size}),get disposed(){return disposed;}};
 }

@@ -1,78 +1,83 @@
 # Industrial window family
 
-36 definitions: full-height and waist-up glazing × 1/2/3 metre spans × six patterns. Patterns are `clear`, `vertical-2`, `vertical-3`, `horizontal-2`, `grid-2x2`, and `grid-3x2`. Each definition supports steel, sage enamel and aged ivory frames, and brick/concrete/corrugated lower walls. This is the art and geometry contract; the coder owns break rules, effects, collision decisions and save state.
+**39 presets plus resizable borderless glass.** The original 36 framed definitions remain compatible. Three borderless presets fill 1/2/3 m widths and the complete **2.12 m storey height**. The resizable template accepts independent width and height in metres; the presets are conveniences, not a size ceiling. This is native Three.js art and geometry. The coder owns the existing shatter adapter, hit rules, authoring and saved damage.
 
-![Full-height and waist-up clear glazing](clear-heights-3m.jpg)
+![One-metre-wide, full-storey borderless glass](borderless-1x2.12.jpg)
 
-## Contract
+## Borderless dimensions and continuity
 
-Pure definitions: `sites/tactical-animal/dist/art/windows/catalog.js`. Import `WINDOW_IDS`, `WINDOW_DEFINITIONS`, `WINDOW_METRICS`, and `describeWindow(id, joins = {})`. IDs follow `window.<full|waist>.<pattern>.<1|2|3>m`, for example `window.full.clear.3m` and `window.waist.grid-3x2.2m`.
+The 1 × 2.12 m preset contains glass from X=−.5 to +.5 and Y=0 to 2.12, with Z=−.004 to +.004. There is no frame, sill, mullion, lower wall, cap face or painted edge. Only the two broad glass faces are rendered. No repeated reflection strokes or texture are added to the surface. Adjacent modules meet without doubled end faces or an alpha-tinted seam; a single large sheet uses one shared unit geometry scaled across its full extent.
 
-Metres, local X across the whole span, Y up with the floor at zero, glass centre plane Z=0 and outward normal +Z. The root is centred on the span. Walls are 2 m high and .16 m thick; metal frames are .20 m deep. Frame posts are .055 m wide; internal mullions .035 m. Glass is .008 m thick. Full glazing is clear from Y=.055 to 1.945; waist glazing from Y=.90 to 1.945, over a solid lower wall up to .845. The horizontal sill occupies .845–.90.
-
-`describeWindow` returns immutable `panes` and `solids` arrays. Every entry has exact local `bounds: {min:[x,y,z], max:[x,y,z]}`. Panes additionally have `id`, zero-based `row`/`column`, `center`, `width`, `height` and `normal`. Rows run **bottom-up**, columns left-to-right when viewed from local +Z. IDs such as `r0c0` and `r1c2` are stable within a definition. A clear 3 m window is one pane (`r0c0`); tile seams create neither mullions nor extra panes.
-
-`solids` includes perimeter frame, sill, actual mullions and the waist lower wall. Its entries carry stable `id`, `role`, `material` and `bounds`. Glass and reflection marks are separate. Removing a pane cannot remove any entry from `solids`.
-
-Optional `joins: {left:boolean, right:boolean}` defaults to false on both sides. Set both touching flags true for two aligned windows of the same height, finish and wall style. Each contributes half a post at the seam, yielding one .055 m post rather than .11 m of doubled frame. Joins change the edge pane bounds, never its ID. Include the returned `cacheKey` (definition + joins) in geometry and hit-table caching. A single 2/3 m definition needs no internal join flags. Adjacency compatibility is the consuming editor's responsibility.
-
-## Native factory
+`WINDOW_METRICS.tile` is **1 m**. `WINDOW_METRICS.storeyHeight` is **2.12 m**, comprising the original 2 m wall plus .12 m slab. Keep these units explicit: 20 × 5 metre tiles is 20 × 5 m; 20 tiles wide × 5 storeys high is 20 × 10.6 m. Both examples are supported. Width and height are independent positive finite numbers; fractional metre dimensions are supported by the art factory. The consuming editor/runtime owns its explicit grid-alignment and placement restrictions.
 
 ```js
+import {BORDERLESS_WINDOW_ID, WINDOW_METRICS, describeWindow} from './art/windows/catalog.js';
 import {createWindowLibrary} from './art/windows/geometry.js';
-const library = createWindowLibrary();
-const asset = library.build('window.waist.grid-3x2.2m', {
-  finish: 'steel', wall: 'brick', joins: {left:false,right:false}, rotation: 90,
-});
-asset.root.position.set(worldX, floorHeight, worldGroundY);
-scene.add(asset.root);
 
-// Apply authoritative saved state; this changes presentation only.
-asset.setPaneVisible('r0c1', false);
-const handle = asset.panes.get('r1c2'); // {root, glass, shine, bounds, ...}
-const bounds = asset.paneWorldBounds('r1c2'); // {min,max}, current world AABB
-const solids = asset.solidParts();
-const glass = asset.paneParts(); // visible panes; {includeHidden:true} includes all
+const dimensions = {
+  width: 20 * WINDOW_METRICS.tile,
+  height: 5 * WINDOW_METRICS.storeyHeight, // 10.6 m; use 5 * tile for 5 m
+};
+const spec = describeWindow(BORDERLESS_WINDOW_ID, {}, dimensions);
+const library = createWindowLibrary();
+const asset = library.build(BORDERLESS_WINDOW_ID, {dimensions});
+scene.add(asset.root);
+// One authored sheet, one logical pane, irrespective of tile/chunk/floor lines.
+asset.setPaneVisible('r0c0', false);
 ```
 
-`build(definitionId, {joins, finish, wall, rotation})` returns `root`, `spec`, a pane-ID `Map` named `panes`, `setPaneVisible`, `isPaneVisible`, `paneWorldBounds`, `solidParts`, `paneParts`, `dispose`, and `disposed`. Rotation accepts 0/90/180/270 **Three +Y degrees**. The coder's placement record is `{id,definitionId,x,y,z:0,rotation,joins}`, with x/y the world ground centre; the consumer converts the floor level to renderer Y. No placement state is stored in a definition.
+The template ID is **`window.full.borderless`**. Preset IDs are **`window.full.borderless.1m`**, `.2m` and `.3m`; they default to 2.12 m high. Both template and borderless presets accept the optional dimensions object. Existing framed IDs reject dimensions rather than silently changing their shape.
 
-Hiding a pane toggles its glass and reflection group together. `solidParts()` and `paneParts()` provide borrowed Three geometry plus copied current `matrixWorld`; pane parts carry their stable ID. `paneWorldBounds` is an axis-aligned world box, not a local shatter shape. For fracture, use the exact local pane bounds and transform the effect with the window root. Requery current matrices after moving a root.
+`describeWindow(definitionId, joins = {}, dimensions?)` returns immutable `dimensions`, effective `span` (width), `height` and `head`, `sill:0`, `borderless:true`, `depth:.008`, `frameDepth:0`, exact `bounds`, one `r0c0` entry in `panes`, and `solids:[]`. The existing `wallHeight:2` field still describes the ordinary wall metric; use **`height` or `bounds` for actual asset height**. Width and height are included in the geometry `cacheKey`. Joins never insert or reserve a borderless post. The nullable `shine` handle is `null` for borderless glass.
 
-The factory owns shared box geometry, materials, generated textures and each asset's wall/reflection geometry. Dispose an asset when removed; dispose the library on unload. Consumers must unregister borrowed collision geometry first. There are no image fetches, sounds, timers or animation loops in the factory.
+A single authored uninterrupted sheet is one pane even across tile, chunk or floor reference lines. It disappears and shatters as one pane across its entire extent. Separate neighbouring placements remain independently breakable: author one large template placement when one large sheet is intended, rather than a row of smaller placements.
 
-## Consuming placement notes
+![20 m wide by five storeys high: whole pane and continuity details](borderless-20x5-storeys-oblique.jpg)
 
-Legacy `WALL_DIMENSIONS.length` is 1.12 m: adjacent legacy wall overhang can cover .055 m end posts. The consuming placement layer must suppress every covered wall edge across a multi-metre span and trim adjoining overhang where needed. A window span is its true width, not a row of legacy wall meshes. The frame extends .10 m each side of the glass plane; ejecting shards need at least this clearance plus their own radius before falling.
+![Front: continuous tint at tile, chunk and storey reference lines](borderless-20x5-storeys-front.jpg)
 
-The art factory does not add vaulting, state persistence or hit rules. Lower walls, frame and mullions remain physical solids; clear glass is transparent to sight. Pane disappearance is the presentation hook for the coder's authoritative break state and the existing AFT effect.
+![Back: intact and removed whole sheet and details](borderless-20x5-storeys-back.jpg)
 
-## Catalog review
+![Independent five-metre height](borderless-20x5-metres-oblique.jpg)
 
-Run `npm run build`, serve the project locally, then open `/art/windows/index.html`. The catalog shows two native assets per card: intact left, the selected pane removed right. If a requested pane ID is absent from the selected pattern, the card uses and labels the last actual pane. Compare both heights, all spans, all six patterns, finishes and lower walls, with front/back/oblique cameras. The cream diagonal behind the aperture makes glass tint and open cells easy to compare.
+## Origin, bounds and identity
 
-![Six full-height pane patterns](full-patterns.jpg)
+Metres, local X across the full width, Y up from the glass bottom at zero, centre plane Z=0, front normal +Z. The root is centred horizontally. `build(definitionId, {joins, finish, wall, rotation, dimensions})` accepts 0/90/180/270 **Three +Y degrees**. Move its root to the required world ground centre and physical base height. A five-storey sheet remains one root spanning 10.6 m; stacking separate 2.12 m placements creates separate logical panes.
 
-![Horizontal and grid patterns](full-patterns-bottom.jpg)
+The factory returns `root`, `spec`, a pane-ID `Map` named `panes`, `setPaneVisible`, `isPaneVisible`, `paneWorldBounds`, `solidParts`, `paneParts`, `dispose`, and `disposed`. A pane handle contains `{id,root,glass,shine,bounds,center,width,height}`. Hiding a pane toggles its entire group. Borrowed geometry and copied current world matrices come from `paneParts()` and `solidParts()`; hidden panes are excluded unless `{includeHidden:true}` is passed.
 
-![Waist-up patterns and brick lower walls](waist-patterns.jpg)
+- **Shatter/picking bounds:** use the exact local `spec.panes[0].bounds` and root transform. For a 20 × 10.6 m sheet they are `[−10,0,−.004]` to `[10,10.6,.004]`. `paneWorldBounds('r0c0')` gives the current world AABB; transform a picking ray into local space for an exact test after rotation. A world AABB is not a local fracture shape.
+- **Save identity:** preserve the placement's unique `id`, `definitionId`, explicit metre `dimensions`, origin/rotation and the one `r0c0` damage state. Derive and validate bounds from the descriptor, not raw saved boxes. Geometry cache keys include dimensions and are not placement identity. Legacy framed placements may omit dimensions.
+- **Residency:** keep the complete logical bounds and one asset/effect owner for the whole sheet. Keep it resident when any part intersects the visible region. Crossing chunk or floor boundaries must not clone overlapping transparent surfaces or split damage identity. Any internal tessellation must preserve the same logical pane and continuous surface treatment.
 
-![Rear view with one grid cell removed](back-selected-pane.jpg)
+Do not cap borderless bounds at the ordinary 2 m wall height. The consuming wall/slab adapter must respect the full 2.12 m band and avoid leaving a frame-like strip through the glass. Covered legacy wall edges must be suppressed across the entire width. Legacy `WALL_DIMENSIONS.length` is 1.12 m; adjoining overhang needs clipping at the true edge. Framed windows have a .10 m frame half-depth for shard clearance; borderless sheets have no frame.
 
-![Sage enamel and corrugated lower wall](sage-corrugated.jpg)
+The library owns the shared box/sheet geometry, materials, generated wall textures and each asset's wall/reflection geometry. Asset disposal releases only its owned resources; library disposal releases shared resources once. Unregister borrowed gameplay geometry before disposal. The factory creates no image requests, sounds, timers or animation loops.
 
-![Phone catalog](phone.jpg)
+## Existing framed definitions
 
-All 36 definitions rendered as 72 intact/missing states; all 36 pair images loaded at 768 × 480 pixels with no browser warnings or errors. Front, rear and oblique views were inspected, along with steel/sage/ivory frames and brick/concrete/corrugated lower walls. At the 390 × 844 phone viewport, content width was 375 px (the vertical scrollbar accounts for the remainder), and the card stayed inside it without horizontal overflow.
+The original IDs follow `window.<full|waist>.<pattern>.<1|2|3>m`, where patterns are `clear`, `vertical-2`, `vertical-3`, `horizontal-2`, `grid-2x2` and `grid-3x2`. `clear` is a single **framed** pane; `borderless` is the new uninterrupted edge-to-edge surface. Framed forms retain their original dimensions: 2 m walls, .16 m lower-wall thickness, .20 m frame depth, .055 m posts, .035 m mullions, .008 m glass. Full framed apertures run Y=.055..1.945; waist apertures Y=.90..1.945 over a solid lower wall up to .845.
 
-The review browser could not create a WebGL context. Screenshots use the catalog's software rasterizer with the actual Three.js triangles, generated textures, transparent glass and reflection lines. Approximate lighting is used; native WebGL shading and in-game shadows have not been visually verified in this session. The factory itself remains a native Three.js asset and does not depend on the review renderer.
+`panes` and `solids` entries contain exact local `bounds:{min:[x,y,z],max:[x,y,z]}`. Pane rows run bottom-up and columns left-to-right viewed from +Z. Stable pane IDs are `r0c0` etc. Divided panes retain actual mullions and adjacent glass when one section is removed. Optional `{left:boolean,right:boolean}` joins give each touching framed placement half of a .055 m post; they change edge pane bounds, not pane IDs. Include joins and dimensions in cache identity.
 
-The generated [catalog.json](../../../sites/tactical-animal/dist/art/windows/catalog.json) includes every pane/solid bound and normalized source hashes. Regenerate with `node sites/tactical-animal/tools/window-catalog.mjs` after changing window sources. The [review record](review.json) contains checks, source hashes and screenshot hashes. Temporary review helpers and the owned browser tab are closed after QA.
+Framed forms support steel, sage enamel and aged ivory finishes, and brick/concrete/corrugated lower walls. Finish/wall selections have no visible effect on a borderless sheet. Existing AFT/designer snapshots and mission placements are unchanged by this art pass.
+
+![Earlier framed clear designs](clear-heights-3m.jpg)
+
+## Catalog and validation
+
+Run `npm run build`, serve the project locally and open `/art/windows/index.html`. The default is the exact 1 × 2.12 m borderless preset. Choose **Span → Resizable sheet** to enter independent width and height, with explicit metre/storey height conversion. The custom review renders the whole sheet intact/removed and two close-ups of the **same full mesh** around the 8 m chunk and 2.12 m storey reference lines. Custom-sheet grid lines are behind the glass and remain after removal; they are not frame geometry. The review camera fits the whole declared extent rather than assuming a small window.
+
+All 39 presets rendered as 78 intact/missing states. The 1 × 2.12 m preset and 20 × 5 m / 20 × 10.6 m sheets were checked in front/back/oblique views, whole and close-up. Phone layout was checked at 390 × 844; content width 375 px, card bounds X=16..359, no horizontal overflow. Earlier framed screenshots are retained from the preceding pass; their geometry remains unchanged.
+
+The in-app browser could not create a WebGL context. Evidence is labelled **software preview**, using actual native triangles, texture pixels and alpha blending. Lighting is approximate; native WebGL shading and in-game shadows still need runtime review. The software renderer is a catalog dependency only. The generated [manifest](../../../sites/tactical-animal/dist/art/windows/catalog.json) records preset bounds, the parameter template and normalized source hashes. Regenerate it with `node sites/tactical-animal/tools/window-catalog.mjs`. The [review record](review.json) records source/evidence hashes and actual checks. Temporary review helpers and the owned browser tab are closed after QA.
+
+![Phone: full-storey borderless glass](borderless-phone.jpg)
+
+Build passes and all **307 repository tests** pass. The 11 window tests cover 624 preset/join/rotation cases, arbitrary-size bounds at four rotations, whole-sheet disappearance, no borderless cap/trim/reflection geometry, source manifests, disposal and actual alpha blending. A pixel comparison verifies that sheets meeting at tile/storey boundaries match one continuous sheet in front/back/oblique software renders.
 
 ## Provenance
 
-Baseline: released Farmyard Commando main `6e47587`. Surface recipes reuse the pinned `aft/tactics/hybrid-materials.js` helper without editing it. The visual glass reference is the authoritative AFT study at `AnimalFactory3D/animation-studies/window-sneak`, commit `ebf51393909040b61a7c40649d9d5f0ac3678735`, specifically `dist/tactics/window-shatter.js` and `docs/tactics/WINDOW-SHATTER-STUDY.md`. The factory carries its cyan tint (`0x8eafb0`), roughness .3, metalness .25, opacity .56 and pale reflection strokes.
+Baseline: released Farmyard Commando main `6e47587`. Surface recipes reuse pinned `aft/tactics/hybrid-materials.js` without editing it. The authoritative glass/shatter reference is `AnimalFactory3D/animation-studies/window-sneak`, commit `ebf51393909040b61a7c40649d9d5f0ac3678735`, specifically `dist/tactics/window-shatter.js` and `docs/tactics/WINDOW-SHATTER-STUDY.md`. Glass retains cyan `0x8eafb0`, roughness .3, metalness .25 and opacity .56. Framed forms retain pale reflection strokes; borderless sheets omit repeated strokes to preserve continuity.
 
-The source study is a presentation effect with fixed-size single panes; its gameplay integration is pending. Its old no-mullion description applies to those original panes. New divided windows deliberately retain their actual mullions when a cell disappears. This art module does not duplicate or adapt the shatter algorithm or audio; the coder consumes the existing study for those. The AFT/designer snapshots and source study remain untouched. No project-wide art license is declared; Three.js retains its separate MIT notice.
-
-Validation: `npm run build` succeeds and `npm run check` passes all 304 tests. The eight window tests cover 576 definition/join/rotation cases, independently removable panes, uninterrupted multi-unit glass, joined posts, resource ownership, actual software alpha blending, generated source hashes and review entry dependencies. Run `node --test sites/tactical-animal/tests/window-art.test.mjs` for the focused suite.
+The source study has fixed-size presentation panes. The coder adapts that existing effect and audio to authoritative gameplay; this art module adds no separate break simulation. No project-wide art license is declared; Three.js retains its MIT notice.

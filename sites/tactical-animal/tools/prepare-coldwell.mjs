@@ -65,7 +65,13 @@ const data={schema:'farmyard-coldwell-data',version:1,bundle,companion,surface,s
   plan:blueprint.plan,semantics:compactSemantics(mesh.semantics),infill:compactSemantics(infill.semantics),
   rigs:mesh.rigs.map(({batches,...rig})=>rig),batches,sourceBounds:blueprint.bounds,motionBounds:blueprint.motionBounds};
 const raw=Buffer.alloc(positions.length*4);positions.forEach((n,i)=>raw.writeFloatLE(n,i*4));
-const outputs=new Map([['data.json',Buffer.from(JSON.stringify(data)+'\n')],['collision.bin.gz',gzipSync(raw,{level:9})]]);
+// zlib versions/platforms may produce different valid gzip containers. The
+// canonical derivative is the exact decoded Float32 byte stream. Check that
+// stream and retain the shipped container, whose own SHA remains in the manifest.
+let packed;
+if(check){packed=fs.readFileSync(path.join(out,'collision.bin.gz'));if(!gunzipSync(packed).equals(raw))throw Error('Coldwell decoded collision bytes are stale.');}
+else packed=gzipSync(raw,{level:9});
+const outputs=new Map([['data.json',Buffer.from(JSON.stringify(data)+'\n')],['collision.bin.gz',packed]]);
 const sourceFiles=['site/map.bundle.json',...bundle.files.map(f=>'site/'+f.file),'silo/assets-silo-models-coldwell-complex.blueprint.json','silo/coldwell-complex.game-mesh.json.gz'];
 const sources=sourceFiles.map(file=>({file,sha256:sha(read(file)),bytes:read(file).length}));
 const sourceDigest=sha(Buffer.from(JSON.stringify(sources)));

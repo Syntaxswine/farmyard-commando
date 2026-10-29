@@ -1,7 +1,9 @@
 {
-  "version": "industrial-windows/1",
+  "version": "industrial-windows/2",
   "metrics": {
+    "tile": 1,
     "wallHeight": 2,
+    "storeyHeight": 2.12,
     "wallThickness": 0.16,
     "frameDepth": 0.2,
     "post": 0.055,
@@ -35,16 +37,103 @@
   ],
   "definitions": [
     {
+      "id": "window.full.borderless.1m",
+      "name": "Full-storey · Borderless glass",
+      "heightId": "full",
+      "patternId": "borderless",
+      "span": 1,
+      "borderless": true,
+      "height": 2.12,
+      "sill": 0,
+      "head": 2.12,
+      "columns": 1,
+      "rows": 1,
+      "version": "industrial-windows/2",
+      "joins": {
+        "left": false,
+        "right": false
+      },
+      "cacheKey": "window.full.borderless.1m:W1H2.12:L0R0",
+      "units": "metres",
+      "origin": "span centre on X, floor Y=0, glass centre plane Z=0, front normal +Z; rotations are Three +Y degrees",
+      "bounds": {
+        "min": [
+          -0.5,
+          0,
+          -0.004
+        ],
+        "max": [
+          0.5,
+          2.12,
+          0.004
+        ]
+      },
+      "aperture": {
+        "min": [
+          -0.5,
+          0,
+          -0.004
+        ],
+        "max": [
+          0.5,
+          2.12,
+          0.004
+        ]
+      },
+      "dimensions": {
+        "width": 1,
+        "height": 2.12
+      },
+      "wallHeight": 2,
+      "wallThickness": 0.16,
+      "frameDepth": 0,
+      "depth": 0.008,
+      "panes": [
+        {
+          "id": "r0c0",
+          "row": 0,
+          "column": 0,
+          "bounds": {
+            "min": [
+              -0.5,
+              0,
+              -0.004
+            ],
+            "max": [
+              0.5,
+              2.12,
+              0.004
+            ]
+          },
+          "center": [
+            0,
+            1.06,
+            0
+          ],
+          "width": 1,
+          "height": 2.12,
+          "normal": [
+            0,
+            0,
+            1
+          ]
+        }
+      ],
+      "solids": []
+    },
+    {
       "id": "window.full.clear.1m",
-      "name": "Full-height · Uninterrupted glass",
+      "name": "Full-height · Framed clear glass",
       "heightId": "full",
       "patternId": "clear",
       "span": 1,
+      "borderless": false,
+      "height": 2,
       "sill": 0.055,
       "head": 1.945,
       "columns": 1,
       "rows": 1,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -79,6 +168,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -187,11 +277,13 @@
       "heightId": "full",
       "patternId": "vertical-2",
       "span": 1,
+      "borderless": false,
+      "height": 2,
       "sill": 0.055,
       "head": 1.945,
       "columns": 2,
       "rows": 1,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -226,6 +318,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -380,11 +473,13 @@
       "heightId": "full",
       "patternId": "vertical-3",
       "span": 1,
+      "borderless": false,
+      "height": 2,
       "sill": 0.055,
       "head": 1.945,
       "columns": 3,
       "rows": 1,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -419,6 +514,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -619,11 +715,13 @@
       "heightId": "full",
       "patternId": "horizontal-2",
       "span": 1,
+      "borderless": false,
+      "height": 2,
       "sill": 0.055,
       "head": 1.945,
       "columns": 1,
       "rows": 2,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -658,6 +756,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -812,11 +911,13 @@
       "heightId": "full",
       "patternId": "grid-2x2",
       "span": 1,
+      "borderless": false,
+      "height": 2,
       "sill": 0.055,
       "head": 1.945,
       "columns": 2,
       "rows": 2,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -851,6 +952,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -1080,11 +1182,13 @@
       "heightId": "full",
       "patternId": "grid-3x2",
       "span": 1,
+      "borderless": false,
+      "height": 2,
       "sill": 0.055,
       "head": 1.945,
       "columns": 3,
       "rows": 2,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -1119,6 +1223,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -1418,16 +1523,103 @@
       ]
     },
     {
+      "id": "window.full.borderless.2m",
+      "name": "Full-storey · Borderless glass",
+      "heightId": "full",
+      "patternId": "borderless",
+      "span": 2,
+      "borderless": true,
+      "height": 2.12,
+      "sill": 0,
+      "head": 2.12,
+      "columns": 1,
+      "rows": 1,
+      "version": "industrial-windows/2",
+      "joins": {
+        "left": false,
+        "right": false
+      },
+      "cacheKey": "window.full.borderless.2m:W2H2.12:L0R0",
+      "units": "metres",
+      "origin": "span centre on X, floor Y=0, glass centre plane Z=0, front normal +Z; rotations are Three +Y degrees",
+      "bounds": {
+        "min": [
+          -1,
+          0,
+          -0.004
+        ],
+        "max": [
+          1,
+          2.12,
+          0.004
+        ]
+      },
+      "aperture": {
+        "min": [
+          -1,
+          0,
+          -0.004
+        ],
+        "max": [
+          1,
+          2.12,
+          0.004
+        ]
+      },
+      "dimensions": {
+        "width": 2,
+        "height": 2.12
+      },
+      "wallHeight": 2,
+      "wallThickness": 0.16,
+      "frameDepth": 0,
+      "depth": 0.008,
+      "panes": [
+        {
+          "id": "r0c0",
+          "row": 0,
+          "column": 0,
+          "bounds": {
+            "min": [
+              -1,
+              0,
+              -0.004
+            ],
+            "max": [
+              1,
+              2.12,
+              0.004
+            ]
+          },
+          "center": [
+            0,
+            1.06,
+            0
+          ],
+          "width": 2,
+          "height": 2.12,
+          "normal": [
+            0,
+            0,
+            1
+          ]
+        }
+      ],
+      "solids": []
+    },
+    {
       "id": "window.full.clear.2m",
-      "name": "Full-height · Uninterrupted glass",
+      "name": "Full-height · Framed clear glass",
       "heightId": "full",
       "patternId": "clear",
       "span": 2,
+      "borderless": false,
+      "height": 2,
       "sill": 0.055,
       "head": 1.945,
       "columns": 1,
       "rows": 1,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -1462,6 +1654,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -1570,11 +1763,13 @@
       "heightId": "full",
       "patternId": "vertical-2",
       "span": 2,
+      "borderless": false,
+      "height": 2,
       "sill": 0.055,
       "head": 1.945,
       "columns": 2,
       "rows": 1,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -1609,6 +1804,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -1763,11 +1959,13 @@
       "heightId": "full",
       "patternId": "vertical-3",
       "span": 2,
+      "borderless": false,
+      "height": 2,
       "sill": 0.055,
       "head": 1.945,
       "columns": 3,
       "rows": 1,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -1802,6 +2000,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -2002,11 +2201,13 @@
       "heightId": "full",
       "patternId": "horizontal-2",
       "span": 2,
+      "borderless": false,
+      "height": 2,
       "sill": 0.055,
       "head": 1.945,
       "columns": 1,
       "rows": 2,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -2041,6 +2242,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -2195,11 +2397,13 @@
       "heightId": "full",
       "patternId": "grid-2x2",
       "span": 2,
+      "borderless": false,
+      "height": 2,
       "sill": 0.055,
       "head": 1.945,
       "columns": 2,
       "rows": 2,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -2234,6 +2438,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -2463,11 +2668,13 @@
       "heightId": "full",
       "patternId": "grid-3x2",
       "span": 2,
+      "borderless": false,
+      "height": 2,
       "sill": 0.055,
       "head": 1.945,
       "columns": 3,
       "rows": 2,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -2502,6 +2709,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -2801,16 +3009,103 @@
       ]
     },
     {
+      "id": "window.full.borderless.3m",
+      "name": "Full-storey · Borderless glass",
+      "heightId": "full",
+      "patternId": "borderless",
+      "span": 3,
+      "borderless": true,
+      "height": 2.12,
+      "sill": 0,
+      "head": 2.12,
+      "columns": 1,
+      "rows": 1,
+      "version": "industrial-windows/2",
+      "joins": {
+        "left": false,
+        "right": false
+      },
+      "cacheKey": "window.full.borderless.3m:W3H2.12:L0R0",
+      "units": "metres",
+      "origin": "span centre on X, floor Y=0, glass centre plane Z=0, front normal +Z; rotations are Three +Y degrees",
+      "bounds": {
+        "min": [
+          -1.5,
+          0,
+          -0.004
+        ],
+        "max": [
+          1.5,
+          2.12,
+          0.004
+        ]
+      },
+      "aperture": {
+        "min": [
+          -1.5,
+          0,
+          -0.004
+        ],
+        "max": [
+          1.5,
+          2.12,
+          0.004
+        ]
+      },
+      "dimensions": {
+        "width": 3,
+        "height": 2.12
+      },
+      "wallHeight": 2,
+      "wallThickness": 0.16,
+      "frameDepth": 0,
+      "depth": 0.008,
+      "panes": [
+        {
+          "id": "r0c0",
+          "row": 0,
+          "column": 0,
+          "bounds": {
+            "min": [
+              -1.5,
+              0,
+              -0.004
+            ],
+            "max": [
+              1.5,
+              2.12,
+              0.004
+            ]
+          },
+          "center": [
+            0,
+            1.06,
+            0
+          ],
+          "width": 3,
+          "height": 2.12,
+          "normal": [
+            0,
+            0,
+            1
+          ]
+        }
+      ],
+      "solids": []
+    },
+    {
       "id": "window.full.clear.3m",
-      "name": "Full-height · Uninterrupted glass",
+      "name": "Full-height · Framed clear glass",
       "heightId": "full",
       "patternId": "clear",
       "span": 3,
+      "borderless": false,
+      "height": 2,
       "sill": 0.055,
       "head": 1.945,
       "columns": 1,
       "rows": 1,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -2845,6 +3140,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -2953,11 +3249,13 @@
       "heightId": "full",
       "patternId": "vertical-2",
       "span": 3,
+      "borderless": false,
+      "height": 2,
       "sill": 0.055,
       "head": 1.945,
       "columns": 2,
       "rows": 1,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -2992,6 +3290,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -3146,11 +3445,13 @@
       "heightId": "full",
       "patternId": "vertical-3",
       "span": 3,
+      "borderless": false,
+      "height": 2,
       "sill": 0.055,
       "head": 1.945,
       "columns": 3,
       "rows": 1,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -3185,6 +3486,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -3385,11 +3687,13 @@
       "heightId": "full",
       "patternId": "horizontal-2",
       "span": 3,
+      "borderless": false,
+      "height": 2,
       "sill": 0.055,
       "head": 1.945,
       "columns": 1,
       "rows": 2,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -3424,6 +3728,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -3578,11 +3883,13 @@
       "heightId": "full",
       "patternId": "grid-2x2",
       "span": 3,
+      "borderless": false,
+      "height": 2,
       "sill": 0.055,
       "head": 1.945,
       "columns": 2,
       "rows": 2,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -3617,6 +3924,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -3846,11 +4154,13 @@
       "heightId": "full",
       "patternId": "grid-3x2",
       "span": 3,
+      "borderless": false,
+      "height": 2,
       "sill": 0.055,
       "head": 1.945,
       "columns": 3,
       "rows": 2,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -3885,6 +4195,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -4185,15 +4496,17 @@
     },
     {
       "id": "window.waist.clear.1m",
-      "name": "Waist-up · Uninterrupted glass",
+      "name": "Waist-up · Framed clear glass",
       "heightId": "waist",
       "patternId": "clear",
       "span": 1,
+      "borderless": false,
+      "height": 2,
       "sill": 0.9,
       "head": 1.945,
       "columns": 1,
       "rows": 1,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -4228,6 +4541,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -4353,11 +4667,13 @@
       "heightId": "waist",
       "patternId": "vertical-2",
       "span": 1,
+      "borderless": false,
+      "height": 2,
       "sill": 0.9,
       "head": 1.945,
       "columns": 2,
       "rows": 1,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -4392,6 +4708,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -4563,11 +4880,13 @@
       "heightId": "waist",
       "patternId": "vertical-3",
       "span": 1,
+      "borderless": false,
+      "height": 2,
       "sill": 0.9,
       "head": 1.945,
       "columns": 3,
       "rows": 1,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -4602,6 +4921,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -4819,11 +5139,13 @@
       "heightId": "waist",
       "patternId": "horizontal-2",
       "span": 1,
+      "borderless": false,
+      "height": 2,
       "sill": 0.9,
       "head": 1.945,
       "columns": 1,
       "rows": 2,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -4858,6 +5180,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -5029,11 +5352,13 @@
       "heightId": "waist",
       "patternId": "grid-2x2",
       "span": 1,
+      "borderless": false,
+      "height": 2,
       "sill": 0.9,
       "head": 1.945,
       "columns": 2,
       "rows": 2,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -5068,6 +5393,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -5314,11 +5640,13 @@
       "heightId": "waist",
       "patternId": "grid-3x2",
       "span": 1,
+      "borderless": false,
+      "height": 2,
       "sill": 0.9,
       "head": 1.945,
       "columns": 3,
       "rows": 2,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -5353,6 +5681,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -5670,15 +5999,17 @@
     },
     {
       "id": "window.waist.clear.2m",
-      "name": "Waist-up · Uninterrupted glass",
+      "name": "Waist-up · Framed clear glass",
       "heightId": "waist",
       "patternId": "clear",
       "span": 2,
+      "borderless": false,
+      "height": 2,
       "sill": 0.9,
       "head": 1.945,
       "columns": 1,
       "rows": 1,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -5713,6 +6044,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -5838,11 +6170,13 @@
       "heightId": "waist",
       "patternId": "vertical-2",
       "span": 2,
+      "borderless": false,
+      "height": 2,
       "sill": 0.9,
       "head": 1.945,
       "columns": 2,
       "rows": 1,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -5877,6 +6211,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -6048,11 +6383,13 @@
       "heightId": "waist",
       "patternId": "vertical-3",
       "span": 2,
+      "borderless": false,
+      "height": 2,
       "sill": 0.9,
       "head": 1.945,
       "columns": 3,
       "rows": 1,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -6087,6 +6424,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -6304,11 +6642,13 @@
       "heightId": "waist",
       "patternId": "horizontal-2",
       "span": 2,
+      "borderless": false,
+      "height": 2,
       "sill": 0.9,
       "head": 1.945,
       "columns": 1,
       "rows": 2,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -6343,6 +6683,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -6514,11 +6855,13 @@
       "heightId": "waist",
       "patternId": "grid-2x2",
       "span": 2,
+      "borderless": false,
+      "height": 2,
       "sill": 0.9,
       "head": 1.945,
       "columns": 2,
       "rows": 2,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -6553,6 +6896,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -6799,11 +7143,13 @@
       "heightId": "waist",
       "patternId": "grid-3x2",
       "span": 2,
+      "borderless": false,
+      "height": 2,
       "sill": 0.9,
       "head": 1.945,
       "columns": 3,
       "rows": 2,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -6838,6 +7184,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -7155,15 +7502,17 @@
     },
     {
       "id": "window.waist.clear.3m",
-      "name": "Waist-up · Uninterrupted glass",
+      "name": "Waist-up · Framed clear glass",
       "heightId": "waist",
       "patternId": "clear",
       "span": 3,
+      "borderless": false,
+      "height": 2,
       "sill": 0.9,
       "head": 1.945,
       "columns": 1,
       "rows": 1,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -7198,6 +7547,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -7323,11 +7673,13 @@
       "heightId": "waist",
       "patternId": "vertical-2",
       "span": 3,
+      "borderless": false,
+      "height": 2,
       "sill": 0.9,
       "head": 1.945,
       "columns": 2,
       "rows": 1,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -7362,6 +7714,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -7533,11 +7886,13 @@
       "heightId": "waist",
       "patternId": "vertical-3",
       "span": 3,
+      "borderless": false,
+      "height": 2,
       "sill": 0.9,
       "head": 1.945,
       "columns": 3,
       "rows": 1,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -7572,6 +7927,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -7789,11 +8145,13 @@
       "heightId": "waist",
       "patternId": "horizontal-2",
       "span": 3,
+      "borderless": false,
+      "height": 2,
       "sill": 0.9,
       "head": 1.945,
       "columns": 1,
       "rows": 2,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -7828,6 +8186,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -7999,11 +8358,13 @@
       "heightId": "waist",
       "patternId": "grid-2x2",
       "span": 3,
+      "borderless": false,
+      "height": 2,
       "sill": 0.9,
       "head": 1.945,
       "columns": 2,
       "rows": 2,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -8038,6 +8399,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -8284,11 +8646,13 @@
       "heightId": "waist",
       "patternId": "grid-3x2",
       "span": 3,
+      "borderless": false,
+      "height": 2,
       "sill": 0.9,
       "head": 1.945,
       "columns": 3,
       "rows": 2,
-      "version": "industrial-windows/1",
+      "version": "industrial-windows/2",
       "joins": {
         "left": false,
         "right": false
@@ -8323,6 +8687,7 @@
       "wallHeight": 2,
       "wallThickness": 0.16,
       "frameDepth": 0.2,
+      "depth": 0.2,
       "panes": [
         {
           "id": "r0c0",
@@ -8639,12 +9004,34 @@
       ]
     }
   ],
+  "templates": [
+    {
+      "id": "window.full.borderless",
+      "dimensions": {
+        "units": "metres",
+        "width": "positive finite number",
+        "height": "positive finite number"
+      },
+      "paneId": "r0c0",
+      "solids": [],
+      "examples": [
+        {
+          "width": 20,
+          "height": 5
+        },
+        {
+          "width": 20,
+          "height": 10.6
+        }
+      ]
+    }
+  ],
   "provenance": {
     "baseFarmyardCommit": "6e47587",
     "studyRepository": "https://github.com/Syntaxswine/animal-factory-tactics-3d",
     "studyCommit": "ebf51393909040b61a7c40649d9d5f0ac3678735",
     "studyFile": "dist/tactics/window-shatter.js",
-    "style": "Cyan translucent glass, pale reflection strokes, oiled metal; source effect remains with gameplay integration.",
+    "style": "Cyan translucent glass; framed forms retain pale reflection strokes and oiled metal. Borderless sheets have no caps, trim or repeated strokes; source effect remains with gameplay integration.",
     "rights": "Inherited study/art license not declared; new geometry is a project contribution; Three.js has its separate MIT notice.",
     "inherited": [
       {
@@ -8660,12 +9047,12 @@
       {
         "path": "art/windows/catalog.js",
         "encoding": "UTF-8 with LF",
-        "sha256": "6012d2b656d420813de53dc7a1274d98dc76ee4f2e1dd83367533c597b9f6931"
+        "sha256": "3b542522d18f27ec98f069a546c5f13b5e5b3fe499cead4465b44b965672dd70"
       },
       {
         "path": "art/windows/geometry.js",
         "encoding": "UTF-8 with LF",
-        "sha256": "bcdc20ae63b056252919dddfce74b1ad3563634227e561b910410fcb5ec0ba39"
+        "sha256": "ceca3bc128ae627308bf15f0fca043025874d767864bca84008d775e3b2f4065"
       },
       {
         "path": "art/windows/preview-renderer.js",
@@ -8675,17 +9062,17 @@
       {
         "path": "art/windows/index.html",
         "encoding": "UTF-8 with LF",
-        "sha256": "2ebc692756711679e55941033ff2a7fb6d56c45c50c0161f490e8f20bc3a1149"
+        "sha256": "b80d09eb32c5870199f4c0af33b3c8f7eb3c24e4e954172c4a6abac928cc10f6"
       },
       {
         "path": "art/windows/review.js",
         "encoding": "UTF-8 with LF",
-        "sha256": "259d464c40a8bed2f9ccbbed5062b92c6f507589ae407896e4c785ef243d90a5"
+        "sha256": "052a96698743b63577f14f340d8ed020183b1979e692b084cd6df9ab69e808e4"
       },
       {
         "path": "art/windows/review.css",
         "encoding": "UTF-8 with LF",
-        "sha256": "39d003b0ed1aad38edb1bd72dd164069b752b25ab79dbff4d14fd091e38bb9b2"
+        "sha256": "5985f080840d5500757a883dbb6ebd539ca5fb54675b3cae0d1da70b3ae72524"
       }
     ]
   }

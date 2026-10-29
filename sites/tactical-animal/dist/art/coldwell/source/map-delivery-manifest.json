@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 1,
+  "collection": "coldwell-site-v1",
+  "engineCommit": "8c4670450cb2b38c1e1abd811d633c22de9e2b7c",
+  "siloCommit": "3b9d4004a7e51e5d345cded068fc46eab2f320a2",
+  "requiredCompanionArchiveSHA256": "b489bb7439a22746281eb2dcc052cd124cc77917a9c00aeaa4c02ee5f1db873f",
+  "status": "Preserving Farmyard intake candidate; current game import/adoption not claimed.",
+  "files": [
+    {
+      "path": "FARMYARD-HANDOFF.md",
+      "bytes": 2527,
+      "sha256": "aaf991db8f2aaaaab4ca51ce89de5ac970d5afa4e15a372bccd7d0623287d493"
+    },
+    {
+      "path": "art/coldwell-map/FARMYARD-HANDOFF.md",
+      "bytes": 2527,
+      "sha256": "aaf991db8f2aaaaab4ca51ce89de5ac970d5afa4e15a372bccd7d0623287d493"
+    },
+    {
+      "path": "art/coldwell-map/NOTICE.md",
+      "bytes": 1353,
+      "sha256": "03683d1c036b32091347404f3870f558ce163517536ca815ae65c76dc0e45965"
+    },
+    {
+      "path": "art/coldwell-map/references.json",
+      "bytes": 1509,
+      "sha256": "b130f87cd380d26f69cce4ef990e823b68d9c78f0e3bfba4aa94434896309c24"
+    },
+    {
+      "path": "docs/coldwell-map.md",
+      "bytes": 5913,
+      "sha256": "032de5392628cce271cd3cd7b02ada10002f2112aff169f6e9ef53102fdb6b07"
+    },
+    {
+      "path": "docs/reviews/coldwell-map/README.md",
+      "bytes": 3734,
+      "sha256": "748a2659a51141be13c1b8402aec720d4fef4dcdabcce532d41b91a19297a2c2"
+    },
+    {
+      "path": "docs/reviews/coldwell-map/browser-review.json",
+      "bytes": 2902,
+      "sha256": "39d1a9a75d6980b2f842601d4d67c76ddbb528a1ebbeb9197d4ef410b3fe473d"
+    },
+    {
+      "path": "docs/reviews/coldwell-map/checks.json",
+      "bytes": 821,
+      "sha256": "bf557ba54e8c9fd36a3c4fe3a744d680768e6ae0fa308b8c01bfc35ace572b8b"
+    },
+    {
+      "path": "docs/reviews/coldwell-map/compatibility.json",
+      "bytes": 22994,
+      "sha256": "573c6e8eced671c069a824cae3542c7510c0fd220a0b0decb5331adb74c8b2d9"
+    },
+    {
+      "path": "docs/reviews/coldwell-map/entrance.jpg",
+      "bytes": 413827,
+      "sha256": "5a4bdfc467520123ee78de788a4bcaa4ac4f1175ac9ff3c0a5fbab33d7ced445"
+    },
+    {
+      "path": "docs/reviews/coldwell-map/helper-cleanup.json",
+      "bytes": 2897,
+      "sha256": "6822a53f5f5f897c29a6e7cc6b8c339955c805c8ca9bfcb7cfcf6856e2f4c4af"
+    },
+    {
+      "path": "docs/reviews/coldwell-map/review.mjs",
+      "bytes": 3609,
+      "sha256": "9aede5d17f96fe49c63f65c71fb4ce466346b555a3ea371c6cc570d94f3d0867"
+    },
+    {
+      "path": "docs/reviews/coldwell-map/silo-open.jpg",
+      "bytes": 443258,
+      "sha256": "1df671d2098ef04a9422b0b6746c74a7a218e4e52c72935accf312aa216a7128"
+    },
+    {
+      "path": "docs/reviews/coldwell-map/silo-pad.jpg",
+      "bytes": 443028,
+      "sha256": "6df02dc18019f66a5db8620953ac3595d088e554c92a91ad697697b58cf9f306"
+    },
+    {
+      "path": "docs/reviews/coldwell-map/site-plan.jpg",
+      "bytes": 80471,
+      "sha256": "358f7953b7051f287eba669fdabdfa84a9ecc3bfd96cbd221fff8b0a4f119845"
+    },
+    {
+      "path": "docs/reviews/coldwell-map/support-building-interiors.jpg",
+      "bytes": 448432,
+      "sha256": "520f2c71b501b065cc525268155a88b60bf44b4dfa7657197e19a954bf06f37a"
+    },
+    {
+      "path": "docs/reviews/coldwell-map/surface-overview.jpg",
+      "bytes": 387614,
+      "sha256": "77052cbf888c168a635161bb7351d003fa3c3a6fbc2a521517e5c663e2c1f6f3"
+    },
+    {
+      "path": "docs/reviews/coldwell-map/surface-plan.jpg",
+      "bytes": 185031,
+      "sha256": "b4944861e9e897b2297f6b4a4717add9e4e4a655ecc709ba6fcb2c726ca036e0"
+    },
+    {
+      "path": "docs/reviews/coldwell-map/underground-complete.jpg",
+      "bytes": 119354,
+      "sha256": "2e26ffc4bc5910d0063186c56e45898a4f39971b3ba45d813932f1cf7a880630"
+    },
+    {
+      "path": "docs/reviews/coldwell-map/underground-window.jpg",
+      "bytes": 138382,
+      "sha256": "22dc022e352326593b99bc26333051b80f4c3fd275a6e1edf9f580e70c44678d"
+    },
+    {
+      "path": "docs/reviews/coldwell-map/verify-cleanup.ps1",
+      "bytes": 1482,
+      "sha256": "cb9143508cfd153e01b24c7f08201915f9271bd4f3d336258d5e46770eac02dd"
+    },
+    {
+      "path": "docs/reviews/coldwell-map/viewer.html",
+      "bytes": 9141,
+      "sha256": "e330ee0da575f825eacf7eb2779ec939b7fcdc79f1a135214a1b84ac480b89cb"
+    },
+    {
+      "path": "maps/coldwell-site/coldwell-silo-v1.zip",
+      "bytes": 42178215,
+      "sha256": "b489bb7439a22746281eb2dcc052cd124cc77917a9c00aeaa4c02ee5f1db873f"
+    },
+    {
+      "path": "maps/coldwell-site/height-reference.world.json",
+      "bytes": 1903,
+      "sha256": "b5ad794caaf0cbe093b248ecbb3782da87ea7c375c69092b0764a0c45b3d12e6"
+    },
+    {
+      "path": "maps/coldwell-site/map.bundle.json",
+      "bytes": 3078,
+      "sha256": "4daaa835b260727a4b811b57c3d30a14dbf59101b93cebcd2957fd99997c1b7a"
+    },
+    {
+      "path": "maps/coldwell-site/silo-companion.json",
+      "bytes": 1796,
+      "sha256": "f8364a6ae693c99bf1fa5a75ce0e0bb41cc1eb809caf88828b861fabd489624c"
+    },
+    {
+      "path": "maps/coldwell-site/site-layout.json",
+      "bytes": 1105,
+      "sha256": "6cd2dc9823a5cab781c99b75639cca9d2fbe821fbf31adbc003d76d969a7d6fa"
+    },
+    {
+      "path": "maps/coldwell-site/site-plan.svg",
+      "bytes": 166800,
+      "sha256": "095ea616290d2b6b9024a94e71162c06ff625bcecd1cc6368c4130cafd11d4f7"
+    },
+    {
+      "path": "maps/coldwell-site/surface-infill.mesh.json",
+      "bytes": 969873,
+      "sha256": "e8f56adc6eec7072d76456cb3d8c32e60ad3acc7fc00ea152e5dce52ae3e57c3"
+    },
+    {
+      "path": "maps/coldwell-site/surface.map.json",
+      "bytes": 884211,
+      "sha256": "c018aee41812e9dacaffd4279cb3bf0b1c2a0c1c5d275185f51d84a936cf8199"
+    },
+    {
+      "path": "maps/coldwell-site/surface.map.rle.json",
+      "bytes": 32057,
+      "sha256": "fd93d21f95dec85df76e9bade808dd23059bd8f7b97e567bcd7fa7739cc60b83"
+    },
+    {
+      "path": "packages/coldwell-map/index.js",
+      "bytes": 9302,
+      "sha256": "013b24ffaed5832aa961142fb04080675aa11ec61c8038abe2b6d8d90b0f4d01"
+    },
+    {
+      "path": "tests/coldwell-map.test.mjs",
+      "bytes": 5408,
+      "sha256": "912bf92babc1ae02df357f5b1d62fe8f78bf62514a41aab80c13cbcc80b97f74"
+    },
+    {
+      "path": "tools/audit-coldwell-map.mjs",
+      "bytes": 4204,
+      "sha256": "08b2fcdf4f6a7137c426f7899fa0345d4a5a9f4f9423ea0ce7f949918f286d00"
+    },
+    {
+      "path": "tools/build-coldwell-map.mjs",
+      "bytes": 5419,
+      "sha256": "26b94013579378a4c083ccd793a5c9376d25ed71dd2b2ea42f5713afcccea437"
+    },
+    {
+      "path": "tools/package-coldwell-map.py",
+      "bytes": 3120,
+      "sha256": "ee35016ab49b04d9d5c7689331cd38eb405c2d7d4b245c79f86aac454ccd9842"
+    }
+  ]
+}

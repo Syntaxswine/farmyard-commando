@@ -1,4 +1,4 @@
-export const LIBRARY_VERSION='library-furniture/1';
+export const LIBRARY_VERSION='library-furniture/2';
 export const TILE_METRES=1;
 export const CONTENTS=['empty','books'];
 export const FORMS=[
@@ -20,7 +20,9 @@ export const SKINS=[
 export const TEXTURE_PATHS=[
  '../../aft/assets/environment/painted-study/material-atlas-v2.png',
  '../../aft/assets/environment/painted-study/cargo-materials-v1.png',
+ './book-spines.svg',
 ];
+export const BOOK_SKIN_ATLAS={width:1024,height:768,columns:4,rows:6,cellWidth:256,cellHeight:128,gutter:2};
 export const PROVENANCE={
  inheritedCommit:'a20b343a0234b5d8b365a4e1668961ca1bf37653',
  reused:[
@@ -29,8 +31,9 @@ export const PROVENANCE={
   {path:'aft/assets/environment/painted-study/material-atlas-v2.png',use:'inherited painted wood'},
   {path:'aft/assets/environment/painted-study/cargo-materials-v1.png',use:'inherited cream/sage painted wood and oxide/steel surfaces'},
  ],
+ authored:[{path:'art/library/book-spines.svg',use:'Original vector atlas: six book palettes, four painted shelf arrangements per palette'}],
  inheritedRights:'User-supplied AFT snapshot; upstream art license is not declared in the repository. Reuse follows the user’s direction.',
- newWork:'Original bookcase, book and reading-table geometry/layouts and finish recipes; no project-wide art license is declared.',
+ newWork:'Original bookcase and reading-table geometry/layouts, finish recipes and vector book-spine skins; no project-wide art license is declared.',
  rendererLicense:'Three.js: MIT; aft/tactics/vendor/THREE-LICENSE.txt',
 };
 export function assetId(form,skin,contents){return `library.${form}.${skin}.${contents}`;}
@@ -44,7 +47,7 @@ export function specification(formId,skinId,contents='books',rotation=0){
   navigationFootprint:[-w/2,-d/2,w/2,d/2],
   placementOffset:odd?[(form.tiles[1]-1)/2,(form.tiles[0]-1)/2]:[(form.tiles[0]-1)/2,(form.tiles[1]-1)/2],
   collision:'Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.',
-  occlusion:'solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded.',
+  occlusion:'solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded.',
  };
 }
 export const ASSETS=FORMS.flatMap(f=>SKINS.flatMap(s=>CONTENTS.map(c=>specification(f.id,s.id,c))));

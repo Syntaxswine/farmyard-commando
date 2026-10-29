@@ -5,9 +5,9 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import * as T from '../dist/aft/tactics/vendor/three.module.js';
-import {FORMS,SKINS,ASSETS,CONTENTS,specification,TEXTURE_PATHS} from '../dist/art/library/catalog.js';
+import {FORMS,SKINS,ASSETS,CONTENTS,specification,TEXTURE_PATHS,BOOK_SKIN_ATLAS} from '../dist/art/library/catalog.js';
 import {createLibraryFurniture,loadLibraryTextures} from '../dist/art/library/furniture.js';
-const make=()=>createLibraryFurniture({atlas:new T.Texture(),cargo:new T.Texture()});
+const make=()=>createLibraryFurniture({atlas:new T.Texture(),cargo:new T.Texture(),bookSkins:new T.Texture()});
 
 test('all 72 variants fit their tiles and body bounds at every quarter-turn',()=>{
  assert.equal(ASSETS.length,72);assert.equal(new Set(ASSETS.map(a=>a.id)).size,72);
@@ -28,11 +28,30 @@ test('skins keep identical shape and book layouts; empty variants contain no boo
  try{for(const f of FORMS)for(const c of CONTENTS){let layout;
   for(const s of SKINS){const asset=lib.build(f.id,s.id,c),next=asset.parts.map(p=>({role:p.role,matrix:p.matrix.toArray(),solid:p.solid}));
    if(layout)assert.deepEqual(next,layout);else layout=next;
-   assert.equal(asset.parts.some(p=>p.role==='book-spine'),c==='books');
+   assert.equal(asset.parts.some(p=>p.role===(f.id.startsWith('bookcase')?'book-row':'book-spine')),c==='books');
    if(f.id.startsWith('library-table'))assert.equal(asset.parts.some(p=>p.role==='open-pages'),c==='books');
    assert.deepEqual(asset.spec.navigationFootprint,specification(f.id,'oak','empty').navigationFootprint);asset.dispose();
   }
  }}finally{lib.dispose();}
+});
+
+test('bookcase skins replace individual books within a 600-triangle model budget',()=>{
+ const lib=make(),maps=new Set();
+ try{for(const form of FORMS.filter(f=>f.id.startsWith('bookcase')))for(const skin of SKINS){
+  const asset=lib.build(form.id,skin.id,'books'),rows=asset.parts.filter(p=>p.role==='book-row');
+  assert.equal(rows.length,form.rows*form.bays*(form.doubleSided?2:1));
+  assert.ok(!asset.parts.some(p=>['book-cover','book-pages','book-spine','spine-band','spine-label'].includes(p.role)));
+  const triangles=asset.parts.reduce((n,p)=>n+p.geometry.index.count/3,0);
+  assert.ok(triangles<=600,`${form.id}: ${triangles} triangles`);
+  for(const row of rows){
+   const map=row.material.map;assert.ok(map);assert.equal(row.geometry.index.count,36);maps.add(map);
+   assert.ok(map.offset.x>=0&&map.offset.y>=0&&map.offset.x+map.repeat.x<=1&&map.offset.y+map.repeat.y<=1);
+   const uv=row.geometry.attributes.uv;assert.ok(uv.getY(16)>=.25&&uv.getY(8)<=.25,'Spines and page surfaces use separate skin regions');
+  }
+  asset.dispose();
+ }
+ assert.equal(maps.size,SKINS.length*BOOK_SKIN_ATLAS.columns);
+ }finally{lib.dispose();}
 });
 
 test('2 x 4 communal tables add six supports and four reading places without scaling the books',()=>{
@@ -70,7 +89,7 @@ test('double-sided bookcases stock both faces, and validation rejects bad asset 
  const lib=make();
  try{
   const double=lib.build('bookcase-double','graphite','books');
-  const spines=double.parts.filter(p=>p.role==='book-spine').map(p=>new T.Vector3().setFromMatrixPosition(p.matrix));
+  const spines=double.parts.filter(p=>p.role==='book-row').map(p=>new T.Vector3(0,0,.5).applyMatrix4(p.matrix));
   assert.ok(spines.some(p=>p.z>.3)&&spines.some(p=>p.z<-.3));double.dispose();
   for(const request of [['missing','oak','empty'],['library-table','missing','empty'],['bookcase-tall','oak','half-full']])assert.throws(()=>lib.build(...request),/Invalid/);
   assert.throws(()=>lib.build('library-table','oak','empty',{rotation:45}),/Invalid/);
@@ -78,20 +97,20 @@ test('double-sided bookcases stock both faces, and validation rejects bad asset 
 });
 
 test('asset release frees instance buffers once and the library owns only its cloned resources',()=>{
- const atlas=new T.Texture(),cargo=new T.Texture();let borrowed=0;atlas.addEventListener('dispose',()=>borrowed++);cargo.addEventListener('dispose',()=>borrowed++);
- const lib=createLibraryFurniture({atlas,cargo}),a=lib.build('bookcase-wide','sage','books'),b=lib.build('library-table','walnut','empty');
+ const atlas=new T.Texture(),cargo=new T.Texture(),bookSkins=new T.Texture();let borrowed=0;for(const t of [atlas,cargo,bookSkins])t.addEventListener('dispose',()=>borrowed++);
+ const lib=createLibraryFurniture({atlas,cargo,bookSkins}),a=lib.build('bookcase-wide','sage','books'),b=lib.build('library-table','walnut','empty');
  const instances=[...a.root.children,...b.root.children];let instanceDisposals=0;for(const mesh of instances)mesh.addEventListener('dispose',()=>instanceDisposals++);
  const resources=[...Object.values(lib.resources.geometries),...lib.resources.materials.values(),...lib.resources.textures],counts=new Map(resources.map(r=>[r,0]));
  for(const r of resources)r.addEventListener('dispose',()=>counts.set(r,counts.get(r)+1));
  a.dispose();a.dispose();assert.equal(lib.stats().assets,1);assert.throws(()=>a.solidParts(),/disposed/);
  lib.dispose();lib.dispose();assert.equal(instanceDisposals,instances.length);assert.ok([...counts.values()].every(n=>n===1));assert.equal(borrowed,0);assert.equal(lib.stats().assets,0);assert.equal(lib.stats().geometries,0);
- assert.throws(()=>lib.build('library-table'),/disposed/);atlas.dispose();cargo.dispose();
+ assert.throws(()=>lib.build('library-table'),/disposed/);atlas.dispose();cargo.dispose();bookSkins.dispose();
 });
 
-test('partial texture failure releases successful loads; module only requests two declared atlases',async()=>{
+test('partial texture failure releases successful loads; module only requests three declared atlases',async()=>{
  const texture=new T.Texture();let released=0;texture.addEventListener('dispose',()=>released++);const urls=[];
  await assert.rejects(loadLibraryTextures({loadAsync(url){urls.push(url);return url.includes('material-atlas-v2')?Promise.resolve(texture):Promise.reject(Error('missing'));}}),/could not be loaded/);
- assert.equal(released,1);assert.equal(urls.length,2);assert.equal(TEXTURE_PATHS.length,2);
+ assert.equal(released,1);assert.equal(urls.length,3);assert.equal(TEXTURE_PATHS.length,3);
 });
 
 test('published catalog matches the asset IDs and source hashes; review dependencies resolve',()=>{
@@ -102,4 +121,24 @@ test('published catalog matches the asset IDs and source hashes; review dependen
  for(const match of html.matchAll(/(?:src|href)="([^"#?]+)"/g))assert.ok(fs.existsSync(path.resolve(path.dirname(file),match[1])),match[1]);
  execFileSync(process.execPath,['--check',path.join(root,'art/library/review.js')]);
  execFileSync(process.execPath,['--check',path.join(root,'art/library/thumbnail-renderer.js')]);
+});
+
+test('software catalog depth keeps intersecting low-poly faces visible on the correct side',async()=>{
+ const {createThumbnailRenderer}=await import('../dist/art/library/thumbnail-renderer.js');
+ const savedDocument=globalThis.document,surfaces=[];
+ globalThis.document={createElement(){
+  const canvas={width:0,height:0,pixels:null,toDataURL:()=> 'data:image/png;base64,'};
+  const ctx={fillRect(){},getImageData:()=>({data:new Uint8ClampedArray(canvas.width*canvas.height*4)}),putImageData(image){canvas.pixels=image.data;}};
+  canvas.getContext=type=>type==='webgl2'?null:ctx;surfaces.push(canvas);return canvas;
+ }};
+ let renderer;const geometry=new T.PlaneGeometry(2,2),red=new T.MeshStandardMaterial({color:0xff0000}),blue=new T.MeshStandardMaterial({color:0x0000ff});
+ try{
+  renderer=createThumbnailRenderer(32,32);assert.equal(renderer.mode,'software');
+  const scene=new T.Scene();scene.background=new T.Color(0);
+  const slanted=new T.Mesh(geometry,red);slanted.rotation.y=Math.PI/4;scene.add(slanted,new T.Mesh(geometry,blue));
+  const camera=new T.OrthographicCamera(-1,1,1,-1,.1,10);camera.position.z=5;camera.lookAt(0,0,0);
+  renderer.render(scene,camera);const pixels=surfaces[1].pixels,left=(16*32+8)*4,right=(16*32+24)*4;
+  assert.ok(pixels[left]>0&&pixels[left+2]===0,'Near red face covers blue on the left');
+  assert.ok(pixels[right]===0&&pixels[right+2]>0,'Blue face covers the receding red face on the right');
+ }finally{renderer?.dispose();geometry.dispose();red.dispose();blue.dispose();if(savedDocument===undefined)delete globalThis.document;else globalThis.document=savedDocument;}
 });

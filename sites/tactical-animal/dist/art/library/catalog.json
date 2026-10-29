@@ -1,5 +1,5 @@
 {
-  "version": "library-furniture/1",
+  "version": "library-furniture/2",
   "tileMetres": 1,
   "assetCount": 72,
   "axes": "X east, Y up, Z south; front +Z; rotation in quarter-turn degrees about +Y",
@@ -210,8 +210,14 @@
         "use": "inherited cream/sage painted wood and oxide/steel surfaces"
       }
     ],
+    "authored": [
+      {
+        "path": "art/library/book-spines.svg",
+        "use": "Original vector atlas: six book palettes, four painted shelf arrangements per palette"
+      }
+    ],
     "inheritedRights": "User-supplied AFT snapshot; upstream art license is not declared in the repository. Reuse follows the user’s direction.",
-    "newWork": "Original bookcase, book and reading-table geometry/layouts and finish recipes; no project-wide art license is declared.",
+    "newWork": "Original bookcase and reading-table geometry/layouts, finish recipes and vector book-spine skins; no project-wide art license is declared.",
     "rendererLicense": "Three.js: MIT; aft/tactics/vendor/THREE-LICENSE.txt",
     "sources": [
       {
@@ -233,13 +239,18 @@
         "path": "aft/assets/environment/painted-study/cargo-materials-v1.png",
         "use": "inherited cream/sage painted wood and oxide/steel surfaces",
         "sha256": "032e09c8fa111f2e05f4b54acca5b46b97588241e234573e68117dbaba95db8e"
+      },
+      {
+        "path": "art/library/book-spines.svg",
+        "use": "Original vector atlas: six book palettes, four painted shelf arrangements per palette",
+        "sha256": "29800c9984ac7b5baed29ec55e8e29834e3bfcaf1d743e2b4fd725963a153d53"
       }
     ]
   },
   "assets": [
     {
       "id": "library.bookcase-tall.oak.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-tall",
       "skin": "oak",
       "contents": "empty",
@@ -265,11 +276,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-tall.oak.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-tall",
       "skin": "oak",
       "contents": "books",
@@ -295,11 +306,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-tall.walnut.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-tall",
       "skin": "walnut",
       "contents": "empty",
@@ -325,11 +336,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-tall.walnut.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-tall",
       "skin": "walnut",
       "contents": "books",
@@ -355,11 +366,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-tall.sage.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-tall",
       "skin": "sage",
       "contents": "empty",
@@ -385,11 +396,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-tall.sage.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-tall",
       "skin": "sage",
       "contents": "books",
@@ -415,11 +426,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-tall.ivory.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-tall",
       "skin": "ivory",
       "contents": "empty",
@@ -445,11 +456,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-tall.ivory.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-tall",
       "skin": "ivory",
       "contents": "books",
@@ -475,11 +486,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-tall.oxblood.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-tall",
       "skin": "oxblood",
       "contents": "empty",
@@ -505,11 +516,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-tall.oxblood.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-tall",
       "skin": "oxblood",
       "contents": "books",
@@ -535,11 +546,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-tall.graphite.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-tall",
       "skin": "graphite",
       "contents": "empty",
@@ -565,11 +576,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-tall.graphite.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-tall",
       "skin": "graphite",
       "contents": "books",
@@ -595,11 +606,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-wide.oak.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-wide",
       "skin": "oak",
       "contents": "empty",
@@ -625,11 +636,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-wide.oak.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-wide",
       "skin": "oak",
       "contents": "books",
@@ -655,11 +666,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-wide.walnut.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-wide",
       "skin": "walnut",
       "contents": "empty",
@@ -685,11 +696,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-wide.walnut.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-wide",
       "skin": "walnut",
       "contents": "books",
@@ -715,11 +726,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-wide.sage.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-wide",
       "skin": "sage",
       "contents": "empty",
@@ -745,11 +756,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-wide.sage.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-wide",
       "skin": "sage",
       "contents": "books",
@@ -775,11 +786,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-wide.ivory.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-wide",
       "skin": "ivory",
       "contents": "empty",
@@ -805,11 +816,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-wide.ivory.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-wide",
       "skin": "ivory",
       "contents": "books",
@@ -835,11 +846,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-wide.oxblood.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-wide",
       "skin": "oxblood",
       "contents": "empty",
@@ -865,11 +876,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-wide.oxblood.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-wide",
       "skin": "oxblood",
       "contents": "books",
@@ -895,11 +906,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-wide.graphite.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-wide",
       "skin": "graphite",
       "contents": "empty",
@@ -925,11 +936,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-wide.graphite.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-wide",
       "skin": "graphite",
       "contents": "books",
@@ -955,11 +966,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-low.oak.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-low",
       "skin": "oak",
       "contents": "empty",
@@ -985,11 +996,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-low.oak.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-low",
       "skin": "oak",
       "contents": "books",
@@ -1015,11 +1026,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-low.walnut.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-low",
       "skin": "walnut",
       "contents": "empty",
@@ -1045,11 +1056,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-low.walnut.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-low",
       "skin": "walnut",
       "contents": "books",
@@ -1075,11 +1086,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-low.sage.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-low",
       "skin": "sage",
       "contents": "empty",
@@ -1105,11 +1116,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-low.sage.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-low",
       "skin": "sage",
       "contents": "books",
@@ -1135,11 +1146,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-low.ivory.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-low",
       "skin": "ivory",
       "contents": "empty",
@@ -1165,11 +1176,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-low.ivory.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-low",
       "skin": "ivory",
       "contents": "books",
@@ -1195,11 +1206,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-low.oxblood.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-low",
       "skin": "oxblood",
       "contents": "empty",
@@ -1225,11 +1236,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-low.oxblood.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-low",
       "skin": "oxblood",
       "contents": "books",
@@ -1255,11 +1266,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-low.graphite.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-low",
       "skin": "graphite",
       "contents": "empty",
@@ -1285,11 +1296,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-low.graphite.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-low",
       "skin": "graphite",
       "contents": "books",
@@ -1315,11 +1326,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-double.oak.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-double",
       "skin": "oak",
       "contents": "empty",
@@ -1345,11 +1356,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-double.oak.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-double",
       "skin": "oak",
       "contents": "books",
@@ -1375,11 +1386,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-double.walnut.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-double",
       "skin": "walnut",
       "contents": "empty",
@@ -1405,11 +1416,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-double.walnut.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-double",
       "skin": "walnut",
       "contents": "books",
@@ -1435,11 +1446,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-double.sage.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-double",
       "skin": "sage",
       "contents": "empty",
@@ -1465,11 +1476,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-double.sage.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-double",
       "skin": "sage",
       "contents": "books",
@@ -1495,11 +1506,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-double.ivory.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-double",
       "skin": "ivory",
       "contents": "empty",
@@ -1525,11 +1536,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-double.ivory.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-double",
       "skin": "ivory",
       "contents": "books",
@@ -1555,11 +1566,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-double.oxblood.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-double",
       "skin": "oxblood",
       "contents": "empty",
@@ -1585,11 +1596,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-double.oxblood.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-double",
       "skin": "oxblood",
       "contents": "books",
@@ -1615,11 +1626,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-double.graphite.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-double",
       "skin": "graphite",
       "contents": "empty",
@@ -1645,11 +1656,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.bookcase-double.graphite.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "bookcase-double",
       "skin": "graphite",
       "contents": "books",
@@ -1675,11 +1686,11 @@
         0
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table.oak.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table",
       "skin": "oak",
       "contents": "empty",
@@ -1705,11 +1716,11 @@
         0.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table.oak.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table",
       "skin": "oak",
       "contents": "books",
@@ -1735,11 +1746,11 @@
         0.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table.walnut.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table",
       "skin": "walnut",
       "contents": "empty",
@@ -1765,11 +1776,11 @@
         0.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table.walnut.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table",
       "skin": "walnut",
       "contents": "books",
@@ -1795,11 +1806,11 @@
         0.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table.sage.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table",
       "skin": "sage",
       "contents": "empty",
@@ -1825,11 +1836,11 @@
         0.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table.sage.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table",
       "skin": "sage",
       "contents": "books",
@@ -1855,11 +1866,11 @@
         0.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table.ivory.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table",
       "skin": "ivory",
       "contents": "empty",
@@ -1885,11 +1896,11 @@
         0.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table.ivory.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table",
       "skin": "ivory",
       "contents": "books",
@@ -1915,11 +1926,11 @@
         0.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table.oxblood.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table",
       "skin": "oxblood",
       "contents": "empty",
@@ -1945,11 +1956,11 @@
         0.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table.oxblood.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table",
       "skin": "oxblood",
       "contents": "books",
@@ -1975,11 +1986,11 @@
         0.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table.graphite.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table",
       "skin": "graphite",
       "contents": "empty",
@@ -2005,11 +2016,11 @@
         0.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table.graphite.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table",
       "skin": "graphite",
       "contents": "books",
@@ -2035,11 +2046,11 @@
         0.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table-large.oak.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table-large",
       "skin": "oak",
       "contents": "empty",
@@ -2065,11 +2076,11 @@
         1.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table-large.oak.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table-large",
       "skin": "oak",
       "contents": "books",
@@ -2095,11 +2106,11 @@
         1.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table-large.walnut.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table-large",
       "skin": "walnut",
       "contents": "empty",
@@ -2125,11 +2136,11 @@
         1.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table-large.walnut.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table-large",
       "skin": "walnut",
       "contents": "books",
@@ -2155,11 +2166,11 @@
         1.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table-large.sage.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table-large",
       "skin": "sage",
       "contents": "empty",
@@ -2185,11 +2196,11 @@
         1.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table-large.sage.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table-large",
       "skin": "sage",
       "contents": "books",
@@ -2215,11 +2226,11 @@
         1.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table-large.ivory.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table-large",
       "skin": "ivory",
       "contents": "empty",
@@ -2245,11 +2256,11 @@
         1.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table-large.ivory.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table-large",
       "skin": "ivory",
       "contents": "books",
@@ -2275,11 +2286,11 @@
         1.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table-large.oxblood.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table-large",
       "skin": "oxblood",
       "contents": "empty",
@@ -2305,11 +2316,11 @@
         1.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table-large.oxblood.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table-large",
       "skin": "oxblood",
       "contents": "books",
@@ -2335,11 +2346,11 @@
         1.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table-large.graphite.empty",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table-large",
       "skin": "graphite",
       "contents": "empty",
@@ -2365,11 +2376,11 @@
         1.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
       "id": "library.library-table-large.graphite.books",
-      "version": "library-furniture/1",
+      "version": "library-furniture/2",
       "form": "library-table-large",
       "skin": "graphite",
       "contents": "books",
@@ -2395,7 +2406,7 @@
         1.5
       ],
       "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
-      "occlusion": "solidParts(): borrowed geometry + copied world matrices; paper labels and trim decoration are excluded."
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     }
   ]
 }

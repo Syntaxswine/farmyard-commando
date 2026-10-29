@@ -1,27 +1,38 @@
 import * as T from '../../aft/tactics/vendor/three.module.js';
 import {softBox} from '../../aft/tactics/painted-environment-scene.js';
-import {FORMS,SKINS,TEXTURE_PATHS,specification} from './catalog.js';
+import {FORMS,SKINS,TEXTURE_PATHS,BOOK_SKIN_ATLAS,specification} from './catalog.js';
 
-// Importing the module loads no images. Caller owns the two source textures.
+// Importing the module loads no images. Caller owns all three source textures.
 export async function loadLibraryTextures(loader=new T.TextureLoader()){
  const results=await Promise.allSettled(TEXTURE_PATHS.map(p=>loader.loadAsync(new URL(p,import.meta.url).href)));
  if(results.some(r=>r.status==='rejected')){for(const r of results)if(r.status==='fulfilled')r.value.dispose();throw Error('Library material atlases could not be loaded');}
- const [atlas,cargo]=results.map(r=>r.value);for(const texture of [atlas,cargo]){texture.colorSpace=T.SRGBColorSpace;texture.anisotropy=4;}
- let disposed=false;return {atlas,cargo,dispose(){if(disposed)return;disposed=true;atlas.dispose();cargo.dispose();}};
+ const [atlas,cargo,bookSkins]=results.map(r=>r.value);for(const texture of [atlas,cargo,bookSkins]){texture.colorSpace=T.SRGBColorSpace;texture.anisotropy=4;}
+ let disposed=false;return {atlas,cargo,bookSkins,dispose(){if(disposed)return;disposed=true;atlas.dispose();cargo.dispose();bookSkins.dispose();}};
 }
 
 // Shared cache, independent asset lifetimes, no Light objects or animation loop.
-export function createLibraryFurniture({atlas,cargo}={}){
- if(!atlas||!cargo)throw Error('Pass the two borrowed library material atlases');
+export function createLibraryFurniture({atlas,cargo,bookSkins}={}){
+ if(!atlas||!cargo||!bookSkins)throw Error('Pass all three borrowed library material atlases');
  const materials=new Map(),textures=[],assets=new Set();let disposed=false;
  const unit=softBox(1,1,1,.016,1);unit.computeBoundingBox();const size=new T.Vector3(),center=new T.Vector3();unit.boundingBox.getSize(size);unit.boundingBox.getCenter(center);unit.translate(-center.x,-center.y,-center.z);unit.scale(1/size.x,1/size.y,1/size.z);
- const geometries={frame:unit,book:new T.BoxGeometry(1,1,1)};
+ const rowGeometry=new T.BoxGeometry(1,1,1),uv=rowGeometry.attributes.uv;
+ // Box front/back use the spine picture, the four other faces use page edges.
+ for(let face=0;face<6;face++)for(let i=0;i<4;i++){const n=face*4+i,v=uv.getY(n);uv.setY(n,face>=4?.25+v*.75:v*.25);}
+ const geometries={frame:unit,book:new T.BoxGeometry(1,1,1),bookRow:rowGeometry};
  const cells={wood:[atlas,[.52,.525,.30,.43]],sage:[cargo,[.678,.53,.30,.44]],ivory:[cargo,[.345,.53,.30,.44]],oxide:[cargo,[.012,.012,.30,.475]],steel:[cargo,[.69,.04,.28,.42]]};
  function material(key,color,source=null,metalness=0){
   if(materials.has(key))return materials.get(key);
   const m=new T.MeshStandardMaterial({color,roughness:.88,metalness});m.name='library:'+key;
   if(source){const [base,cell]=cells[source],map=base.clone();map.offset.set(cell[0],cell[1]);map.repeat.set(cell[2],cell[3]);map.needsUpdate=true;textures.push(map);m.map=map;}
   materials.set(key,m);return m;
+ }
+ function bookRowMaterial(skin,row){
+  const variant=row%BOOK_SKIN_ATLAS.columns,key=skin.id+':book-row:'+variant;
+  if(materials.has(key))return materials.get(key);
+  const m=material(key,0xffffff),map=bookSkins.clone(),a=BOOK_SKIN_ATLAS,index=SKINS.indexOf(skin);
+  map.offset.set((variant*a.cellWidth+a.gutter)/a.width,1-((index+1)*a.cellHeight-a.gutter)/a.height);
+  map.repeat.set((a.cellWidth-2*a.gutter)/a.width,(a.cellHeight-2*a.gutter)/a.height);map.needsUpdate=true;
+  textures.push(map);m.map=map;return m;
  }
  const pages=()=>material('pages',0xd8d0ad),ink=()=>material('page-ink',0x6b7061),brass=()=>material('aged-brass',0xb7a06b,null,.38),iron=()=>material('iron',0x353e3d,null,.40);
  function finish(skin){return {
@@ -34,7 +45,7 @@ export function createLibraryFurniture({atlas,cargo}={}){
  function build(formId,skinId='oak',contents='books',{rotation=0}={}){
   if(disposed)throw Error('Library furniture is disposed');
   const spec=specification(formId,skinId,contents,rotation),form=FORMS.find(f=>f.id===formId),skin=SKINS.find(s=>s.id===skinId),m=finish(skin),parts=[];
-  function add(role,mat,at,extent,angles=[0,0,0],{parent=null,solid=true,geometry='frame'}={}){
+  function add(role,mat,at,extent,angles=[0,0,0],{parent=null,solid=true,geometry=formId.startsWith('bookcase')?'book':'frame'}={}){
    const matrix=compose(at,extent,angles);if(parent)matrix.premultiply(parent);
    parts.push({role,material:mat,geometry:geometries[geometry],matrix,solid});
   }
@@ -48,13 +59,8 @@ export function createLibraryFurniture({atlas,cargo}={}){
    put('spine-label',pages(),[0,h*.05,d/2+.002],[w*.64,.035,.004],false);
   }
   function populateBay(cx,cy,cz,width,row,back=false){
-   const count=7,raw=Array.from({length:count},(_,i)=>.075+((i*17+row*11)%7)*.006),sum=raw.reduce((a,b)=>a+b),gap=.012,usable=width-.11-gap*(count-1);
-   let cursor=-width/2+.055;
-   for(let i=0;i<count;i++){
-    const w=raw[i]*usable/sum,h=(form.rows===2?.215:.255)+((i*3+row*5)%7)*(form.rows===2?.008:.010);
-    const d=form.doubleSided?.295:.285;
-    book([cx+cursor+w/2,cy+h/2+.002,cz],w,h,d,i+row*2,{yaw:back?Math.PI:0});cursor+=w+gap;
-   }
+   const h=form.rows===2?.265:.315,d=form.doubleSided?.295:.285;
+   add('book-row',bookRowMaterial(skin,row),[cx,cy+h/2+.002,cz],[width-.11,h,d],[0,back?Math.PI:0,0],{geometry:'bookRow'});
   }
   if(formId.startsWith('bookcase')){
    const {width:w,depth:d,height:h}=form,side=.065,low=form.rows===2;
@@ -133,5 +139,5 @@ export function createLibraryFurniture({atlas,cargo}={}){
   assets.add(result);return result;
  }
  function dispose(){if(disposed)return;for(const asset of [...assets])asset.dispose();disposed=true;for(const g of Object.values(geometries))g.dispose();for(const m of materials.values())m.dispose();for(const t of textures)t.dispose();materials.clear();textures.length=0;}
- return {build,dispose,stats:()=>({assets:assets.size,geometries:disposed?0:2,materials:materials.size,textures:textures.length}),get disposed(){return disposed;},resources:{geometries,materials,textures}};
+ return {build,dispose,stats:()=>({assets:assets.size,geometries:disposed?0:3,materials:materials.size,textures:textures.length}),get disposed(){return disposed;},resources:{geometries,materials,textures}};
 }

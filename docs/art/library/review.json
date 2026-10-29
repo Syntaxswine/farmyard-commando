@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "reviewedAt": "2026-10-29T01:37:34.7684793Z",
+  "reviewedAt": "2026-10-29T02:35:50.121Z",
   "branch": "codex/library-furniture",
   "baseCommit": "60aeeed5e7f4283d46253c46654fb44af7636e6d",
   "collection": {
@@ -25,8 +25,8 @@
   },
   "checks": {
     "build": "npm run build: passed",
-    "targeted": "node --test sites/tactical-animal/tests/library-furniture.test.mjs: 8 passed",
-    "repository": "npm run check: 293 passed, 0 failed",
+    "targeted": "10 furniture tests passed",
+    "repository": "npm run check: 295 passed, 0 failed",
     "browser": {
       "surface": "Codex in-app browser",
       "previewMode": "software",
@@ -54,8 +54,9 @@
         "top"
       ],
       "webglVisuallyVerified": false,
-      "lighting": "Software snapshot of the native model triangles and inherited atlases. Approximate lighting; WebGL shading and shadows still need an in-game check.",
-      "pngDownloadVerified": false
+      "lighting": "Software snapshot of native triangles and inherited/original atlases with per-pixel depth. Approximate lighting; WebGL shading and shadows still need an in-game check.",
+      "pngDownloadVerified": false,
+      "mobileModel": "bookcase-wide.sage"
     }
   },
   "integration": {
@@ -72,15 +73,15 @@
   "sourceHashes": [
     {
       "path": "sites/tactical-animal/dist/art/library/catalog.js",
-      "sha256": "8ac5c923cb16a506ca032a6475f4a3280879a6d6df6328faf890f8a50098d196"
+      "sha256": "c18b5d1abb079f29595e0d589001b2e27bf848ecf2b245817072c2eb72980c88"
     },
     {
       "path": "sites/tactical-animal/dist/art/library/catalog.json",
-      "sha256": "637933085ac62f882d0f93c6891ea1a2dbbe330c3c46a492e59cdcd570bd7646"
+      "sha256": "5db6b4b6a120d134dfbe101d2fd95daf75bf858eef0e715d3e826d22f42411d2"
     },
     {
       "path": "sites/tactical-animal/dist/art/library/furniture.js",
-      "sha256": "ee831869c4aeeaba487984152d4aee90ceb9311f57680638f1a86bc3eeca8895"
+      "sha256": "6090a19d5743efe0d99de32fc6d0991a765a0b639dc0959a35e3a501981b3e18"
     },
     {
       "path": "sites/tactical-animal/dist/art/library/index.html",
@@ -96,46 +97,141 @@
     },
     {
       "path": "sites/tactical-animal/dist/art/library/thumbnail-renderer.js",
-      "sha256": "893d5579746c91f04f100e264c31d447cfc9ca063c64711b310209e0ee7bd563"
+      "sha256": "300dbf4641b6a73a1a24dcaee3f16ff1a32c288ae1e21f5aadd9b3358723b8a7"
     },
     {
       "path": "sites/tactical-animal/tests/library-furniture.test.mjs",
-      "sha256": "1b6b5b0c85f1a0a461a925e1d9760ce08338e3c45e71db161bd50c45df6ccf1f"
+      "sha256": "ac87cc445e90ca8d3322467951edcb47e92fa3aa3054cd313859ba178d3fced4"
     },
     {
       "path": "sites/tactical-animal/tools/library-catalog.mjs",
-      "sha256": "74f65a55d8dc642e699c9a013233d1113267bbea149fd3e9ba407b899f01cdb6"
+      "sha256": "548b5ee0748cec1310b5548c54bbb504921eabf55fea9358231cbb09f722b7ad"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/library/book-spines.svg",
+      "sha256": "29800c9984ac7b5baed29ec55e8e29834e3bfcaf1d743e2b4fd725963a153d53"
+    },
+    {
+      "path": "sites/tactical-animal/tools/library-book-skins.mjs",
+      "sha256": "ea48782fa1beeec573b0c3a7c80ef96320689ae7511b05a847e03dae286f3a1b"
+    },
+    {
+      "path": ".gitattributes",
+      "sha256": "79cb3b41c56d1eab307c56f8d5b478e4a0d061f6799af3debfbe2e35ef6c0dc5"
     }
   ],
   "screenshots": [
     {
-      "path": "overview.jpg",
-      "sha256": "f75c080c9e9e904b134aefe33709b73a402a3103a462003493da8508c6444921"
+      "path": "bookcase-skins-bottom.jpg",
+      "sha256": "67c487a2e98e4cb53ed923f436036f18437ddacef3eb7e98e4328d32339e27ac",
+      "pass": "Simplified bookcase pass"
     },
     {
       "path": "bookcase-skins.jpg",
-      "sha256": "5329d41d1c11ad4e29b692799e1d4ddaf58937acbc473e5368212434c692a4c4"
-    },
-    {
-      "path": "table-skins.jpg",
-      "sha256": "efa453e8e0156cf5edda13da43148560687d1fa39239bd37d1ee8e2cff0ce630"
-    },
-    {
-      "path": "large-table-skins.jpg",
-      "sha256": "63ef7c2870cd282201b871fee8f34eb8374aa3862dc6f9670df8b61e840d1e35"
-    },
-    {
-      "path": "large-table-top.jpg",
-      "sha256": "4f9db34bdde3d8b4618407c0e8103ba76c347e026ddb583f3c98651edce94751"
+      "sha256": "e760b519923fc919248fa36e73bc80e1163795c93dcfe7014f66ba118d9c4f44",
+      "pass": "Simplified bookcase pass"
     },
     {
       "path": "double-back.jpg",
-      "sha256": "dedd78fd3ed1f9b7ba30a9b078200126e269094b2049b5a8dd59aafb3be0186d"
+      "sha256": "d2f74a8aedea5cdff6deb50c787ef0ba88b1b054d087e4c5a4fba81dc1301782",
+      "pass": "Simplified bookcase pass"
+    },
+    {
+      "path": "large-table-skins.jpg",
+      "sha256": "63ef7c2870cd282201b871fee8f34eb8374aa3862dc6f9670df8b61e840d1e35",
+      "pass": "Retained table-only evidence from preceding pass"
+    },
+    {
+      "path": "large-table-top.jpg",
+      "sha256": "4f9db34bdde3d8b4618407c0e8103ba76c347e026ddb583f3c98651edce94751",
+      "pass": "Retained table-only evidence from preceding pass"
+    },
+    {
+      "path": "overview.jpg",
+      "sha256": "a4f6facd5ffdfd2d9bd8271178dac1a30a0888685189cd9c4dfda68eca10072b",
+      "pass": "Simplified bookcase pass"
+    },
+    {
+      "path": "phone-bookcase.jpg",
+      "sha256": "0d7951f9ecf5a7d5a316eb6b19141d573cef2ec557a2c92a1d4551aaaa6b6939",
+      "pass": "Simplified bookcase pass"
     },
     {
       "path": "phone-table.jpg",
-      "sha256": "4e441b9d23bfab18d957245af911cef0e0c1812805839601062cf25ab8e7ee29"
+      "sha256": "4e441b9d23bfab18d957245af911cef0e0c1812805839601062cf25ab8e7ee29",
+      "pass": "Retained table-only evidence from preceding pass"
+    },
+    {
+      "path": "table-skins.jpg",
+      "sha256": "efa453e8e0156cf5edda13da43148560687d1fa39239bd37d1ee8e2cff0ce630",
+      "pass": "Retained table-only evidence from preceding pass"
     }
   ],
-  "sourceHashFormat": "Git-normalized committed source bytes; inherited AFT bytes preserved by .gitattributes"
+  "sourceHashFormat": "UTF-8 source normalized to LF, matching committed owned text; inherited AFT hashes use preserved source bytes in catalog.json",
+  "modelVersion": "library-furniture/2",
+  "revisionBase": "83b7da8f002026dc17fd77e2033f12e39c16a4ba",
+  "performance": {
+    "bookcase-tall": {
+      "before": {
+        "parts": 213,
+        "triangles": 3916,
+        "batches": 13
+      },
+      "after": {
+        "parts": 21,
+        "triangles": 252,
+        "batches": 9
+      },
+      "triangleReductionPercent": 93.6
+    },
+    "bookcase-wide": {
+      "before": {
+        "parts": 410,
+        "triangles": 6360,
+        "batches": 13
+      },
+      "after": {
+        "parts": 26,
+        "triangles": 312,
+        "batches": 9
+      },
+      "triangleReductionPercent": 95.1
+    },
+    "bookcase-low": {
+      "before": {
+        "parts": 210,
+        "triangles": 3640,
+        "batches": 13
+      },
+      "after": {
+        "parts": 18,
+        "triangles": 216,
+        "batches": 8
+      },
+      "triangleReductionPercent": 94.1
+    },
+    "bookcase-double": {
+      "before": {
+        "parts": 812,
+        "triangles": 11984,
+        "batches": 13
+      },
+      "after": {
+        "parts": 44,
+        "triangles": 528,
+        "batches": 9
+      },
+      "triangleReductionPercent": 95.6
+    }
+  },
+  "bookcaseSkins": {
+    "atlas": "sites/tactical-animal/dist/art/library/book-spines.svg",
+    "dimensions": [
+      1024,
+      768
+    ],
+    "finishPalettes": 6,
+    "rowLayoutsPerFinish": 4,
+    "geometry": "One 12-triangle box per shelf bay; front/back spine region and page regions on other faces; no individually modeled shelf books"
+  }
 }

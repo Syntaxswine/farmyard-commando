@@ -1,8 +1,8 @@
 {
-  "version": "library-furniture/2",
+  "version": "library-furniture/3",
   "tileMetres": 1,
-  "assetCount": 72,
-  "axes": "X east, Y up, Z south; front +Z; rotation in quarter-turn degrees about +Y",
+  "assetCount": 96,
+  "axes": "X east, Y up, Z south; front defined by each asset origin; rotation in quarter-turn degrees about +Y",
   "forms": [
     {
       "id": "bookcase-tall",
@@ -56,6 +56,41 @@
       "rows": 4,
       "bays": 2,
       "doubleSided": true
+    },
+    {
+      "id": "bookcase-double-thick",
+      "name": "Full-tile double bookcase",
+      "tiles": [
+        1,
+        2
+      ],
+      "width": 0.98,
+      "depth": 1.98,
+      "height": 1.9,
+      "rows": 4,
+      "bays": 2,
+      "doubleSided": true,
+      "fullTile": true,
+      "constructionRotation": 90,
+      "frontAxis": "+X"
+    },
+    {
+      "id": "bookcase-double-ornate",
+      "name": "Frieze double bookcase",
+      "tiles": [
+        1,
+        2
+      ],
+      "width": 0.98,
+      "depth": 1.98,
+      "height": 1.98,
+      "rows": 4,
+      "bays": 2,
+      "doubleSided": true,
+      "fullTile": true,
+      "constructionRotation": 90,
+      "frontAxis": "+X",
+      "ornate": true
     },
     {
       "id": "library-table",
@@ -250,7 +285,7 @@
   "assets": [
     {
       "id": "library.bookcase-tall.oak.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-tall",
       "skin": "oak",
       "contents": "empty",
@@ -280,7 +315,7 @@
     },
     {
       "id": "library.bookcase-tall.oak.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-tall",
       "skin": "oak",
       "contents": "books",
@@ -310,7 +345,7 @@
     },
     {
       "id": "library.bookcase-tall.walnut.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-tall",
       "skin": "walnut",
       "contents": "empty",
@@ -340,7 +375,7 @@
     },
     {
       "id": "library.bookcase-tall.walnut.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-tall",
       "skin": "walnut",
       "contents": "books",
@@ -370,7 +405,7 @@
     },
     {
       "id": "library.bookcase-tall.sage.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-tall",
       "skin": "sage",
       "contents": "empty",
@@ -400,7 +435,7 @@
     },
     {
       "id": "library.bookcase-tall.sage.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-tall",
       "skin": "sage",
       "contents": "books",
@@ -430,7 +465,7 @@
     },
     {
       "id": "library.bookcase-tall.ivory.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-tall",
       "skin": "ivory",
       "contents": "empty",
@@ -460,7 +495,7 @@
     },
     {
       "id": "library.bookcase-tall.ivory.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-tall",
       "skin": "ivory",
       "contents": "books",
@@ -490,7 +525,7 @@
     },
     {
       "id": "library.bookcase-tall.oxblood.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-tall",
       "skin": "oxblood",
       "contents": "empty",
@@ -520,7 +555,7 @@
     },
     {
       "id": "library.bookcase-tall.oxblood.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-tall",
       "skin": "oxblood",
       "contents": "books",
@@ -550,7 +585,7 @@
     },
     {
       "id": "library.bookcase-tall.graphite.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-tall",
       "skin": "graphite",
       "contents": "empty",
@@ -580,7 +615,7 @@
     },
     {
       "id": "library.bookcase-tall.graphite.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-tall",
       "skin": "graphite",
       "contents": "books",
@@ -610,7 +645,7 @@
     },
     {
       "id": "library.bookcase-wide.oak.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-wide",
       "skin": "oak",
       "contents": "empty",
@@ -640,7 +675,7 @@
     },
     {
       "id": "library.bookcase-wide.oak.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-wide",
       "skin": "oak",
       "contents": "books",
@@ -670,7 +705,7 @@
     },
     {
       "id": "library.bookcase-wide.walnut.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-wide",
       "skin": "walnut",
       "contents": "empty",
@@ -700,7 +735,7 @@
     },
     {
       "id": "library.bookcase-wide.walnut.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-wide",
       "skin": "walnut",
       "contents": "books",
@@ -730,7 +765,7 @@
     },
     {
       "id": "library.bookcase-wide.sage.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-wide",
       "skin": "sage",
       "contents": "empty",
@@ -760,7 +795,7 @@
     },
     {
       "id": "library.bookcase-wide.sage.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-wide",
       "skin": "sage",
       "contents": "books",
@@ -790,7 +825,7 @@
     },
     {
       "id": "library.bookcase-wide.ivory.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-wide",
       "skin": "ivory",
       "contents": "empty",
@@ -820,7 +855,7 @@
     },
     {
       "id": "library.bookcase-wide.ivory.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-wide",
       "skin": "ivory",
       "contents": "books",
@@ -850,7 +885,7 @@
     },
     {
       "id": "library.bookcase-wide.oxblood.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-wide",
       "skin": "oxblood",
       "contents": "empty",
@@ -880,7 +915,7 @@
     },
     {
       "id": "library.bookcase-wide.oxblood.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-wide",
       "skin": "oxblood",
       "contents": "books",
@@ -910,7 +945,7 @@
     },
     {
       "id": "library.bookcase-wide.graphite.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-wide",
       "skin": "graphite",
       "contents": "empty",
@@ -940,7 +975,7 @@
     },
     {
       "id": "library.bookcase-wide.graphite.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-wide",
       "skin": "graphite",
       "contents": "books",
@@ -970,7 +1005,7 @@
     },
     {
       "id": "library.bookcase-low.oak.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-low",
       "skin": "oak",
       "contents": "empty",
@@ -1000,7 +1035,7 @@
     },
     {
       "id": "library.bookcase-low.oak.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-low",
       "skin": "oak",
       "contents": "books",
@@ -1030,7 +1065,7 @@
     },
     {
       "id": "library.bookcase-low.walnut.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-low",
       "skin": "walnut",
       "contents": "empty",
@@ -1060,7 +1095,7 @@
     },
     {
       "id": "library.bookcase-low.walnut.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-low",
       "skin": "walnut",
       "contents": "books",
@@ -1090,7 +1125,7 @@
     },
     {
       "id": "library.bookcase-low.sage.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-low",
       "skin": "sage",
       "contents": "empty",
@@ -1120,7 +1155,7 @@
     },
     {
       "id": "library.bookcase-low.sage.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-low",
       "skin": "sage",
       "contents": "books",
@@ -1150,7 +1185,7 @@
     },
     {
       "id": "library.bookcase-low.ivory.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-low",
       "skin": "ivory",
       "contents": "empty",
@@ -1180,7 +1215,7 @@
     },
     {
       "id": "library.bookcase-low.ivory.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-low",
       "skin": "ivory",
       "contents": "books",
@@ -1210,7 +1245,7 @@
     },
     {
       "id": "library.bookcase-low.oxblood.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-low",
       "skin": "oxblood",
       "contents": "empty",
@@ -1240,7 +1275,7 @@
     },
     {
       "id": "library.bookcase-low.oxblood.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-low",
       "skin": "oxblood",
       "contents": "books",
@@ -1270,7 +1305,7 @@
     },
     {
       "id": "library.bookcase-low.graphite.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-low",
       "skin": "graphite",
       "contents": "empty",
@@ -1300,7 +1335,7 @@
     },
     {
       "id": "library.bookcase-low.graphite.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-low",
       "skin": "graphite",
       "contents": "books",
@@ -1330,7 +1365,7 @@
     },
     {
       "id": "library.bookcase-double.oak.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-double",
       "skin": "oak",
       "contents": "empty",
@@ -1360,7 +1395,7 @@
     },
     {
       "id": "library.bookcase-double.oak.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-double",
       "skin": "oak",
       "contents": "books",
@@ -1390,7 +1425,7 @@
     },
     {
       "id": "library.bookcase-double.walnut.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-double",
       "skin": "walnut",
       "contents": "empty",
@@ -1420,7 +1455,7 @@
     },
     {
       "id": "library.bookcase-double.walnut.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-double",
       "skin": "walnut",
       "contents": "books",
@@ -1450,7 +1485,7 @@
     },
     {
       "id": "library.bookcase-double.sage.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-double",
       "skin": "sage",
       "contents": "empty",
@@ -1480,7 +1515,7 @@
     },
     {
       "id": "library.bookcase-double.sage.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-double",
       "skin": "sage",
       "contents": "books",
@@ -1510,7 +1545,7 @@
     },
     {
       "id": "library.bookcase-double.ivory.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-double",
       "skin": "ivory",
       "contents": "empty",
@@ -1540,7 +1575,7 @@
     },
     {
       "id": "library.bookcase-double.ivory.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-double",
       "skin": "ivory",
       "contents": "books",
@@ -1570,7 +1605,7 @@
     },
     {
       "id": "library.bookcase-double.oxblood.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-double",
       "skin": "oxblood",
       "contents": "empty",
@@ -1600,7 +1635,7 @@
     },
     {
       "id": "library.bookcase-double.oxblood.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-double",
       "skin": "oxblood",
       "contents": "books",
@@ -1630,7 +1665,7 @@
     },
     {
       "id": "library.bookcase-double.graphite.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-double",
       "skin": "graphite",
       "contents": "empty",
@@ -1660,7 +1695,7 @@
     },
     {
       "id": "library.bookcase-double.graphite.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "bookcase-double",
       "skin": "graphite",
       "contents": "books",
@@ -1689,8 +1724,728 @@
       "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
     },
     {
+      "id": "library.bookcase-double-thick.oak.empty",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-thick",
+      "skin": "oak",
+      "contents": "empty",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.9,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-thick.oak.books",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-thick",
+      "skin": "oak",
+      "contents": "books",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.9,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-thick.walnut.empty",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-thick",
+      "skin": "walnut",
+      "contents": "empty",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.9,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-thick.walnut.books",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-thick",
+      "skin": "walnut",
+      "contents": "books",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.9,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-thick.sage.empty",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-thick",
+      "skin": "sage",
+      "contents": "empty",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.9,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-thick.sage.books",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-thick",
+      "skin": "sage",
+      "contents": "books",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.9,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-thick.ivory.empty",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-thick",
+      "skin": "ivory",
+      "contents": "empty",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.9,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-thick.ivory.books",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-thick",
+      "skin": "ivory",
+      "contents": "books",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.9,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-thick.oxblood.empty",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-thick",
+      "skin": "oxblood",
+      "contents": "empty",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.9,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-thick.oxblood.books",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-thick",
+      "skin": "oxblood",
+      "contents": "books",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.9,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-thick.graphite.empty",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-thick",
+      "skin": "graphite",
+      "contents": "empty",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.9,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-thick.graphite.books",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-thick",
+      "skin": "graphite",
+      "contents": "books",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.9,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-ornate.oak.empty",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-ornate",
+      "skin": "oak",
+      "contents": "empty",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.98,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-ornate.oak.books",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-ornate",
+      "skin": "oak",
+      "contents": "books",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.98,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-ornate.walnut.empty",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-ornate",
+      "skin": "walnut",
+      "contents": "empty",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.98,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-ornate.walnut.books",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-ornate",
+      "skin": "walnut",
+      "contents": "books",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.98,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-ornate.sage.empty",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-ornate",
+      "skin": "sage",
+      "contents": "empty",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.98,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-ornate.sage.books",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-ornate",
+      "skin": "sage",
+      "contents": "books",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.98,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-ornate.ivory.empty",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-ornate",
+      "skin": "ivory",
+      "contents": "empty",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.98,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-ornate.ivory.books",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-ornate",
+      "skin": "ivory",
+      "contents": "books",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.98,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-ornate.oxblood.empty",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-ornate",
+      "skin": "oxblood",
+      "contents": "empty",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.98,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-ornate.oxblood.books",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-ornate",
+      "skin": "oxblood",
+      "contents": "books",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.98,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-ornate.graphite.empty",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-ornate",
+      "skin": "graphite",
+      "contents": "empty",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.98,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
+      "id": "library.bookcase-double-ornate.graphite.books",
+      "version": "library-furniture/3",
+      "form": "bookcase-double-ornate",
+      "skin": "graphite",
+      "contents": "books",
+      "rotation": 0,
+      "tiles": [
+        1,
+        2
+      ],
+      "origin": "footprint center, ground Y=0; front +X at 0 degrees",
+      "size": [
+        0.98,
+        1.98,
+        1.98
+      ],
+      "navigationFootprint": [
+        -0.49,
+        -0.99,
+        0.49,
+        0.99
+      ],
+      "placementOffset": [
+        0,
+        0.5
+      ],
+      "collision": "Physical body footprint for navigation; exact solid parts for sight/projectiles. Tile reservation is not an invisible wall.",
+      "occlusion": "solidParts(): borrowed geometry + copied world matrices; stocked bookcases use simple book-row boxes; paper labels and trim decoration are excluded."
+    },
+    {
       "id": "library.library-table.oak.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table",
       "skin": "oak",
       "contents": "empty",
@@ -1720,7 +2475,7 @@
     },
     {
       "id": "library.library-table.oak.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table",
       "skin": "oak",
       "contents": "books",
@@ -1750,7 +2505,7 @@
     },
     {
       "id": "library.library-table.walnut.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table",
       "skin": "walnut",
       "contents": "empty",
@@ -1780,7 +2535,7 @@
     },
     {
       "id": "library.library-table.walnut.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table",
       "skin": "walnut",
       "contents": "books",
@@ -1810,7 +2565,7 @@
     },
     {
       "id": "library.library-table.sage.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table",
       "skin": "sage",
       "contents": "empty",
@@ -1840,7 +2595,7 @@
     },
     {
       "id": "library.library-table.sage.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table",
       "skin": "sage",
       "contents": "books",
@@ -1870,7 +2625,7 @@
     },
     {
       "id": "library.library-table.ivory.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table",
       "skin": "ivory",
       "contents": "empty",
@@ -1900,7 +2655,7 @@
     },
     {
       "id": "library.library-table.ivory.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table",
       "skin": "ivory",
       "contents": "books",
@@ -1930,7 +2685,7 @@
     },
     {
       "id": "library.library-table.oxblood.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table",
       "skin": "oxblood",
       "contents": "empty",
@@ -1960,7 +2715,7 @@
     },
     {
       "id": "library.library-table.oxblood.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table",
       "skin": "oxblood",
       "contents": "books",
@@ -1990,7 +2745,7 @@
     },
     {
       "id": "library.library-table.graphite.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table",
       "skin": "graphite",
       "contents": "empty",
@@ -2020,7 +2775,7 @@
     },
     {
       "id": "library.library-table.graphite.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table",
       "skin": "graphite",
       "contents": "books",
@@ -2050,7 +2805,7 @@
     },
     {
       "id": "library.library-table-large.oak.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table-large",
       "skin": "oak",
       "contents": "empty",
@@ -2080,7 +2835,7 @@
     },
     {
       "id": "library.library-table-large.oak.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table-large",
       "skin": "oak",
       "contents": "books",
@@ -2110,7 +2865,7 @@
     },
     {
       "id": "library.library-table-large.walnut.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table-large",
       "skin": "walnut",
       "contents": "empty",
@@ -2140,7 +2895,7 @@
     },
     {
       "id": "library.library-table-large.walnut.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table-large",
       "skin": "walnut",
       "contents": "books",
@@ -2170,7 +2925,7 @@
     },
     {
       "id": "library.library-table-large.sage.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table-large",
       "skin": "sage",
       "contents": "empty",
@@ -2200,7 +2955,7 @@
     },
     {
       "id": "library.library-table-large.sage.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table-large",
       "skin": "sage",
       "contents": "books",
@@ -2230,7 +2985,7 @@
     },
     {
       "id": "library.library-table-large.ivory.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table-large",
       "skin": "ivory",
       "contents": "empty",
@@ -2260,7 +3015,7 @@
     },
     {
       "id": "library.library-table-large.ivory.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table-large",
       "skin": "ivory",
       "contents": "books",
@@ -2290,7 +3045,7 @@
     },
     {
       "id": "library.library-table-large.oxblood.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table-large",
       "skin": "oxblood",
       "contents": "empty",
@@ -2320,7 +3075,7 @@
     },
     {
       "id": "library.library-table-large.oxblood.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table-large",
       "skin": "oxblood",
       "contents": "books",
@@ -2350,7 +3105,7 @@
     },
     {
       "id": "library.library-table-large.graphite.empty",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table-large",
       "skin": "graphite",
       "contents": "empty",
@@ -2380,7 +3135,7 @@
     },
     {
       "id": "library.library-table-large.graphite.books",
-      "version": "library-furniture/2",
+      "version": "library-furniture/3",
       "form": "library-table-large",
       "skin": "graphite",
       "contents": "books",

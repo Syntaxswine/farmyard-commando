@@ -9,8 +9,8 @@ import {FORMS,SKINS,ASSETS,CONTENTS,specification,TEXTURE_PATHS,BOOK_SKIN_ATLAS}
 import {createLibraryFurniture,loadLibraryTextures} from '../dist/art/library/furniture.js';
 const make=()=>createLibraryFurniture({atlas:new T.Texture(),cargo:new T.Texture(),bookSkins:new T.Texture()});
 
-test('all 72 variants fit their tiles and body bounds at every quarter-turn',()=>{
- assert.equal(ASSETS.length,72);assert.equal(new Set(ASSETS.map(a=>a.id)).size,72);
+test('all 96 variants fit their tiles and body bounds at every quarter-turn',()=>{
+ assert.equal(ASSETS.length,96);assert.equal(new Set(ASSETS.map(a=>a.id)).size,96);
  const lib=make();
  try{for(const f of FORMS)for(const s of SKINS)for(const c of CONTENTS)for(const rotation of [0,90,180,270]){
   const asset=lib.build(f.id,s.id,c,{rotation}),b=asset.bounds,[w,h,d]=asset.spec.size,tolerance=.012;
@@ -35,14 +35,14 @@ test('skins keep identical shape and book layouts; empty variants contain no boo
  }}finally{lib.dispose();}
 });
 
-test('bookcase skins replace individual books within a 600-triangle model budget',()=>{
+test('bookcase skins retain simple shelf geometry within the plain and ornate model budgets',()=>{
  const lib=make(),maps=new Set();
  try{for(const form of FORMS.filter(f=>f.id.startsWith('bookcase')))for(const skin of SKINS){
   const asset=lib.build(form.id,skin.id,'books'),rows=asset.parts.filter(p=>p.role==='book-row');
   assert.equal(rows.length,form.rows*form.bays*(form.doubleSided?2:1));
   assert.ok(!asset.parts.some(p=>['book-cover','book-pages','book-spine','spine-band','spine-label'].includes(p.role)));
   const triangles=asset.parts.reduce((n,p)=>n+p.geometry.index.count/3,0);
-  assert.ok(triangles<=600,`${form.id}: ${triangles} triangles`);
+  assert.ok(triangles<=(form.ornate?1800:600),`${form.id}: ${triangles} triangles`);
   for(const row of rows){
    const map=row.material.map;assert.ok(map);assert.equal(row.geometry.index.count,36);maps.add(map);
    assert.ok(map.offset.x>=0&&map.offset.y>=0&&map.offset.x+map.repeat.x<=1&&map.offset.y+map.repeat.y<=1);
@@ -52,6 +52,28 @@ test('bookcase skins replace individual books within a 600-triangle model budget
  }
  assert.equal(maps.size,SKINS.length*BOOK_SKIN_ATLAS.columns);
  }finally{lib.dispose();}
+});
+
+test('full-tile double cases pair two cabinet backs in 1 x 2 tiles with stocked long faces',()=>{
+ const lib=make();
+ try{for(const form of FORMS.filter(f=>f.fullTile))for(const contents of CONTENTS){
+  const asset=lib.build(form.id,'walnut',contents);
+  assert.deepEqual(asset.spec.tiles,[1,2]);assert.deepEqual(asset.spec.placementOffset,[0,.5]);
+  assert.deepEqual(asset.spec.navigationFootprint,[-.49,-.99,.49,.99]);assert.match(asset.spec.origin,/front \+X/);
+  const bodySize=asset.bounds.getSize(new T.Vector3());assert.ok(bodySize.x>.97&&bodySize.z>1.97,'Cabinet occupies almost the entire tile reservation');
+  assert.equal(asset.parts.filter(p=>p.role==='back-panel').length,2);
+  assert.equal(asset.parts.some(p=>p.role==='frieze-relief'),!!form.ornate);
+  assert.equal(asset.parts.some(p=>p.role==='pilaster'),!!form.ornate);
+  const rows=asset.parts.filter(p=>p.role==='book-row');assert.equal(rows.length,contents==='books'?16:0);
+  if(contents==='books'){
+   const faces=rows.map(p=>new T.Vector3(0,0,.5).applyMatrix4(p.matrix));
+   assert.equal(faces.filter(p=>p.x>.4).length,8);assert.equal(faces.filter(p=>p.x<-.4).length,8);
+   const meshes=asset.solidParts().filter(p=>p.role==='book-row').map(p=>{const mesh=new T.Mesh(p.geometry);mesh.matrixAutoUpdate=false;mesh.matrix.copy(p.matrixWorld);mesh.updateMatrixWorld(true);return mesh;});
+   for(const side of [-1,1])assert.ok(new T.Raycaster(new T.Vector3(side*2,1.12,.45),new T.Vector3(-side,0,0),0,4).intersectObjects(meshes).length>0,'Painted book rows have physical depth on each long face');
+  }
+  const turned=specification(form.id,'walnut',contents,90);assert.deepEqual(turned.tiles,[2,1]);assert.deepEqual(turned.placementOffset,[.5,0]);
+  asset.dispose();
+ }}finally{lib.dispose();}
 });
 
 test('2 x 4 communal tables add six supports and four reading places without scaling the books',()=>{

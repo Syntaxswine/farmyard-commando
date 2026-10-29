@@ -1,4 +1,4 @@
-export const LIBRARY_VERSION='library-furniture/2';
+export const LIBRARY_VERSION='library-furniture/3';
 export const TILE_METRES=1;
 export const CONTENTS=['empty','books'];
 export const FORMS=[
@@ -6,6 +6,8 @@ export const FORMS=[
  {id:'bookcase-wide',name:'Wide bookcase',tiles:[2,1],width:1.94,depth:.46,height:1.90,rows:4,bays:2},
  {id:'bookcase-low',name:'Low bookcase',tiles:[2,1],width:1.94,depth:.46,height:.98,rows:2,bays:2},
  {id:'bookcase-double',name:'Double-sided bookcase',tiles:[2,1],width:1.94,depth:.88,height:1.90,rows:4,bays:2,doubleSided:true},
+ {id:'bookcase-double-thick',name:'Full-tile double bookcase',tiles:[1,2],width:.98,depth:1.98,height:1.90,rows:4,bays:2,doubleSided:true,fullTile:true,constructionRotation:90,frontAxis:'+X'},
+ {id:'bookcase-double-ornate',name:'Frieze double bookcase',tiles:[1,2],width:.98,depth:1.98,height:1.98,rows:4,bays:2,doubleSided:true,fullTile:true,constructionRotation:90,frontAxis:'+X',ornate:true},
  {id:'library-table',name:'Library table · 1 × 2 tiles',tiles:[1,2],width:.94,depth:1.94,height:.84,booksHeight:1.18},
  {id:'library-table-large',name:'Library table · 2 × 4 tiles',tiles:[2,4],width:1.94,depth:3.94,height:.84,booksHeight:1.18},
 ];
@@ -42,7 +44,7 @@ export function specification(formId,skinId,contents='books',rotation=0){
  if(!form||!skin||!CONTENTS.includes(contents)||![0,90,180,270].includes(rotation))throw Error('Invalid library form, skin, contents or quarter-turn');
  const odd=rotation%180===90,w=odd?form.depth:form.width,d=odd?form.width:form.depth;
  return {id:assetId(form.id,skin.id,contents),version:LIBRARY_VERSION,form:form.id,skin:skin.id,contents,rotation,
-  tiles:odd?[form.tiles[1],form.tiles[0]]:[...form.tiles],origin:'footprint center, ground Y=0; front +Z at 0 degrees',
+  tiles:odd?[form.tiles[1],form.tiles[0]]:[...form.tiles],origin:`footprint center, ground Y=0; front ${form.frontAxis||'+Z'} at 0 degrees`,
   size:[w,contents==='books'?(form.booksHeight||form.height):form.height,d],
   navigationFootprint:[-w/2,-d/2,w/2,d/2],
   placementOffset:odd?[(form.tiles[1]-1)/2,(form.tiles[0]-1)/2]:[(form.tiles[0]-1)/2,(form.tiles[1]-1)/2],

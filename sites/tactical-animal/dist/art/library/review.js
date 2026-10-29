@@ -19,18 +19,21 @@ function thumbnail(form,skin,view){
  const empty=library.build(form.id,skin.id,'empty'),books=library.build(form.id,skin.id,'books');
  const group=new T.Group();stage.add(group);const guideGeometries=[];
  try{
-  const spacing=form.width/2+.24;
+  const sideways=!!form.constructionRotation&&view!=='top',spacing=(sideways?form.depth:form.width)/2+.24;
   for(const [i,asset] of [empty,books].entries()){
-   asset.root.position.x=(i?1:-1)*spacing*(view==='back'?-1:1);group.add(asset.root);
+   const offset=(i?1:-1)*spacing*(view==='back'?-1:1);
+   if(sideways)asset.root.position.z=-offset;else asset.root.position.x=offset;group.add(asset.root);
    const [w,d]=form.tiles;
    for(let x=0;x<w;x++)for(let z=0;z<d;z++){
-    const tile=new T.Mesh(groundGeometry,tileMaterials[(x+z)%2]);tile.scale.set(.986,.012,.986);tile.position.set(asset.root.position.x+x-(w-1)/2,-.009,z-(d-1)/2);tile.receiveShadow=true;tile.userData.ground=true;group.add(tile);
+    const tile=new T.Mesh(groundGeometry,tileMaterials[(x+z)%2]);tile.scale.set(.986,.012,.986);tile.position.set(asset.root.position.x+x-(w-1)/2,-.009,asset.root.position.z+z-(d-1)/2);tile.receiveShadow=true;tile.userData.ground=true;group.add(tile);
    }
-   const sx=asset.root.position.x,points=[[-w/2,-d/2],[w/2,-d/2],[w/2,d/2],[-w/2,d/2],[-w/2,-d/2]].map(([x,z])=>new T.Vector3(x+sx,.002,z));
+   const sx=asset.root.position.x,sz=asset.root.position.z,points=[[-w/2,-d/2],[w/2,-d/2],[w/2,d/2],[-w/2,d/2],[-w/2,-d/2]].map(([x,z])=>new T.Vector3(x+sx,.002,z+sz));
    const geometry=new T.BufferGeometry().setFromPoints(points);guideGeometries.push(geometry);group.add(new T.Line(geometry,guideMaterial));
   }
   const bounds=new T.Box3().setFromObject(group),center=bounds.getCenter(new T.Vector3());
-  camera.up.set(0,1,0);camera.position.copy(center).add(view==='back'?new T.Vector3(-5,4.5,-8):view==='top'?new T.Vector3(0,10,.001):new T.Vector3(5,4.5,8));
+  const facing=sideways?new T.Vector3(8,4.5,5):new T.Vector3(5,4.5,8);
+  if(view==='back'){facing.x*=-1;facing.z*=-1;}
+  camera.up.set(0,1,0);camera.position.copy(center).add(view==='top'?new T.Vector3(0,10,.001):facing);
   if(view==='top')camera.up.set(0,0,-1);camera.lookAt(center);camera.updateMatrixWorld(true);
   const projected=new T.Box3();
   for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z])projected.expandByPoint(new T.Vector3(x,y,z).applyMatrix4(camera.matrixWorldInverse));
@@ -41,7 +44,7 @@ function thumbnail(form,skin,view){
 }
 async function renderCatalog(){
  const current=++generation,formId=document.querySelector('#form').value,skinId=document.querySelector('#skin').value,view=document.querySelector('#view').value;
- const forms=FORMS.filter(f=>formId==='all'||f.id===formId),skins=SKINS.filter(s=>skinId==='all'||s.id===skinId);
+ const forms=FORMS.filter(f=>formId==='all'||(formId==='full-tile-pair'?f.fullTile:f.id===formId)),skins=SKINS.filter(s=>skinId==='all'||s.id===skinId);
  catalog.replaceChildren();status.textContent='Rendering furniture…';
  for(const form of forms)for(const skin of skins){
   if(disposed||current!==generation)return;

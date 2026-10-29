@@ -45,8 +45,9 @@ export function createLibraryFurniture({atlas,cargo,bookSkins}={}){
  function build(formId,skinId='oak',contents='books',{rotation=0}={}){
   if(disposed)throw Error('Library furniture is disposed');
   const spec=specification(formId,skinId,contents,rotation),form=FORMS.find(f=>f.id===formId),skin=SKINS.find(s=>s.id===skinId),m=finish(skin),parts=[];
+  const construction=form.constructionRotation?new T.Matrix4().makeRotationY(form.constructionRotation*Math.PI/180):null;
   function add(role,mat,at,extent,angles=[0,0,0],{parent=null,solid=true,geometry=formId.startsWith('bookcase')?'book':'frame'}={}){
-   const matrix=compose(at,extent,angles);if(parent)matrix.premultiply(parent);
+   const matrix=compose(at,extent,angles);if(parent)matrix.premultiply(parent);if(construction)matrix.premultiply(construction);
    parts.push({role,material:mat,geometry:geometries[geometry],matrix,solid});
   }
   function book(at,w,h,d,index,{yaw=0,lean=0}={}){
@@ -59,17 +60,25 @@ export function createLibraryFurniture({atlas,cargo,bookSkins}={}){
    put('spine-label',pages(),[0,h*.05,d/2+.002],[w*.64,.035,.004],false);
   }
   function populateBay(cx,cy,cz,width,row,back=false){
-   const h=form.rows===2?.265:.315,d=form.doubleSided?.295:.285;
+   const h=form.rows===2?.265:.315,d=form.fullTile?.345:form.doubleSided?.295:.285;
    add('book-row',bookRowMaterial(skin,row),[cx,cy+h/2+.002,cz],[width-.11,h,d],[0,back?Math.PI:0,0],{geometry:'bookRow'});
   }
   if(formId.startsWith('bookcase')){
-   const {width:w,depth:d,height:h}=form,side=.065,low=form.rows===2;
+   const w=construction?form.depth:form.width,d=construction?form.width:form.depth,h=form.height,carcassHeight=form.ornate?1.77:h,side=.065,low=form.rows===2;
    add('plinth',m.body,[0,.065,0],[w,.13,d]);
-   add('top-cap',m.body,[0,h-.04,0],[w,.08,d]);
-   for(const x of [-w/2+side/2,w/2-side/2])add('side-panel',m.body,[x,(h+.13)/2,0],[side,h-.13,d-.025]);
-   add('back-panel',m.shelf,[0,(h+.13)/2,form.doubleSided?0:-d/2+.026],[w-.08,h-.18,.045]);
+   if(form.fullTile){
+    // Two joined carcasses keep a visible roof seam and separate back panels.
+    for(const face of [-1,1]){
+     add('top-cap',m.body,[0,form.ornate?1.90:h-.04,face*d/4],[form.ornate?w-.08:w,form.ornate?.04:.08,d/2-(form.ornate?.048:.008)]);
+     add('back-panel',m.shelf,[0,(carcassHeight+.13)/2,face*.024],[w-.08,carcassHeight-.18,.044]);
+    }
+   }else{
+    add('top-cap',m.body,[0,h-.04,0],[w,.08,d]);
+    add('back-panel',m.shelf,[0,(h+.13)/2,form.doubleSided?0:-d/2+.026],[w-.08,h-.18,.045]);
+   }
+   for(const x of [-w/2+side/2,w/2-side/2])add('side-panel',m.body,[x,(carcassHeight+.13)/2,0],[side,carcassHeight-.13,d-.025]);
    const bayWidth=(w-.13-(form.bays-1)*.05)/form.bays;
-   if(form.bays===2)add('center-divider',m.body,[0,(h+.13)/2,0],[.05,h-.18,d-.06]);
+   if(form.bays===2)add('center-divider',m.body,[0,(carcassHeight+.13)/2,0],[.05,carcassHeight-.18,d-.06]);
    const levels=low?[.205,.57]:[.205,.605,1.005,1.405];
    for(const [row,y] of levels.entries()){
     const sides=form.doubleSided?[1,-1]:[1];
@@ -78,7 +87,7 @@ export function createLibraryFurniture({atlas,cargo,bookSkins}={}){
      add('shelf',m.shelf,[0,y,cz],[w-.10,.045,shelfDepth]);
      add('shelf-lip',m.edge,[0,y,face*(d/2-.016)],[w-.12,.044,.022],[0,0,0],{solid:false});
      for(let bay=0;bay<form.bays;bay++)if(contents==='books'){
-      const cx=(bay-(form.bays-1)/2)*(bayWidth+.05),bookZ=form.doubleSided?face*.19:.035;
+      const cx=(bay-(form.bays-1)/2)*(bayWidth+.05),bookZ=form.fullTile?face*.245:form.doubleSided?face*.19:.035;
       populateBay(cx,y+.0225,bookZ,bayWidth,row+bay*3,face<0);
      }
     }
@@ -88,7 +97,27 @@ export function createLibraryFurniture({atlas,cargo,bookSkins}={}){
     add('blank-label',pages(),[0,.085,face*(d/2+.006)],[.145,.027,.003],[0,0,0],{solid:false});
    }
    // Broad sacrificial edge strips communicate paint wear without speckle.
-   for(const x of [-w/2+.010,w/2-.010])add('front-edge',m.edge,[x,h/2+.03,d/2-.012],[.018,h-.22,.018],[0,0,0],{solid:false});
+   for(const face of form.fullTile?[-1,1]:[1])for(const x of [-w/2+.010,w/2-.010])add('front-edge',m.edge,[x,carcassHeight/2+.03,face*(d/2-.012)],[.018,carcassHeight-.22,.018],[0,0,0],{solid:false});
+   if(form.fullTile)for(const x of [-w/2+.004,w/2-.004])add('join-seam',m.edge,[x,carcassHeight/2,0],[.008,carcassHeight-.19,.012],[0,0,0],{solid:false});
+   if(form.ornate){
+    // Broad relief stays readable at phone size; shelf books remain skinned.
+    add('cornice-lower',m.edge,[0,1.7725,0],[w-.025,.045,d-.025]);
+    add('frieze-body',m.body,[0,1.845,0],[w-.08,.12,d-.08]);
+    add('cornice-step',m.edge,[0,1.9275,0],[w-.04,.045,d-.04]);
+    add('cornice-crown',m.body,[0,1.965,0],[w,.03,d]);
+    for(const face of [-1,1]){
+     add('frieze-panel',m.body,[0,1.845,face*(d/2-.04)],[w-.10,.12,.04]);
+     for(const x of [-w/2+.065,w/2-.065]){
+      add('pilaster',m.edge,[x,.955,face*(d/2-.026)],[.065,1.57,.032]);
+      add('pilaster-capital',m.edge,[x,1.735,face*(d/2-.031)],[.11,.065,.046]);
+     }
+     for(let i=0;i<6;i++){
+      const x=(i-2.5)*.275,z=face*(d/2-.013);
+      for(const [dx,dy,angle] of [[-.024,.024,1],[.024,.024,-1],[-.024,-.024,-1],[.024,-.024,1]])add('frieze-relief',m.edge,[x+dx,1.845+dy,z],[.068,.012,.014],[0,0,angle*Math.PI/4],{solid:false});
+     }
+     for(let i=0;i<9;i++)add('dentil',m.edge,[(i-4)*.195,1.795,face*(d/2-.028)],[.065,.045,.036],[0,0,0],{solid:false});
+    }
+   }
   }else{
    // Extend the inherited plank-top, apron and leg language for both footprints.
    const large=formId==='library-table-large',w=form.width,d=form.depth,boards=large?8:4,gap=.002,boardWidth=(w-gap*(boards-1))/boards;

@@ -6,7 +6,7 @@ export const FRAMES=Object.freeze({silo:Object.freeze([38.5,46.64,85.5]),site:Ob
 const finite=(...n)=>n.every(Number.isFinite);
 export function toCanonical(frame,point){
  if(frame==='canonical'){if(!point||!finite(point.x,point.y,point.h))throw Error('Invalid canonical point');return {x:point.x,y:point.y,h:point.h};}
- const o=FRAMES[frame];if(!o||!Array.isArray(point)||point.length!==3||!finite(...point))throw Error('Invalid Coldwell source frame/point');
+ const o=Object.hasOwn(FRAMES,frame)?FRAMES[frame]:null;if(!o||!Array.isArray(point)||point.length!==3||!finite(...point))throw Error('Invalid Coldwell source frame/point');
  return {x:point[0]+o[0],y:point[2]+o[2],h:point[1]+o[1]};
 }
 export function toThree(point){if(!point||!finite(point.x,point.y,point.h))throw Error('Invalid canonical point');return [point.x,point.h,point.y];}
@@ -19,7 +19,7 @@ export function normalizeVisibleRegion({rect,heightBands,cutaway={}}={}){
  if(!Array.isArray(heightBands)||!heightBands.length||heightBands.some(b=>!b||!finite(b.min,b.max)||b.min>b.max))throw Error('Supply canonical metre heightBands:[{min,max}]');
  if(!cutaway||typeof cutaway!=='object'||Array.isArray(cutaway)||Object.keys(cutaway).some(k=>!['roofs','canopies','display','plane'].includes(k)))throw Error('Invalid Coldwell cutaway');
  const c={roofs:true,canopies:true,display:true,...cutaway};for(const key of ['roofs','canopies','display'])if(typeof c[key]!=='boolean')throw Error('Cutaway visibility switches must be boolean');
- if(c.plane!==undefined&&c.plane!==null){const p=c.plane;if(!Array.isArray(p.normal)||p.normal.length!==3||!finite(...p.normal,p.constant)||Math.hypot(...p.normal)<1e-10)throw Error('Cutaway plane uses Three normal [x,h,y] and a finite constant');c.plane={normal:[...p.normal],constant:p.constant};}
+ if(c.plane!==undefined&&c.plane!==null){const p=c.plane;if(!Array.isArray(p.normal)||p.normal.length!==3||!finite(...p.normal,p.constant)||Math.hypot(...p.normal)<1e-10)throw Error('Cutaway plane uses Three normal [x,h,y] and a finite constant');const length=Math.hypot(...p.normal);c.plane={normal:p.normal.map(n=>n/length),constant:p.constant/length};}
  return {rect:{...rect},heightBands:heightBands.map(b=>({min:b.min,max:b.max})),cutaway:c};
 }
 export function nearbyHeightBand(height,{below=1,above=1}={}){

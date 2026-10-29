@@ -335,9 +335,10 @@ function windowBlast(s,origin,radius,options={}){
 }
 export function previewPointAttack(s,a,point,burst=false,aimLevel='hip'){
   const w=WEAPONS[a?.weapon],aim=w&&shotAim(w,aimLevel,burst),rounds=burst&&w?.burstRounds?w.burstRounds:1,d=point?distance(a,point):Infinity;
+  const placed=point?.windowId!==undefined?windowSystem.compile(s).find(r=>r.placement.id===point.windowId):null,ceiling=placed?.spec.height??2;
   let reason='';
   if(!canControl(s,a))reason='Wait for your turn';
-  else if(!point?.ground||![point.x,point.y,point.h].every(Number.isFinite)||point.h<0||point.h>2||!insideWorld(s,point)||!s.seen.has(key(point.x,point.y)))reason='Choose a visible window';
+  else if(!point?.ground||point.windowId!==undefined&&!placed||![point.x,point.y,point.h].every(Number.isFinite)||point.h<0||point.h>ceiling||!insideWorld(s,point)||!s.seen.has(key(point.x,point.y)))reason='Choose a visible window';
   else if(!w||w.incendiary||a.weapon==='grenade')reason='Use the area weapon controls';
   else if(d>w.range+EPS)reason='Out of range';
   else if(w.mag&&(a.ammo[a.weapon]??0)<rounds)reason='Reload first';

@@ -12,7 +12,7 @@ export function windowBox(p,part,kind){
 }
 export function windowEdges(p,width){
   const horizontal=(p.rotation||0)%180===0,along=horizontal?p.x:p.y,across=horizontal?p.y:p.x,start=along-(width-1)/2;
-  if(!Number.isInteger(width)||!Number.isInteger(start)||!Number.isInteger(across-.5))throw Error('Windows must align with complete wall spans.');
+  if(!Number.isInteger(width)||width<1||width>240||!Number.isInteger(start)||!Number.isInteger(across-.5))throw Error('Windows must align with complete wall spans inside the 240 m sector.');
   return Array.from({length:width},(_,i)=>horizontal?`s:${start+i}:${across-.5}`:`e:${across-.5}:${start+i}`);
 }
 // Old wall meshes overhang by 6 cm. Clip only the end adjoining a placed
@@ -33,7 +33,10 @@ export function clipLegacyWindowBox(box,covered,length=1.12){
   if(hi<=lo)return null;
   return {...box,center:box.center.map((n,i)=>i===along?(lo+hi)/2:n),size:box.size.map((n,i)=>i===along?hi-lo:n)};
 }
-function validPart(part){return part&&typeof part.id==='string'&&Array.isArray(part.min)&&Array.isArray(part.max)&&part.min.length===3&&part.max.length===3&&[...part.min,...part.max].every(Number.isFinite)&&part.min.every((n,i)=>n<=part.max[i])&&part.min[1]>=0&&part.max[1]<=2;}
+// Bounds come from the asset contract, never a saved bounds object. Leave
+// float-buffer headroom for rotated/ejected shards without a storey-height cap.
+function validBounds(bounds){return bounds&&Array.isArray(bounds.min)&&Array.isArray(bounds.max)&&bounds.min.length===3&&bounds.max.length===3&&[...bounds.min,...bounds.max].every(n=>Number.isFinite(n)&&Number.isFinite(Math.fround(n*4)))&&bounds.min.every((n,i)=>n<=bounds.max[i])&&bounds.min[1]===0&&Math.fround(bounds.max[1])>0;}
+function validPart(part,bounds){return part&&typeof part.id==='string'&&Array.isArray(part.min)&&Array.isArray(part.max)&&part.min.length===3&&part.max.length===3&&[...part.min,...part.max].every(Number.isFinite)&&part.min.every((n,i)=>n<part.max[i]&&n>=bounds.min[i]-EPS&&part.max[i]<=bounds.max[i]+EPS);}
 export function makeWindowSystem(describe){
   const cache=new WeakMap();
   function compile(state){
@@ -43,10 +46,12 @@ export function makeWindowSystem(describe){
     if((state.windows?.length||0)>1024)throw Error('Too many placed windows.');
     for(const p of state.windows||[]){
       if(p?.finish!==undefined&&!['steel','sage','ivory'].includes(p.finish)||p?.wall!==undefined&&!['brick','concrete','corrugated'].includes(p.wall))throw Error('Unsupported window finish.');
+      if(p?.dimensions!==undefined&&(!p.dimensions||typeof p.dimensions!=='object'||Array.isArray(p.dimensions)||Object.keys(p.dimensions).length!==2||Object.keys(p.dimensions).some(k=>!['width','height'].includes(k))||![p.dimensions.width,p.dimensions.height].every(n=>Number.isFinite(n)&&n>0)))throw Error('Unsupported window dimensions.');
       if(!p||typeof p.id!=='string'||!/^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,95}$/.test(p.id)||ids.has(p.id)||typeof p.definitionId!=='string'||![p.x,p.y].every(Number.isFinite)||(p.z??0)!==0||!QUARTERS.includes(p.rotation??0)||p.joins!==undefined&&(!p.joins||typeof p.joins!=='object'||Array.isArray(p.joins)||Object.entries(p.joins).some(([k,v])=>!['left','right'].includes(k)||typeof v!=='boolean')))throw Error('Unsupported window placement.');
-      const spec=describe(p.definitionId,p.joins||{});if(!spec||!Array.isArray(spec.panes)||!spec.panes.length||!Array.isArray(spec.solids)||!spec.panes.every(validPart)||!spec.solids.every(validPart)||spec.panes.some((v,i)=>spec.panes.findIndex(q=>q.id===v.id)!==i))throw Error('Unsupported window definition.');
+      const spec=describe(p.definitionId,p.joins||{},p.dimensions);if(!spec||!validBounds(spec.bounds)||!Number.isFinite(spec.height)||spec.height!==spec.bounds.max[1]||Math.abs(spec.width-(spec.bounds.max[0]-spec.bounds.min[0]))>EPS||!Array.isArray(spec.panes)||!spec.panes.length||!Array.isArray(spec.solids)||!spec.panes.every(part=>validPart(part,spec.bounds))||!spec.solids.every(part=>validPart(part,spec.bounds))||spec.panes.some((v,i)=>spec.panes.findIndex(q=>q.id===v.id)!==i))throw Error('Unsupported window definition.');
+      if(spec.requiresDimensions&&p.dimensions===undefined)throw Error('A custom sheet must retain its dimensions.');
       const covered=windowEdges(p,spec.width);for(const edge of covered){if(edges.has(edge))throw Error('Placed windows overlap.');edges.add(edge);}
-      if(state.map||state.terrain){const rows=state.map||state.terrain,w=rows[0].length,h=rows.length;const footprint=windowBox(p,{min:[-spec.width/2,0,-.1],max:[spec.width/2,2,.1]},'prop');if(footprint.x0<-.61||footprint.y0<-.61||footprint.x1>w-.39||footprint.y1>h-.39)throw Error('Window is outside the map.');}
+      if(state.map||state.terrain){const rows=state.map||state.terrain,w=rows[0].length,h=rows.length,footprint=windowBox(p,spec.bounds,'prop');if(footprint.x0<-.61||footprint.y0<-.61||footprint.x1>w-.39||footprint.y1>h-.39)throw Error('Window is outside the map.');}
       ids.add(p.id);records.push({placement:p,spec,edges:covered});
     }
     cache.set(state,{source:state.windows,records});return records;
@@ -56,7 +61,7 @@ export function makeWindowSystem(describe){
     return compile(state).flatMap(({placement:p,spec})=>[
       // Existing wall windows are not walkable/vaultable. Keep that rule even
       // after breaking glass; this reservation never blocks sight or a bullet.
-      windowBox(p,{id:'passage',role:'window-passage',min:[-spec.width/2,0,-.08],max:[spec.width/2,2,.08]},'prop'),
+      windowBox(p,{id:'passage',role:'window-passage',min:[spec.bounds.min[0],0,-.08],max:[spec.bounds.max[0],spec.height,.08]},'prop'),
       ...spec.solids.map(part=>windowBox(p,part,'wall')),
       ...spec.panes.filter(part=>!broken(state,p.id,part.id)).map(part=>windowBox(p,part,'glass')),
     ]);

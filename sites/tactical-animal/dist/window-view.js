@@ -2,11 +2,11 @@ import * as T from './aft/tactics/vendor/three.module.js';
 import {createWindowLibrary} from './art/windows/geometry.js';
 import {windowSystem} from './window-catalogue.js';
 import {windowBox,SHATTER_LIMITS} from './window-system.js';
-import {createWindowShatter,SHATTER_DURATION} from './window-shatter.js';
+import {createWindowShatter} from './window-shatter.js';
 const cell=p=>`${Math.round(p.x)},${Math.round(p.y)}`;
 const key=e=>`${e.instanceId}/${e.paneId}`;
 export function windowResident(record,rect){
-  const box=windowBox(record.placement,{min:[-record.spec.width/2,0,-.1],max:[record.spec.width/2,2,.1]},'prop');
+  const box=windowBox(record.placement,record.spec.bounds,'prop');
   return box.x1>=rect.x-.5&&box.x0<rect.x+rect.w-.5&&box.y1>=rect.y-.5&&box.y0<rect.y+rect.h-.5;
 }
 function windowKnown(s,record){return record.edges.some(edge=>{const [axis,x,y]=edge.split(':'),a={x:+x,y:+y};return s.seen.has(cell(a))||s.seen.has(cell({x:a.x+(axis==='e'?1:0),y:a.y+(axis==='s'?1:0)}));});}
@@ -16,7 +16,7 @@ export class WindowScenery{
     this.picks=[];
     for(const record of this.records){const {placement:p,spec}=record;let asset=this.assets.get(p.id);
       if(!windowResident(record,rect)){asset?.dispose();this.assets.delete(p.id);continue;}
-      if(!asset){asset=this.library.build(p.definitionId,{joins:p.joins,finish:p.finish,wall:p.wall,rotation:p.rotation||0});asset.root.position.set(p.x,0,p.y);this.root.add(asset.root);this.assets.set(p.id,asset);asset.root.traverse(mesh=>{if(mesh.isMesh)mesh.userData.windowId=p.id;});}
+      if(!asset){asset=this.library.build(p.definitionId,{joins:p.joins,dimensions:p.dimensions,finish:p.finish,wall:p.wall,rotation:p.rotation||0});asset.root.position.set(p.x,0,p.y);this.root.add(asset.root);this.assets.set(p.id,asset);asset.root.traverse(mesh=>{if(mesh.isMesh)mesh.userData.windowId=p.id;});}
       asset.root.visible=windowKnown(state,record);if(!asset.root.visible)continue;
       for(const pane of spec.panes)asset.setPaneVisible(pane.id,!windowSystem.broken(state,p.id,pane.id)||holds(p.id,pane.id));
       asset.root.traverse(mesh=>{if(mesh.isMesh&&(!mesh.userData.windowPaneId||asset.isPaneVisible(mesh.userData.windowPaneId)))this.picks.push(mesh);});
@@ -40,7 +40,7 @@ export class WindowEffects{
       const record=this.records.find(r=>r.placement.id===event.instanceId),pane=record?.spec.raw.panes.find(p=>p.id===event.paneId);
       if(record&&pane&&windowResident(record,rect)&&state.visible.has(cell(event.point)))this.pending.set(key(event),{event,record,pane,start});
     }
-    this.active=this.active.filter(fx=>{if(!windowResident(fx.record,rect)||(now-fx.at)/1000>=SHATTER_DURATION){fx.effect.dispose();return false;}fx.effect.sample((now-fx.at)/1000);return true;});
+    this.active=this.active.filter(fx=>{if(!windowResident(fx.record,rect)||(now-fx.at)/1000>=fx.effect.duration){fx.effect.dispose();return false;}fx.effect.sample((now-fx.at)/1000);return true;});
     const ready=[];for(const [id,cue]of this.pending){if(!windowResident(cue.record,rect)){this.pending.delete(id);continue;}const at=cue.start(cue.event);if(at!==null&&now>=at)ready.push([id,cue]);}
     let budget=SHATTER_LIMITS.triangles-this.active.reduce((n,fx)=>n+fx.effect.pieces.length,0),slots=Math.min(ready.length,SHATTER_LIMITS.active-this.active.length,Math.floor(budget/4));
     for(const [id,cue]of ready){this.pending.delete(id);this.sound();if(this.reduced()||slots<=0)continue;

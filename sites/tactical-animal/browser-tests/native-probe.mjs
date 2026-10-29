@@ -1,6 +1,9 @@
 // Isolated test instrumentation: observe native API calls without replacing
 // renderer output, shader results, audio data or any game/editor operation.
 export function installNativeProbe(){
+  // Popup creation can run the context init script more than once in the
+  // initial document. Never wrap a native API twice or replace its receipts.
+  if(Object.prototype.hasOwnProperty.call(window,'__windowNativeProbe'))return;
   const records={shaders:[],links:[],audio:[]},captures=[];
   for(const name of ['WebGLRenderingContext','WebGL2RenderingContext']){
     const prototype=window[name]?.prototype;if(!prototype)continue;

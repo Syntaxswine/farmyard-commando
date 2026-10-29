@@ -5,6 +5,8 @@ import {PAINTED_ATLAS} from './aft/tactics/painted-environment-scene.js';
 import {WALL_DIMENSIONS} from './world-dimensions.js';
 import {blockForPoint,blockWindow,worldBounds} from './world-grid.js';
 import {windowChanges} from './render-residency.js';
+import {windowSystem} from './window-catalogue.js';
+import {legacyWallSpan} from './window-system.js';
 export {weaponArtwork} from './weapon-artwork.js';
 
 const origin=new URL('./aft/tactics/',import.meta.url);
@@ -51,9 +53,10 @@ export class OriginalEnvironment {
     this.cube=new T.BoxGeometry(1,1,1);
     const bucket=point=>{const b=blockForPoint(point),id=`${b.x},${b.y}`;if(!this.index.has(id))this.index.set(id,{walls:[],cargo:[],sandbags:[]});return this.index.get(id);};
     const doors=new Set((state.interactables||[]).filter(object=>object.kind==='door').map(object=>object.edge));
+    const covered=new Set(windowSystem.compile(state).flatMap(r=>r.edges));
     for(const [edge,kind]of Object.entries(state.edges)){
-      if(kind==='door'||doors.has(edge))continue;
-      const [axis,x,y]=edge.split(':'),wall={axis,x:+x,y:+y};bucket(wall).walls.push(wall);
+      const span=legacyWallSpan(edge,covered,WALL_DIMENSIONS.length);if(kind==='door'||doors.has(edge)||!span)continue;
+      const [axis,x,y]=edge.split(':'),wall={axis,x:+x,y:+y,span};bucket(wall).walls.push(wall);
     }
     const occupied=new Set();
     for(const p of state.props||[]){
@@ -162,7 +165,8 @@ export class OriginalEnvironment {
         let count=0;
         for(const wall of edges){
           if(!wallKnown(state,wall)||foregroundWall(wall,unit)!==faded)continue;
-          matrix.compose(position.set(wall.x+(axis==='e'?.5:0),WALL_DIMENSIONS.height/2,wall.y+(axis==='s'?.5:0)),rotation,scale.set(axis==='e'?WALL_DIMENSIONS.thickness:WALL_DIMENSIONS.length,WALL_DIMENSIONS.height,axis==='e'?WALL_DIMENSIONS.length:WALL_DIMENSIONS.thickness));
+          const middle=(wall.span.min+wall.span.max)/2,length=wall.span.max-wall.span.min;
+          matrix.compose(position.set(axis==='e'?wall.x+.5:middle,WALL_DIMENSIONS.height/2,axis==='s'?wall.y+.5:middle),rotation,scale.set(axis==='e'?WALL_DIMENSIONS.thickness:length,WALL_DIMENSIONS.height,axis==='e'?length:WALL_DIMENSIONS.thickness));
           mesh.setMatrixAt(count,matrix);const lit=state.visible.has(key(wall.x,wall.y))||state.visible.has(key(wall.x+(axis==='e'?1:0),wall.y+(axis==='s'?1:0)));mesh.setColorAt(count++,color.setScalar(lit?1:.5));
         }
         mesh.count=count;mesh.instanceMatrix.needsUpdate=true;mesh.instanceColor.needsUpdate=true;mesh.computeBoundingSphere();

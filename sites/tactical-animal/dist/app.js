@@ -171,7 +171,7 @@ bindPressHold($('interaction-hand'),{
   press:()=>{resetStick();keys.clear();Core.stop(state);},
   tap:()=>{if(handTarget)useInteraction(handTarget.id,handTarget.actions[0].id);},hold:interactionChoices,
 });
-function act(fn){if(!state||paused)return;resetStick();keys.clear();fn();contextKey='';renderBattle();storage.write();}
+function act(fn){if(!state||paused)return;view?.unlockSound?.();resetStick();keys.clear();fn();contextKey='';renderBattle();storage.write();}
 function triggerReloadStatus(u){
   const w=Core.WEAPONS[u.weapon],empty=!!w.mag&&!w.thrown&&!(u.ammo[u.weapon]>0),cost=Core.combatCosts(state)?3:0,reserve=u.ammoPouch?.[u.weapon]||0,can=Core.canControl(state,u);
   const apShort=can&&reserve>0&&u.ap+1e-7<cost;
@@ -186,6 +186,7 @@ function reloadFromTrigger({targeting=false}={}){
   renderBattle();storage.write();return true;
 }
 function pick(p){if(!state||paused||aiming()||state.phase==='enemy'||state.solo.status!=='active')return;resetStick();if(p.interactionId){focusInteraction(p.interactionId);return;}if(p.unitId!==undefined){if(p.unitId===0){operationMenu();return;}const target=state.units.find(u=>u.id===p.unitId);if(target?.hp<=0){focusInteraction('body:'+target.id);return;}if(!state.detected.has(target?.id))return;if(hero(state).weapon==='flamethrower'){armFlame(Core.headingTo(hero(state),target));return;}Core.stop(state);Core.turnTo(state,hero(state),Core.headingTo(hero(state),target));selected={targetId:target.id};burst=false;aim=availableAim(Core.WEAPONS[hero(state).weapon],hero(state).ap);zone='torso';}
+  else if(p.windowId){const u=hero(state);Core.stop(state);if(u.weapon==='flamethrower'){armFlame(Core.headingTo(u,p));return;}const target={...p,name:p.paneId?'Glass pane':'Window frame'},single=Core.previewPointAttack(state,u,target),burst=Core.previewPointAttack(state,u,target,true);showDialog(`<p class="eyebrow">WINDOW</p><h2>${safe(target.name)}</h2><p>Glass stops the first shot. Later shots pass through the opening. Frames and lower walls remain solid.</p>`,[[`Fire · ${single.cost} AP`,()=>act(()=>Core.attack(state,u,target)),'primary',!single.ok],...(Core.WEAPONS[u.weapon].burstRounds?[[`Burst · ${burst.cost} AP`,()=>act(()=>Core.attack(state,u,target,true)),'',!burst.ok]]:[]),['Return to operation',()=>{}]]);return;}
   else{const path=Core.navigationPath(state,hero(state),p.x,p.y);if(!path){toast('No clear route to that point.');return;}view.route([hero(state),...path]);if(state.phase==='player')selected={point:p,path};else{Core.move(state,hero(state),p.x,p.y);selected=null;view.center();}}
   contextKey='';renderBattle();if(selected)selected.targetId!==undefined?shootingMenu():operationMenu();
 }

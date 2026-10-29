@@ -17,7 +17,7 @@ function wallEntry(a,b,box){
 
 export function recordFlame(source,range,geometry,visible){
   const heading=source.heading*Math.PI/180,h=source.stance==='prone'?.3:source.stance==='kneeling'?.75:1.1;
-  const origin={x:source.x,y:source.y,h},walls=geometry.filter(box=>box.kind==='wall'),sourceVisible=visible.has(cell(source.x,source.y));
+  const origin={x:source.x,y:source.y,h},walls=geometry.filter(box=>(box.kind==='wall'||box.kind==='glass')&&(!box.windowPart||h>=(box.z0??0)&&h<=box.height)),sourceVisible=visible.has(cell(source.x,source.y));
   const rays=Array.from({length:FLAME_RAY_COUNT},(_,i)=>{
     const angle=heading-FLAME_HALF_ANGLE+2*FLAME_HALF_ANGLE*i/(FLAME_RAY_COUNT-1),dx=Math.cos(angle),dy=Math.sin(angle),end={x:source.x+dx*range,y:source.y+dy*range};
     let reach=range,kind=sourceVisible?'range':'hidden';

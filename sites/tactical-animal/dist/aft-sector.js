@@ -1,5 +1,6 @@
 import {CHECKPOINT_DATA,CHECKPOINT_PROVENANCE} from './aft-checkpoint-data.js';
 import {WORLD_SECTOR_SIZE} from './world-grid.js';
+import {windowSystem} from './window-catalogue.js';
 
 export {CHECKPOINT_PROVENANCE};
 const terrainKinds=new Set(['yard','floor','ground-asphalt','ground-grass','ground-gravel','ground-concrete','crate']);
@@ -40,7 +41,13 @@ export function adaptAftSector(source,{provenance=null}={}){
     obstacles.push({x0:prop.x-.48,x1:prop.x+.48,y0:prop.y-.48,y1:prop.y+.48,height,kind:'crate',sourceKind:prop.kind});
   }
   for(const position of [...source.starts??[],...source.guards??[],...source.exits??[]])if((position.z??0)!==0)throw Error('This sector requires an upper-floor actor.');
-  return {name:source.name,terrain:source.terrain.map(row=>row.slice()),edges,props,obstacles,doors,worldBounds:{x:0,y:0,w:WORLD_SECTOR_SIZE,h:WORLD_SECTOR_SIZE},groundPalette:'aft-sector',...(provenance?{source:structuredClone(provenance)}:{})};
+  let windows;
+  if(source.farmyardWindows!==undefined){
+    if(source.farmyardWindows?.version!==1||!Array.isArray(source.farmyardWindows.instances))throw Error('Unsupported Farmyard window extension.');
+    windows=structuredClone(source.farmyardWindows.instances);
+    for(const record of windowSystem.compile({map:source.terrain,windows}))for(const edge of record.edges){if(doors.some(d=>d.edge===edge))throw Error('A window cannot replace a door.');delete edges[edge];}
+  }
+  return {name:source.name,terrain:source.terrain.map(row=>row.slice()),edges,props,obstacles,doors,...(windows?{windows}:{}),worldBounds:{x:0,y:0,w:WORLD_SECTOR_SIZE,h:WORLD_SECTOR_SIZE},groundPalette:'aft-sector',...(provenance?{source:structuredClone(provenance)}:{})};
 }
 
 export const checkpointSource=()=>unpackSector(CHECKPOINT_DATA);

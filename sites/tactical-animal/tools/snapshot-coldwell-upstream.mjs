@@ -10,6 +10,9 @@ if(process.argv.includes('--check')){
   const manifest=JSON.parse(fs.readFileSync(record));
   if(manifest.commit!==commit)throw Error('Unexpected Coldwell upstream revision.');
   for(const file of manifest.files){const bytes=fs.readFileSync(path.join(target,file.path));if(bytes.length!==file.bytes||sha(bytes)!==file.sha256)throw Error('Coldwell upstream changed: '+file.path);}
+  const silo=JSON.parse(fs.readFileSync(path.resolve('sites/tactical-animal/coldwell-silo-upstream.json')));
+  if(silo.commit!=='3b9d4004a7e51e5d345cded068fc46eab2f320a2'||silo.archiveSHA256!=='b489bb7439a22746281eb2dcc052cd124cc77917a9c00aeaa4c02ee5f1db873f')throw Error('Unexpected silo source identity.');
+  for(const file of silo.files){const bytes=fs.readFileSync(path.join(silo.root,file.path));if(bytes.length!==file.bytes||sha(bytes)!==file.sha256)throw Error('Original silo implementation changed: '+file.path);}
   console.log('Coldwell optional upstream closure matches '+commit+'.');
 }else{
   const source=process.argv[2];if(!source)throw Error('Supply the read-only Nautilus Git repository path.');

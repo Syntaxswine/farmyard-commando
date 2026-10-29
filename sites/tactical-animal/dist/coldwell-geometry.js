@@ -25,7 +25,7 @@ export class ColdwellGeometry{
     for(const panel of bundle.data.surfacePanels){
       const shape={id:panel.id,floorId:panel.floorId,h:panel.h,outline:[[panel.x,panel.y],[panel.x+panel.w,panel.y],[panel.x+panel.w,panel.y+panel.d],[panel.x,panel.y+panel.d]],holes:[]};shape.bounds=polygonBounds(shape);this.support.push(shape);
       const box=new Box3(vec(panel.x,panel.h-.12,panel.y),vec(panel.x+panel.w,panel.h,panel.y+panel.d));
-      this.records.set(panel.id,{box,kind:'floor',panel});surfaces.push(this.record(panel.id,box,panel.floorId));
+      this.records.set(panel.id,{id:panel.id,box,kind:'floor',panel});surfaces.push(this.record(panel.id,box,panel.floorId));
     }
     for(const volume of bundle.data.surfaceVolumes){
       const box=new Box3(vec(...volume.min),vec(...volume.max));this.records.set(volume.id,{...volume,box});surfaces.push(this.record(volume.id,box,floorId(22)));
@@ -37,7 +37,7 @@ export class ColdwellGeometry{
       for(let offset=batch.offset;offset<batch.offset+batch.count;offset+=9*32){
         const count=Math.min(9*32,batch.offset+batch.count-offset),box=new Box3();
         for(let i=offset;i<offset+count;i+=3)box.expandByPoint(vec().fromArray(this.positions,i));
-        const id='native-'+offset;this.records.set(id,{box,batch,offset,count,kind:batch.kind});surfaces.push(this.record(id,box,floorId(batch.level)));
+        const id='native-'+offset;this.records.set(id,{id,box,batch,offset,count,kind:batch.kind});surfaces.push(this.record(id,box,floorId(batch.level)));
       }
     }
     // Reuse the released upstream BVH and validation. Records are broad phase;
@@ -79,8 +79,8 @@ export class ColdwellGeometry{
     }
     return best;
   }
-  supportAt(state,point,{radius=.23,maxDrop=.2,maxRise=.2}={}){
-    const min=point.h-maxDrop-EPS,max=point.h+maxRise+EPS;
+  supportAt(state,point,{radius=.23,maxDrop=.22,maxRise=.22,step=false}={}){
+    const min=point.h-(step?Math.max(maxDrop,.4):maxDrop)-EPS,max=point.h+(step?Math.max(maxRise,.4):maxRise)+EPS;
     const shapes=this.support.filter(s=>s.h>=min&&s.h<=max&&touches(point,radius,s.bounds));
     // The source's open treads and bridge grates are actual supporting triangles.
     const box=new Box3(vec(point.x-radius,min-.01,point.y-radius),vec(point.x+radius,max+.01,point.y+radius));
@@ -88,14 +88,14 @@ export class ColdwellGeometry{
       if(Math.abs(triangle.a.y-triangle.b.y)>EPS||Math.abs(triangle.b.y-triangle.c.y)>EPS)return;
       const normal=triangle.getNormal(new Vector3());if(normal.y<.999)return;
       const h=triangle.a.y;if(h<min||h>max)return;
-      const shape={id:record.rig?.id||record.batch.id,floorId:record.rig?floorId(record.rig.level):floorId(record.batch.level),h,outline:[triangle.a,triangle.b,triangle.c].map(p=>[p.x,p.z]),holes:[]};shape.bounds=polygonBounds(shape);shapes.push(shape);
+      const shape={id:record.rig?.id||record.batch.id,floorId:record.rig?floorId(record.rig.level):floorId(record.batch.level),h,step:true,outline:[triangle.a,triangle.b,triangle.c].map(p=>[p.x,p.z]),holes:[]};shape.bounds=polygonBounds(shape);shapes.push(shape);
     });
     const centres=shapes.filter(s=>polygonContains(point,s)).sort((a,b)=>b.h-a.h||a.id.localeCompare(b.id));
     for(const centre of centres){
       // A body's footprint may straddle two adjacent native stair treads. All
       // contacted pieces must remain within one ordinary riser of the feet.
-      const step=centre.id.startsWith('service-bridge-')||centre.id.startsWith('silo:')&&centre.id.includes(':')? .19:EPS;
-      const nearby=shapes.filter(s=>Math.abs(s.h-centre.h)<=step);
+      const stepHeight=step ? .4 : centre.step ? .205 : EPS;
+      const nearby=shapes.filter(s=>Math.abs(s.h-centre.h)<=stepHeight);
       if(supportedDisc(point,radius,nearby))return {x:point.x,y:point.y,h:centre.h,floorId:centre.floorId,surfaceId:centre.id};
     }
     return null;
@@ -106,7 +106,10 @@ export class ColdwellGeometry{
       if(record.id===ignoreRig)continue;
       if(record.batch||record.positions){
         const blocked=this.triangles(record,triangle=>{
-          if(step&&(record.kind==='stair'||record.rig?.kind==='platform')&&Math.max(triangle.a.y,triangle.b.y,triangle.c.y)<=Math.max(a.h,b.h)+.19)return;
+          // A 46 cm footprint straddles two 25 cm treads. Native risers are
+          // 2.12/12 m, plus 16 mm nosing. Permit that authored leg clearance;
+          // railings, upper flights and ceilings retain full body collision.
+          if(step&&(record.kind==='stair'||record.rig?.kind==='platform')&&Math.max(triangle.a.y,triangle.b.y,triangle.c.y)<=Math.max(a.h,b.h)+.37)return;
           if(capsuleTriangleHit(a,b,height,radius,triangle))return false;
         })===false;
         if(blocked)return {id:record.id,rigId:record.rig?.id,kind:record.kind};

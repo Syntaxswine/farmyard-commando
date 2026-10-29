@@ -17,9 +17,9 @@ test('Coldwell conversion and optional upstream closure reproduce exact checked-
 test('the atomic package retains the complete source inventory and native geometry',()=>{
   assert.equal(bundle.data.surface.props.length,83);assert.equal(Object.keys(bundle.data.surface.edges).length,488);
   const cells=bundle.terrain.flat();assert.equal(cells.filter(x=>x==='void').length,319);assert.equal(cells.filter(x=>x==='ground-dirt').length,1315);
-  assert.equal(bundle.data.rigs.length,11);assert.equal(bundle.data.semantics.stairs.length,31);assert.equal(bundle.data.plan.floors.length,23);
+  assert.equal(bundle.data.rigs.length,14);assert.equal(bundle.manifest.inventory.siloRigs,11);assert.equal(bundle.data.semantics.stairs.length,31);assert.equal(bundle.data.plan.floors.length,23);
   assert.equal(Object.keys(bundle.data.surface.upper[0]).length,168);assert.equal(bundle.manifest.inventory.roofHeight,48.76);
-  assert.equal(bundle.positions.length/9,167764);assert.ok(Object.isFrozen(bundle.data));assert.ok(Object.isFrozen(bundle.data.surface.props));
+  assert.equal(bundle.positions.length/9,167836);assert.ok(Object.isFrozen(bundle.data));assert.ok(Object.isFrozen(bundle.data.surface.props));
 });
 test('missing, modified or truncated collision/companion data refuses the entire load',async()=>{
   await assert.rejects(loadColdwell({baseURL:base,fetcher:async url=>url.pathname.endsWith('collision.bin.gz')?new Response('',{status:404}):fetcher(url)}),/refused/);

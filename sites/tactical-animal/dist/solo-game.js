@@ -15,6 +15,8 @@ import {createFireRules,firePending,recordBurn} from './solo-fire.js';
 import {createFuelRules,tankExplosionChance} from './solo-fuel.js';
 export {tankExplosionChance} from './solo-fuel.js';
 import {gridDimensions,worldBounds} from './world-grid.js';
+import {PathFrontier} from './path-frontier.js';
+import {providerFor,attachSpatial,actorEye,actorHeight,spatialDistance,floorKey} from './spatial-provider.js';
 import {DEFAULT_MISSION_ID,getMission,missionForState,missionMap,objectiveSecured} from './missions.js';
 export {MISSIONS,DEFAULT_MISSION_ID,getMission,missionForState,missionMap,objectiveSecured,missionDestination} from './missions.js';
 
@@ -28,8 +30,10 @@ export const DEFAULT_BUILD=Object.freeze({animal:'rifleman',primary:'assault',se
 // Preserve the original public brief for existing callers. Active operations
 // resolve their own definition through missionForState instead.
 export const BRIEF=getMission(DEFAULT_MISSION_ID);
-export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+export const distance=(a,b)=>a.h!==undefined&&b.h!==undefined?Math.hypot(a.x-b.x,a.y-b.y,a.h-b.h):Math.hypot(a.x-b.x,a.y-b.y);
 export const key=(x,y)=>`${Math.round(x)},${Math.round(y)}`;
+export const cellKey=(s,point)=>s.spatial?floorKey({...point,floorId:point.floorId??hero(s).floorId}):key(point.x,point.y);
+const rememberedPoint=u=>({x:u.x,y:u.y,...(u.h!==undefined?{h:u.h,floorId:u.floorId,...(u.stairId?{stairId:u.stairId}:{})}:{})});
 export const hero=s=>s.units.find(u=>u.team==='squad');
 export const alive=u=>!!u&&u.hp>0;
 export const movementModeOf=u=>u.sneaking?'sneak':u.running?'run':'walk';
@@ -68,6 +72,7 @@ export function createSoloGame(build=DEFAULT_BUILD,seed=1947,missionId=DEFAULT_M
 }
 const geometryCache=new WeakMap(),GEOMETRY_BUCKET=8;
 export function geometry(s){
+  if(s.spatial)throw Error('This operation requires its spatial provider queries.');
   if(geometryCache.has(s))return geometryCache.get(s).boxes;const boxes=[],covered=new Set(windowSystem.compile(s).flatMap(r=>r.edges));
   for(const [k,kind] of Object.entries(s.edges)){
     const span=legacyWallSpan(k,covered,WALL_DIMENSIONS.length);if(kind==='door'||!span)continue;const [axis,xs,ys]=k.split(':'),x=+xs+(axis==='e'?.5:0),y=+ys+(axis==='s'?.5:0);
@@ -121,7 +126,7 @@ const eyeHeight=u=>u.stance==='prone'?PRONE_EYE:u.stance==='kneeling'?.75:STANDI
 const bodyHeight=u=>u.stance==='prone'?.42:u.stance==='kneeling'?1.15:1.75;
 const pointBoxDistance=(p,b)=>Math.hypot(Math.max(b.x0-p.x,0,p.x-b.x1),Math.max(b.y0-p.y,0,p.y-b.y1));
 function insideWorld(s,p,padding=0){const b=worldBounds(s);return Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=b.x-.5+padding&&p.x<=b.x+b.w-.5-padding&&p.y>=b.y-.5+padding&&p.y<=b.y+b.h-.5-padding;}
-export function freePoint(s,p,ignoreId=null,{units=true,radius=RADIUS}={}){if(!insideWorld(s,p,radius))return false;if(geometryNear(s,p,p,radius,'walk').some(b=>pointBoxDistance(p,b)<radius-EPS))return false;return !units||!s.units.some(u=>alive(u)&&u.id!==ignoreId&&distance(u,p)<RADIUS+radius-EPS);}
+export function freePoint(s,p,ignoreId=null,{units=true,radius=RADIUS}={}){const provider=providerFor(s);if(provider){const actor=s.units.find(u=>u.id===ignoreId)||hero(s);return provider.occupancy(s,actor,{...p,h:p.h??actor.h,floorId:p.floorId??actor.floorId},{units,resolve:true,ignoreId});}if(!insideWorld(s,p,radius))return false;if(geometryNear(s,p,p,radius,'walk').some(b=>pointBoxDistance(p,b)<radius-EPS))return false;return !units||!s.units.some(u=>alive(u)&&u.id!==ignoreId&&distance(u,p)<RADIUS+radius-EPS);}
 function boxInterval(a,b,box){let lo=0,hi=1;for(const [k,min,max] of [['x',box.x0,box.x1],['y',box.y0,box.y1]]){const d=b[k]-a[k];if(Math.abs(d)<EPS){if(a[k]<min||a[k]>max)return null;continue;}const t0=(min-a[k])/d,t1=(max-a[k])/d;lo=Math.max(lo,Math.min(t0,t1));hi=Math.min(hi,Math.max(t0,t1));if(lo>hi)return null;}return [lo,hi];}
 function intersectsBox(a,b,box){const span=boxInterval(a,b,box);return !!span&&span[1]>EPS&&span[0]<1-EPS;}
 // The parameter span within [0,1] where a segment, rising linearly from height
@@ -137,10 +142,11 @@ function airSpan(a,b,za,zb,box){
 // solid that crosses their eye line blocks it, at its own height.
 export function lineClear(s,a,b){
   if(![a.x,a.y,b.x,b.y].every(Number.isFinite))return false;
+  const provider=providerFor(s);if(provider)return !provider.trace(s,{...a,h:a.eyeH??actorEye(a)},{...b,h:b.eyeH??actorEye(b)},{purpose:'sight'});
   if(a.stance!=='prone'||b.stance!=='prone')return !geometryNear(s,a,b,0,'wall').some(box=>intersectsBox(a,b,box)&&(!box.windowPart||!!airSpan(a,b,a.h??eyeHeight(a),b.h??eyeHeight(b),box)));
   return !geometryNear(s,a,b,0,'air').some(box=>box.kind!=='glass'&&intersectsBox(a,b,box)&&(box.kind==='wall'&&!box.windowPart||!!airSpan(a,b,PRONE_EYE,PRONE_EYE,box)));
 }
-export function walkSegment(s,a,b,ignoreId=null){return sceneryWalk(s,a,b)&&unitsWalk(s,a,b,ignoreId);}
+export function walkSegment(s,a,b,ignoreId=null){const provider=providerFor(s);if(provider){const actor=s.units.find(u=>u.id===ignoreId)||hero(s);return provider.sweep(s,actor,{...a,h:a.h??actor.h,floorId:a.floorId??actor.floorId},b).ok;}return sceneryWalk(s,a,b)&&unitsWalk(s,a,b,ignoreId);}
 // The scenery half of a walk: every 10 cm sample inside the world and clear of walk-blocking boxes.
 function sceneryWalk(s,a,b){
   if(!insideWorld(s,b,RADIUS))return false;
@@ -193,6 +199,7 @@ export function visibleOpponents(s){
     const d=distance(u,g),nx=-(g.y-u.y)/Math.max(d,EPS),ny=(g.x-u.x)/Math.max(d,EPS);
     const exposed=[-RADIUS,-RADIUS/2,0,RADIUS/2,RADIUS].filter(offset=>{
       const p={x:g.x+nx*offset,y:g.y+ny*offset};
+      if(s.spatial)return !providerFor(s).trace(s,{x:u.x,y:u.y,h:actorEye(u)},{...p,h:g.h+bodyHeight(g)*.62},{purpose:'sight'});
       // Columns conceal whatever stands behind their footprint; a part conceals
       // only where it crosses the line from the viewer's eye to the torso.
       return !geometryNear(s,u,p,0,'air').some(box=>box.kind!=='glass'&&intersectsBox(u,p,box)&&(box.kind!=='part'&&!box.windowPart||!!airSpan(u,p,eyeHeight(u),bodyHeight(g)*.62,box)));
@@ -202,6 +209,14 @@ export function visibleOpponents(s){
   }).sort((a,b)=>a.score-b.score||a.distance-b.distance||a.unit.id-b.unit.id).map(contact=>contact.unit);
 }
 function visibility(s){
+  const provider=providerFor(s);if(provider){
+    const u=hero(s),range=35;s.visible=new Set();
+    for(let y=Math.max(0,Math.ceil(u.y-range));y<=Math.min(239,Math.floor(u.y+range));y++)for(let x=Math.max(0,Math.ceil(u.x-range));x<=Math.min(239,Math.floor(u.x+range));x++){
+      const p={x,y,h:u.h,floorId:u.floorId};if(distance(u,p)>range||!provider.supportAt(s,p,{radius:0,maxRise:.04,maxDrop:.04}))continue;
+      if(lineClear(s,u,p)){const k=cellKey(s,p);s.visible.add(k);s.seen.add(k);}
+    }
+    s.fogAt=rememberedPoint(u);return;
+  }
   const u=hero(s),b=worldBounds(s),{width,height}=gridDimensions(s),range=35;
   const x0=Math.max(0,Math.ceil(b.x),Math.ceil(u.x-range)),x1=Math.min(width-1,Math.ceil(b.x+b.w)-1,Math.floor(u.x+range));
   const y0=Math.max(0,Math.ceil(b.y),Math.ceil(u.y-range)),y1=Math.min(height-1,Math.ceil(b.y+b.h)-1,Math.floor(u.y+range));
@@ -209,22 +224,34 @@ function visibility(s){
   for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(distance(u,{x,y})<range&&lineClear(s,u,{x,y})){const k=key(x,y);s.visible.add(k);s.seen.add(k);}
   s.fogAt={x:u.x,y:u.y};
 }
-export function refresh(s,{forceFog=false}={}){const u=hero(s);s.detected=new Set(s.units.filter(g=>g.team==='guard'&&alive(g)&&canSee(s,u,g)).map(g=>g.id));for(const g of s.units.filter(g=>g.team==='guard'&&alive(g)))if(canSee(s,g,u)){g.alert=true;g.lastKnown={x:u.x,y:u.y};g.alertAge=0;}if(!s.fogAt||distance(u,s.fogAt)>.25||forceFog)visibility(s);if(!alive(u)){s.phase='lost';s.solo.status='lost';s.queue=[];u.isMoving=false;s.revision++;return;}const guards=s.units.filter(g=>g.team==='guard'&&alive(g));if(!guards.length&&!firePending(s)){if(s.phase!=='won')s.queue=[];s.phase='won';}else if(s.phase!=='enemy'){const contact=s.engaged||firePending(s)||guards.some(g=>g.alert&&distance(g,u)<=WEAPONS[g.weapon].range+g.maxAp);if(contact&&s.phase!=='player'){s.phase='player';s.round++;u.ap=u.burningTurns?0:u.maxAp;s.queue=[];u.isMoving=false;log(s,'Contact. Movement now spends AP by distance.');}else if(!contact&&s.phase==='player'){s.phase='explore';s.queue=[];u.isMoving=false;log(s,'Contact broken. Real-time exploration resumed.');}}s.revision++;}
+export function refresh(s,{forceFog=false}={}){const u=hero(s);s.detected=new Set(s.units.filter(g=>g.team==='guard'&&alive(g)&&canSee(s,u,g)).map(g=>g.id));for(const g of s.units.filter(g=>g.team==='guard'&&alive(g)))if(canSee(s,g,u)){g.alert=true;g.lastKnown=rememberedPoint(u);g.alertAge=0;}if(!s.fogAt||distance(u,s.fogAt)>.25||forceFog)visibility(s);if(!alive(u)){s.phase='lost';s.solo.status='lost';s.queue=[];u.isMoving=false;s.revision++;return;}const guards=s.units.filter(g=>g.team==='guard'&&alive(g));if(!guards.length&&!firePending(s)){if(s.phase!=='won')s.queue=[];s.phase='won';}else if(s.phase!=='enemy'){const contact=s.engaged||firePending(s)||guards.some(g=>g.alert&&distance(g,u)<=WEAPONS[g.weapon].range+g.maxAp);if(contact&&s.phase!=='player'){s.phase='player';s.round++;u.ap=u.burningTurns?0:u.maxAp;s.queue=[];u.isMoving=false;log(s,'Contact. Movement now spends AP by distance.');}else if(!contact&&s.phase==='player'){s.phase='explore';s.queue=[];u.isMoving=false;log(s,'Contact broken. Real-time exploration resumed.');}}s.revision++;}
 export function stop(s){s.queue=[];hero(s).isMoving=false;s.revision++;}
 // Exhaustion changes the movement mode without cancelling held input or a route.
 function walkWhenExhausted(s,u){if(u.running&&u.stamina<=EPS*(u.stance==='prone'?3:4)){u.running=false;u.sneaking=false;u.stamina=0;s.revision++;}}
 // Swept-disc collision prevents tunnelling. AP charges accepted displacement,
 // including wall slides, rather than requested input or pathfinder cells.
-export function travel(s,u,dx,dy,{enemy=false}={}){if((enemy?s.phase!=='enemy'||u.burningTurns:!canControl(s,u))||!Number.isFinite(dx)||!Number.isFinite(dy))return 0;const requested=Math.hypot(dx,dy);if(requested<EPS)return 0;walkWhenExhausted(s,u);const rate=movementRate(u),spends=enemy||s.phase==='player',staminaRate=u.stance==='prone'?3:u.running?4:u.sneaking?2:1;const budget=Math.min(requested,spends?u.ap/rate:Infinity,u.running||u.sneaking||u.stance==='prone'?u.stamina/staminaRate:Infinity);if(budget<EPS){u.isMoving=false;return 0;}const steps=Math.ceil(budget/.07),sx=dx/requested*budget/steps,sy=dy/requested*budget/steps;let walked=0;for(let i=0;i<steps;i++){let nx=u.x+sx,ny=u.y+sy;if(!freePoint(s,{x:nx,y:ny},u.id)){if(freePoint(s,{x:nx,y:u.y},u.id))ny=u.y;else if(freePoint(s,{x:u.x,y:ny},u.id))nx=u.x;else break;}const d=Math.hypot(nx-u.x,ny-u.y);if(d<EPS)break;u.heading=Math.atan2(ny-u.y,nx-u.x)*180/Math.PI;u.x=nx;u.y=ny;walked+=d;if(spends)u.ap=Math.max(0,u.ap-d*rate);u.stamina=Math.max(0,u.stamina-d*staminaRate);u.travelled+=d;fireRules.enterFire(s,u);if(u.burningTurns)break;}u.isMoving=walked>EPS&&!u.burningTurns;walkWhenExhausted(s,u);if(walked){if(u.team==='squad'){s.solo.distance+=walked;if(spends)s.solo.apDistance+=walked*rate;}refresh(s);}return walked;}
+export function travel(s,u,dx,dy,{enemy=false,distanceBudget}={}){if(s.spatial)return spatialTravel(s,u,dx,dy,{enemy,distanceBudget});if((enemy?s.phase!=='enemy'||u.burningTurns:!canControl(s,u))||!Number.isFinite(dx)||!Number.isFinite(dy))return 0;const requested=Math.hypot(dx,dy);if(requested<EPS)return 0;walkWhenExhausted(s,u);const rate=movementRate(u),spends=enemy||s.phase==='player',staminaRate=u.stance==='prone'?3:u.running?4:u.sneaking?2:1;const budget=Math.min(requested,spends?u.ap/rate:Infinity,u.running||u.sneaking||u.stance==='prone'?u.stamina/staminaRate:Infinity);if(budget<EPS){u.isMoving=false;return 0;}const steps=Math.ceil(budget/.07),sx=dx/requested*budget/steps,sy=dy/requested*budget/steps;let walked=0;for(let i=0;i<steps;i++){let nx=u.x+sx,ny=u.y+sy;if(!freePoint(s,{x:nx,y:ny},u.id)){if(freePoint(s,{x:nx,y:u.y},u.id))ny=u.y;else if(freePoint(s,{x:u.x,y:ny},u.id))nx=u.x;else break;}const d=Math.hypot(nx-u.x,ny-u.y);if(d<EPS)break;u.heading=Math.atan2(ny-u.y,nx-u.x)*180/Math.PI;u.x=nx;u.y=ny;walked+=d;if(spends)u.ap=Math.max(0,u.ap-d*rate);u.stamina=Math.max(0,u.stamina-d*staminaRate);u.travelled+=d;fireRules.enterFire(s,u);if(u.burningTurns)break;}u.isMoving=walked>EPS&&!u.burningTurns;walkWhenExhausted(s,u);if(walked){if(u.team==='squad'){s.solo.distance+=walked;if(spends)s.solo.apDistance+=walked*rate;}refresh(s);}return walked;}
 // A stable heap preserves tie order without sorting the whole frontier on every
 // expansion. The cap also bounds an unreachable request in a large open sector.
-export const NAVIGATION_NODE_LIMIT=8192;
-class PathFrontier{
-  constructor(){this.items=[];this.sequence=0;}
-  before(a,b){return a.f<b.f||a.f===b.f&&a.order<b.order;}
-  push(point){const p={...point,order:this.sequence++},items=this.items;let i=items.length;items.push(p);while(i){const parent=(i-1)>>1;if(!this.before(p,items[parent]))break;items[i]=items[parent];i=parent;}items[i]=p;}
-  pop(){const items=this.items,first=items[0],last=items.pop();if(items.length){let i=0;while(i*2+1<items.length){let child=i*2+1;if(child+1<items.length&&this.before(items[child+1],items[child]))child++;if(!this.before(items[child],last))break;items[i]=items[child];i=child;}items[i]=last;}return first;}
+function spatialTravel(s,u,dx,dy,{enemy=false,distanceBudget}={}){
+  if((enemy?s.phase!=='enemy'||u.burningTurns:!canControl(s,u))||![dx,dy].every(Number.isFinite))return 0;
+  const horizontal=Math.hypot(dx,dy),requested=distanceBudget??horizontal;if(horizontal<EPS||!Number.isFinite(requested)||requested<=0)return 0;
+  walkWhenExhausted(s,u);const provider=providerFor(s),rate=movementRate(u),spends=enemy||s.phase==='player',staminaRate=u.stance==='prone'?3:u.running?4:u.sneaking?2:1;
+  const budget=Math.min(requested,spends?u.ap/rate:Infinity,u.running||u.sneaking||u.stance==='prone'?u.stamina/staminaRate:Infinity);if(budget<EPS){u.isMoving=false;return 0;}
+  const steps=Math.ceil(budget/.07),sx=dx*budget/requested/steps,sy=dy*budget/requested/steps;let walked=0;
+  for(let i=0;i<steps;i++){
+    let result=provider.advance(s,u,sx,sy,budget/steps);
+    if(result.distance<EPS&&sx&&sy){result=provider.advance(s,u,sx,0,budget/steps);if(result.distance<EPS)result=provider.advance(s,u,0,sy,budget/steps);}
+    if(result.distance<EPS)break;
+    const p=result.point,d=result.distance;u.heading=Math.atan2(p.y-u.y,p.x-u.x)*180/Math.PI;u.x=p.x;u.y=p.y;u.h=p.h;u.floorId=p.floorId;u.z=provider.floorById.get(p.floorId).index;
+    if(p.stairId)u.stairId=p.stairId;else delete u.stairId;
+    walked+=d;if(spends)u.ap=Math.max(0,u.ap-d*rate);u.stamina=Math.max(0,u.stamina-d*staminaRate);u.travelled+=d;fireRules.enterFire(s,u);if(u.burningTurns)break;
+  }
+  u.isMoving=walked>EPS&&!u.burningTurns;walkWhenExhausted(s,u);
+  if(walked){if(u.team==='squad'){s.solo.distance+=walked;if(spends)s.solo.apDistance+=walked*rate;}refresh(s);}
+  return walked;
 }
+export const NAVIGATION_NODE_LIMIT=8192;
 // Grid nodes around p that u could stand on and reach from p in a straight walk, nearest first.
 function gridNodesAround(s,u,p){
   const a=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
@@ -266,17 +293,18 @@ function smoothRoute(s,u,raw){
   while(index<raw.length){let far=index;for(let j=raw.length-1;j>=index;j--)if(walkSegment(s,a,raw[j],u.id)){far=j;break;}const b=raw[far];result.push({...b,z:0,cost:distance(a,b)*movementRate(u)});a=b;index=far+1;}
   return result;
 }
-export function navigationPath(s,u,x,y){
+export function navigationPath(s,u,x,y,point){
+  if(s.spatial)return providerFor(s).path(s,u,{x,y,...(point||{})},{rate:movementRate(u)});
   const end={x,y};if(!freePoint(s,end,u.id))return null;
   if(walkSegment(s,u,end,u.id))return [{...end,z:0,cost:distance(u,end)*movementRate(u)}];
   const start=gridNodesAround(s,u,u)[0],goals=gridNodesAround(s,u,end);if(!start||!goals.length)return null;
   const goalKeys=new Set(goals.map(p=>key(p.x,p.y))),raw=gridSearch(s,u,[start],(p,pk)=>goalKeys.has(pk),q=>distance(q,end));
   return raw&&smoothRoute(s,u,[...raw,end]);
 }
-export function move(s,u,x,y){if(!canControl(s,u))return false;const path=navigationPath(s,u,x,y);if(!path?.length)return false;s.queue=path;s.revision++;return true;}
+export function move(s,u,x,y,point){if(!canControl(s,u))return false;const path=navigationPath(s,u,x,y,point);if(!path?.length)return false;s.queue=path;s.revision++;return true;}
 export function turnTo(s,u,heading){if(!canControl(s,u)||!Number.isFinite(heading))return false;u.heading=heading;refresh(s);return true;}
 export function setMovementMode(s,u,mode){if(!canControl(s,u)||!['run','sneak','walk'].includes(mode))return false;stop(s);u.running=mode==='run';u.sneaking=mode==='sneak';walkWhenExhausted(s,u);s.revision++;return true;}
-export function setStance(s,u,stance){if(!canControl(s,u)||!['standing','kneeling','prone'].includes(stance)||u.stance===stance)return false;stop(s);u.stance=stance;refresh(s,{forceFog:true});return true;}
+export function setStance(s,u,stance){if(!canControl(s,u)||!['standing','kneeling','prone'].includes(stance)||u.stance===stance||s.spatial&&!providerFor(s).occupancy(s,{...u,stance},u))return false;stop(s);u.stance=stance;refresh(s,{forceFog:true});return true;}
 const random=s=>{s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296;};
 export const grenadeCost=u=>WEAPONS.grenade.cost*(['pistol','pistol-offhand','smg'].includes(u.weapon)?.5:1);
 export function grenadeTrajectory(a,b){
@@ -326,7 +354,7 @@ export function throwGrenade(s,u,point){
   }
   windowBlast(s,point,p.blast);
   log(s,`${u.name} threw a grenade (${p.cost} AP).`);
-  for(const guard of s.units.filter(g=>g.team==='guard'&&alive(g)))if(distance(u,guard)<=WEAPONS.grenade.range*2){guard.alert=true;guard.lastKnown={x:u.x,y:u.y};guard.alertAge=0;}
+  for(const guard of s.units.filter(g=>g.team==='guard'&&alive(g)))if(distance(u,guard)<=WEAPONS.grenade.range*2){guard.alert=true;guard.lastKnown=rememberedPoint(u);guard.alertAge=0;}
   s.effect={sequence:[{shooter:u.id,ax:u.x,ay:u.y,bx:point.x,by:point.y,hit:hits>0,weapon:'grenade',blast:p.blast,...impactEvent,windowSequences:windowReceipts(s,windowBefore),fireSequences:(s.fireAnimations||[]).filter(e=>e.sequence>fireBefore).map(e=>e.sequence)}]};
   refresh(s);return true;
 }
@@ -370,7 +398,7 @@ export function fireFlame(s,a,heading){
   a.ap=Math.max(0,a.ap-p.cost);a.ammo.flamethrower--;syncAmmo(a,'flamethrower');a.heading=p.heading;
   const impactEvent={explosions:[]},fireBefore=s.fireAnimationSequence||0,windowBefore=s.windowSequence||0,flame=recordFlame(a,p.range,geometryNear(s,a,a,p.range,'flame'),s.visible),impacts=resolveFlame(s,a,impactEvent),angle=a.heading*Math.PI/180;
   log(s,`${a.name} fired a flamethrower cone (${p.cost} AP).`);
-  for(const guard of s.units.filter(u=>u.team==='guard'&&alive(u)))if(distance(a,guard)<=p.range*2){guard.alert=true;guard.lastKnown={x:a.x,y:a.y};guard.alertAge=0;}
+  for(const guard of s.units.filter(u=>u.team==='guard'&&alive(u)))if(distance(a,guard)<=p.range*2){guard.alert=true;guard.lastKnown=rememberedPoint(a);guard.alertAge=0;}
   s.effect={sequence:[{shooter:a.id,ax:a.x,ay:a.y,bx:a.x+Math.cos(angle)*p.range,by:a.y+Math.sin(angle)*p.range,incendiary:true,hit:impacts.length>0,weapon:'flamethrower',shot:0,shots:1,flame,impacts,...impactEvent,windowSequences:windowReceipts(s,windowBefore),fireSequences:(s.fireAnimations||[]).filter(e=>e.sequence>fireBefore).map(e=>e.sequence)}]};
   refresh(s);return true;
 }
@@ -438,7 +466,7 @@ export function attack(s,a,b,burst=false,byAI=false,zone='torso',reaction=false,
   }
   for(const event of sequence)event.shots=sequence.length;
   log(s,`${a.name} → ${b.name||'window'}: ${b.ground?sequence.some(e=>e.glass)?'glass broken':'shot':hits?Math.round(hp-b.hp)+' damage':'miss'} (${p.chance}%).`);
-  for(const g of s.units.filter(g=>g.team==='guard'&&alive(g)))if(distance(a,g)<=w.range*2){g.alert=true;g.lastKnown={x:a.x,y:a.y};g.alertAge=0;}
+  for(const g of s.units.filter(g=>g.team==='guard'&&alive(g)))if(distance(a,g)<=w.range*2){g.alert=true;g.lastKnown=rememberedPoint(a);g.alertAge=0;}
   s.effect={sequence,cost:p.cost};refresh(s);return true;
 }
 export function equip(s,u,id){if(!canControl(s,u)||!u.pack.some(i=>i.kind===id)||u.weapon===id)return false;const cost=combatCosts(s)?u.slots.includes(id)?2:3:0;if(u.ap+EPS<cost)return false;stop(s);u.ap-=cost;u.weapon=id;log(s,'Equipped '+WEAPONS[id].name+'.');return true;}
@@ -448,8 +476,8 @@ export function endTurn(s){if(s.phase!=='player'||s.solo.status!=='active')retur
 // its own grid node, inside that distance; it walks on to the next waypoint
 // instead of ending its turn there.
 const ARRIVED=.08;
-function enemyStep(s,dt){const u=hero(s);let g=s.units[s.enemyIndex];if(!g){fireRules.finishRound(s);s.round++;s.panicDelay=3;u.ap=alive(u)&&!u.burningTurns?u.maxAp:0;u.stamina=Math.min(u.maxStamina,u.stamina+10);s.phase='player';refresh(s);return;}if(!alive(g)||g.burningTurns||!g.alert||g.ap<.02){g.isMoving=false;s.enemyIndex++;s.enemyDelay=.15;return;}s.enemyDelay-=dt;if(s.enemyDelay>0)return;const p=previewAttack(s,g,u);if(p.ok&&canSee(s,g,u)){attack(s,g,u,false,true);s.enemyDelay=.6;return;}if(g.ammo[g.weapon]===0&&g.ap>=3){const count=Math.min(WEAPONS[g.weapon].mag,g.ammoPouch[g.weapon]||0);if(count){g.ammo[g.weapon]=count;g.ammoPouch[g.weapon]-=count;g.ap-=3;s.enemyDelay=.4;return;}}if(g.ap<WEAPONS[g.weapon].cost&&canSee(s,g,u)&&distance(g,u)<=WEAPONS[g.weapon].range){g.ap=0;return;}const path=approachPath(s,g,g.lastKnown||u),next=path?.length>1&&distance(g,path[0])<ARRIVED?path[1]:path?.[0];if(!next){g.ap=0;return;}const d=distance(g,next);if(d<ARRIVED){g.ap=0;return;}const step=Math.min(d,movementSpeed(g)*dt);if(!travel(s,g,(next.x-g.x)/d*step,(next.y-g.y)/d*step,{enemy:true}))g.ap=0;}
-export function tick(s,dt=1/60,input=null){if(s.solo.status!=='active')return false;dt=Math.max(0,Math.min(.05,dt));s.elapsed+=dt;for(const u of s.units)u.isMoving=false;if(s.phase==='enemy'){enemyStep(s,dt);return true;}const u=hero(s);if(u.burningTurns){refresh(s);if(s.phase==='player'){s.panicDelay=Math.max(0,(s.panicDelay??3)-dt);if(!s.panicDelay)endTurn(s);}return true;}walkWhenExhausted(s,u);if(input&&Math.hypot(input.x,input.y)>.1){s.queue=[];const n=Math.max(1,Math.hypot(input.x,input.y));travel(s,u,input.x/n*movementSpeed(u)*dt,input.y/n*movementSpeed(u)*dt);}else if(s.queue.length){const p=s.queue[0],d=distance(u,p);if(d<.025)s.queue.shift();else{const step=Math.min(d,movementSpeed(u)*dt),moved=travel(s,u,(p.x-u.x)/d*step,(p.y-u.y)/d*step);if(!moved||s.phase==='player'&&u.ap<EPS)s.queue=[];}}else if(s.phase==='explore'||s.phase==='won')u.stamina=Math.min(u.maxStamina,u.stamina+dt*2);return true;}
+function enemyStep(s,dt){const u=hero(s);let g=s.units[s.enemyIndex];if(!g){fireRules.finishRound(s);s.round++;s.panicDelay=3;u.ap=alive(u)&&!u.burningTurns?u.maxAp:0;u.stamina=Math.min(u.maxStamina,u.stamina+10);s.phase='player';refresh(s);return;}if(!alive(g)||g.burningTurns||!g.alert||g.ap<.02){g.isMoving=false;s.enemyIndex++;s.enemyDelay=.15;return;}s.enemyDelay-=dt;if(s.enemyDelay>0)return;const p=previewAttack(s,g,u);if(p.ok&&canSee(s,g,u)){attack(s,g,u,false,true);s.enemyDelay=.6;return;}if(g.ammo[g.weapon]===0&&g.ap>=3){const count=Math.min(WEAPONS[g.weapon].mag,g.ammoPouch[g.weapon]||0);if(count){g.ammo[g.weapon]=count;g.ammoPouch[g.weapon]-=count;g.ap-=3;s.enemyDelay=.4;return;}}if(g.ap<WEAPONS[g.weapon].cost&&canSee(s,g,u)&&distance(g,u)<=WEAPONS[g.weapon].range){g.ap=0;return;}const path=approachPath(s,g,g.lastKnown||u),next=path?.length>1&&distance(g,path[0])<ARRIVED?path[1]:path?.[0];if(!next){g.ap=0;return;}const d=distance(g,next);if(d<ARRIVED){g.ap=0;return;}const step=Math.min(d,movementSpeed(g)*dt);if(!travel(s,g,(next.x-g.x)/d*step,(next.y-g.y)/d*step,{enemy:true,distanceBudget:step}))g.ap=0;}
+export function tick(s,dt=1/60,input=null){if(s.solo.status!=='active')return false;dt=Math.max(0,Math.min(.05,dt));s.elapsed+=dt;for(const u of s.units)u.isMoving=false;if(s.phase==='enemy'){enemyStep(s,dt);return true;}const u=hero(s);if(u.burningTurns){refresh(s);if(s.phase==='player'){s.panicDelay=Math.max(0,(s.panicDelay??3)-dt);if(!s.panicDelay)endTurn(s);}return true;}walkWhenExhausted(s,u);if(input&&Math.hypot(input.x,input.y)>.1){s.queue=[];const n=Math.max(1,Math.hypot(input.x,input.y));travel(s,u,input.x/n*movementSpeed(u)*dt,input.y/n*movementSpeed(u)*dt);}else if(s.queue.length){const p=s.queue[0],d=distance(u,p);if(d<.025)s.queue.shift();else{const step=Math.min(d,movementSpeed(u)*dt),moved=travel(s,u,(p.x-u.x)/d*step,(p.y-u.y)/d*step,{distanceBudget:step});if(!moved||s.phase==='player'&&u.ap<EPS)s.queue=[];}}else if(s.phase==='explore'||s.phase==='won')u.stamina=Math.min(u.maxStamina,u.stamina+dt*2);return true;}
 const fireRules=createFireRules({kill,walkSegment,random,key,log});
 const fuelRules=createFuelRules({kill,ignite:fireRules.ignite,recordBurn,inside:insideWorld,log,windowBlast});
 export const ignite=(s,u)=>{const result=fireRules.ignite(s,u);if(result)refresh(s);return result;};
@@ -563,6 +591,7 @@ function searchStarts(s,g){
   return [...starts.values()];
 }
 export function approachPath(s,g,lastSeen){
+  if(s.spatial)return providerFor(s).approachPath(s,g,lastSeen,{rate:movementRate(g)});
   const quarries=standIns(s,lastSeen);if(!quarries.length)return null;
   // The straight walk tries the stand-ins nearest first; the search weighs them all.
   for(const quarry of [...quarries].sort((a,b)=>distance(a,g)-distance(b,g))){

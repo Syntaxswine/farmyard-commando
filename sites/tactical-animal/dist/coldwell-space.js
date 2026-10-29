@@ -1,4 +1,5 @@
 import {Vector3,Ray,Triangle,Line3} from './aft/tactics/vendor/three.module.js';
+import {transformSiloRigPoint} from './vendor/coldwell-silo/3b9d4004a7e51e5d345cded068fc46eab2f320a2/packages/silo/mesh.js';
 
 export const COLDWELL_ORIGIN=Object.freeze({x:38.5,y:85.5,h:46.64});
 export const COLDWELL_GROUND=46.64,COLDWELL_INTERVAL=2.12;
@@ -10,14 +11,8 @@ export const fromThree=point=>({x:point.x,y:point.z,h:point.y});
 export const floorId=index=>'coldwell-datum-'+String(index).padStart(2,'0');
 export const mixPoint=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,h:a.h+(b.h-a.h)*t,floorId:t<.5?a.floorId:b.floorId});
 
-// Same source-native rotation/travel as silo/mesh.js transformSiloRigPoint.
-// This adapter adds canonical placement exactly once; no animation clock.
-export function rigPoint(rig,[x,h,y],pose){
-  if(!Number.isFinite(pose)||pose<0||pose>rig.maximum)throw Error('Invalid Coldwell rig pose.');
-  const yaw=rig.yaw+(rig.kind==='door'?pose*Math.PI/180*rig.swingSign:0),c=Math.cos(yaw),s=Math.sin(yaw);
-  const travel=rig.kind==='door'?[0,0,0]:rig.travel.map(n=>n*pose);
-  return siloToWorld([rig.pivot[0]+x*c+y*s+travel[0],rig.pivot[1]+h+travel[1],rig.pivot[2]-x*s+y*c+travel[2]]);
-}
+// Reuse original source-native motion, adding canonical placement once.
+export const rigPoint=(rig,point,pose)=>(rig.frame==='site'?siteToWorld:siloToWorld)(transformSiloRigPoint(rig,point,pose));
 export function pointInPolygon(point,polygon){
   let inside=false;
   for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){
@@ -84,6 +79,9 @@ export function trianglesDistanceSq(a,b){
 // A translating vertical capsule sweeps a parallelogram plus its radius.
 // Three's existing triangle/ray/closest-point math supplies the narrow phase.
 export function capsuleTriangleHit(a,b,height,radius,triangle){
+  // A prone body's 46 cm footprint cannot form a capsule shorter than its
+  // diameter. Keep the conservative footprint rather than inverting its axis.
+  height=Math.max(height,2*radius);
   const low=p=>new Vector3(p.x,p.h+radius,p.y),high=p=>new Vector3(p.x,p.h+height-radius,p.y);
   const al=low(a),ah=high(a),bl=low(b),bh=high(b);
   if(al.distanceToSquared(bl)<1e-14)return segmentTriangleDistanceSq(al,ah,triangle)<(radius-4e-5)**2;

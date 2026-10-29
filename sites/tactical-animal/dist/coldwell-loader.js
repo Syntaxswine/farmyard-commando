@@ -9,7 +9,7 @@ export function validateColdwellData(manifest,data){
   const c=data.companion.coordinates,p=c?.placement;
   if(c?.units!=='metres'||JSON.stringify(c.nativeScale)!=='[1,1,1]'||p?.x!==38.5||p?.y!==85.5||p?.h!==46.64||c.legacySurfaceToWorld.x!==.5||c.legacySurfaceToWorld.y!==.5||c.legacySurfaceToWorld.h!==46.64)fail('native coordinate contract changed.');
   if(data.surface?.width!==240||data.surface?.height!==240||data.plan?.floors?.length!==23||data.plan.floors.some((f,i)=>f.index!==i||Math.abs(f.worldElevationM-i*2.12)>1e-7))fail('source dimensions or datums changed.');
-  if(data.rigs?.length!==11||new Set(data.rigs.map(r=>r.id)).size!==11||data.semantics?.stairs?.length!==31||data.semantics.floors.length!==38||!data.infill?.floors?.length)fail('incomplete native geometry.');
+  if(data.rigs?.length!==14||new Set(data.rigs.map(r=>r.id)).size!==14||data.rigs.filter(r=>r.frame==='silo').length!==11||data.rigs.filter(r=>r.frame==='site'&&r.id.startsWith('surface-door:')).length!==3||data.semantics?.stairs?.length!==31||data.semantics.floors.length!==38||!data.infill?.floors?.length)fail('incomplete native geometry.');
   if(manifest.geometry?.format!=='float32-le-triangles'||!Number.isInteger(manifest.geometry.floats)||manifest.geometry.floats<9||manifest.geometry.floats%9||manifest.geometry.bytes!==manifest.geometry.floats*4)fail('invalid collision storage.');
   let offset=0;
   for(const batch of data.batches||[]){if(batch.offset!==offset||!Number.isInteger(batch.count)||batch.count%9||!['silo','site','rig'].includes(batch.frame)||batch.frame==='rig'&&!data.rigs.some(r=>r.id===batch.rigId))fail('invalid collision batch.');offset+=batch.count;}
@@ -24,7 +24,7 @@ export function decodeColdwellTerrain(surface){
 }
 export async function loadColdwell({baseURL=new URL('./coldwell/',import.meta.url),fetcher=fetch,signal}={}){
   const base=new URL(baseURL,import.meta.url);
-  async function read(file){const response=await fetcher(new URL(file,base),{signal});if(!response.ok)fail('could not load '+file+'.');return new Uint8Array(await response.arrayBuffer());}
+  async function read(file){const url=new URL(file,base),version=new URL(import.meta.url).searchParams.get('v');if(version)url.searchParams.set('v',version);const response=await fetcher(url,{signal});if(!response.ok)fail('could not load '+file+'.');return new Uint8Array(await response.arrayBuffer());}
   const manifest=JSON.parse(new TextDecoder().decode(await read('runtime.manifest.json')));
   if(!Array.isArray(manifest.files)||manifest.files.length!==2)fail('invalid file manifest.');
   const verified=new Map();

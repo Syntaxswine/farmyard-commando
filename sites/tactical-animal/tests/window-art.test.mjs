@@ -1,12 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import {createHash} from 'node:crypto';
 import * as T from '../dist/aft/tactics/vendor/three.module.js';
 import {WINDOW_IDS,WINDOW_DEFINITIONS,WINDOW_METRICS,describeWindow} from '../dist/art/windows/catalog.js';
 import {createWindowLibrary} from '../dist/art/windows/geometry.js';
+import {WALL_DIMENSIONS} from '../dist/world-dimensions.js';
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-6,`${a} != ${b}`);
 
 test('36 definitions preserve wall scale and one full-span clear pane',()=>{
  assert.equal(WINDOW_IDS.length,36);assert.equal(new Set(WINDOW_IDS).size,36);
+ assert.equal(WINDOW_METRICS.wallHeight,WALL_DIMENSIONS.height);assert.equal(WINDOW_METRICS.wallThickness,WALL_DIMENSIONS.thickness);
  for(const def of WINDOW_DEFINITIONS){
   const s=describeWindow(def.id);assert.ok(Object.isFrozen(s.panes[0].bounds.min));
   assert.equal(s.wallHeight,2);assert.equal(s.wallThickness,.16);assert.equal(s.frameDepth,.20);
@@ -17,6 +22,18 @@ test('36 definitions preserve wall scale and one full-span clear pane',()=>{
   }
   const lower=s.solids.find(p=>p.role==='lower-wall');assert.equal(!!lower,def.heightId==='waist');if(lower)close(lower.bounds.max[1],.845);
  }
+});
+
+test('software review blends actual glass and removes all of its tint with the selected pane',async()=>{
+ const {createWindowPreview}=await import('../dist/art/windows/preview-renderer.js'),savedDocument=globalThis.document,surfaces=[];
+ globalThis.document={createElement(){const canvas={width:0,height:0,pixels:null,toDataURL:()=> 'data:image/png;base64,'};const ctx={createImageData:()=>({data:new Uint8ClampedArray(canvas.width*canvas.height*4)}),putImageData(image){canvas.pixels=image.data;}};canvas.getContext=type=>type==='webgl2'?null:ctx;surfaces.push(canvas);return canvas;}};
+ const lib=createWindowLibrary();let renderer;
+ try{
+  renderer=createWindowPreview(32,32);assert.equal(renderer.mode,'software');const asset=lib.build('window.full.clear.2m'),scene=new T.Scene();scene.background=new T.Color(0xff0000);scene.add(asset.root);
+  const camera=new T.OrthographicCamera(-1.2,1.2,1.1,-1.1,.1,10);camera.position.set(0,1,5);camera.lookAt(0,1,0);const sample=()=>Array.from(surfaces[1].pixels.slice((16*32+16)*4,(16*32+16)*4+3));
+  renderer.render(scene,camera);const glazed=sample();assert.ok(glazed[0]>0&&glazed[1]>0&&glazed[2]>0,'Glass blends tint with the red backdrop');
+  asset.setPaneVisible('r0c0',false);renderer.render(scene,camera);assert.deepEqual(sample(),[255,0,0],'Removed glass leaves only the original backdrop');
+ }finally{lib.dispose();renderer?.dispose();if(savedDocument===undefined)delete globalThis.document;else globalThis.document=savedDocument;}
 });
 
 test('each divided pane occupies its own disjoint aperture cell',()=>{
@@ -70,4 +87,15 @@ test('world transforms, validation and ownership remain explicit',()=>{
  for(const joins of [{left:1},{other:true},null])assert.throws(()=>describeWindow(a.spec.id,joins),/joins/);
  assert.throws(()=>lib.build('missing'),/Unknown/);assert.throws(()=>lib.build(a.spec.id,{rotation:45}),/Invalid/);
  a.dispose();a.dispose();lib.dispose();lib.dispose();assert.ok([...counts.values()].every(n=>n===1));assert.equal(lib.stats().assets,0);assert.throws(()=>a.paneParts(),/disposed/);assert.throws(()=>lib.build(a.spec.id),/disposed/);
+});
+
+test('published window manifest and review entry resolve the real source modules',()=>{
+ const root=path.resolve('sites/tactical-animal/dist'),file=path.join(root,'art/windows/catalog.json'),manifest=JSON.parse(fs.readFileSync(file,'utf8'));
+ assert.deepEqual(manifest.definitions,WINDOW_IDS.map(id=>describeWindow(id)));
+ for(const source of [...manifest.provenance.inherited,...manifest.provenance.authored]){
+  const bytes=source.encoding?fs.readFileSync(path.join(root,source.path),'utf8').replace(/\r\n/g,'\n'):fs.readFileSync(path.join(root,source.path));
+  assert.equal(createHash('sha256').update(bytes).digest('hex'),source.sha256,source.path);
+ }
+ const html=fs.readFileSync(path.join(root,'art/windows/index.html'),'utf8');
+ for(const match of html.matchAll(/(?:src|href)="([^"#?]+)"/g))assert.ok(fs.existsSync(path.resolve(root,'art/windows',match[1])),match[1]);
 });

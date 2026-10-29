@@ -1,6 +1,7 @@
 import * as T from './aft/tactics/vendor/three.module.js';
 import {createShortMeasureArt} from './mission-art/short-measure/kit.js';
 import {PLACEMENTS,GROUND_MARKINGS} from './mission-art/short-measure/manifest.js';
+import {SOLIDS_DIGEST} from './mission-art/short-measure/solids.js';
 import {coverRect,missionArtBindings,missionHasArt} from './mission-scenery.js';
 import {missionForState,objectiveSecured} from './missions.js';
 import {pointInWorldRect} from './world-grid.js';
@@ -17,8 +18,13 @@ function tilesUnder([west,north,east,south]){
 // registered (mission-scenery.js). Props follow map knowledge like cargo does;
 // the collectible paper follows the objective. Returns null for missions
 // without art.
-export function createMissionArt(state,{onLoading=()=>{},onError=()=>{},loader}={}){
+// `bindings` defaults to what the simulation registered; tests pass others.
+// `expectDigest` is the solid table the running simulation loaded: a page left
+// open across a deploy can fetch this module newer than its rules, and must not
+// draw art for collision it does not have. Refusing keeps the inherited cargo.
+export function createMissionArt(state,{onLoading=()=>{},onError=()=>{},loader,bindings:override,expectDigest=SOLIDS_DIGEST}={}){
   const mission=missionForState(state);if(!missionHasArt(mission))return null;
+  if(expectDigest!==SOLIDS_DIGEST){onError('The game was updated while this page was open. Reload to continue.');return null;}
   let disposed=false;
   const manager=new T.LoadingManager();
   manager.onStart=()=>{if(!disposed)onLoading(true);};
@@ -27,7 +33,7 @@ export function createMissionArt(state,{onLoading=()=>{},onError=()=>{},loader}=
   manager.onError=url=>{if(!disposed)console.warn('Mission paper art could not load: '+url.split('/').at(-1));};
   const paper=(loader||new T.TextureLoader(manager)).load(new URL('./mission-art/short-measure/shipping-manifest.svg',import.meta.url).href);
   paper.colorSpace=T.SRGBColorSpace;
-  const bindings=missionArtBindings(mission,state.map);
+  const bindings=override??missionArtBindings(mission,state.map);
   const art=createShortMeasureArt({missionId:mission.id,bindings,collected:objectiveSecured(state),paperTexture:paper});
   // A registered solid that the kit refused would be collision nobody can see.
   const refused=art.skipped.filter(id=>bindings[id]);

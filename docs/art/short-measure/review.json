@@ -1,5 +1,5 @@
 {
-  "stage": "Artist first pass; not integrated into playable missions",
+  "stage": "Artist first pass; runtime integration installed 2026-10-28 (see integration)",
   "branch": "codex/short-measure-environment",
   "baseCommit": "85c8a2e",
   "blockoutCommit": "5524d91b3971328f27ccc9bb50b41ce7d2a19482",
@@ -85,5 +85,25 @@
     "Optional inspect hooks and collected-paper state binding",
     "Architect acceptance of additional arrival freight scale and sack bay"
   ],
-  "notPublished": true
+  "notPublished": true,
+  "integration": {
+    "date": "2026-10-28",
+    "branch": "claude/short-measure-art-kit",
+    "runtime": [
+      "mission-scenery.js registers ground reservations and 108 solid parts",
+      "mission-art-view.js draws the kit with the registered bindings",
+      "solids.js is baked from kit.solidParts() by tools/short-measure-art.mjs"
+    ],
+    "done": [
+      "Runtime mission-art loader and matching navigation reservations",
+      "Mesh-part sight/projectile/grenade occlusion adapter",
+      "Existing cover visual replacement ownership",
+      "Optional inspect hooks and collected-paper state binding"
+    ],
+    "coderAcceptance": "Arrival freight scale and sack bay installed after route, door, spawn, guard-post and leaf-swing clearance checks; the architect approved them in the combined candidate shipped as PR #20.",
+    "authoringChanges": [
+      "sealed-load sized to the runtime crate collider: 1.96 x 1.96 x 0.92 m (short-measure/2)",
+      "full-load corner posts end at the lower of 0.935 m and the load height"
+    ]
+  }
 }

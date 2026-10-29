@@ -95,12 +95,14 @@ export function geometry(s){
   }
   geometryCache.set(s,{boxes,layers});return boxes;
 }
-// Each question gets its own broad phase: walking never sifts a prop's parts,
-// standing sight looks only at walls, and anything in flight skips reservations.
-const GEOMETRY_LAYERS={all:()=>true,walk:box=>blocksWalking(box),air:box=>occupiesAir(box),wall:box=>box.kind==='wall',flame:box=>box.kind==='wall'||box.kind==='glass'};
+// Each question gets its own broad phase, and the layer IS the kind filter:
+// walking never sifts a prop's parts, standing sight looks only at walls, and
+// anything in flight skips reservations. A caller must name its question.
+const GEOMETRY_LAYERS={walk:box=>blocksWalking(box),air:box=>occupiesAir(box),wall:box=>box.kind==='wall',flame:box=>box.kind==='wall'||box.kind==='glass'};
 // Broad phase shared by movement, sight, silhouettes and area weapons. The
 // interaction system invalidates this cache immediately after a door changes.
-export function geometryNear(s,a,b=a,padding=0,layer='all'){
+export function geometryNear(s,a,b,padding,layer){
+  if(!GEOMETRY_LAYERS[layer])throw Error(`geometryNear needs a layer (${Object.keys(GEOMETRY_LAYERS).join(', ')}), not ${layer}.`);
   if(![a.x,a.y,b.x,b.y,padding].every(Number.isFinite)||padding<0)return [];
   geometry(s);const buckets=geometryCache.get(s).layers[layer],boxes=new Set();
   const x0=Math.min(a.x,b.x)-padding,x1=Math.max(a.x,b.x)+padding,y0=Math.min(a.y,b.y)-padding,y1=Math.max(a.y,b.y)+padding;
@@ -114,8 +116,8 @@ export function geometryNear(s,a,b=a,padding=0,layer='all'){
 // travels through the air asks the parts, so the air beside or under them stays open.
 export const blocksWalking=box=>box.kind!=='part';
 const occupiesAir=box=>box.kind!=='prop';
-const PRONE_EYE=.3;
-const eyeHeight=u=>u.stance==='prone'?PRONE_EYE:u.stance==='kneeling'?.75:1.1;
+const STANDING_EYE=1.1,PRONE_EYE=.3;
+const eyeHeight=u=>u.stance==='prone'?PRONE_EYE:u.stance==='kneeling'?.75:STANDING_EYE;
 const bodyHeight=u=>u.stance==='prone'?.42:u.stance==='kneeling'?1.15:1.75;
 const pointBoxDistance=(p,b)=>Math.hypot(Math.max(b.x0-p.x,0,p.x-b.x1),Math.max(b.y0-p.y,0,p.y-b.y1));
 function insideWorld(s,p,padding=0){const b=worldBounds(s);return Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=b.x-.5+padding&&p.x<=b.x+b.w-.5-padding&&p.y>=b.y-.5+padding&&p.y<=b.y+b.h-.5-padding;}
@@ -138,14 +140,48 @@ export function lineClear(s,a,b){
   if(a.stance!=='prone'||b.stance!=='prone')return !geometryNear(s,a,b,0,'wall').some(box=>intersectsBox(a,b,box)&&(!box.windowPart||!!airSpan(a,b,a.h??eyeHeight(a),b.h??eyeHeight(b),box)));
   return !geometryNear(s,a,b,0,'air').some(box=>box.kind!=='glass'&&intersectsBox(a,b,box)&&(box.kind==='wall'&&!box.windowPart||!!airSpan(a,b,PRONE_EYE,PRONE_EYE,box)));
 }
-export function walkSegment(s,a,b,ignoreId=null){
+export function walkSegment(s,a,b,ignoreId=null){return sceneryWalk(s,a,b)&&unitsWalk(s,a,b,ignoreId);}
+// The scenery half of a walk: every 10 cm sample inside the world and clear of walk-blocking boxes.
+function sceneryWalk(s,a,b){
   if(!insideWorld(s,b,RADIUS))return false;
-  const blockers=geometryNear(s,a,b,RADIUS,'walk'),units=s.units.filter(u=>alive(u)&&u.id!==ignoreId),steps=Math.max(1,Math.ceil(distance(a,b)/.1));
+  const blockers=geometryNear(s,a,b,RADIUS,'walk'),steps=Math.max(1,Math.ceil(distance(a,b)/.1));
   for(let i=1;i<=steps;i++){
     const p={x:a.x+(b.x-a.x)*i/steps,y:a.y+(b.y-a.y)*i/steps};
-    if(!insideWorld(s,p,RADIUS)||blockers.some(box=>pointBoxDistance(p,box)<RADIUS-EPS)||units.some(u=>distance(u,p)<2*RADIUS-EPS))return false;
+    if(!insideWorld(s,p,RADIUS)||blockers.some(box=>pointBoxDistance(p,box)<RADIUS-EPS))return false;
   }
   return true;
+}
+// The unit half: every sample clear of living units other than ignoreId. A unit
+// outside the walk's box grown by two radii cannot reach any sample, so it is skipped.
+function unitsWalk(s,a,b,ignoreId){
+  const pad=2*RADIUS,x0=Math.min(a.x,b.x)-pad,x1=Math.max(a.x,b.x)+pad,y0=Math.min(a.y,b.y)-pad,y1=Math.max(a.y,b.y)+pad;
+  const units=s.units.filter(u=>alive(u)&&u.id!==ignoreId&&u.x>=x0&&u.x<=x1&&u.y>=y0&&u.y<=y1);if(!units.length)return true;
+  const steps=Math.max(1,Math.ceil(distance(a,b)/.1));
+  for(let i=1;i<=steps;i++){const p={x:a.x+(b.x-a.x)*i/steps,y:a.y+(b.y-a.y)*i/steps};if(units.some(u=>distance(u,p)<2*RADIUS-EPS))return false;}
+  return true;
+}
+// Scenery alone decides whether a grid node is clear and whether a straight walk to
+// a neighbouring node is, so searches share those answers through one table per
+// geometry (a door changing rebuilds the geometry and so starts a fresh table).
+// Units are checked afresh every time. 0 unknown, 1 clear, 2 blocked. The stand-ins
+// for last-seen points inside scenery (standIns) depend on the scenery alone too.
+const sceneryGrids=new WeakMap();
+function sceneryGrid(s){
+  const boxes=geometry(s);let grid=sceneryGrids.get(boxes);
+  if(!grid){const {width,height}=gridDimensions(s);grid={width,height,nodes:new Uint8Array(width*height),walks:new Uint8Array(width*height*9),standIns:new Map()};sceneryGrids.set(boxes,grid);}
+  return grid;
+}
+// freePoint for an integer grid node, its scenery half read from the table.
+function nodeClear(s,grid,q,ignoreId){
+  const inside=q.x>=0&&q.y>=0&&q.x<grid.width&&q.y<grid.height,i=q.y*grid.width+q.x;
+  let open=inside?grid.nodes[i]:0;if(!open){open=freePoint(s,q,null,{units:false})?1:2;if(inside)grid.nodes[i]=open;}
+  return open===1&&!s.units.some(u=>alive(u)&&u.id!==ignoreId&&distance(u,q)<2*RADIUS-EPS);
+}
+// walkSegment from grid node p to a neighbouring node q, its scenery half read from the table.
+function linkClear(s,grid,p,q,ignoreId){
+  const inside=p.x>=0&&p.y>=0&&p.x<grid.width&&p.y<grid.height,i=(p.y*grid.width+p.x)*9+(q.y-p.y+1)*3+(q.x-p.x+1);
+  let open=inside?grid.walks[i]:0;if(!open){open=sceneryWalk(s,p,q)?1:2;if(inside)grid.walks[i]=open;}
+  return open===1&&unitsWalk(s,p,q,ignoreId);
 }
 export function canSee(s,a,b){const d=distance(a,b),range=identifyRange(a,b,a.team==='squad'?35:26)*(b.sneaking?.7:1);return alive(a)&&d<=Math.max(1.5,range)&&lineClear(s,a,b);}
 export function visibleOpponents(s){
@@ -189,37 +225,53 @@ class PathFrontier{
   push(point){const p={...point,order:this.sequence++},items=this.items;let i=items.length;items.push(p);while(i){const parent=(i-1)>>1;if(!this.before(p,items[parent]))break;items[i]=items[parent];i=parent;}items[i]=p;}
   pop(){const items=this.items,first=items[0],last=items.pop();if(items.length){let i=0;while(i*2+1<items.length){let child=i*2+1;if(child+1<items.length&&this.before(items[child+1],items[child]))child++;if(!this.before(items[child],last))break;items[i]=items[child];i=child;}items[i]=last;}return first;}
 }
-export function navigationPath(s,u,x,y){
-  const end={x,y};if(!freePoint(s,end,u.id))return null;
-  if(walkSegment(s,u,end,u.id))return [{...end,z:0,cost:distance(u,end)*movementRate(u)}];
-  const candidates=p=>{
-    const a=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
-      const q={x:Math.round(p.x)+dx,y:Math.round(p.y)+dy};if(freePoint(s,q,u.id)&&walkSegment(s,p,q,u.id))a.push(q);
-    }
-    return a.sort((a,b)=>distance(a,p)-distance(b,p));
-  };
-  const start=candidates(u)[0],goals=candidates(end);if(!start||!goals.length)return null;
-  const goalKeys=new Set(goals.map(p=>key(p.x,p.y))),open=new PathFrontier(),startKey=key(start.x,start.y);
-  const cost=new Map([[startKey,0]]),parents=new Map(),points=new Map([[startKey,start]]),links=new Map(),passable=new Map();
-  open.push({...start,g:0,f:distance(start,end)});let found=null,expanded=0;
+// Grid nodes around p that u could stand on and reach from p in a straight walk, nearest first.
+function gridNodesAround(s,u,p){
+  const a=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+    const q={x:Math.round(p.x)+dx,y:Math.round(p.y)+dy};if(freePoint(s,q,u.id)&&walkSegment(s,p,q,u.id))a.push(q);
+  }
+  return a.sort((a,b)=>distance(a,p)-distance(b,p));
+}
+// A* over integer grid nodes joined by straight walks, from the start nodes (each
+// entered at its cost, 0 if it has none) to the first node isGoal accepts. Returns
+// the nodes walked, a start first, or null. A caller may pass sealed(reached), asked
+// once after SEALED_CHECK expansions: true ends the search as unreachable.
+const SEALED_CHECK=256;
+function gridSearch(s,u,starts,isGoal,estimate,sealed=null){
+  const open=new PathFrontier(),grid=sceneryGrid(s);
+  const cost=new Map(),parents=new Map(),points=new Map(),links=new Map(),passable=new Map();
+  for(const start of starts){const sk=key(start.x,start.y),g=start.cost??0;if(g>=(cost.get(sk)??Infinity))continue;cost.set(sk,g);points.set(sk,{x:start.x,y:start.y});open.push({x:start.x,y:start.y,g,f:g+estimate(start)});}
+  let found=null,expanded=0;
   while(open.items.length&&expanded<NAVIGATION_NODE_LIMIT){
     const p=open.pop(),pk=key(p.x,p.y);if(p.g>(cost.get(pk)??Infinity))continue;
-    if(goalKeys.has(pk)){found=p;break;}expanded++;
+    if(isGoal(p,pk)){found=p;break;}expanded++;
+    if(sealed&&expanded===SEALED_CHECK&&sealed(cost))return null;
     for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){
       if(!dx&&!dy)continue;
       const q={x:p.x+dx,y:p.y+dy},qk=key(q.x,q.y),g=p.g+Math.hypot(dx,dy);
       if(g>=(cost.get(qk)??Infinity))continue;
-      if(!passable.has(qk))passable.set(qk,freePoint(s,q,u.id));if(!passable.get(qk))continue;
+      if(!passable.has(qk))passable.set(qk,nodeClear(s,grid,q,u.id));if(!passable.get(qk))continue;
       // Direction matters because swept sampling includes its destination.
-      const link=pk+'>'+qk;if(!links.has(link))links.set(link,walkSegment(s,p,q,u.id));if(!links.get(link))continue;
-      cost.set(qk,g);parents.set(qk,pk);points.set(qk,q);open.push({...q,g,f:g+distance(q,end)});
+      const link=pk+'>'+qk;if(!links.has(link))links.set(link,linkClear(s,grid,p,q,u.id));if(!links.get(link))continue;
+      cost.set(qk,g);parents.set(qk,pk);points.set(qk,q);open.push({...q,g,f:g+estimate(q)});
     }
   }
   if(!found)return null;
-  const raw=[end];let current=key(found.x,found.y);while(current){raw.unshift(points.get(current));current=parents.get(current);}
+  const raw=[];let current=key(found.x,found.y);while(current){raw.unshift(points.get(current));current=parents.get(current);}
+  return raw;
+}
+// Waypoints from u along raw, each the farthest node still reachable in a straight walk.
+function smoothRoute(s,u,raw){
   const result=[];let a=u,index=0;
   while(index<raw.length){let far=index;for(let j=raw.length-1;j>=index;j--)if(walkSegment(s,a,raw[j],u.id)){far=j;break;}const b=raw[far];result.push({...b,z:0,cost:distance(a,b)*movementRate(u)});a=b;index=far+1;}
   return result;
+}
+export function navigationPath(s,u,x,y){
+  const end={x,y};if(!freePoint(s,end,u.id))return null;
+  if(walkSegment(s,u,end,u.id))return [{...end,z:0,cost:distance(u,end)*movementRate(u)}];
+  const start=gridNodesAround(s,u,u)[0],goals=gridNodesAround(s,u,end);if(!start||!goals.length)return null;
+  const goalKeys=new Set(goals.map(p=>key(p.x,p.y))),raw=gridSearch(s,u,[start],(p,pk)=>goalKeys.has(pk),q=>distance(q,end));
+  return raw&&smoothRoute(s,u,[...raw,end]);
 }
 export function move(s,u,x,y){if(!canControl(s,u))return false;const path=navigationPath(s,u,x,y);if(!path?.length)return false;s.queue=path;s.revision++;return true;}
 export function turnTo(s,u,heading){if(!canControl(s,u)||!Number.isFinite(heading))return false;u.heading=heading;refresh(s);return true;}
@@ -392,7 +444,11 @@ export function attack(s,a,b,burst=false,byAI=false,zone='torso',reaction=false,
 export function equip(s,u,id){if(!canControl(s,u)||!u.pack.some(i=>i.kind===id)||u.weapon===id)return false;const cost=combatCosts(s)?u.slots.includes(id)?2:3:0;if(u.ap+EPS<cost)return false;stop(s);u.ap-=cost;u.weapon=id;log(s,'Equipped '+WEAPONS[id].name+'.');return true;}
 export function reload(s,u){if(!canControl(s,u))return false;const w=WEAPONS[u.weapon],count=Math.min(w.mag-(u.ammo[u.weapon]??0),u.ammoPouch[u.weapon]||0),cost=combatCosts(s)?3:0;if(!count||u.ap+EPS<cost)return false;stop(s);u.ap-=cost;u.ammo[u.weapon]+=count;u.ammoPouch[u.weapon]-=count;syncAmmo(u,u.weapon);log(s,'Reloaded '+count+' rounds.');return true;}
 export function endTurn(s){if(s.phase!=='player'||s.solo.status!=='active')return false;stop(s);for(const unit of s.units)fireRules.panicRun(s,unit);s.phase='enemy';s.enemyIndex=1;s.enemyDelay=.35;s.engaged=false;for(const g of s.units.filter(g=>g.team==='guard')){g.ap=g.burningTurns?0:g.maxAp;g.alertAge++;if(g.alertAge>3&&!canSee(s,g,hero(s)))g.alert=false;}s.revision++;return true;}
-function enemyStep(s,dt){const u=hero(s);let g=s.units[s.enemyIndex];if(!g){fireRules.finishRound(s);s.round++;s.panicDelay=3;u.ap=alive(u)&&!u.burningTurns?u.maxAp:0;u.stamina=Math.min(u.maxStamina,u.stamina+10);s.phase='player';refresh(s);return;}if(!alive(g)||g.burningTurns||!g.alert||g.ap<.02){g.isMoving=false;s.enemyIndex++;s.enemyDelay=.15;return;}s.enemyDelay-=dt;if(s.enemyDelay>0)return;const p=previewAttack(s,g,u);if(p.ok&&canSee(s,g,u)){attack(s,g,u,false,true);s.enemyDelay=.6;return;}if(g.ammo[g.weapon]===0&&g.ap>=3){const count=Math.min(WEAPONS[g.weapon].mag,g.ammoPouch[g.weapon]||0);if(count){g.ammo[g.weapon]=count;g.ammoPouch[g.weapon]-=count;g.ap-=3;s.enemyDelay=.4;return;}}if(g.ap<WEAPONS[g.weapon].cost&&canSee(s,g,u)&&distance(g,u)<=WEAPONS[g.weapon].range){g.ap=0;return;}const goal=g.lastKnown||u,range=distance(g,goal),offset=Math.min(.75,range),tx=goal.x-(goal.x-g.x)/Math.max(range,.001)*offset,ty=goal.y-(goal.y-g.y)/Math.max(range,.001)*offset,path=navigationPath(s,g,tx,ty),next=path?.[0];if(!next){g.ap=0;return;}const d=distance(g,next);if(d<.08){g.ap=0;return;}const step=Math.min(d,movementSpeed(g)*dt);if(!travel(s,g,(next.x-g.x)/d*step,(next.y-g.y)/d*step,{enemy:true}))g.ap=0;}
+// A guard within ARRIVED of its last waypoint has arrived. A route can also open at
+// its own grid node, inside that distance; it walks on to the next waypoint
+// instead of ending its turn there.
+const ARRIVED=.08;
+function enemyStep(s,dt){const u=hero(s);let g=s.units[s.enemyIndex];if(!g){fireRules.finishRound(s);s.round++;s.panicDelay=3;u.ap=alive(u)&&!u.burningTurns?u.maxAp:0;u.stamina=Math.min(u.maxStamina,u.stamina+10);s.phase='player';refresh(s);return;}if(!alive(g)||g.burningTurns||!g.alert||g.ap<.02){g.isMoving=false;s.enemyIndex++;s.enemyDelay=.15;return;}s.enemyDelay-=dt;if(s.enemyDelay>0)return;const p=previewAttack(s,g,u);if(p.ok&&canSee(s,g,u)){attack(s,g,u,false,true);s.enemyDelay=.6;return;}if(g.ammo[g.weapon]===0&&g.ap>=3){const count=Math.min(WEAPONS[g.weapon].mag,g.ammoPouch[g.weapon]||0);if(count){g.ammo[g.weapon]=count;g.ammoPouch[g.weapon]-=count;g.ap-=3;s.enemyDelay=.4;return;}}if(g.ap<WEAPONS[g.weapon].cost&&canSee(s,g,u)&&distance(g,u)<=WEAPONS[g.weapon].range){g.ap=0;return;}const path=approachPath(s,g,g.lastKnown||u),next=path?.length>1&&distance(g,path[0])<ARRIVED?path[1]:path?.[0];if(!next){g.ap=0;return;}const d=distance(g,next);if(d<ARRIVED){g.ap=0;return;}const step=Math.min(d,movementSpeed(g)*dt);if(!travel(s,g,(next.x-g.x)/d*step,(next.y-g.y)/d*step,{enemy:true}))g.ap=0;}
 export function tick(s,dt=1/60,input=null){if(s.solo.status!=='active')return false;dt=Math.max(0,Math.min(.05,dt));s.elapsed+=dt;for(const u of s.units)u.isMoving=false;if(s.phase==='enemy'){enemyStep(s,dt);return true;}const u=hero(s);if(u.burningTurns){refresh(s);if(s.phase==='player'){s.panicDelay=Math.max(0,(s.panicDelay??3)-dt);if(!s.panicDelay)endTurn(s);}return true;}walkWhenExhausted(s,u);if(input&&Math.hypot(input.x,input.y)>.1){s.queue=[];const n=Math.max(1,Math.hypot(input.x,input.y));travel(s,u,input.x/n*movementSpeed(u)*dt,input.y/n*movementSpeed(u)*dt);}else if(s.queue.length){const p=s.queue[0],d=distance(u,p);if(d<.025)s.queue.shift();else{const step=Math.min(d,movementSpeed(u)*dt),moved=travel(s,u,(p.x-u.x)/d*step,(p.y-u.y)/d*step);if(!moved||s.phase==='player'&&u.ap<EPS)s.queue=[];}}else if(s.phase==='explore'||s.phase==='won')u.stamina=Math.min(u.maxStamina,u.stamina+dt*2);return true;}
 const fireRules=createFireRules({kill,walkSegment,random,key,log});
 const fuelRules=createFuelRules({kill,ignite:fireRules.ignite,recordBurn,inside:insideWorld,log,windowBlast});
@@ -433,6 +489,110 @@ export function decodeSave(text){
   fireRules.restore(s,p=>insideWorld(canonical,p));fuelRules.restore(s);
   return releaseFromScenery(interactionRules.restore(s));
 }
+// The nearest spot around p (never p itself) where a unit could stand, scanned
+// outward in 5 cm rings of 32 bearings; null beyond maxRadius metres.
+function nearestStanding(s,p,ignoreId,maxRadius){
+  for(let ring=1;ring*.05<=maxRadius+EPS;ring++){const r=ring*.05;for(let i=0;i<32;i++){const a=i/32*Math.PI*2,q={x:p.x+Math.cos(a)*r,y:p.y+Math.sin(a)*r};if(freePoint(s,q,ignoreId))return q;}}
+  return null;
+}
+// Approach goals are remembered ground points: retain standing sight, independent
+// of the quarry's current stance. Window heads/sills block only at their actual
+// height; ordinary walls keep the existing opaque footprint rule.
+function standingWallHit(a,b,box){return intersectsBox(a,b,box)&&(!box.windowPart||!!airSpan(a,b,STANDING_EYE,STANDING_EYE,box));}
+// Expand footprints by ARRIVED without stretching a window member vertically.
+// The 8 cm horizontal stopping margin still protects a goal's standing view.
+function wideSight(s,a,b,margin){return !geometryNear(s,a,b,margin,'wall').some(box=>standingWallHit(a,b,{...box,x0:box.x0-margin,x1:box.x1+margin,y0:box.y0-margin,y1:box.y1+margin}));}
+// A guard closing on its quarry stops 0.75 m short of it. With a straight walk to
+// that spot, and a clear line from it to the quarry, it walks straight there.
+// Otherwise one search takes it to the nearest node, by walking distance, that
+// stands within QUARRY_REACH of the quarry and sees it past the walls; from there
+// the straight walk usually opens. The goal set depends on the quarry and the
+// scenery alone, not on where the guard stands, so a step cannot flip the plan, and
+// no single solid or cut-off spot can freeze the guard. Sight is tested with walls
+// grown by ARRIVED, so it holds wherever the guard stops. Nothing is held between
+// ticks: a resumed save plans exactly the same route.
+export const QUARRY_REACH=2;
+const SEALED_BUDGET=128;
+// A last-seen point inside scenery (a door shut over it, a leaf swung onto it, a prop
+// an old save predates) is no spot an animal could stand on, and close to it nothing
+// can see it. Its stand-ins are clear points that would see it but for what covers it
+// (the boxes within a body's radius of it), scanned in 5 cm rings (32 bearings) out to
+// 0.7 m beyond the first ring that has one (a shut door's clearance is 0.62 m across,
+// so the far side is always reached) and at most 1.5 m: one for each group of them
+// that see one another past the walls, the innermost of each. A shut door gets one on
+// each side, an open leaf one on each face, and nothing behind a wall gets one. The
+// search takes goals round every stand-in, so a guard walks to whichever side of a
+// shut door it reaches first. Units are left out, so nobody's body pushes a stand-in
+// away, and the stand-ins depend on the point and the scenery alone; they are kept
+// per geometry.
+export function standIns(s,p){
+  if(freePoint(s,p,null,{units:false}))return [p];
+  const grid=sceneryGrid(s),k=`${p.x},${p.y}`;if(grid.standIns.has(k))return grid.standIns.get(k);
+  const cover=new Set(geometryNear(s,p,p,RADIUS,'walk').filter(box=>pointBoxDistance(p,box)<RADIUS-EPS));
+  const seesPast=q=>!geometryNear(s,p,q,0,'wall').some(box=>!cover.has(box)&&standingWallHit(p,q,box));
+  let clear=[];
+  for(let ring=1,last=30;ring<=last;ring++){
+    for(let i=0;i<32;i++){const a=i/32*Math.PI*2,q={x:p.x+Math.cos(a)*ring*.05,y:p.y+Math.sin(a)*ring*.05};if(freePoint(s,q,null,{units:false})&&seesPast(q))clear.push(q);}
+    if(clear.length&&last===30)last=Math.min(30,ring+14);
+  }
+  const stands=[],sees=(a,b)=>lineClear(s,{...a,stance:'standing'},{...b,stance:'standing'});
+  while(clear.length){const q=clear[0];stands.push(q);clear=clear.filter(r=>!sees(r,q));}
+  grid.standIns.set(k,Object.freeze(stands));return stands;
+}
+// The nodes a guard's search starts from: normally the nearest node it can walk
+// straight to. A route smoothed along a wall can cross a strip so narrow that no node
+// is a straight walk from it (Short Measure has one, between the ration room's south
+// wall and the sealed-load-arrival prop). A guard standing in one may leave along any
+// of 32 bearings: on each, the first point 10-150 cm out from which a node is a
+// straight walk starts the search at the cost of walking there and on to the node, so
+// the guard leaves by the way that is shortest to walk, as it takes a door's side.
+function searchStarts(s,g){
+  const node=gridNodesAround(s,g,g)[0];if(node)return [{...node,cost:0}];
+  const starts=new Map();
+  for(let i=0;i<32;i++){
+    const a=i/32*Math.PI*2;
+    for(let ring=2;ring<=30;ring++){
+      const q={x:g.x+Math.cos(a)*ring*.05,y:g.y+Math.sin(a)*ring*.05};
+      if(!freePoint(s,q,g.id)||!walkSegment(s,g,q,g.id))break;
+      const node=gridNodesAround(s,g,q)[0];if(!node)continue;
+      const k=key(node.x,node.y),cost=distance(g,q)+distance(q,node);
+      if(!(starts.get(k)?.cost<=cost))starts.set(k,{...node,cost,via:q});
+      break;
+    }
+  }
+  return [...starts.values()];
+}
+export function approachPath(s,g,lastSeen){
+  const quarries=standIns(s,lastSeen);if(!quarries.length)return null;
+  // The straight walk tries the stand-ins nearest first; the search weighs them all.
+  for(const quarry of [...quarries].sort((a,b)=>distance(a,g)-distance(b,g))){
+    const range=distance(g,quarry),offset=Math.min(.75,range),aim={x:quarry.x-(quarry.x-g.x)/Math.max(range,.001)*offset,y:quarry.y-(quarry.y-g.y)/Math.max(range,.001)*offset};
+    if(wideSight(s,aim,quarry,ARRIVED)&&freePoint(s,aim,g.id)&&walkSegment(s,g,aim,g.id))return [{...aim,z:0,cost:distance(g,aim)*movementRate(g)}];
+  }
+  const goals=[],taken=new Set(),grid=sceneryGrid(s);
+  const reach=QUARRY_REACH+EPS;
+  for(const q of quarries)for(let y=Math.ceil(q.y-reach);y<=q.y+reach;y++)for(let x=Math.ceil(q.x-reach);x<=q.x+reach;x++){const p={x,y},pk=key(x,y);if(!taken.has(pk)&&distance(p,q)<=reach&&nodeClear(s,grid,p,g.id)&&wideSight(s,p,q,ARRIVED)){taken.add(pk);goals.push(p);}}
+  const starts=goals.length?searchStarts(s,g):[];if(!starts.length)return null;
+  // A quarry behind closed doors sits in a small pocket: after SEALED_CHECK nodes
+  // without reaching it, flood back from its goals, and when that flood runs dry
+  // within SEALED_BUDGET nodes without meeting the guard's search, stop there
+  // instead of searching the rest of the map every round.
+  const goalKeys=new Set(goals.map(p=>key(p.x,p.y))),sealed=reached=>{
+    const seen=new Set(goalKeys),queue=[...goals];
+    for(let i=0;i<queue.length;i++){
+      const p=queue[i];if(reached.has(key(p.x,p.y)))return false;
+      for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){
+        const q={x:p.x+dx,y:p.y+dy},qk=key(q.x,q.y);if((!dx&&!dy)||seen.has(qk)||!nodeClear(s,grid,q,g.id)||!linkClear(s,grid,q,p,g.id))continue;
+        seen.add(qk);queue.push(q);if(queue.length>SEALED_BUDGET)return false;
+      }
+    }
+    return true;
+  };
+  const estimate=quarries.length===1?q=>Math.max(0,distance(q,quarries[0])-QUARRY_REACH):q=>Math.min(...quarries.map(c=>Math.max(0,distance(q,c)-QUARRY_REACH)));
+  const raw=gridSearch(s,g,starts,(p,pk)=>goalKeys.has(pk),estimate,sealed);if(!raw)return null;
+  const via=starts.find(p=>p.x===raw[0].x&&p.y===raw[0].y).via;
+  return smoothRoute(s,g,via?[via,...raw]:raw);
+}
 // A save written before a prop became solid may store a living animal inside it
 // (Short Measure's ration scale stands where its clue marker once had no
 // collision). Such a unit moves to the nearest clear point, scanned outward in
@@ -440,8 +600,7 @@ export function decodeSave(text){
 function releaseFromScenery(s){
   for(const u of s.units){
     if(!alive(u)||freePoint(s,u,u.id,{units:false}))continue;
-    let best=null;
-    for(let ring=1;ring<=60&&!best;ring++){const r=ring*.05;for(let i=0;i<32;i++){const a=i/32*Math.PI*2,p={x:u.x+Math.cos(a)*r,y:u.y+Math.sin(a)*r};if(freePoint(s,p,u.id)){best=p;break;}}}
+    const best=nearestStanding(s,u,u.id,3);
     if(!best)continue;
     u.x=best.x;u.y=best.y;u.isMoving=false;
     if(u.team==='squad')s.queue=[];

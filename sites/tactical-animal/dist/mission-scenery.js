@@ -1,5 +1,7 @@
-import {SHORT_MEASURE_SOLIDS} from './mission-art/short-measure/solids.js';
+import {SHORT_MEASURE_SOLIDS,SOLIDS_DIGEST} from './mission-art/short-measure/solids.js';
 import {CRATE_DIMENSIONS} from './world-dimensions.js';
+// The solid table this simulation registered; the art view must have the same.
+export const SCENERY_DIGEST=SOLIDS_DIGEST;
 
 // Bespoke mission scenery registered with the authoritative simulation. The
 // art kit draws these solids; this module is what movement, sight and weapons

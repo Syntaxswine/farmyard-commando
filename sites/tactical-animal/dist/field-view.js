@@ -9,8 +9,7 @@ import {OriginalEnvironment} from './original-art.js';
 import {hero, Core, missionForState, objectiveSecured} from './solo-game.js';
 import {FIELD_CAMERA,grenadeCameraFrame} from './grenade-controls.js';
 import {InteractionScenery} from './interaction-view.js';
-import {createMissionArt} from './mission-art-view.js';
-import {clueAnchorHeight} from './mission-scenery.js';
+import {clueAnchorHeight,missionHasArt,SCENERY_DIGEST} from './mission-scenery.js';
 import {SoloFlameEffects} from './flame-effects.js';
 import {SoloBurnEffects} from './burn-effects.js';
 import {SoloTankEffects} from './tank-effects.js';
@@ -84,29 +83,42 @@ export class FieldView {
   clearEffects(){this.windowEffects?.dispose();this.windowEffects=null;this.shotVisuals?.clear();this.tankEffects?.dispose();this.tankEffects=null;this.burnEffects?.dispose();this.burnEffects=null;for(const effect of this.effects){this.scene.remove(effect.line);effect.line.geometry.dispose();effect.line.material.dispose();}this.effects=[];this.flameEffects?.dispose();this.flameEffects=null;this.flameCone?.dispose();this.flameCone=null;this.flameAim=null;this.lastEffect=null;}
   clearGestures(){for(const id of this.pointers.keys())if(this.container.hasPointerCapture(id))this.container.releasePointerCapture(id);this.pointers.clear();this.gesture=null;this.pinch=null;this.grenadeCamera=null;this.flameAim=null;this.flameCone?.hide();this.returnSpan=null;this.focusedId=null;}
   setGame(s){this.generation++;this.clearGestures();this.clearEffects();this.span=this.requestedSpan=13;this.state=s;this.residentWindow=null;this.lastWindowKey=null;this.samples.clear();this.failed.clear();for(const a of [...this.actors.values(),...(this.parkedActors?.values()||[])])this.disposeActor(a);this.actors.clear();this.parkedActors?.clear();this.pending.clear();this.clearEnvironment();this.buildEnvironment(s);this.center();this.resize();this.lastRevision=-1;this.lastLightAt=undefined;this.lastEffect=s.effect||null;this.route([]);}
-  reportLoading(){this.onLoading(this.artBusy||this.propBusy||this.missionArtBusy||this.pending.size>0||this.failed.size>0);}
+  reportLoading(){this.onLoading(this.artBusy||this.propBusy||this.missionArtBusy||this.missionPaperBusy||this.pending.size>0||this.failed.size>0);}
   // Mission art owns its geometry; detach it before the generic traversal below.
-  clearEnvironment(){this.windowArt?.dispose();this.windowArt=null;this.windowEffects?.dispose();this.windowEffects=null;this.searchHalo?.dispose();this.searchHalo=null;this.missionArt?.dispose();this.missionArt=null;this.missionArtBusy=false;this.interactionArt?.dispose();this.interactionArt=null;this.art?.dispose();this.art=null;this.environment.traverse(o=>{o.geometry?.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});this.environment.clear();for(const t of this.disposables)t.dispose();this.disposables=[];}
+  clearEnvironment(){this.windowArt?.dispose();this.windowArt=null;this.windowEffects?.dispose();this.windowEffects=null;this.searchHalo?.dispose();this.searchHalo=null;this.missionArt?.dispose();this.missionArt=null;this.missionArtBusy=this.missionPaperBusy=false;this.interactionArt?.dispose();this.interactionArt=null;this.art?.dispose();this.art=null;this.environment.traverse(o=>{o.geometry?.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});this.environment.clear();for(const t of this.disposables)t.dispose();this.disposables=[];}
   buildEnvironment(s){
     this.windowArt=new WindowScenery(s);this.environment.add(this.windowArt.root);this.windowEffects=new WindowEffects(this.scene,s);
-    const generation=this.generation;this.artBusy=true;this.missionArtBusy=false;this.searchHalo=new SearchHalo();
-    // Bespoke mission art first: an accepted cover replacement takes over its crate tiles.
-    this.missionArt=createMissionArt(s,{
-      onLoading:busy=>{if(generation===this.generation){this.missionArtBusy=busy;this.reportLoading();}},
-      onError:message=>{if(generation===this.generation){this.failed.add('mission-art');this.onError(message);}},
-    });
-    this.art=new OriginalEnvironment(this.renderer,s,{replacedCells:this.missionArt?.replacedCells,
+    const generation=this.generation,mission=missionForState(s);this.artBusy=true;this.missionArtBusy=this.missionPaperBusy=false;this.searchHalo=new SearchHalo();
+    this.art=new OriginalEnvironment(this.renderer,s,{
       onLoading:busy=>{if(generation===this.generation){this.artBusy=busy;this.reportLoading();}},
       onError:message=>{if(generation===this.generation){this.failed.add('environment');this.onError(message);}},
     });this.environment.add(this.art.root);
-    if(this.missionArt)this.environment.add(this.missionArt.root);
+    this.missionArtReady=missionHasArt(mission)?this.loadMissionArt(s,generation):Promise.resolve(null);
     this.propBusy=true;this.interactionArt=new InteractionScenery(s,{
       onLoading:busy=>{if(generation===this.generation){this.propBusy=busy;this.reportLoading();}},
       onError:message=>{if(generation===this.generation){this.failed.add('interaction-art');this.onError(message);}},
     });this.environment.add(this.interactionArt.root);
-    const mission=missionForState(s);this.objectivePin=this.makePin(mission.objective,0xe16b3d);this.extractionPin=this.makePin(mission.extraction,0xc4d29a);
+    this.objectivePin=this.makePin(mission.objective,0xe16b3d);this.extractionPin=this.makePin(mission.extraction,0xc4d29a);
     // Rail lines and loading-yard markings are scenery; the engine owns all collision.
     if(!s.groundPalette)for(let x=3;x<37;x+=3){const mark=new T.Mesh(new T.PlaneGeometry(1.2,.06),new T.MeshBasicMaterial({color:0xb0a475,transparent:true,opacity:.16}));mark.rotation.x=-Math.PI/2;mark.position.set(x,.003,26.8);this.environment.add(mark);}
+  }
+  // The art kit and its inherited model modules load only for a mission with art.
+  // Inherited cargo keeps drawing a replaced crate until the kit's model is in the
+  // scene, so a slow, failed or refused kit never leaves an invisible collider.
+  loadMissionArt(s,generation){
+    this.missionArtBusy=true;this.reportLoading();
+    const fail=message=>{if(generation===this.generation){this.failed.add('mission-art');this.onError(message);}};
+    const load=this.importMissionArt??(()=>import('./mission-art-view.js'));
+    return load().then(({createMissionArt})=>{
+      if(generation!==this.generation)return null;
+      const art=createMissionArt(s,{expectDigest:SCENERY_DIGEST,onError:fail,onLoading:busy=>{if(generation===this.generation){this.missionPaperBusy=busy;this.reportLoading();}}});
+      if(!art)return null;
+      this.missionArt=art;this.environment.add(art.root);
+      art.update(this.state,this.residentWindow||blockWindow(this.state,hero(this.state)));
+      this.art.replace(art.replacedCells);
+      return art;
+    }).catch(error=>{fail('Mission art could not load: '+error.message);return null;})
+      .finally(()=>{if(generation===this.generation){this.missionArtBusy=false;this.reportLoading();}});
   }
   makePin(point,color){const group=new T.Group();group.position.set(point.x,0,point.y);const mat=new T.MeshBasicMaterial({color,transparent:true,opacity:.8,side:T.DoubleSide});const ring=new T.Mesh(new T.RingGeometry(.36,.45,32),mat);ring.rotation.x=-Math.PI/2;ring.position.y=.035;group.add(ring);const shaft=new T.Mesh(new T.CylinderGeometry(.017,.017,1.6,6),mat.clone());shaft.position.y=.8;group.add(shaft);const flag=new T.Mesh(new T.OctahedronGeometry(.14),mat.clone());flag.position.y=1.65;group.add(flag);this.environment.add(group);return group;}
   route(path=[]){this.flameCone?.hide();this.flamePreviewKey='';this.blastMarker.visible=false;this.blastArea.visible=false;this.grenadePreviewKey='';this.marker.material.color.setHex(0xf2c56a);this.pathLine.material.color.setHex(0xe6b464);this.pathLine.geometry.dispose();this.pathLine.geometry=new T.BufferGeometry().setFromPoints(path.map(p=>V(p.x,.06,p.y)));const end=path.at(-1);this.marker.visible=!!end;if(end)this.marker.position.set(end.x,.035,end.y);}

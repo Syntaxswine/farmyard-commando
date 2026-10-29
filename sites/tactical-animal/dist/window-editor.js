@@ -6,6 +6,7 @@ import {clipLegacyWindowBox} from './window-system.js';
 import {windowReviewSource} from './window-review-map.js';
 import {adaptAftSector} from './aft-sector.js';
 import {bindWindowEditorControls} from './window-editor-controls.js';
+import {adoptWindowBuffers} from './window-editor-buffers.js';
 const $=id=>document.getElementById(id),frame=$('designer');let api,library,releaseControls,assets=[];
 for(const d of WINDOW_DEFINITIONS){if(d.id===BORDERLESS_WINDOW_ID)continue;const option=document.createElement('option');option.value=d.id;option.textContent=`${d.heightId==='waist'?'Waist':'Full'} · ${d.patternId} · ${d.span} m`;$('definition').append(option);}
 const custom=document.createElement('option');custom.value=BORDERLESS_WINDOW_ID;custom.textContent='Borderless · custom width / height';$('definition').append(custom);
@@ -31,7 +32,7 @@ function connect(){
     // and pinned designer bytes remain untouched.
     if(prior)scene.world={...prior,boxes:prior.boxes.map(box=>clipLegacyWindowBox(box,covered)).filter(Boolean)};
     try{base();}finally{scene.world=prior;}
-    if(scene.options.walls)for(const {placement:p}of records){const asset=library.build(p.definitionId,{joins:p.joins,dimensions:p.dimensions,finish:p.finish,wall:p.wall,rotation:p.rotation||0});asset.root.position.set(p.x,0,p.y);scene.scene.add(asset.root);assets.push(asset);}
+    if(scene.options.walls)for(const {placement:p}of records){const asset=library.build(p.definitionId,{joins:p.joins,dimensions:p.dimensions,finish:p.finish,wall:p.wall,rotation:p.rotation||0});adoptWindowBuffers(asset.root,frame.contentWindow);asset.root.position.set(p.x,0,p.y);scene.scene.add(asset.root);assets.push(asset);}
   };
   scene.rebuild();controls();status('Select a ground-floor wall. A wide window starts at that wall cell and replaces its complete span. Playtest accepts flat ground maps.');
 }

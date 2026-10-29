@@ -15,6 +15,7 @@ test('Coldwell compiles native standard/depth/distance shaders in all proving vi
   const started=new Date(),server=await chromium.launchServer({headless:true,args:flags}),processHandle=server.process();let browser,context,art,field;
   let creationTicks=null;try{creationTicks=(await fs.readFile('/proc/'+processHandle.pid+'/stat','utf8')).split(') ').at(-1).split(' ')[19];}catch{}
   report.helper={pid:processHandle.pid,creationTicks,createdAt:started.toISOString(),executable:processHandle.spawnfile,owner:'Coldwell native acceptance',project:root,purpose:'Isolated Chromium for actual shaders and controls',port:Number(new URL(server.wsEndpoint()).port),expiresAt:new Date(started.getTime()+360000).toISOString(),stop:'Owned BrowserServer.close() in finally; six-minute automatic retirement',restart:{source:'sites/tactical-animal/browser-tests/coldwell.spec.mjs',runtime:'Node 24 and locked Playwright Chromium',inputs:'exact TESTED_SHA dist build',outputs:'artifacts/window-browser/coldwell',flags}};
+  report.browserStderr='';processHandle.stderr?.on('data',chunk=>{report.browserStderr=(report.browserStderr+chunk.toString()).slice(-16000);});processHandle.on('exit',(code,signal)=>{report.helper.exitCode=code;report.helper.exitSignal=signal;});
   const retire=setTimeout(()=>server.close().catch(()=>{}),360000);retire.unref();
   try{
     browser=await chromium.connect(server.wsEndpoint());report.browser=browser.version();
@@ -53,7 +54,7 @@ test('Coldwell compiles native standard/depth/distance shaders in all proving vi
     await field.evaluate(()=>window.__coldwellPreview.dispose());const disposed=await preview(field);expect(disposed.retiredArt.disposed).toBe(true);expect(disposed.retiredArt.residentEntries).toBe(0);expect(disposed.retiredArt.counters.createdGeometries).toBe(disposed.retiredArt.counters.disposedGeometries);expect(disposed.retiredArt.counters.createdTextures).toBe(disposed.retiredArt.counters.disposedTextures);report.passed=true;
   }catch(error){report.failure=String(error.stack||error);for(const [name,page]of [['art-failure',art],['field-failure',field]])if(page&&!page.isClosed())await shot(page,name).catch(()=>{});throw error;
   }finally{
-    try{if(field&&!field.isClosed())report.finalState=await preview(field).catch(()=>null);await context?.tracing.stop({path:path.join(output,'native-trace.zip')});}
+    try{if(field&&!field.isClosed())report.finalState=await preview(field).catch(()=>null);await context?.tracing.stop({path:path.join(output,'native-trace.zip')}).catch(error=>{report.traceError=String(error);});}
     finally{try{await context?.close();report.contextClosed=true;}finally{try{await browser?.close();}finally{await server.close();clearTimeout(retire);report.browserDisconnected=!browser?.isConnected();report.helper.exited=processHandle.exitCode!==null||processHandle.signalCode!==null;const file=path.join(output,'native-report.json');await fs.writeFile(file,JSON.stringify(report,null,2));await testInfo.attach('coldwell-native-report',{path:file,contentType:'application/json'});}}}
   }
 });

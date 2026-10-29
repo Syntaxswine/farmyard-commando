@@ -1,0 +1,42 @@
+{
+  "repository": "https://github.com/Syntaxswine/nautilus-engine",
+  "commit": "8c4670450cb2b38c1e1abd811d633c22de9e2b7c",
+  "purpose": "Optional Coldwell height validation, AABB broad phase and floor controls; exact custom-geometry narrow phase remains an adapter.",
+  "files": [
+    {
+      "path": "NOTICE.md",
+      "bytes": 3847,
+      "sha256": "678bc719ac75c78037968ea53cc785d945b40d2a4f29d4f4bc023a449cf9fd07"
+    },
+    {
+      "path": "packages/world-core/validation.js",
+      "bytes": 5846,
+      "sha256": "31bc3f71471f0148f97d9bc33342f9ae478ce30adb385b561735d5a233b43b53"
+    },
+    {
+      "path": "packages/world-core/state.js",
+      "bytes": 11068,
+      "sha256": "b51024dbeed15a7dc700f5b2b7b645f91559343307a70414640a56475d3190a0"
+    },
+    {
+      "path": "packages/world-core/queries.js",
+      "bytes": 5880,
+      "sha256": "b639175cbf0d82607cc9090cc2e0867e399dcece592a0c6bbe717278565b8457"
+    },
+    {
+      "path": "packages/floor-navigation/index.js",
+      "bytes": 6336,
+      "sha256": "e4cd51314d634494b0cd7cfcc7b0733dacd7d07a55af9df1e245611d2632968d"
+    },
+    {
+      "path": "packages/floor-navigation/dom.js",
+      "bytes": 5334,
+      "sha256": "cee14d8c517b024227ce637a6ba35f037354488376914c1f55170655b99457c7"
+    },
+    {
+      "path": "packages/floor-navigation/style.css",
+      "bytes": 3011,
+      "sha256": "3d20868bc3fcfabc9e313d15051e9f7c3b0a653cbc51c3d331aec01fe6ce8eda"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+# Coldwell runtime / art boundary
+
+The runtime consumes the artist's proposed API without editing `art/coldwell/**`. `root` is already canonical Three `(x,h,y)` at scale one; the host applies no extra root translation. The host supplies its existing Three instance. `setVisibleRegion` receives `{rect:{x,y,w,h},heightBands:[{min,max}],cutaway:{roofs:boolean,plane?:{normal:[x,h,y],constant}}}`. `roofs:true` shows roofs. Bounds intersecting the region remain eligible even if their anchors are outside it. Current/adjacent floor bands are a development setting, not measured phone performance.
+
+`syncDynamicState(posesById)` receives source units, not percentages: the four `blast-door-*` leaves use degrees 0–90; `service-bridge-5/8/11/14/17/20` and `silo-cover` use 0–1. IDs remain unchanged. Surface door IDs will be consumed from the exported manifest; each needs its source edge key, hinge/closed pose and canonical swept bounds. No internal art clock or authoritative collision comes from scene visibility.
+
+The runtime keeps compact source-derived support and collision independently of art residency. All 23 datums, roofs, infill and rigs remain queryable offscreen. Saves contain source identity and state, never meshes or immutable collision arrays. The authored package and reduced geometry are preserved under `sources/coldwell`; `prepare-coldwell.mjs` verifies the source manifest and deterministically derives the runtime files. It does not execute donor modules.

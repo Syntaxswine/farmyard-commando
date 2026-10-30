@@ -113,7 +113,7 @@ export class FieldView {
   }
   buildColdwellEnvironment(s){
     const generation=this.generation,provider=providerFor(s),u=hero(s);this.artBusy=true;this.propBusy=false;this.missionArtBusy=this.missionPaperBusy=false;this.renderer.localClippingEnabled=true;
-    this.floorController=createFloorNavigation({floors:provider.floors,selectedId:u.floorId,cancelPreview:event=>{if(event.source==='manual'){Core.stop(s);this.endGrenadeAim();this.route([]);this.onFloorChange(event);}},onFloorChange:()=>{this.lastWindowKey=null;}});
+    this.floorController=createFloorNavigation({floors:provider.floors,selectedId:u.floorId,cancelPreview:event=>{if(event.mode==='manual'){Core.stop(s);this.endGrenadeAim();this.route([]);this.onFloorChange(event);}},onFloorChange:()=>{this.lastWindowKey=null;}});
     if(this.floorContainer)this.floorWidget=mountFloorNavigation(this.floorContainer,this.floorController,{onError:error=>this.onError(error.message)});
     this.floorController.setCharacter({id:u.id,floorId:u.floorId});this.floorController.followCharacter();
     this.artReady=import('./coldwell-view.js').then(({ColdwellPresentation})=>{

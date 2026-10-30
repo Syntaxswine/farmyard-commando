@@ -40,6 +40,25 @@ export async function checkColdwellGame(context,{root,origin,output,report,obser
   await expect(loot.locator('#interaction-label')).toHaveText('Open');await loot.locator('#interaction-hand').tap();await expect(loot.getByRole('button',{name:/Take all/})).toBeVisible();await shot(loot,'game-phone-records-chest');await loot.getByRole('button',{name:/Take all/}).tap();await expect.poll(async()=>(await snapshot(loot)).objectives['coldwell-records']).toBe(true);report.gameViews.push({id:'records-taken',...await snapshot(loot)});
   await loot.getByRole('button',{name:'Return to operation',exact:true}).click();await loot.locator('#menu').click();await loot.getByRole('button',{name:'Choose operation, animal & loadout',exact:true}).click();await loot.locator('#resume').click();await loaded(loot);expect((await snapshot(loot)).objectives['coldwell-records']).toBe(true);await shot(loot,'game-phone-records-restored');await loot.close();
   }
+  if(scenario==='navigation'||scenario==='all'){
+    const page=await context.newPage();observe(page,'actual-coldwell-deep-navigation',report);
+    await seed(page,'coldwell-traversal',fixtures.states['quiet-portal']);await page.goto(origin+'/game.html?coldwellTest=traversal');await page.locator('#resume').click();await loaded(page);
+    for(let i=0;i<5;i++)await page.keyboard.press('PageDown');await loaded(page);expect((await snapshot(page)).floor).toBe('coldwell-datum-17');
+    await page.evaluate(()=>{
+      window.__navigationInput=[];let input;
+      addEventListener('pointerdown',event=>{if(event.target.closest('#joystick'))input={before:window.__coldwellGame.snapshot().navigation,at:performance.now()};},true);
+      addEventListener('pointerdown',event=>{if(event.target.closest('#joystick')&&input)window.__navigationInput.push({before:input.before,after:window.__coldwellGame.snapshot().navigation,handlerMs:performance.now()-input.at});});
+    });
+    const before=await snapshot(page),destination={x:72,y:114.1,h:36.04},stick=await page.locator('#joystick').boundingBox();
+    await clickWorld(page,destination);await page.touchscreen.tap(stick.x+stick.width/2,stick.y+stick.height/2);
+    await expect.poll(async()=>(await snapshot(page)).navigation.status).toBe('cancelled');
+    const cancelled=await snapshot(page),inputs=await page.evaluate(()=>window.__navigationInput);expect(inputs.length).toBe(1);expect(inputs[0].before.pending).toBe(true);expect(inputs[0].after.pending).toBe(false);expect(inputs[0].handlerMs).toBeLessThan(250);expect(cancelled.navigation.worker).toBe(false);expect(cancelled.queue).toEqual([]);expect(cancelled.hero.x).toBe(before.hero.x);expect(cancelled.hero.y).toBe(before.hero.y);expect(cancelled.hero.h).toBe(before.hero.h);expect(cancelled.hero.ap).toBe(before.hero.ap);expect(cancelled.hero.ammo).toEqual(before.hero.ammo);
+    report.navigationCancellation={inputs,before,cancelled};await loaded(page);await shot(page,'game-deep-route-cancelled');
+    for(let i=0;i<5;i++)await page.keyboard.press('PageDown');await loaded(page);expect((await snapshot(page)).floor).toBe('coldwell-datum-17');
+    await clickWorld(page,destination);await expect.poll(async()=>(await snapshot(page)).navigation.status,{timeout:60000}).toBe('complete');const planned=await snapshot(page);expect(planned.navigation.search.coarse).toBe(true);expect(planned.navigation.durationMs).toBeLessThan(30000);report.navigationPlanned=planned;await shot(page,'game-five-floor-route');
+    await expect.poll(async()=>{const d=await snapshot(page);return d.hero.floorId==='coldwell-datum-17'&&Math.hypot(d.hero.x-72,d.hero.y-114.1,d.hero.h-36.04)<.03&&d.queue.length===0;},{timeout:240000}).toBe(true);
+    report.navigationArrived=await snapshot(page);await shot(page,'game-five-floor-arrival');await page.locator('#menu').click();await page.getByRole('button',{name:'Choose operation, animal & loadout',exact:true}).click();expect((await snapshot(page)).navigation.worker).toBe(false);await page.close();
+  }
   report.actualGameControlsPassed=true;
   for(const log of report.pages){expect(log.errors,JSON.stringify(log)).toEqual([]);expect(log.console.filter(m=>m.type==='error'),JSON.stringify(log)).toEqual([]);expect(log.requests.filter(r=>r.status||r.error!=='net::ERR_ABORTED'),JSON.stringify(log)).toEqual([]);}
 }

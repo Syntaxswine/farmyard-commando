@@ -51,7 +51,9 @@
       <p id="flame-warning" class="danger-note" role="status" hidden></p>
       <p>Joystick rotates the cone. Release, then tap FIRE. Enter fires; Esc cancels.</p>
       <p class="blast-key">Highlighted area stops at walls and fog. Firing spends one fuel charge.</p>
-    </div><div class="thumb-layout">
+    </div>
+    <div id="route-planning" class="grenade-aim" hidden role="status"><div class="grenade-aim-heading"><strong>PLANNING ROUTE</strong><button id="cancel-route" type="button">Cancel <span aria-hidden="true">×</span></button></div><p>You can keep looking around. Use the joystick or Cancel to stop planning.</p></div>
+    <div class="thumb-layout">
       <div class="left-controls">
         <button id="look" class="square-control industrial-switch" data-face="red" data-lit="false" type="button" aria-label="0 visible opponents. Recenter on your animal." disabled><span class="switch-legend"><span class="switch-icon eye-symbol" aria-hidden="true"><svg class="switch-glyph" viewBox="0 0 32 32"><use href="assets/ui/industrial-switches/symbols.svg#look"/></svg><strong id="visible-count" class="eye-count">0</strong></span><span class="switch-label">LOOK</span></span></button>
         <button id="movement-cycle" class="square-control cycle-control industrial-switch" data-lit="false" type="button" aria-label="Movement: off. Tap to cycle; hold for choices." aria-haspopup="dialog" aria-controls="control-picker" aria-expanded="false"><span class="switch-legend"><span id="movement-icon" class="switch-icon control-icon" aria-hidden="true"></span><span id="movement-label" class="switch-label">OFF</span><span class="switch-cost">0 AP</span></span></button>

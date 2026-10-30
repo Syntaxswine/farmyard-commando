@@ -50,7 +50,7 @@ test('Coldwell proving views compile real standard/depth/distance shaders and di
   }});
 });
 
-for(const scenario of ['gatehouse','stairs','records'])test('Coldwell actual game controls: '+scenario,async({},testInfo)=>{
+for(const scenario of ['gatehouse','stairs','records','navigation'])test('Coldwell actual game controls: '+scenario,async({},testInfo)=>{
   const output=path.join(root,'artifacts/window-browser/coldwell-game-'+scenario),report={stage:scenario};
   await withColdwellNative(testInfo,{output,report,run:async(context,checkpoint)=>{
     const shot=async(page,name)=>{await page.screenshot({path:path.join(output,name+'.png'),fullPage:true});await checkpoint();};

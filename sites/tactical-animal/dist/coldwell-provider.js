@@ -3,6 +3,8 @@ import {ColdwellRigRules} from './coldwell-rigs.js';
 import {ColdwellCombat} from './coldwell-combat.js';
 import {COLDWELL_CAPABILITIES} from './coldwell-loader.js';
 import {PathFrontier} from './path-frontier.js';
+import {coldwellPath,coldwellNavigationGeometry} from './coldwell-path.js';
+import {ColdwellNavigation} from './coldwell-navigation.js';
 import {actorHeight,spatialDistance} from './spatial-provider.js';
 import {siloToWorld,mixPoint,floorId,toThree,fromThree,polygonContains} from './coldwell-space.js';
 import {Vector3,Ray,Plane,Box3} from './aft/tactics/vendor/three.module.js';
@@ -20,7 +22,7 @@ export function coldwellStairRoute(stair){
 }
 
 export class ColdwellProvider{
-  constructor(bundle){
+  constructor(bundle,navigationOptions){
     this.schema=1;this.id='coldwell-native-v1';this.bundle=bundle;this.geometry=new ColdwellGeometry(bundle);this.capabilities=COLDWELL_CAPABILITIES;
     this.floors=this.geometry.floors;this.floorById=new Map(this.floors.map(f=>[f.id,f]));
     this.stairs=bundle.data.semantics.stairs.map(s=>({...s,route:coldwellStairRoute(s)}));
@@ -29,7 +31,7 @@ export class ColdwellProvider{
     this.floorIndex=new Map(this.floors.map((f,i)=>[f.id,i]));this.floorExtra=this.floors.map((_,i)=>this.floors.map((_,j)=>i===j?0:Infinity));
     for(const stair of this.stairs){let length=0;for(let i=1;i<stair.route.length;i++)length+=spatialDistance(stair.route[i-1],stair.route[i]);const a=this.floorIndex.get(stair.fromFloorId),b=this.floorIndex.get(stair.toFloorId),extra=length-xy(stair.route[0],stair.route.at(-1));this.floorExtra[a][b]=this.floorExtra[b][a]=Math.min(this.floorExtra[a][b],extra);}
     for(let k=0;k<this.floors.length;k++)for(let i=0;i<this.floors.length;i++)for(let j=0;j<this.floors.length;j++)this.floorExtra[i][j]=Math.min(this.floorExtra[i][j],this.floorExtra[i][k]+this.floorExtra[k][j]);
-    this.rigRules=new ColdwellRigRules(this);this.combat=new ColdwellCombat(this);
+    this.rigRules=new ColdwellRigRules(this);this.combat=new ColdwellCombat(this);this.navigation=new ColdwellNavigation(this,navigationOptions);
   }
   createState(){return {provider:this.id,version:2,sourceDigest:this.bundle.manifest.sourceDigest,revision:0,poses:Object.fromEntries(this.bundle.data.rigs.map(r=>[r.id,0])),transitions:{}};}
   validateState(saved){
@@ -114,7 +116,7 @@ export class ColdwellProvider{
   }
   stairClear(state,actor,stair){
     let cache=this.navigationCache.get(state.spatial);
-    const key=state.spatial.revision+':'+actor.stance;
+    const key=coldwellNavigationGeometry(state)+':'+actor.stance;
     if(cache?.key!==key){cache={key,links:new Map()};this.navigationCache.set(state.spatial,cache);}
     if(!cache.links.has(stair.id)){
       let clear=true;
@@ -138,6 +140,10 @@ export class ColdwellProvider{
   }
   floorOptions(point){const stair=point.stairId&&this.stairById.get(point.stairId);return stair?[stair.route[0],stair.route.at(-1)].map(p=>({index:this.floorIndex.get(p.floorId),extra:spatialDistance(point,p)-xy(point,p)})):[{index:this.floorIndex.get(point.floorId),extra:0}];}
   path(state,actor,destination,{rate=1,nodeLimit=8192,goals=[destination]}={}){
+    if(nodeLimit<=128)return this.gridPath(state,actor,destination,{rate,nodeLimit,goals});
+    return coldwellPath(this,state,actor,goals,{rate,nodeLimit});
+  }
+  gridPath(state,actor,destination,{rate=1,nodeLimit=8192,goals=[destination],localOnly=false}={}){
     this.lastSearch={expanded:0,found:false,nodeLimit};
     const ends=goals.map(p=>this.resolve(state,p,actor)).filter(p=>p&&this.occupancy(state,actor,p)&&Number.isFinite(this.floorExtra[this.floorIndex.get(actor.floorId)]?.[this.floorIndex.get(p.floorId)])).sort((a,b)=>spatialDistance(actor,a)-spatialDistance(actor,b));if(!ends.length)return null;
     const end=ends[0],clean=p=>({x:p.x,y:p.y,h:p.h,floorId:p.floorId,...(p.stairId?{stairId:p.stairId}:{})});
@@ -159,11 +165,11 @@ export class ColdwellProvider{
           const route=this.stairPart(stair,p,goal);if(route.every((q,i)=>this.sweep(state,actor,i?route[i-1]:p,q).ok))add(goal,route);
         }else if(p.floorId===goal.floorId&&spatialDistance(p,goal)<1.1)add(goal);
       }
-      if(p.id==='start'&&p.stairId){const stair=this.stairById.get(p.stairId);for(const anchor of this.anchors.filter(a=>a.stair===stair)){const route=this.stairPart(stair,p,anchor);if(route.every((q,i)=>this.sweep(state,actor,i?route[i-1]:p,q).ok))add(anchor,route);}}
+      if(!localOnly&&p.id==='start'&&p.stairId){const stair=this.stairById.get(p.stairId);for(const anchor of this.anchors.filter(a=>a.stair===stair)){const route=this.stairPart(stair,p,anchor);if(route.every((q,i)=>this.sweep(state,actor,i?route[i-1]:p,q).ok))add(anchor,route);}}
       const rx=Math.round(p.x*2)/2,ry=Math.round(p.y*2)/2;
       for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){const q=floorPoint(rx+dx*.5,ry+dy*.5,p.floorId);if(xy(p,q)>1e-5&&q.x>=RADIUS&&q.y>=RADIUS&&q.x<=240-RADIUS&&q.y<=240-RADIUS)add(q);}
-      for(const anchor of this.anchors)if(anchor.floorId===p.floorId&&xy(anchor,p)<=.8&&anchor.id!==p.id)add(anchor);
-      if(p.stair&&this.stairClear(state,actor,p.stair)){
+      if(!localOnly)for(const anchor of this.anchors)if(anchor.floorId===p.floorId&&xy(anchor,p)<=.8&&anchor.id!==p.id)add(anchor);
+      if(!localOnly&&p.stair&&this.stairClear(state,actor,p.stair)){
         const route=p.side?[...p.stair.route].reverse():p.stair.route,other=this.anchors.find(a=>a.stair===p.stair&&a.side!==p.side);
         const ordered=route.slice(1);if(ordered.every((q,i)=>this.sweep(state,actor,i?ordered[i-1]:p,q).ok))add(other,ordered);
       }

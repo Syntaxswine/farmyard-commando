@@ -48,3 +48,20 @@ Reconstruction retains the selected escape via before legal smoothing and the
 exact clicked endpoint. Live bodies and ordinary movement/AP/save rules still
 apply. Normal starts keep their existing route and tie order. Regression command:
 `node --test sites/tactical-animal/tests/player-strip.test.mjs`.
+
+## Friendly blockers
+
+An alert guard with no route can ask one later, higher-ID ally to yield. At most
+four candidate allies and 48 standing points each are considered; a hypothetical
+route must become legal with that ally standing at the yield point. Source
+geometry is shared, live bodies are checked anew. A trapped actor with no legal
+10 cm start among 32 bearings makes no remote request. The low-ID priority avoids
+reciprocal requests. Each guard requests at most once per round.
+
+The blocker yields in its own turn through ordinary `travel`, paying actual AP
+and stamina, for at most one second. The waiter gets one retry with its remaining
+AP after that turn. Failed or expired requests clear at round end. Pending point,
+elapsed time, ownership and retry state are saved and validated. No body is
+teleported or omitted from actual movement. The Road Checkpoint doorway, two-way
+contention, pending-save replay and five-guard sealed ring are covered by
+`node --test sites/tactical-animal/tests/guard-coordination.test.mjs`.

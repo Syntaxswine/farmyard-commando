@@ -16,6 +16,7 @@ import {createFuelRules,tankExplosionChance} from './solo-fuel.js';
 export {tankExplosionChance} from './solo-fuel.js';
 import {gridDimensions,worldBounds} from './world-grid.js';
 import {PathFrontier} from './path-frontier.js';
+import {createGuardCoordination} from './guard-coordination.js';
 import {providerFor,attachSpatial,actorEye,actorHeight,spatialDistance,floorKey} from './spatial-provider.js';
 import {restoreColdwellBase,validateColdwellObjects} from './coldwell-save.js';
 import {DEFAULT_MISSION_ID,getMission,missionForState,missionMap,objectiveSecured} from './missions.js';
@@ -539,10 +540,26 @@ export function endTurn(s){if(s.phase!=='player'||s.solo.status!=='active'||s.sp
 // its own grid node, inside that distance; it walks on to the next waypoint
 // instead of ending its turn there.
 const ARRIVED=.08;
-function enemyStep(s,dt){const u=hero(s);let g=s.units[s.enemyIndex];if(!g){fireRules.finishRound(s);s.round++;s.panicDelay=3;u.ap=alive(u)&&!u.burningTurns?u.maxAp:0;u.stamina=Math.min(u.maxStamina,u.stamina+10);s.phase='player';refresh(s);return;}if(!alive(g)||g.burningTurns||!g.alert||g.ap<.02){g.isMoving=false;s.enemyIndex++;s.enemyDelay=.15;return;}s.enemyDelay-=dt;if(s.enemyDelay>0)return;const zone=guardFireZone(s,g,u);if(zone){attack(s,g,u,false,true,zone);s.enemyDelay=.6;return;}if(g.ammo[g.weapon]===0&&g.ap>=3){const count=Math.min(WEAPONS[g.weapon].mag,g.ammoPouch[g.weapon]||0);if(count){g.ammo[g.weapon]=count;g.ammoPouch[g.weapon]-=count;g.ap-=3;s.enemyDelay=.4;return;}}if(g.ap<WEAPONS[g.weapon].cost&&canSee(s,g,u)&&distance(g,u)<=WEAPONS[g.weapon].range){g.ap=0;return;}const path=approachPath(s,g,g.lastKnown||u),next=path?.length>1&&distance(g,path[0])<ARRIVED?path[1]:path?.[0];if(!next){g.ap=0;return;}const d=distance(g,next);if(d<ARRIVED){g.ap=0;return;}const step=Math.min(d,movementSpeed(g)*dt);if(!travel(s,g,(next.x-g.x)/d*step,(next.y-g.y)/d*step,{enemy:true,distanceBudget:step}))g.ap=0;}
+function enemyStep(s,dt){
+  const u=hero(s),g=s.units[s.enemyIndex];
+  if(!g){const retry=guardCoordination.retry(s);if(retry!==null){s.enemyIndex=retry;s.enemyDelay=.15;return;}guardCoordination.settle(s);fireRules.finishRound(s);s.round++;s.panicDelay=3;u.ap=alive(u)&&!u.burningTurns?u.maxAp:0;u.stamina=Math.min(u.maxStamina,u.stamina+10);s.phase='player';refresh(s);return;}
+  if(!alive(g)||g.burningTurns||!g.alert&&!g.yieldRequest||g.ap<.02){g.isMoving=false;s.enemyIndex++;s.enemyDelay=.15;return;}
+  s.enemyDelay-=dt;if(s.enemyDelay>0)return;
+  if(guardCoordination.step(s,g,dt))return;
+  const zone=guardFireZone(s,g,u);if(zone){attack(s,g,u,false,true,zone);s.enemyDelay=.6;return;}
+  if(g.ammo[g.weapon]===0&&g.ap>=3){const count=Math.min(WEAPONS[g.weapon].mag,g.ammoPouch[g.weapon]||0);if(count){g.ammo[g.weapon]=count;g.ammoPouch[g.weapon]-=count;g.ap-=3;s.enemyDelay=.4;return;}}
+  if(g.ap<WEAPONS[g.weapon].cost&&canSee(s,g,u)&&distance(g,u)<=WEAPONS[g.weapon].range){g.ap=0;return;}
+  const path=g.lastKnown?approachPath(s,g,g.lastKnown):null,next=path?.length>1&&distance(g,path[0])<ARRIVED?path[1]:path?.[0];
+  if(!next){if(!path&&guardCoordination.request(s,g,g.lastKnown)){g.isMoving=false;s.enemyIndex++;s.enemyDelay=.15;}else g.ap=0;return;}
+  const d=distance(g,next);if(d<ARRIVED){g.ap=0;return;}const step=Math.min(d,movementSpeed(g)*dt);if(!travel(s,g,(next.x-g.x)/d*step,(next.y-g.y)/d*step,{enemy:true,distanceBudget:step}))g.ap=0;
+}
 export function tick(s,dt=1/60,input=null){if(s.solo.status!=='active')return false;dt=Math.max(0,Math.min(.05,dt));s.elapsed+=dt;if(s.spatial&&providerFor(s).tick(s,dt)){refresh(s,{forceFog:!providerFor(s).isMoving(s)});return true;}for(const u of s.units)u.isMoving=false;if(s.phase==='enemy'){enemyStep(s,dt);return true;}const u=hero(s);if(u.burningTurns){refresh(s);if(s.phase==='player'){s.panicDelay=Math.max(0,(s.panicDelay??3)-dt);if(!s.panicDelay)endTurn(s);}return true;}walkWhenExhausted(s,u);if(input&&Math.hypot(input.x,input.y)>.1){if(s.spatial)providerFor(s).navigation?.cancel(s);s.queue=[];const n=Math.max(1,Math.hypot(input.x,input.y));travel(s,u,input.x/n*movementSpeed(u)*dt,input.y/n*movementSpeed(u)*dt);}else if(s.queue.length){const p=s.queue[0],d=distance(u,p);if(d<.025)s.queue.shift();else{const step=Math.min(d,movementSpeed(u)*dt),moved=travel(s,u,(p.x-u.x)/d*step,(p.y-u.y)/d*step,{distanceBudget:step});if(!moved||s.phase==='player'&&u.ap<EPS)s.queue=[];}}else if(s.phase==='explore'||s.phase==='won')u.stamina=Math.min(u.maxStamina,u.stamina+dt*2);return true;}
 const fireRules=createFireRules({kill,walkSegment,random,key,log});
 const fuelRules=createFuelRules({kill,ignite:fireRules.ignite,recordBurn,inside:insideWorld,log,windowBlast});
+const guardCoordination=createGuardCoordination({alive,distance,point:rememberedPoint,approach:approachPath,free:freePoint,walk:walkSegment,travel,speed:movementSpeed,shadow:(s,b,p)=>{
+  const shadow={...s,units:s.units.flatMap(u=>u!==b?[u]:p?[{...u,...p}]:[])};
+  if(geometryCache.has(s))geometryCache.set(shadow,geometryCache.get(s));return shadow;
+}});
 export const ignite=(s,u)=>{const result=fireRules.ignite(s,u);if(result)refresh(s);return result;};
 export const enterFire=(s,u)=>{const result=fireRules.enterFire(s,u);if(result)refresh(s);return result;};
 const interactionRules=createInteractionSystem({hero,canControl,combatCosts,distance,geometry,spatial:providerFor,blocksWalking,pointBoxDistance,refresh,stop,log,clearGeometry:s=>geometryCache.delete(s),weapons:WEAPONS,radius:RADIUS});
@@ -581,6 +598,7 @@ export function decodeSave(text){
   if(!Array.isArray(s.solo.inspected)||s.solo.inspected.some(id=>!mission.clues.some(clue=>clue.id===id)))throw Error('Unsupported inspection save.');
   fireRules.restore(s,p=>insideWorld(canonical,p));fuelRules.restore(s);
   interactionRules.restore(s);
+  guardCoordination.restore(s,p=>insideWorld(canonical,p,RADIUS));
   return provider?validateColdwellObjects(s,mission):releaseFromScenery(s);
 }
 // The nearest spot around p (never p itself) where a unit could stand, scanned

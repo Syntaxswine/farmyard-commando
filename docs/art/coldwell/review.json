@@ -1,0 +1,275 @@
+{
+  "schema": 1,
+  "reviewedAt": "2026-10-29T23:00:23.266Z",
+  "artSourceCommit": "372c09c23754c00fede6b1cc927063204421e4f5",
+  "branch": "codex/coldwell-art",
+  "pullRequest": "https://github.com/Syntaxswine/farmyard-commando/pull/27",
+  "baseCommit": "251bf8094b5f9ebe44208443084c1a6d6658512a",
+  "source": {
+    "farmyard": "251bf8094b5f9ebe44208443084c1a6d6658512a",
+    "engine": "8c4670450cb2b38c1e1abd811d633c22de9e2b7c",
+    "silo": "3b9d4004a7e51e5d345cded068fc46eab2f320a2",
+    "outerSHA256": "4abaee28fa9070f53a8923db28e2f92f8618d7443dfe16c5ae4421e21de87b36",
+    "siloSHA256": "b489bb7439a22746281eb2dcc052cd124cc77917a9c00aeaa4c02ee5f1db873f"
+  },
+  "manifestSHA256": "e7fc6b1c2ab403816d5cf62e307073fa936757e700d84bbac5acb44576e508df",
+  "collection": {
+    "components": 635,
+    "prototypes": 55,
+    "rigs": 14,
+    "originalRigs": 11,
+    "surfaceDoorBindings": 3,
+    "siloDatums": 23,
+    "terrainCells": 57600,
+    "terrain": {
+      "ground-grass": 55234,
+      "floor": 168,
+      "ground-concrete": 564,
+      "void": 319,
+      "ground-dirt": 1315
+    },
+    "edges": 488,
+    "chainlinkSections": 400,
+    "treePlacements": 78,
+    "sourceTreeFamilies": 4,
+    "cargoPlacements": 5,
+    "roofCells": 168,
+    "sourceGameTriangles": 163300,
+    "sourceCurveSegments": 96,
+    "partition": {
+      "sourceTriangles": 163236,
+      "derivedTriangles": 174100,
+      "sourceArea": 17699.13171035236,
+      "derivedArea": 17699.131710352973
+    },
+    "packageBytes": 25847942,
+    "runtimeChunkBytes": 3863306
+  },
+  "checks": {
+    "build": "npm run build: passed",
+    "repository": "npm run check: 401 passed, 0 failed",
+    "focusedArtTests": 11,
+    "deterministicCompilation": true,
+    "sourceGeometryAreaConserved": true,
+    "originalRigBatchesAndDescriptorsUnchanged": true,
+    "originalRendererBodyUnchangedAfterImportBridge": true,
+    "fullSourceObjectCoverage": true,
+    "shaftVoidRayTest": true,
+    "latestRequestWins": true,
+    "hiddenPoseRestoration": true,
+    "disposeDuringLoad": true,
+    "integrityFailureRollback": true,
+    "shaderInjection": "Inspected against actual host standard/depth/distance shader sources; native compilation remains pending"
+  },
+  "browser": {
+    "surface": "Codex In-app Browser",
+    "nativeWebGL": false,
+    "reason": "The only available browser returned no WebGL 2 context. Native appearance, GPU/shadows, in-game FieldView and phone performance are not approved.",
+    "provingViews": [
+      {
+        "id": "interior",
+        "residentEntries": 23,
+        "candidateDrawObjects": 40,
+        "candidateTriangles": 177164,
+        "geometryBytes": 197864,
+        "instanceBytes": 520768,
+        "texturePixels": 5061960,
+        "coverPose": 1
+      },
+      {
+        "id": "portal",
+        "residentEntries": 75,
+        "candidateDrawObjects": 150,
+        "candidateTriangles": 202418,
+        "geometryBytes": 2257832,
+        "instanceBytes": 533440,
+        "texturePixels": 35073968,
+        "coverPose": 1
+      },
+      {
+        "id": "b5",
+        "residentEntries": 41,
+        "candidateDrawObjects": 72,
+        "candidateTriangles": 20034,
+        "geometryBytes": 1923264,
+        "instanceBytes": 0,
+        "texturePixels": 1572516,
+        "coverPose": 1
+      },
+      {
+        "id": "stairs",
+        "residentEntries": 34,
+        "candidateDrawObjects": 65,
+        "candidateTriangles": 19590,
+        "geometryBytes": 1880640,
+        "instanceBytes": 0,
+        "texturePixels": 1572516,
+        "coverPose": 1
+      },
+      {
+        "id": "closed",
+        "residentEntries": 50,
+        "candidateDrawObjects": 93,
+        "candidateTriangles": 237679,
+        "geometryBytes": 1737992,
+        "instanceBytes": 583936,
+        "texturePixels": 3604132,
+        "coverPose": 0
+      },
+      {
+        "id": "half",
+        "residentEntries": 50,
+        "candidateDrawObjects": 93,
+        "candidateTriangles": 237679,
+        "geometryBytes": 1737992,
+        "instanceBytes": 583936,
+        "texturePixels": 3604132,
+        "coverPose": 0.5
+      },
+      {
+        "id": "open",
+        "residentEntries": 50,
+        "candidateDrawObjects": 93,
+        "candidateTriangles": 237679,
+        "geometryBytes": 1737992,
+        "instanceBytes": 583936,
+        "texturePixels": 3604132,
+        "coverPose": 1
+      },
+      {
+        "id": "approach",
+        "residentEntries": 17,
+        "candidateDrawObjects": 23,
+        "candidateTriangles": 66764,
+        "geometryBytes": 349896,
+        "instanceBytes": 332800,
+        "texturePixels": 3145380,
+        "coverPose": 1
+      }
+    ],
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 375,
+      "horizontalOverflow": false
+    },
+    "consoleWarningsOrErrors": 0,
+    "doorControlDegrees": 45,
+    "doorStateRetainedAfterUnload": 45,
+    "unloaded": {
+      "entries": 0,
+      "geometryBytes": 0,
+      "texturePixels": 0
+    },
+    "finalDisposalCounters": {
+      "fetchedBytes": 26520971,
+      "createdModels": 274,
+      "disposedModels": 274,
+      "createdGeometries": 352,
+      "disposedGeometries": 352,
+      "createdTextures": 9,
+      "disposedTextures": 9
+    },
+    "donorCapturesUsedAsIntegrationProof": false
+  },
+  "integration": {
+    "entry": "sites/tactical-animal/dist/art/coldwell/index.js",
+    "hostThreeOnly": true,
+    "canonicalIdentityRoot": true,
+    "noAuthoritativeSimulation": true,
+    "noCapabilityRegistration": true,
+    "coderOwns": [
+      "FieldView",
+      "support/clearance/collision",
+      "navigation/combat",
+      "authoritative interactions and save state",
+      "mission registration",
+      "build-cache versioning",
+      "runtime CI"
+    ],
+    "promotion": "Draft; architect native/combined review before main or Pages"
+  },
+  "helper": {
+    "processExited": true,
+    "portReleased": true,
+    "port": 4741,
+    "browserTabClosed": true,
+    "temporaryViewportReset": true,
+    "restartSourcePreserved": true,
+    "retainedServices": 0
+  },
+  "sourceHashes": [
+    {
+      "path": "sites/tactical-animal/dist/art/coldwell/.gitattributes",
+      "sha256": "8d208baed3b0d62463ad486230163a0d9029f4f0be07175a7c33640b3adf3853",
+      "format": "UTF-8 normalized to LF; source copies/assets preserve raw bytes"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/coldwell/contract.js",
+      "sha256": "9de34867ece7160a8baea33dd7f8055891ac90acfa57e722d64a5da886c2a3ae",
+      "format": "UTF-8 normalized to LF; source copies/assets preserve raw bytes"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/coldwell/index.js",
+      "sha256": "7425c01fda0b5537738ce9cdf5e1763bf0a7561e8bf4580f1d74e3638c3af812",
+      "format": "UTF-8 normalized to LF; source copies/assets preserve raw bytes"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/coldwell/review.html",
+      "sha256": "bc471286e260aff3849945b0cdc0b3357f9619fd9b3350337652d9eef37283ad",
+      "format": "UTF-8 normalized to LF; source copies/assets preserve raw bytes"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/coldwell/review.css",
+      "sha256": "fcbcd22bd09bd9036addd09f4670c12340fffdfc52a9cd9e841f989d00cfbe36",
+      "format": "UTF-8 normalized to LF; source copies/assets preserve raw bytes"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/coldwell/review.js",
+      "sha256": "1cba86edbe872460969fc0a5f22a5b89ac067987a7557dea5ed411f2bb29a4d4",
+      "format": "UTF-8 normalized to LF; source copies/assets preserve raw bytes"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/coldwell/upstream/silo-renderer.js",
+      "sha256": "b7a1ed287ccab2decbae199dea09362d7118ab001f4f07ef15994fb73a856d42",
+      "format": "UTF-8 normalized to LF; source copies/assets preserve raw bytes"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/coldwell/upstream/silo-bindings.js",
+      "sha256": "7895ed1308adf21ea2ddfa2203a6aee592035f37c8f9c30bdfe38b34d234cc08",
+      "format": "UTF-8 normalized to LF; source copies/assets preserve raw bytes"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/coldwell/upstream/biome-paint.js",
+      "sha256": "ef95ed26fa910e59e3e18e715b97e16e8b0905cf852ab740b880d2300b6c1f5e",
+      "format": "UTF-8 normalized to LF; source copies/assets preserve raw bytes"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/coldwell/upstream/map-ground-paint.js",
+      "sha256": "789e6bd028ebd4e9858aa272c1437b14e75fee01c8487bc1be0a88fc70086ea5",
+      "format": "UTF-8 normalized to LF; source copies/assets preserve raw bytes"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/coldwell/upstream/biome-foliage-data.js",
+      "sha256": "05c500352b3ecef1be47b1341e700d0099e720f1f42680eb4787a5d5a7e482f4",
+      "format": "UTF-8 normalized to LF; source copies/assets preserve raw bytes"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/coldwell/tools/prepare.py",
+      "sha256": "d8f527940fa59c44b99287b722f4313bb8d1878554807702b917e2403e45d904",
+      "format": "UTF-8 normalized to LF; source copies/assets preserve raw bytes"
+    },
+    {
+      "path": "sites/tactical-animal/dist/art/coldwell/tools/compile.mjs",
+      "sha256": "f5f92e2f12243771bc5c7441e2c54fbafd16af5919ea3fcdfb1b8c0b976ef345",
+      "format": "UTF-8 normalized to LF; source copies/assets preserve raw bytes"
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "native-unavailable-mobile.jpg",
+      "sha256": "f4cbbbbf6f35fe20c1f4950c952e385965f806bee3ea495f21687683e62bec8a",
+      "purpose": "Actual browser status and phone layout. The blank stage is an explicit unavailable-rendering diagnostic, not an artwork approval image."
+    }
+  ]
+}

@@ -1,5 +1,8 @@
 # Keep imported source bytes and line endings for provenance hashes on every OS.
 sites/tactical-animal/dist/designer/** -text -whitespace
 sites/tactical-animal/dist/aft/** -text -whitespace
+sites/tactical-animal/dist/vendor/** -text -whitespace
+sources/coldwell/** -text -whitespace
+sites/tactical-animal/dist/coldwell/** -text -whitespace
 sites/tactical-animal/aft-provenance.json text eol=lf
 sites/tactical-animal/dist/art/library/book-spines.svg text eol=lf

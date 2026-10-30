@@ -1,4 +1,8 @@
-import {ANIMALS,PRIMARY,SECONDARY,DEFAULT_BUILD,MISSIONS,DEFAULT_MISSION_ID,getMission,missionForState,missionMap,objectiveSecured,missionDestination,Core,normalizeBuild,buildStats,createSoloGame,hero,interaction,interact,dressing,tick,encodeSave,decodeSave,distance} from './solo-game.js';
+import {ANIMALS,PRIMARY,SECONDARY,DEFAULT_BUILD,DEFAULT_MISSION_ID,getMission,missionForState,missionMap,objectiveSecured,missionDestination,Core,normalizeBuild,buildStats,createSoloGame,hero,interaction,interact,dressing,tick,encodeSave,decodeSave,distance} from './solo-game.js';
+import {OPERATIONS} from './missions.js';
+import {prepareColdwell} from './coldwell-runtime.js';
+const coldwellTest=new URL(location.href).searchParams.get('coldwellTest'),privateColdwell=['traversal','recon'].includes(coldwellTest);
+const MISSIONS=privateColdwell?[...OPERATIONS,getMission('coldwell-traversal')]:OPERATIONS;
 import {FieldView,drawMinimap} from './field-view.js';
 import {cycleStep,nextCameraFocus,bindPressHold} from './mobile-controls.js';
 import {GrenadeAim,screenToGround} from './grenade-controls.js';
@@ -39,6 +43,7 @@ function button(parent,label,cls,pressed,onClick){const b=document.createElement
 function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,4000);}
 function renderMissionPreparation(){
   const mission=getMission(selectedMissionId),index=MISSIONS.indexOf(mission)+1;
+  document.querySelector('.edition').innerHTML='<i></i> SOLO OPERATIONS / '+String(OPERATIONS.length).padStart(2,'0');
   $('operation-select').innerHTML=MISSIONS.map(m=>`<option value="${m.id}">${safe(m.title)}</option>`).join('');$('operation-select').value=mission.id;
   $('operation-number').textContent='OP. '+String(index).padStart(3,'0');$('mission-location').textContent=mission.location;
   $('mission-heading').textContent=mission.title;$('briefing-text').textContent=mission.briefing;
@@ -66,11 +71,14 @@ function renderPrep(){renderMissionPreparation();const p=ANIMALS.find(a=>a.id===
   preparationBuilds[selectedMissionId]=normalizeBuild(build);
   try{operationStorage.savePreparation(selectedMissionId,build);}catch(error){storageWriteFailure('preparation changes',error);}
 }
+function prepareOperation(id){if(!getMission(id).spatialProvider)return null;$('deploy').disabled=true;return prepareColdwell({playable:!privateColdwell}).finally(()=>{$('deploy').disabled=false;});}
+let operationRequest=0;
 $('operation-select').onchange=()=>{
-  try{selectedMissionId=getMission($('operation-select').value).id;build=normalizeBuild(preparationBuilds[selectedMissionId]);renderPrep();}catch(error){toast(error.message);}
+  const request=++operationRequest;try{const id=getMission($('operation-select').value).id,commit=()=>{if(request!==operationRequest)return;selectedMissionId=id;build=normalizeBuild(preparationBuilds[id]);renderPrep();},pending=prepareOperation(id);if(pending)pending.then(commit,error=>{if(request===operationRequest){renderPrep();toast(error.message);}});else commit();}catch(error){renderPrep();toast(error.message);}
 };
 $('interaction-icon').append(weaponArtwork('hands',25));
 function showDialog(html,actions=[],{context=false,mode='',focusControl}={}){
+  if(Core.navigationStatus(state)?.pending)Core.stop(state);
   if(picker.open)closePicker();
   guardAlert.stop();
   cancelAreaAim();
@@ -88,7 +96,7 @@ function showDialog(html,actions=[],{context=false,mode='',focusControl}={}){
   if(context){contextKey='';renderContext(focusControl);}
 }
 function closeDialog(){overlay.close();paused=false;lastTime=performance.now();}
-function clearTargeting(){selected=null;view?.route([]);contextKey='';}
+function clearTargeting(){if(state?.spatial&&selected?.point)Core.stop(state);selected=null;view?.route([]);contextKey='';}
 function exitTargeting(){clearTargeting();closeDialog();renderBattle();}
 overlay.addEventListener('cancel',()=>{if(overlay.dataset.mode==='shooting')clearTargeting();paused=false;lastTime=performance.now();renderBattle();});
 function grenadeViewport(){
@@ -102,16 +110,16 @@ function grenadeViewport(){
   return aimViewport;
 }
 function start(s,{resume=false}={}){try{
-  if(state&&state!==s)storage.write();cancelAreaAim();resetStick();keys.clear();if(picker.open)closePicker();
+  if(state&&state!==s){storage.write();Core.disposeNavigation(state);}cancelAreaAim();resetStick();keys.clear();if(picker.open)closePicker();
   guardAlert.stop();guardContacts.reset([...(Array.isArray(s.solo.spottedGuardIds)?s.solo.spottedGuardIds:[]),...(resume?Core.visibleOpponents(s).map(guard=>guard.id):[])]);s.solo.spottedGuardIds=guardContacts.ids();
-  view?.dispose();$('loading').textContent='Preparing the field…';$('loading').hidden=false;state=s;selectedMissionId=s.solo.missionId;build=normalizeBuild(s.solo.build);Core.stop(s);delete s.effect;
+  view?.dispose();$('loading').textContent='Preparing the field…';$('loading').hidden=false;state=s;selectedMissionId=s.solo.missionId;build=normalizeBuild(s.solo.build);if(!resume||!s.spatial)Core.stop(s);delete s.effect;
   selected=null;interactionFocus=null;handTarget=null;grenadeAim.cancel();flameAim.cancel();lastHeldWeapon=hero(s).weapon;areaPress=false;aimViewport=null;contextKey='';resultShown=false;stanceDirection=1;movementDirection=-1;aim='hip';zone='torso';burst=false;
   $('prep').hidden=true;$('battle').hidden=false;document.body.classList.add('in-battle');active=true;paused=false;
-  view=new FieldView($('viewport'),{onPick:pick,getAimViewport:grenadeViewport,onLoading:busy=>{$('loading').hidden=!busy;},onError:message=>{$('loading').hidden=false;$('loading').textContent='Animal artwork could not load. '+message;}});
+  $('floor-controls').hidden=!s.spatial;view=new FieldView($('viewport'),{floorContainer:$('floor-controls'),onFloorChange:()=>{cancelAreaAim();resetStick();keys.clear();},onPick:pick,getAimViewport:grenadeViewport,onLoading:busy=>{$('loading').hidden=!busy;},onError:message=>{$('loading').hidden=false;$('loading').textContent='Animal artwork could not load. '+message;}});
   view.setGame(state);lastPhase=state.phase;lastTime=performance.now();lastUI=0;lastSave=lastTime;renderBattle();storage.write();
 }catch(error){active=false;view?.dispose();view=null;$('prep').hidden=false;$('battle').hidden=true;document.body.classList.remove('in-battle');toast('Cannot start 3D view: '+error.message);}}
-function backToPrep(){cancelAreaAim();resetStick();keys.clear();Core.stop(state);storage.write();guardAlert.stop();active=false;view?.dispose();view=null;$('battle').hidden=true;$('prep').hidden=false;document.body.classList.remove('in-battle');renderPrep();}
-$('deploy').onclick=()=>start(createSoloGame(build,1947,selectedMissionId));$('resume').onclick=()=>{try{const s=operationStorage.load(selectedMissionId);if(s.solo.status!=='active'){toast('That operation has ended. Deploy a new animal to begin again.');return;}start(s,{resume:true});}catch(error){toast('Could not resume: '+error.message);}};
+function backToPrep(){cancelAreaAim();resetStick();keys.clear();Core.stop(state);Core.disposeNavigation(state);storage.write();guardAlert.stop();active=false;view?.dispose();view=null;$('battle').hidden=true;$('prep').hidden=false;document.body.classList.remove('in-battle');renderPrep();}
+$('deploy').onclick=()=>{const id=selectedMissionId,chosen={...build},deploy=()=>start(createSoloGame(chosen,1947,id));try{const pending=prepareOperation(id);if(pending)pending.then(deploy,error=>toast(error.message));else deploy();}catch(error){toast(error.message);}};$('resume').onclick=()=>{const id=selectedMissionId,resume=()=>{try{const s=operationStorage.load(id);if(s.solo.status!=='active'){toast('That operation has ended. Deploy a new animal to begin again.');return;}start(s,{resume:true});}catch(error){toast('Could not resume: '+error.message);}};try{const pending=prepareOperation(id);if(pending)pending.then(resume,error=>toast(error.message));else resume();}catch(error){toast('Could not resume: '+error.message);}};
 function positionInteractionHand(){
   const button=$('interaction-hand');
   if(!handTarget||!active||paused||aiming()||!Core.canControl(state,hero(state))||!$('loading').hidden){button.hidden=true;return;}
@@ -154,6 +162,7 @@ function itemLabel(item){
   if(item.type==='ammo')return `${Core.WEAPONS[item.kind].short} ammunition ×${item.quantity}`;
   if(item.type==='dressing')return `Field dressing ×${item.quantity}`;
   if(item.type==='grenade')return `Frag grenade ×${item.quantity}`;
+  if(item.type==='mission')return item.name;
   return `${Core.WEAPONS[item.kind].name} · ${item.rounds} loaded`;
 }
 function lootWindow(id){
@@ -185,9 +194,24 @@ function reloadFromTrigger({targeting=false}={}){
   if(targeting)shootingMenu('fire');
   renderBattle();storage.write();return true;
 }
+function planSpatialMove(point){
+  const current=state,currentView=view;selected=null;contextKey='';view.route([]);
+  const pending=Core.requestNavigationPath(current,hero(current),point);renderBattle();
+  pending.then(path=>{
+    if(state!==current||view!==currentView||!active||paused)return;
+    if(!path?.length){toast('No clear route to that point.');renderBattle();return;}
+    view.route([hero(state),...path]);
+    if(state.phase==='player'){selected={point,path};operationMenu();}
+    else if(Core.acceptNavigationPath(state,hero(state),path)){selected=null;view.center();}
+    contextKey='';renderBattle();
+  },error=>{if(state!==current||!active)return;if(error.name!=='AbortError')toast(error.message);contextKey='';renderBattle();});
+}
+$('cancel-route').onclick=()=>{Core.stop(state);view?.route([]);renderBattle();};
+addEventListener('pagehide',()=>Core.disposeNavigation(state));
 function pick(p){if(!state||paused||aiming()||state.phase==='enemy'||state.solo.status!=='active')return;resetStick();if(p.interactionId){focusInteraction(p.interactionId);return;}if(p.unitId!==undefined){if(p.unitId===0){operationMenu();return;}const target=state.units.find(u=>u.id===p.unitId);if(target?.hp<=0){focusInteraction('body:'+target.id);return;}if(!state.detected.has(target?.id))return;if(hero(state).weapon==='flamethrower'){armFlame(Core.headingTo(hero(state),target));return;}Core.stop(state);Core.turnTo(state,hero(state),Core.headingTo(hero(state),target));selected={targetId:target.id};burst=false;aim=availableAim(Core.WEAPONS[hero(state).weapon],hero(state).ap);zone='torso';}
   else if(p.windowId){const u=hero(state);Core.stop(state);if(u.weapon==='flamethrower'){armFlame(Core.headingTo(u,p));return;}const target={...p,name:p.paneId?'Glass pane':'Window frame'},single=Core.previewPointAttack(state,u,target),burst=Core.previewPointAttack(state,u,target,true);showDialog(`<p class="eyebrow">WINDOW</p><h2>${safe(target.name)}</h2><p>Glass stops the first shot. Later shots pass through the opening. Frames and lower walls remain solid.</p>`,[[`Fire · ${single.cost} AP`,()=>act(()=>Core.attack(state,u,target)),'primary',!single.ok],...(Core.WEAPONS[u.weapon].burstRounds?[[`Burst · ${burst.cost} AP`,()=>act(()=>Core.attack(state,u,target,true)),'',!burst.ok]]:[]),['Return to operation',()=>{}]]);return;}
-  else{const path=Core.navigationPath(state,hero(state),p.x,p.y);if(!path){toast('No clear route to that point.');return;}view.route([hero(state),...path]);if(state.phase==='player')selected={point:p,path};else{Core.move(state,hero(state),p.x,p.y);selected=null;view.center();}}
+  else if(state.spatial){planSpatialMove(p);return;}
+  else{const path=Core.navigationPath(state,hero(state),p.x,p.y,p);if(!path){toast('No clear route to that point.');return;}view.route([hero(state),...path]);if(state.phase==='player')selected={point:p,path};else{Core.move(state,hero(state),p.x,p.y,p);selected=null;view.center();}}
   contextKey='';renderBattle();if(selected)selected.targetId!==undefined?shootingMenu():operationMenu();
 }
 function shootingMenu(focusControl='zone-'+zone){
@@ -251,12 +275,13 @@ function renderContext(focusControl){if(!state)return;const u=hero(state),near=i
     const warning=reload.empty?reload.reason:p.reason||(!chosen.available?'Not enough AP':'');
     if(warning||w.blast){const note=document.createElement('p');note.className='shooting-warning';note.setAttribute('role','status');note.textContent=[warning,w.blast?'BLAST CAN HURT YOU':''].filter(Boolean).join(' · ');root.append(note);}
     restoreFocus?.focus?.({preventScroll:true});
-  }else if(selected?.point){const path=Core.navigationPath(state,u,selected.point.x,selected.point.y),cost=path?.reduce((n,p)=>n+p.cost,0)||0,d=cost/Core.movementRate(u);content('Move to this point',`${d.toFixed(1)} m · ${cost.toFixed(1)} AP${cost>u.ap?' · stops when AP runs out':''}`,'Move',()=>{Core.move(state,u,selected.point.x,selected.point.y);selected=null;view.center();},!path||u.ap<.01);
+  }else if(selected?.point){const path=state.spatial?selected.path:Core.navigationPath(state,u,selected.point.x,selected.point.y,selected.point),cost=path?.reduce((n,p)=>n+p.cost,0)||0,d=cost/Core.movementRate(u);content('Move to this point',`${d.toFixed(1)} m · ${cost.toFixed(1)} AP${cost>u.ap?' · stops when AP runs out':''}`,'Move',()=>{if(state.spatial){if(!Core.acceptNavigationPath(state,u,path)){const point=selected.point;selected=null;planSpatialMove(point);return;}}else Core.move(state,u,selected.point.x,selected.point.y,selected.point);selected=null;view.center();},!path||u.ap<.01);
   }else if(near){const mission=missionForState(state);content(near.label,near.kind==='extract'?mission.extraction.name:`${near.cost} AP · ${mission.objective.after}`,near.kind==='extract'?'Extract ↗':'Collect',()=>interact(state),!near.ok);}
   else if(state.detected.size){const guard=[...state.detected].map(id=>state.units.find(v=>v.id===id)).sort((a,b)=>distance(u,a)-distance(u,b))[0];content('Visible contact',`${guard.name} · ${distance(u,guard).toFixed(1)} m`,'Target',()=>pick({unitId:guard.id}));}
   if(selected&&!p){const cancel=document.createElement('button');cancel.className='cancel-context';cancel.textContent='×';cancel.setAttribute('aria-label','Cancel selection');cancel.onclick=()=>{clearTargeting();renderContext();};root.append(cancel);}
 }
 function renderBattle(){if(!state)return;const u=hero(state),combat=state.phase==='player'||state.phase==='enemy',can=Core.canControl(state,u);
+  $('route-planning').hidden=!Core.navigationStatus(state)?.pending;
   $('battle-name').textContent=u.name;$('battle-species').textContent=speciesLabel(u.species);
   $('hp-label').textContent=`${Math.ceil(u.hp)} / ${u.maxHp} HP`;$('hp-bar').style.width=`${u.hp/u.maxHp*100}%`;
   $('ap').textContent=combat?Math.max(0,u.ap).toFixed(1):'∞';$('ap-label').textContent=combat?'AP':'FREE MOVE';
@@ -279,7 +304,7 @@ function renderBattle(){if(!state)return;const u=hero(state),combat=state.phase=
   const nextAction=nextFocus?'View '+nextFocus.name:'Recenter on your animal';
   $('look').setAttribute('aria-label',`${contacts.length} visible opponent${contacts.length===1?'':'s'}. ${viewing}. Next: ${nextAction}.`);
   $('look').title=`${nextAction} · opponents, then your animal`;
-  drawMinimap($('minimap'),state);renderContext();renderInteractionHand();
+  drawMinimap($('minimap'),state,{floorId:view?.floorController?.state.selectedId});renderContext();renderInteractionHand();
   if(state.solo.status!=='active'&&!resultShown){resultShown=true;storage.write();const win=state.solo.status==='extracted',mission=missionForState(state);showDialog(`<p class="eyebrow">${safe(mission.title)} / OPERATION ${win?'COMPLETE':'LOST'}</p><h2>${win?mission.result.title:'One worker down.'}</h2><p>${win?`${u.name} ${mission.result.summary} ${Math.round(state.solo.distance)} metres travelled; ${state.round} combat rounds.`:'The factory kept its secrets this time. Try another animal, another loadout, or a quieter route.'}</p>${win?`<p>${mission.result.epilogue}</p>`:''}`,[['Choose your next operation',backToPrep,'primary'],['Replay this loadout',()=>start(createSoloGame(state.solo.build,1947,state.solo.missionId))]]);}
 }
 $('end-turn').onclick=()=>act(()=>{selected=null;cancelAreaAim();Core.endTurn(state);});
@@ -521,7 +546,7 @@ function help(){showDialog(`<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br
   <li>Chests and fallen guards share a loot window with individual Take buttons and Take all. Transfers cost 1 AP in combat, including a bulk transfer. Doors open or close for 1 AP; opening a chest or searching a body costs 2 AP. Exploration interactions are free. A blocked doorway cannot close on an animal.</li>
   <li>Options holds inventory, weapon changes, reloads and treatment, including looted supplies. Find your objective and recent events under Mission & combat log. Use the hand to collect the mission evidence and extract.</li>
   </ul>`,[['Back to menu',operationMenu],['Return to operation',()=>{},'primary']]);}
-$('minimap-button').onclick=()=>{showDialog(`<p class="eyebrow">${safe(missionForState(state).location)} / TACTICAL MAP</p><h2>Find your way.</h2><div class="map-metal-frame map-expanded-frame"><canvas id="large-map" width="760" height="560" aria-label="Tactical map"></canvas></div><p>Cream: your animal. Orange: the objective and visible guards. Green: extraction. Dark areas remain unexplored.</p>`,[['Return to operation',()=>{},'primary']]);drawMinimap($('large-map'),state);};
+$('minimap-button').onclick=()=>{showDialog(`<p class="eyebrow">${safe(missionForState(state).location)} / TACTICAL MAP</p><h2>Find your way.</h2><div class="map-metal-frame map-expanded-frame"><canvas id="large-map" width="760" height="560" aria-label="Tactical map"></canvas></div><p>Cream: your animal. Orange: the objective and visible guards. Green: extraction. Dark areas remain unexplored.</p>`,[['Return to operation',()=>{},'primary']]);drawMinimap($('large-map'),state,{floorId:view?.floorController?.state.selectedId});};
 function resetStick(){const pointer=stickPointer;stickPointer=null;if(pointer!==null&&$('joystick').hasPointerCapture(pointer))$('joystick').releasePointerCapture(pointer);stick={x:0,y:0};$('stick-knob').style.transform='translate(-50%,-50%)';}
 function updateStick(e){
   const r=$('joystick').getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,limit=r.width*.3,n=Math.hypot(dx,dy),scale=Math.min(1,limit/Math.max(1,n));
@@ -535,6 +560,7 @@ addEventListener('keydown',e=>{
   if(!active||paused||e.defaultPrevented||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;
   const k=e.key.toLowerCase(),button=e.target.closest('button');
   if(k==='g'){e.preventDefault();if(!e.repeat)armGrenade();return;}
+  if(k==='escape'&&Core.navigationStatus(state)?.pending){e.preventDefault();Core.stop(state);view.route([]);renderBattle();return;}
   if(k==='f'){e.preventDefault();if(!e.repeat)armFlame();return;}
   if(k==='enter'&&aiming()&&!button){e.preventDefault();if(!e.repeat){if(flameAim.active)commitFlame();else commitGrenade();}return;}
   if(k===' '&&button)return;
@@ -547,7 +573,7 @@ addEventListener('keyup',e=>{keys.delete(e.key.toLowerCase());if(grenadeAim.acti
 addEventListener('blur',()=>{areaPress=false;resetStick();keys.clear();clearAreaReadiness();guardAlert.stop();});document.addEventListener('visibilitychange',()=>{areaPress=false;resetStick();keys.clear();if(document.hidden){clearAreaReadiness();guardAlert.stop();storage.write();}lastTime=performance.now();});addEventListener('pagehide',event=>{storage.write();guardAlert.stop();if(!event.persisted)void guardAlert.dispose();});
 function frame(now){
   requestAnimationFrame(frame);const dt=Math.min(.05,Math.max(0,(now-lastTime)/1000));lastTime=now;if(!active||!view)return;
-  if(!paused&&!document.hidden){
+  if(!paused&&!document.hidden&&(!state.spatial||$('loading').hidden)){
     let x=stick.x,y=stick.y;if(keys.size){x=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0);y=(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);}
     const n=Math.max(1,Math.hypot(x,y));x/=n;y/=n;
     if(aiming()){
@@ -564,4 +590,12 @@ function frame(now){
   }
   view.sync(state,now);positionInteractionHand();if(now-lastUI>100){renderBattle();lastUI=now;}
 }
-renderPrep();requestAnimationFrame(frame);
+function boot(){if(privateColdwell)selectedMissionId='coldwell-'+coldwellTest;const ready=()=>{renderPrep();requestAnimationFrame(frame);},fail=error=>{selectedMissionId=DEFAULT_MISSION_ID;ready();toast(error.message);};try{const pending=prepareOperation(selectedMissionId);if(pending)pending.then(ready,fail);else ready();}catch(error){fail(error);}}
+void boot();
+
+// Only the unlisted acceptance route exposes read-only snapshots/projection.
+if(privateColdwell)globalThis.__coldwellGame=Object.freeze({
+  snapshot(){return structuredClone({active,paused,navigation:Core.navigationStatus(state),aiming:{grenade:grenadeAim.active,flame:flameAim.active},effects:{flame:view?.flameEffects?.queue.length??0},mission:state?.solo.missionId,status:state?.solo.status,hero:state&&hero(state),units:state?.units,queue:state?.queue,phase:state?.phase,inspected:state?.solo.inspected,objectives:state?.solo.objectives,spatial:state?.spatial,seen:state?.seen.size,detected:state&&[...state.detected],fireAnimationSequence:state?.fireAnimationSequence,windowSequence:state?.windowSequence,art:view?.art?.diagnostics(),actors:view?.actors.size,pendingActors:view?.pending.size,failed:view&&[...view.failed],floor:view?.floorController?.state.selectedId,mode:view?.floorController?.state.mode,renderer:view&&{calls:view.renderer.info.render.calls,triangles:view.renderer.info.render.triangles,geometries:view.renderer.info.memory.geometries,textures:view.renderer.info.memory.textures}});},
+  project:point=>view?.project(point),
+  async whenIdle(){await view?.artReady;await view?.art?.whenIdle();}
+});

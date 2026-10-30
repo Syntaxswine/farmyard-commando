@@ -7,9 +7,9 @@ import {createWorkerLocomotion} from './aft/tactics/worker-locomotion.js';
 import {createTankBlastMotion,TANK_TIME} from './designer/a20b343a0234/tactics/tank-blast-motion.js';
 
 const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
-const cell=p=>`${Math.round(p.x)},${Math.round(p.y)}`;
+const cell=p=>`${p.floorId?p.floorId+'@':''}${p.floorId?Math.floor(p.x):Math.round(p.x)},${p.floorId?Math.floor(p.y):Math.round(p.y)}`;
 export function burnSegments(event){
-  const points=event.route.map(p=>({x:p.x,y:0,z:p.y})),segments=[];let part=[points[0]],last=null;
+  const points=event.route.map(p=>({x:p.x,y:p.h??0,z:p.y})),segments=[];let part=[points[0]],last=null;
   for(let i=1;i<points.length;i++){
     const a=points[i-1],b=points[i],heading=Math.atan2(b.z-a.z,b.x-a.x);
     if(last!==null&&Math.abs(heading-last)>1e-6){segments.push(makeBurnRoute(part));part=[a];}
@@ -49,7 +49,7 @@ export class SoloBurnEffects{
       if(entry.waiting){const start=startFor(entry.event,now);if(start!==null){entry.start=start;entry.waiting=false;}}
     }
     for(const u of visibleUnits)if(paintedBurnSupported(u)&&(u.burnedRemains||u.hp>0&&u.burningTurns)&&!this.entries.has(u.id)&&!this.failures.has(u.id)){
-      const event={unitId:u.id,kind:u.burnedRemains?'ash':'ignite',weapon:u.weapon,route:[{x:u.x,y:u.y,heading:u.heading}]};
+      const event={unitId:u.id,kind:u.burnedRemains?'ash':'ignite',weapon:u.weapon,route:[{x:u.x,y:u.y,heading:u.heading,...(u.h!==undefined?{h:u.h,floorId:u.floorId}:{})}]};
       this.entries.set(u.id,{event,segments:burnSegments(event),start:now-(u.burnedRemains?5400:1500),waiting:false});
     }
     if(this.entries.size)this.load();
@@ -67,9 +67,9 @@ export class SoloBurnEffects{
     const entry=this.entries.get(unit.id);if(!entry||this.failures.has(unit.id)||!paintedBurnSupported(unit)){this.release(unit.id);return false;}
     try{
       const s=this.session(actor,unit.id);actor.root.position.set(0,0,0);actor.root.updateMatrixWorld(true);
-      if(s.settledEvent===entry.event){s.effects.group.visible=true;actor.pick.position.set(unit.x,.18,unit.y);actor.ring.position.set(unit.x,.018,unit.y);actor.shadow.position.set(unit.x,.01,unit.y);return true;}
+      if(s.settledEvent===entry.event){s.effects.group.visible=true;actor.pick.position.set(unit.x,(unit.h??0)+.18,unit.y);actor.ring.position.set(unit.x,(unit.h??0)+.018,unit.y);actor.shadow.position.set(unit.x,(unit.h??0)+.01,unit.y);return true;}
       if(this.textures&&!s.effects&&!s.loading){s.loading=true;createPaintedFireEffects(this.scene,null,actor.worker,{textures:this.textures,world:true}).then(fx=>{if(s.disposed)fx.dispose();else s.effects=fx;}).catch(e=>this.onError(e));}
-      if(this.reduced){entry.segments=burnSegments({route:[{x:unit.x,y:unit.y,heading:unit.heading}]});entry.start=this.now-(unit.burnedRemains?5400:1500);entry.waiting=false;}
+      if(this.reduced){entry.segments=burnSegments({route:[{x:unit.x,y:unit.y,heading:unit.heading,...(unit.h!==undefined?{h:unit.h,floorId:unit.floorId}:{})}]});entry.start=this.now-(unit.burnedRemains?5400:1500);entry.waiting=false;}
       const p=burnPlayback(entry,this.now),waiting=entry.waiting||this.now<entry.start;
       const time=waiting?0:p.terminal&&!s.effects?Math.min(p.time,1.84):p.time;
       let result;
@@ -79,9 +79,9 @@ export class SoloBurnEffects{
       }else result=s.motion.burn(time,p.route,{terminal:p.terminal});s.value.value=result.state.dissolve;
       actor.paint.setGripForearm?.(result.state.bodyVisible&&!!actor.worker.weapon?.carry?.handPoses?.support?.gripMesh);
       if(s.effects)s.effects.update(waiting?0:p.time,{camera,route:p.route,flame:false,terminal:p.terminal,groundPoint:s.motion.groundPoint,body:true});
-      const point=result.state.point;actor.pick.position.set(point.x,unit.hp>0?.9:.18,point.z);actor.ring.position.set(point.x,.018,point.z);actor.shadow.position.set(point.x,.01,point.z);
+      const point=result.state.point;actor.pick.position.set(point.x,(point.y??0)+(unit.hp>0?.9:.18),point.z);actor.ring.position.set(point.x,(point.y??0)+.018,point.z);actor.shadow.position.set(point.x,(point.y??0)+.01,point.z);
       actor.root.updateMatrixWorld(true);actor.worker.skeleton.update();if(s.effects&&p.terminal&&p.time>=FIRE_TIME.duration)s.settledEvent=entry.event;return true;
-    }catch(error){this.failures.add(unit.id);this.remove(unit.id);actor.root.position.set(unit.x,0,unit.y);this.onError(error);return false;}
+    }catch(error){this.failures.add(unit.id);this.remove(unit.id);actor.root.position.set(unit.x,unit.h??0,unit.y);this.onError(error);return false;}
   }
   release(id){const s=this.sessions.get(id);if(!s)return;s.disposed=true;s.motion.dispose();s.restoreSkin();s.effects?.dispose();s.actor.worker.root.position.set(0,0,0);s.actor.worker.root.rotation.set(0,0,0);if(s.resumeWalking)s.actor.locomotion=createWorkerLocomotion(s.actor.worker,s.actor.profile);s.actor.signature=null;this.sessions.delete(id);}
   remove(id){this.release(id);this.entries.delete(id);}

@@ -1,4 +1,4 @@
-import {MISSIONS,DEFAULT_MISSION_ID,getMission} from './missions.js';
+import {OPERATIONS as MISSIONS,DEFAULT_MISSION_ID,getMission} from './missions.js';
 
 export const OPERATION_SAVE='tactical-animal-operation-v2';
 export const OPERATION_SLOT='tactical-animal-operation-v3:';

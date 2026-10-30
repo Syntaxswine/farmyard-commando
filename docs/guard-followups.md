@@ -88,3 +88,36 @@ post survive saves. Existing pursuit-position tests now stop after two unseen
 rounds; the third intentionally begins investigation. Dedicated transition,
 exploration, blocked-return, hidden-hero and mid-search replay coverage:
 `node --test sites/tactical-animal/tests/guard-awareness.test.mjs`.
+
+## Contact reports and sound
+
+The AFT `shout`/last-known report policy is adapted to the solo simulation.
+Each firsthand sighting records its point, target, original observer, simulation
+time and round. A friendly discharge relays a usable hostile snapshot, retaining
+those original fields and recording only its forwarding guard. A listener keeps
+newer information, and its equally fresh firsthand observation wins. Forwarding
+does not create a sighting or reset its age. Reports expire after three unseen
+rounds or nine simulation seconds; old report records remain historical data.
+
+Player/unknown shots and friendly shots without a usable hostile fix supply only
+the audible shooter's point. Listeners without stronger contact information enter
+the AFT suspicious state and investigate that sound before returning. Hearing is
+not permission to fire through cover. Firearm, directional flame and grenade
+hooks share this policy and retain their previous hearing radii. A guard never
+overwrites its own hostile fix with its own gun's location.
+
+Tests cover real combat hooks, relay chains, stale reports, newer firsthand fixes,
+audible radii, save validation, and native floor/height preservation. The native
+provider also checks every selected body zone against actual partial-height
+chest/capsule impact. Commands:
+
+```
+node --test sites/tactical-animal/tests/guard-reports.test.mjs sites/tactical-animal/tests/guard-awareness.test.mjs sites/tactical-animal/tests/flame-aim.test.mjs sites/tactical-animal/tests/shot-exposure.test.mjs
+node --test sites/tactical-animal/tests/coldwell-gameplay.test.mjs
+```
+
+These passed 22 focused checks (including all 54 flame gameplay comparisons) and
+15 full-provider gameplay checks. Friendly report metadata and guard state/post
+fields intentionally change serialized replay hashes from the first command;
+later decision changes follow the explicit policies above, rather than a scenery
+or source-art change.

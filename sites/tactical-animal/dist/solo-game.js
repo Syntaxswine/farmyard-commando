@@ -390,7 +390,7 @@ export function throwGrenade(s,u,point){
   }
   windowBlast(s,point,p.blast);
   log(s,`${u.name} threw a grenade (${p.cost} AP).`);
-  for(const guard of s.units.filter(g=>g.team==='guard'&&alive(g)))if(distance(u,guard)<=WEAPONS.grenade.range*2){guard.alert=true;guard.lastKnown=rememberedPoint(u);guard.alertAge=0;}
+  reportNoise(s,u,WEAPONS.grenade.range*2);
   s.effect={sequence:[{shooter:u.id,ax:u.x,ay:u.y,bx:point.x,by:point.y,...(s.spatial?{ah:u.h,bh:point.h}:{}),hit:hits>0,weapon:'grenade',blast:p.blast,...impactEvent,windowSequences:windowReceipts(s,windowBefore),fireSequences:(s.fireAnimations||[]).filter(e=>e.sequence>fireBefore).map(e=>e.sequence)}]};
   refresh(s);return true;
 }
@@ -464,7 +464,7 @@ export function fireFlame(s,a,heading){
   a.ap=Math.max(0,a.ap-p.cost);a.ammo.flamethrower--;syncAmmo(a,'flamethrower');a.heading=p.heading;
   const impactEvent={explosions:[]},fireBefore=s.fireAnimationSequence||0,windowBefore=s.windowSequence||0,flame=flameShape(s,a,p.range),impacts=resolveFlame(s,a,impactEvent),angle=a.heading*Math.PI/180;
   log(s,`${a.name} fired a flamethrower cone (${p.cost} AP).`);
-  for(const guard of s.units.filter(u=>u.team==='guard'&&alive(u)))if(distance(a,guard)<=p.range*2){guard.alert=true;guard.lastKnown=rememberedPoint(a);guard.alertAge=0;}
+  reportNoise(s,a,p.range*2);
   s.effect={sequence:[{shooter:a.id,ax:a.x,ay:a.y,bx:a.x+Math.cos(angle)*p.range,by:a.y+Math.sin(angle)*p.range,incendiary:true,hit:impacts.length>0,weapon:'flamethrower',shot:0,shots:1,flame,impacts,...impactEvent,windowSequences:windowReceipts(s,windowBefore),fireSequences:(s.fireAnimations||[]).filter(e=>e.sequence>fireBefore).map(e=>e.sequence)}]};
   refresh(s);return true;
 }
@@ -533,7 +533,7 @@ export function attack(s,a,b,burst=false,byAI=false,zone='torso',reaction=false,
   }
   for(const event of sequence)event.shots=sequence.length;
   log(s,`${a.name} → ${b.name||'window'}: ${b.ground?sequence.some(e=>e.glass)?'glass broken':'shot':hits?Math.round(hp-b.hp)+' damage':'miss'} (${p.chance}%).`);
-  for(const g of s.units.filter(g=>g.team==='guard'&&alive(g)))if(distance(a,g)<=w.range*2){g.alert=true;g.lastKnown=rememberedPoint(a);g.alertAge=0;}
+  reportNoise(s,a,w.range*2);
   s.effect={sequence,cost:p.cost};refresh(s);return true;
 }
 export function equip(s,u,id){if(!canControl(s,u)||!u.pack.some(i=>i.kind===id)||u.weapon===id)return false;const cost=combatCosts(s)?u.slots.includes(id)?2:3:0;if(u.ap+EPS<cost)return false;stop(s);u.ap-=cost;u.weapon=id;log(s,'Equipped '+WEAPONS[id].name+'.');return true;}
@@ -546,7 +546,7 @@ const ARRIVED=.08;
 function enemyStep(s,dt){
   const u=hero(s),g=s.units[s.enemyIndex];
   if(!g){const retry=guardCoordination.retry(s);if(retry!==null){s.enemyIndex=retry;s.enemyDelay=.15;return;}guardCoordination.settle(s);fireRules.finishRound(s);s.round++;s.panicDelay=3;u.ap=alive(u)&&!u.burningTurns?u.maxAp:0;u.stamina=Math.min(u.maxStamina,u.stamina+10);s.phase='player';refresh(s);return;}
-  if(!alive(g)||g.burningTurns||!g.alert&&!g.yieldRequest&&!['searching','standdown'].includes(guardState(g))||g.ap<.02){g.isMoving=false;s.enemyIndex++;s.enemyDelay=.15;return;}
+  if(!alive(g)||g.burningTurns||!g.alert&&!g.yieldRequest&&!['suspicious','searching','standdown'].includes(guardState(g))||g.ap<.02){g.isMoving=false;s.enemyIndex++;s.enemyDelay=.15;return;}
   s.enemyDelay-=dt;if(s.enemyDelay>0)return;
   if(guardCoordination.step(s,g,dt))return;
   if(!g.alert&&guardAwareness.step(s,g,dt)){if(g.ap<.02||guardState(g)==='rest')g.ap=0;return;}
@@ -561,6 +561,7 @@ export function tick(s,dt=1/60,input=null){if(s.solo.status!=='active')return fa
 const fireRules=createFireRules({kill,walkSegment,random,key,log});
 const fuelRules=createFuelRules({kill,ignite:fireRules.ignite,recordBurn,inside:insideWorld,log,windowBlast});
 const guardAwareness=createGuardAwareness({alive,point:rememberedPoint,distance,sees:(s,g)=>canSee(s,g,hero(s))?hero(s):null,free:freePoint,path:(s,g,p)=>navigationPath(s,g,p.x,p.y,p,{nodeLimit:128}),travel,speed:movementSpeed,refresh});
+export const reportNoise=(s,source,radius)=>guardAwareness.signal(s,source,radius);
 const guardCoordination=createGuardCoordination({alive,distance,point:rememberedPoint,approach:approachPath,free:freePoint,walk:walkSegment,travel,speed:movementSpeed,shadow:(s,b,p)=>{
   const shadow={...s,units:s.units.flatMap(u=>u!==b?[u]:p?[{...u,...p}]:[])};
   if(geometryCache.has(s))geometryCache.set(shadow,geometryCache.get(s));return shadow;

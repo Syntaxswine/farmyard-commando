@@ -35,6 +35,15 @@ test('native friendly reports preserve the observed floor/height through relay a
   const restored=decodeSave(encodeSave(state));assert.deepEqual(restored.units[2].contact,b.contact);
   for(const mutate of [p=>p.floorId='missing',p=>p.h+=.5]){const bad=JSON.parse(encodeSave(state));mutate(bad.units[2].contact.point);assert.throws(()=>decodeSave(JSON.stringify(bad)),/Coldwell/);}
 });
+
+test('a lost stair observation resolves local search cells onto their actual source floors before saving',()=>{
+  const state=fresh('coldwell-recon'),guard=state.units[5],fix=provider.stairById.get('portal-stair-21').route.at(-2);state.units=[hero(state),guard];
+  Object.assign(guard,fix,{z:provider.floorById.get(fix.floorId).index,alert:true,state:'alert',lastKnown:{...fix},alertAge:2});state.phase='player';
+  const started=performance.now();assert.ok(Core.endTurn(state));assert.equal(guard.state,'searching');assert.ok(guard.search.candidates.length>0);assert.equal(guard.search.cells.length,1);
+  assert.ok(performance.now()-started<1000,'search startup must not run a batch of native path searches');
+  for(const cell of [...guard.search.cells,...guard.search.candidates]){const resolved=provider.resolve(state,cell,cell);assert.ok(resolved);assert.ok(spatialDistance(cell,resolved)<.025);assert.equal(cell.floorId,resolved.floorId);}
+  assert.doesNotThrow(()=>decodeSave(encodeSave(state)));
+});
 function walk(state,destination){
   const unit=hero(state),route=Core.navigationPath(state,unit,destination.x,destination.y,destination);assert.ok(route?.length,'No route to '+JSON.stringify(destination));
   for(const point of route){const distance=spatialDistance(unit,point);Core.travel(state,unit,point.x-unit.x,point.y-unit.y,{distanceBudget:distance});assert.ok(spatialDistance(unit,point)<.025,'Stopped before '+JSON.stringify(point));}

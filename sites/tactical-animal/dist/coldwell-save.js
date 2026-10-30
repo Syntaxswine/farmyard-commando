@@ -22,7 +22,7 @@ export function restoreColdwellBase(state,map){
     if(unit.lastKnown)position(unit.lastKnown);
     // Observations may outlive the support they were seen on, but their native
     // floor/stair identity and elevation must remain internally consistent.
-    for(const p of [unit.post,unit.contact?.point,unit.lastHeard,unit.yieldRequest?.point,...(unit.search?.cells||[]),...(unit.guardRoute||[])])if(p)position(p);
+    for(const p of [unit.post,unit.contact?.point,unit.lastHeard,unit.yieldRequest?.point,unit.search?.goal,...(unit.search?.cells||[]),...(unit.search?.candidates||[]),...(unit.guardRoute||[])])if(p)position(p);
   }
   if(state.fogAt)position(state.fogAt);
   for(const point of state.queue||[])position(point,{support:true});

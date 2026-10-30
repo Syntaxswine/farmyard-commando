@@ -5,7 +5,7 @@ function field(){const s=createSoloGame(DEFAULT_BUILD,1947,'road-checkpoint'),u=
 function turn(s){s.phase='player';s.engaged=true;assert.ok(Core.endTurn(s));for(let n=0;s.phase==='enemy'&&n<3000;n++)tick(s,.05);assert.notEqual(s.phase,'enemy');}
 test('three unseen rounds produce a bounded local search then return to the authored post',()=>{
   const {s,g}=field(),post={...g.post};turn(s);turn(s);assert.equal(guardState(g),'alert');
-  s.phase='player';Core.endTurn(s);assert.equal(guardState(g),'searching');const cells=structuredClone(g.search.cells);assert.ok(cells.length>1&&cells.length<=5);assert.deepEqual(cells[0],{x:94,y:120});
+  s.phase='player';Core.endTurn(s);assert.equal(guardState(g),'searching');const cells=structuredClone(g.search.cells);assert.equal(cells.length,1);assert.ok(g.search.candidates.length>0&&g.search.candidates.length<=8);assert.deepEqual(cells[0],{x:94,y:120});
   let moved=false;for(let n=0;n<2000&&guardState(g)!=='rest';n++){const before={x:g.x,y:g.y};tick(s,.05);moved||=distance(before,g)>.01;}
   assert.equal(guardState(g),'rest');assert.equal(s.phase,'explore');assert.ok(moved);assert.ok(distance(g,post)<.08);assert.equal(g.heading,post.heading);assert.equal(g.lastKnown,null);
 });

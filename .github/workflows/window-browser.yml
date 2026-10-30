@@ -2,7 +2,7 @@ name: Native window browser check
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, codex/coldwell-runtime]
     paths:
       - '.github/workflows/window-browser.yml'
       - 'sites/tactical-animal/**'

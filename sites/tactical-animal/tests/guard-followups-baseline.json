@@ -1,0 +1,48 @@
+{
+  "source": "Intentional guard-state, shot-exposure and report changes; original goldens remain in scenery-neutrality-baseline.json. See docs/reviews/guard-followups-replays.json",
+  "base": "783f45baf935bed592f423e6bf8ed852648e5cfa",
+  "runtimeRevision": "e0c1e20809806384c7b183c8daf9e5fca2fcb89d",
+  "sourceHashes": {
+    "solo-game.js": "ac03a3d7f4d7b47e72976a6ad99dbdb7c08e5090aec0fd98a20135acf39128b3",
+    "guard-awareness.js": "8d0b16a2a95a7129e7ac5b15c0e81dd423dfdfcd7490859819ae477c53c0a4c4",
+    "guard-coordination.js": "60ca9b31c0d891ad9e0fd2a75ce8fe7086370c16efe022359b205e94bd17e90d"
+  },
+  "rows": [
+    {
+      "missionId": "night-ledger",
+      "seed": 3,
+      "steps": 150,
+      "hash": "e84ef47b5deb778c2c0926b65c812304072684ec4641fc6239936a3a1b67f0ae"
+    },
+    {
+      "missionId": "night-ledger",
+      "seed": 4,
+      "steps": 150,
+      "hash": "2c07681ac0e60ab0ae7d7d3fca0b074ea30131caf79d8c98f1429f6d0a5be5f9"
+    },
+    {
+      "missionId": "night-ledger",
+      "seed": 6,
+      "steps": 150,
+      "hash": "99593ab0415c6c3d4271eae9995308a09778f18f4956fb34dd7596a1c1bd4faf"
+    },
+    {
+      "missionId": "night-ledger",
+      "seed": 8,
+      "steps": 200,
+      "hash": "1245e95c3aa808e86d8854b22c7136ca245d32a5f6b186c27b5bf78c2d0f3851"
+    },
+    {
+      "missionId": "road-checkpoint",
+      "seed": 1,
+      "steps": 40,
+      "hash": "92da367f59a6d35fd062c2224b15896c67182ae57214f4a43baa658051cb55f2"
+    },
+    {
+      "missionId": "road-checkpoint",
+      "seed": 2,
+      "steps": 40,
+      "hash": "8b1cd88c4e3ea14352860cb22aee24d702e694f651f7421c898c443762a0a067"
+    }
+  ]
+}

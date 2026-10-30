@@ -31,10 +31,14 @@
 //               left with no plan, or with one over a metre longer, by who is in the way.
 // With no checkout named, this one is censused; the first named checkout places
 // the cases and runs the oracle. A case is FROZEN when the guard never fires and its
-// alert lapses; STALLED when a turn ends with AP left, no shot, no step and no
+// investigation finishes without a shot; active searches at the cutoff are
+// reported separately. STALLED when a turn ends with AP left, no shot, no step and no
 // sight of the animal. The oracle walks the grid graph from the guard to the
 // nearest node with a wall-clear line to the animal within weapon range.
 import path from 'node:path';
+import fs from 'node:fs';
+import {createHash} from 'node:crypto';
+import {execFileSync} from 'node:child_process';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 const [mission,mode,seedArg,casesArg,...named]=process.argv.slice(2);
 if(!mission||!['blocked','near','props','doorway','doorshot','play'].includes(mode)||!Number.isFinite(+seedArg)||!(+casesArg>0))throw Error('usage: guard-census.mjs <mission> <blocked|near|props|doorway|doorshot|play> <seed> <cases> [name=checkout ...]');
@@ -42,6 +46,7 @@ const here=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..')
 const trees=named.length?named.map(a=>a.split(/=(.*)/s).slice(0,2)):[['this',here]];
 const M={};for(const [name,root] of trees)M[name]=await import(pathToFileURL(path.join(root,'sites/tactical-animal/dist/solo-game.js')).href);
 const names=Object.keys(M),ref=M[names[0]];
+console.log('census metadata '+JSON.stringify({mission,mode,seed:+seedArg,requestedCases:+casesArg,checkouts:trees.map(([name,root])=>({name,revision:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),modules:Object.fromEntries(['solo-game.js','guard-awareness.js','guard-coordination.js'].filter(f=>fs.existsSync(path.join(root,'sites/tactical-animal/dist',f))).map(f=>[f,createHash('sha256').update(fs.readFileSync(path.join(root,'sites/tactical-animal/dist',f)).toString().replaceAll('\r\n','\n')).digest('hex')]))})),shotEvent:'one AI firearm round; physical chosen-zone first impact must be target or deliberate glass breach'}));
 const random=(seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;})(+seedArg);
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 function field(T,doors){const s=T.createSoloGame(T.DEFAULT_BUILD,1947,mission);if(doors)for(const o of s.interactables)if(o.kind==='door'){o.open=true;s.edges[o.edge]='door';}return {...s};}
@@ -49,15 +54,17 @@ function play(T,c){
   const s=field(T,c.doors),u=T.hero(s),g=s.units[1];for(const other of s.units.slice(2))other.hp=0;
   Object.assign(u,{...c.heroAt,ap:20,hp:1e6,maxHp:1e6});Object.assign(g,{...c.guardAt,heading:c.heading,alert:true,lastKnown:{...c.heroAt},alertAge:0,hp:1e6});
   T.Core.refresh(s,{forceFog:true});
-  let fired=0,stalls=0,reversals=0,last=null;const ticks=[],stepping=[];
+  let fired=0,stalls=0,reversals=0,last=null,physicalShots=0,invalidShots=0,glassBreaches=0;const ticks=[],stepping=[];
   for(let round=0;round<4;round++){s.phase='player';s.engaged=true;let effect=s.effect;T.Core.endTurn(s);
     for(let f=0;s.phase==='enemy'&&f<3000;f++){
-      const at={x:g.x,y:g.y},ap=g.ap,shot=s.effect,t0=performance.now();T.tick(s,.05);const ms=performance.now()-t0;ticks.push(ms);
+      const at={x:g.x,y:g.y},ap=g.ap,shot=s.effect,zone=T.guardFireZone?.(s,g,u)??'torso',impact=T.confirmedImpact(s,g,u,zone),t0=performance.now();T.tick(s,.05);const ms=performance.now()-t0;ticks.push(ms);
       if(ap>.5&&g.ap===0&&s.effect===shot&&g.x===at.x&&g.y===at.y&&!T.canSee(s,g,u))stalls++;
       if(g.x!==at.x||g.y!==at.y){stepping.push(ms);const step={x:g.x-at.x,y:g.y-at.y};if(last&&step.x*last.x+step.y*last.y<-.5*Math.hypot(step.x,step.y)*Math.hypot(last.x,last.y))reversals++;last=step;}
-      if(s.effect!==effect){effect=s.effect;if(s.effect?.sequence?.[0]?.shooter===g.id)fired++;}
+      if(s.effect!==effect){effect=s.effect;if(s.effect?.sequence?.[0]?.shooter===g.id){fired++;
+        const w=T.Core.WEAPONS[g.weapon];if(w.mag&&!w.blast&&!w.incendiary)for(const event of s.effect.sequence){physicalShots++;if(impact?.box?.kind==='glass')glassBreaches++;else if(impact?.unit?.id!==u.id)invalidShots++;}
+      }}
     }}
-  return {fired,stalls,reversals,alert:g.alert,ticks,stepping,end:[+g.x.toFixed(2),+g.y.toFixed(2)]};
+  return {fired,stalls,reversals,alert:g.alert,state:T.guardState?.(g),physicalShots,invalidShots,glassBreaches,ticks,stepping,end:[+g.x.toFixed(2),+g.y.toFixed(2)]};
 }
 function oracle(c){
   const s=field(ref,c.doors),u=ref.hero(s),g=s.units[1];for(const other of s.units.slice(2))other.hp=0;Object.assign(u,c.heroAt);Object.assign(g,c.guardAt);
@@ -137,7 +144,7 @@ function doorshots(){
 }
 async function plays(){
   const {doorFootprint}=await import(pathToFileURL(path.join(trees[0][1],'sites/tactical-animal/dist/interactions.js')).href);
-  const T=ref,tally={turns:0,engaged:0,judged:0,noPlanGuards:0,noPlanAnimal:0,longerGuards:0,longerAnimal:0};
+  const T=ref,tally={turns:0,investigationTurns:0,engaged:0,judged:0,noPlanGuards:0,noPlanAnimal:0,longerGuards:0,longerAnimal:0};
   for(let run=0;run<+casesArg;run++){
     let s=field(T,false);for(const o of s.interactables)if(o.kind==='door'&&random()<.5){o.open=true;s.edges[o.edge]='door';}s={...s};
     const u=T.hero(s),guards=s.units.filter(g=>g.team==='guard'&&g.hp>0),doors=s.interactables.filter(o=>o.kind==='door');
@@ -150,13 +157,14 @@ async function plays(){
       else{const a=random()*Math.PI*2,r=3+random()*9;target={x:u.x+Math.cos(a)*r,y:u.y+Math.sin(a)*r};}
       const route=T.freePoint(s,target,u.id)?T.navigationPath(s,u,target.x,target.y):null;
       if(route){let at={x:u.x,y:u.y};for(const w of route){const n=Math.max(1,Math.ceil(dist(at,w)/.06));for(let i=1;i<=n;i++){u.x=at.x+(w.x-at.x)*i/n;u.y=at.y+(w.y-at.y)*i/n;T.Core.refresh(s);}at={x:w.x,y:w.y};}}
-      if(random()<.4){const range=T.Core.WEAPONS[u.weapon].range*2;for(const g of guards)if(dist(g,u)<=range){g.alert=true;g.lastKnown={x:u.x,y:u.y};g.alertAge=0;}}
+      if(random()<.4){const range=T.Core.WEAPONS[u.weapon].range*2;if(T.reportNoise)T.reportNoise(s,u,range);else for(const g of guards)if(dist(g,u)<=range){g.alert=true;g.lastKnown={x:u.x,y:u.y};g.alertAge=0;}}
       if(random()<.35&&doors.length){const o=random()<.75?doors.reduce((a,b)=>dist(a,u)<dist(b,u)?a:b):doors[Math.floor(random()*doors.length)],swing=doorFootprint(o,!o.open);
         if(!s.units.some(x=>x.hp>0&&Math.hypot(Math.max(swing.x0-x.x,0,x.x-swing.x1),Math.max(swing.y0-x.y,0,x.y-swing.y1))<.23)){o.open=!o.open;s.edges[o.edge]=o.open?'door':'closed-door';s={...s};T.Core.refresh(s,{forceFog:true});}}
       s.phase='player';s.engaged=true;u.ap=20;T.Core.endTurn(s);
-      const turns=new Map();
+      const turns=new Map(),investigating=new Set();
       for(let f=0;s.phase==='enemy'&&f<40000;f++){
         const g=s.units[s.enemyIndex];
+        if(g?.team==='guard'&&g.hp>0&&['suspicious','searching','standdown'].includes(T.guardState?.(g))&&!investigating.has(g.id)){investigating.add(g.id);tally.investigationTurns++;}
         if(g?.team==='guard'&&g.hp>0&&g.alert&&g.lastKnown&&!turns.has(g.id)&&s.enemyDelay<=.05&&g.ap>=g.maxAp-1e-9){
           // its first plan: with every unit where it stands, with none, and with the guards but not the animal
           const L={...g.lastKnown},others=s.units.filter(x=>x!==g&&x.hp>0),hp=others.map(x=>x.hp),plan=()=>{const p=T.approachPath(s,g,L);return p?p.reduce((t,w,i)=>t+dist(w,i?p[i-1]:g),0):Infinity;};
@@ -178,6 +186,7 @@ async function plays(){
   console.log(`${mission} play seed ${seedArg}: ${casesArg} runs of 12 rounds, ${tally.turns} guard turns (${tally.engaged} fired, saw the animal or heard it anew; ${tally.judged} with a plan of over 0.3 m once the way is clear)`);
   console.log(`no plan until the way is clear: other guards in it ${tally.noPlanGuards}, the animal ${tally.noPlanAnimal}`);
   console.log(`a plan over a metre longer: other guards in the way ${tally.longerGuards}, the animal ${tally.longerAnimal}`);
+  console.log(`investigation/return turns outside the alert-pursuit denominator: ${tally.investigationTurns}`);
 }
 if(mode==='doorway')doorways();else if(mode==='doorshot')doorshots();else if(mode==='play')await plays();else census();
 function census(){
@@ -197,10 +206,10 @@ if(mode==='props'){
     if(!ref.freePoint(probe,c.heroAt,null,{units:false})||!ref.freePoint(probe,c.guardAt,null,{units:false}))continue;
     if(mode==='blocked'&&ref.freePoint(probe,aimOf(c),null,{units:false}))continue;cases.push(c);}
 }
-const sum=Object.fromEntries(names.map(n=>[n,{fired:0,frozen:0,stalled:0,stuck:0,reachable:0,jitter:0,ticks:[],stepping:[]}]));let onlyFirst=0,onlySecond=0,both=0;const shots=[0,0];
+const sum=Object.fromEntries(names.map(n=>[n,{fired:0,frozen:0,investigating:0,stalled:0,stuck:0,reachable:0,jitter:0,physicalShots:0,invalidShots:0,glassBreaches:0,ticks:[],stepping:[]}]));let onlyFirst=0,onlySecond=0,both=0;const shots=[0,0];
 for(const c of cases){
-  const out=Object.fromEntries(names.map(n=>[n,play(M[n],c)])),frozen=names.filter(n=>!out[n].fired&&!out[n].alert);
-  for(const n of names){const S=sum[n],o=out[n];if(o.fired)S.fired++;if(o.reversals>3)S.jitter++;S.ticks.push(...o.ticks);S.stepping.push(...o.stepping);if(frozen.includes(n)){S.frozen++;if(o.stalls)S.stalled++;}}
+  const out=Object.fromEntries(names.map(n=>[n,play(M[n],c)])),frozen=names.filter(n=>!out[n].fired&&!out[n].alert&&(!out[n].state||out[n].state==='rest'));
+  for(const n of names){const S=sum[n],o=out[n];if(o.fired)S.fired++;if(['suspicious','searching','standdown'].includes(o.state))S.investigating++;for(const k of ['physicalShots','invalidShots','glassBreaches'])S[k]+=o[k];if(o.reversals>3)S.jitter++;S.ticks.push(...o.ticks);S.stepping.push(...o.stepping);if(frozen.includes(n)){S.frozen++;if(o.stalls)S.stalled++;}}
   if(names.length>1){const [a,b]=names;if(out[a].fired&&!out[b].fired)onlyFirst++;if(!out[a].fired&&out[b].fired)onlySecond++;if(out[a].fired&&out[b].fired){both++;shots[0]+=out[a].fired;shots[1]+=out[b].fired;}}
   if(frozen.length){const L=oracle(c);for(const n of frozen){if(L!==null&&L<=10)sum[n].reachable++;if(L!==null&&out[n].stalls)sum[n].stuck++;}
     if(process.env.ROWS)console.log(JSON.stringify({box:c.box,heroAt:[c.heroAt.x,c.heroAt.y],guardAt:[c.guardAt.x,c.guardAt.y],heading:c.heading,doors:c.doors,frozen,oracle:L,ends:Object.fromEntries(names.map(n=>[n,out[n].end]))}));}
@@ -208,5 +217,6 @@ for(const c of cases){
 const q=(a,p)=>a.length?+Float64Array.from(a).sort()[Math.min(a.length-1,Math.floor(p*(a.length-1)))].toFixed(2):0;
 console.log(`${mission} ${mode} seed ${seedArg}: ${cases.length} approaches`);
 for(const n of names){const S=sum[n];console.log(`${n}: fired ${S.fired}, frozen ${S.frozen} (stalled ${S.stalled}, ${S.stuck} of them with a firing node reachable; firing node within a 10 m walk ${S.reachable}), turned back >3 times ${S.jitter} | tick ms p99 ${q(S.ticks,.99)} p999 ${q(S.ticks,.999)} max ${q(S.ticks,1)}, stepping p50 ${q(S.stepping,.5)} p99 ${q(S.stepping,.99)}`);}
+for(const n of names){const S=sum[n];console.log(`${n}: physical shot oracle ${S.invalidShots} invalid / ${S.physicalShots} firearm rounds (${S.glassBreaches} deliberate pane breaches); ${S.investigating} guards still investigating at the four-round cutoff`);if(S.invalidShots)process.exitCode=1;}
 if(names.length>1)console.log(`engaged only in ${names[0]} ${onlyFirst}, only in ${names[1]} ${onlySecond}; both in ${both}, shots ${shots[0]} / ${shots[1]}`);
 }

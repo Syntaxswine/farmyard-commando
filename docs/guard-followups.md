@@ -122,3 +122,30 @@ These passed 22 focused checks (including all 54 flame gameplay comparisons) and
 fields intentionally change serialized replay hashes from the first command;
 later decision changes follow the explicit policies above, rather than a scenery
 or source-art change.
+
+## Replay and census evidence
+
+`tools/audit-guard-replays.mjs` snapshots the exact `783f45b` JavaScript import
+closure, reproduces every historical golden hash, then compares the candidate
+after every public command. `docs/reviews/guard-followups-replays.json` contains
+the revision, normalized runtime SHA-256 values, seeds, command counts, hashes,
+comparison definition and the first differences. New guard metadata is listed
+separately from the played-state comparison. Original goldens remain unchanged;
+`guard-followups-baseline.json` pins the reviewed new behavior.
+
+| Mission / seed | Commands | First changed played command (zero based) | Reason |
+| --- | ---: | --- | --- |
+| Night Ledger / 3 | 150 | 8: grenade | Sound investigation replaces an unobserved hostile fix. |
+| Night Ledger / 4 | 150 | 40: shot | Listeners investigate the sound source. |
+| Night Ledger / 6 | 150 | 5: flame | Listeners investigate the sound source. |
+| Night Ledger / 8 | 200 | 13: shot | Listeners investigate the sound source. |
+| Road Checkpoint / 1 | 40 | 30: end turn | Resting guards no longer accrue unseen alert age. |
+| Road Checkpoint / 2 | 40 | None | Played state stays equal; physical preview/metadata changes only. |
+
+The census prints revision/module hashes, seed, requested/actual denominator,
+timings, and a physical chosen-zone shot oracle. A firearm round is invalid when
+its pre-discharge first impact is neither its target nor deliberately targeted
+glass. An active search at the four-round cutoff is reported separately from a
+settled guard that never fired. Historical counts are not used as new results.
+The browser workflow accepts the Coldwell base branch as well as main so this
+stacked draft gets the same exact-head native checks before integration.

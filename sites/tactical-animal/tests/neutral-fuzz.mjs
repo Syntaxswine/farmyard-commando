@@ -13,7 +13,7 @@ function digest(M,s){
   const flame=u.weapon==='flamethrower'?JSON.stringify(M.Core.previewFlame(s,u,u.heading)):'';
   return M.encodeSave(s)+'|'+JSON.stringify({visible:M.Core.visibleOpponents(s).map(g=>g.id),attacks,near})+'|'+flame;
 }
-export function fuzzRun(M,missionId,seed,steps){
+export function fuzzRun(M,missionId,seed,steps,{onStep}={}){
   const r=rng(seed*7919),build={animal:'rifleman',primary:PRIMARIES[seed%PRIMARIES.length],secondary:'pistol',utility:seed%2?'grenade':'dressing'};
   const s=M.createSoloGame(build,1947+seed,missionId);let hash='';
   for(let step=0;step<steps;step++){
@@ -28,6 +28,7 @@ export function fuzzRun(M,missionId,seed,steps){
     else{const pick=r(),near=M.Core.nearbyInteractions(s);if(near.length){const o=near[Math.floor(pick*near.length)],act=o.actions.find(a=>a.ok);if(act)M.Core.performInteraction(s,o.id,act.id);}}
     for(let i=0;i<400&&s.phase==='enemy';i++)M.tick(s,.05);
     hash=createHash('sha256').update(hash+digest(M,s)).digest('hex');
+    if(onStep)onStep({step,roll,state:s,previews:s.units.filter(g=>g.team==='guard').map(g=>{const p=M.Core.previewAttack(s,M.hero(s),g);return {id:g.id,ok:p.ok,reason:p.reason,chance:p.chance,cover:p.cover};})});
   }
   return hash;
 }

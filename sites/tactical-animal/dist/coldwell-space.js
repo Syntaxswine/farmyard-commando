@@ -78,13 +78,13 @@ export function trianglesDistanceSq(a,b){
 }
 // A translating vertical capsule sweeps a parallelogram plus its radius.
 // Three's existing triangle/ray/closest-point math supplies the narrow phase.
-export function capsuleTriangleHit(a,b,height,radius,triangle){
+export function capsuleTriangleHit(a,b,height,radius,triangle,padding=0){
   // A prone body's 46 cm footprint cannot form a capsule shorter than its
   // diameter. Keep the conservative footprint rather than inverting its axis.
   height=Math.max(height,2*radius);
   const low=p=>new Vector3(p.x,p.h+radius,p.y),high=p=>new Vector3(p.x,p.h+height-radius,p.y);
   const al=low(a),ah=high(a),bl=low(b),bh=high(b);
-  if(al.distanceToSquared(bl)<1e-14)return segmentTriangleDistanceSq(al,ah,triangle)<(radius-4e-5)**2;
+  if(al.distanceToSquared(bl)<1e-14)return segmentTriangleDistanceSq(al,ah,triangle)<(radius+padding-4e-5)**2;
   const one=new Triangle(al,ah,bh),two=new Triangle(al,bh,bl);
-  return Math.min(trianglesDistanceSq(one,triangle),trianglesDistanceSq(two,triangle))<(radius-4e-5)**2;
+  return Math.min(trianglesDistanceSq(one,triangle),trianglesDistanceSq(two,triangle))<(radius+padding-4e-5)**2;
 }

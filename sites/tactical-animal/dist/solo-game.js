@@ -17,6 +17,7 @@ export {tankExplosionChance} from './solo-fuel.js';
 import {gridDimensions,worldBounds} from './world-grid.js';
 import {PathFrontier} from './path-frontier.js';
 import {providerFor,attachSpatial,actorEye,actorHeight,spatialDistance,floorKey} from './spatial-provider.js';
+import {restoreColdwellBase,validateColdwellObjects} from './coldwell-save.js';
 import {DEFAULT_MISSION_ID,getMission,missionForState,missionMap,objectiveSecured} from './missions.js';
 export {MISSIONS,DEFAULT_MISSION_ID,getMission,missionForState,missionMap,objectiveSecured,missionDestination} from './missions.js';
 
@@ -33,6 +34,7 @@ export const BRIEF=getMission(DEFAULT_MISSION_ID);
 export const distance=(a,b)=>a.h!==undefined&&b.h!==undefined?Math.hypot(a.x-b.x,a.y-b.y,a.h-b.h):Math.hypot(a.x-b.x,a.y-b.y);
 export const key=(x,y)=>`${Math.round(x)},${Math.round(y)}`;
 export const cellKey=(s,point)=>s.spatial?floorKey({...point,floorId:point.floorId??hero(s).floorId}):key(point.x,point.y);
+export const visibleCells=(s,floor=hero(s).floorId)=>s.spatial?providerFor(s).combat.visibleCells(s,floor):s.visible;
 const rememberedPoint=u=>({x:u.x,y:u.y,...(u.h!==undefined?{h:u.h,floorId:u.floorId,...(u.stairId?{stairId:u.stairId}:{})}:{})});
 export const hero=s=>s.units.find(u=>u.team==='squad');
 export const alive=u=>!!u&&u.hp>0;
@@ -40,7 +42,7 @@ export const movementModeOf=u=>u.sneaking?'sneak':u.running?'run':'walk';
 export const movementRate=u=>(u.stance==='prone'?8:u.stance==='kneeling'?4:2)*(u.running?.5:u.sneaking?1.5:1);
 export const movementSpeed=u=>(u.stance==='prone'?.9:u.stance==='kneeling'?1.8:3.6)*(u.running?2:u.sneaking?.5:1);
 export const combatCosts=s=>['player','enemy'].includes(s.phase)||s.units.some(g=>g.team==='guard'&&alive(g)&&g.alert);
-export const canControl=(s,u)=>alive(u)&&!u.burningTurns&&u.team==='squad'&&['explore','player','won'].includes(s.phase)&&s.solo.status==='active';
+export const canControl=(s,u)=>alive(u)&&!u.burningTurns&&u.team==='squad'&&['explore','player','won'].includes(s.phase)&&s.solo.status==='active'&&(!s.spatial||!providerFor(s).isMoving(s));
 export function validBuild(b){return !!b&&ANIMALS.some(a=>a.id===b.animal)&&PRIMARY.includes(b.primary)&&SECONDARY.includes(b.secondary)&&UTILITIES.includes(b.utility);}
 export function normalizeBuild(b){return validBuild(b)?{animal:b.animal,primary:b.primary,secondary:b.secondary,utility:b.utility}:{...DEFAULT_BUILD};}
 export function buildStats(b){const p=ANIMALS.find(a=>a.id===b.animal),u={team:'squad',name:p.name};initializeStats(u,p.stats);return u;}
@@ -68,6 +70,10 @@ export function createSoloGame(build=DEFAULT_BUILD,seed=1947,missionId=DEFAULT_M
   if(mission.fallen){const f=mission.fallen,fallen=makeUnit(units.length,'guard',f.name,f.species,f.weapon,f.x,f.y,f.heading,stats);fallen.hp=0;fallen.casualty='dead';units.push(fallen);}
   const s={map:m.terrain,edges:m.edges,units,interactables:missionInteractables({missionId:mission.id,layoutVersion:mission.layoutVersion??1}),phase:'explore',round:0,selected:0,visible:new Set(),seen:new Set(),detected:new Set(),log:[],seed,revision:0,queue:[],enemyIndex:1,enemyDelay:0,elapsed:0,solo:{version:2,missionId:mission.id,layoutVersion:mission.layoutVersion??1,build:{...build},objectives:{},inspected:[],ledger:false,status:'active',dressings:build.utility==='dressing'?2:0,distance:0,apDistance:0}};
   if(authoredMap)s.solo.authoredMap=structuredClone(authoredMap);
+  if(m.spatialProvider){
+    const provider=attachSpatial(s,m.spatialProvider);s.interactables.push(...structuredClone(m.interactables||[]));
+    for(const [i,unit]of s.units.entries()){const position=i===0?spawn:posts[i-1];unit.h=position.h;unit.floorId=position.floorId;unit.z=provider.floorById.get(unit.floorId)?.index;if(!provider.occupancy(s,unit,unit,{units:false}))throw Error('Coldwell actor needs valid source support and clearance: '+unit.name);}
+  }
   mapMetadata(s,m);windowSystem.restore(s);interactionRules.restore(s);refresh(s);log(s,mission.briefing);return s;
 }
 const geometryCache=new WeakMap(),GEOMETRY_BUCKET=8;
@@ -210,10 +216,14 @@ export function visibleOpponents(s){
 }
 function visibility(s){
   const provider=providerFor(s);if(provider){
-    const u=hero(s),range=35;s.visible=new Set();
-    for(let y=Math.max(0,Math.ceil(u.y-range));y<=Math.min(239,Math.floor(u.y+range));y++)for(let x=Math.max(0,Math.ceil(u.x-range));x<=Math.min(239,Math.floor(u.x+range));x++){
-      const p={x,y,h:u.h,floorId:u.floorId};if(distance(u,p)>range||!provider.supportAt(s,p,{radius:0,maxRise:.04,maxDrop:.04}))continue;
-      if(lineClear(s,u,p)){const k=cellKey(s,p);s.visible.add(k);s.seen.add(k);}
+    const u=hero(s),range=35;s.visible=new Set([cellKey(s,u)]);s.seen.add(cellKey(s,u));
+    for(const p of provider.visibilityPoints(u,range)){
+      if(!provider.trace(s,{x:u.x,y:u.y,h:actorEye(u)},{...p,h:p.h+.04},{purpose:'sight'})){const k=cellKey(s,p);s.visible.add(k);s.seen.add(k);}
+    }
+    // A visible chest or door must not conceal itself by occluding the ground
+    // underneath its own footprint. Reveal its cell from its actual surface.
+    for(const object of s.interactables)if(Number.isFinite(object.h)&&distance(u,object)<=range&&!provider.trace(s,{x:u.x,y:u.y,h:actorEye(u)},{x:object.x,y:object.y,h:object.h+(object.anchorHeight??.8)},{purpose:'sight',ignoreRig:object.rigId||object.id})){
+      const k=cellKey(s,object);s.visible.add(k);s.seen.add(k);
     }
     s.fogAt=rememberedPoint(u);return;
   }
@@ -309,18 +319,20 @@ const random=s=>{s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed
 export const grenadeCost=u=>WEAPONS.grenade.cost*(['pistol','pistol-offhand','smg'].includes(u.weapon)?.5:1);
 export function grenadeTrajectory(a,b){
   const rise=Math.min(2.5,distance(a,b)*.35);
-  return Array.from({length:33},(_,i)=>{const t=i/32;return {x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:1.1*(1-t)+.08*t+Math.sin(t*Math.PI)*rise};});
+  return Array.from({length:33},(_,i)=>{const t=i/32;return {x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.h!==undefined&&b.h!==undefined?(a.h+1.1)*(1-t)+(b.h+.08)*t+Math.sin(t*Math.PI)*rise:1.1*(1-t)+.08*t+Math.sin(t*Math.PI)*rise};});
 }
 function grenadePathBlocked(s,path){
+  if(s.spatial)return path.slice(1).some((b,i)=>providerFor(s).trace(s,{x:path[i].x,y:path[i].y,h:path[i].z},{x:b.x,y:b.y,h:b.z},{purpose:'shot'}));
   return geometryNear(s,path[0],path.at(-1),0,'air').some(box=>{
     for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i];if(airSpan(a,b,a.z,b.z,box))return true;}
     return false;
   });
 }
-export const grenadeAffects=(s,point,target)=>distance(target,point)<=WEAPONS.grenade.blast&&lineClear(s,point,target);
+export const grenadeAffects=(s,point,target)=>s.spatial?providerFor(s).combat.blastAffects(s,point,target,WEAPONS.grenade.blast):distance(target,point)<=WEAPONS.grenade.blast&&lineClear(s,point,target);
 // The fill stops at walls and unexplored ground. The outer ring still shows the
 // maximum blast radius; neither the preview nor its camera changes visibility.
 export function grenadeBlastFootprint(s,point){
+  if(s.spatial){const landing=providerFor(s).combat.grenadeLanding(s,hero(s),point);return landing?providerFor(s).combat.blastFootprint(s,landing,WEAPONS.grenade.blast):[];}
   if(!s.seen.has(key(point.x,point.y)))return [];
   const radius=WEAPONS.grenade.blast,walls=geometryNear(s,point,point,radius,'wall');
   return Array.from({length:97},(_,i)=>{
@@ -332,6 +344,11 @@ export function grenadeBlastFootprint(s,point){
   });
 }
 export function previewGrenade(s,u,point){
+  if(s.spatial){
+    const provider=providerFor(s),landing=provider.combat.grenadeLanding(s,u,point),w=WEAPONS.grenade,cost=grenadeCost(u),d=landing?distance(u,landing):Infinity;let reason='';
+    if(!canControl(s,u))reason='Wait for your turn';else if(!(u.ammo.grenade>0))reason='No grenades remaining';else if(!landing)reason='Choose a supported landing point';else if(!s.seen.has(cellKey(s,landing)))reason='Choose an explored landing point';else if(d>w.range+EPS)reason='Out of throwing range';else if(grenadePathBlocked(s,grenadeTrajectory(u,landing)))reason='Throw path is blocked';else if(u.ap+EPS<cost)reason='Not enough AP';
+    return {ok:!reason,reason,cost,point:landing,distance:d,blast:w.blast,discounted:cost<w.cost,selfDanger:!!landing&&grenadeAffects(s,landing,u)};
+  }
   const w=WEAPONS.grenade,cost=grenadeCost(u),valid=point&&Number.isFinite(point.x)&&Number.isFinite(point.y),d=valid?distance(u,point):Infinity;
   let reason='';
   if(!canControl(s,u))reason='Wait for your turn';
@@ -346,6 +363,7 @@ export function previewGrenade(s,u,point){
 }
 export function throwGrenade(s,u,point){
   const p=previewGrenade(s,u,point);if(!p.ok)return false;
+  if(s.spatial)point=p.point;
   stop(s);if(s.phase!=='player'){s.engaged=true;refresh(s);}
   u.ap=Math.max(0,u.ap-p.cost);u.ammo.grenade--;syncAmmo(u,'grenade');u.heading=headingTo(u,point);
   const impactEvent={explosions:[]},fireBefore=s.fireAnimationSequence||0,windowBefore=s.windowSequence||0;
@@ -355,13 +373,14 @@ export function throwGrenade(s,u,point){
   windowBlast(s,point,p.blast);
   log(s,`${u.name} threw a grenade (${p.cost} AP).`);
   for(const guard of s.units.filter(g=>g.team==='guard'&&alive(g)))if(distance(u,guard)<=WEAPONS.grenade.range*2){guard.alert=true;guard.lastKnown=rememberedPoint(u);guard.alertAge=0;}
-  s.effect={sequence:[{shooter:u.id,ax:u.x,ay:u.y,bx:point.x,by:point.y,hit:hits>0,weapon:'grenade',blast:p.blast,...impactEvent,windowSequences:windowReceipts(s,windowBefore),fireSequences:(s.fireAnimations||[]).filter(e=>e.sequence>fireBefore).map(e=>e.sequence)}]};
+  s.effect={sequence:[{shooter:u.id,ax:u.x,ay:u.y,bx:point.x,by:point.y,...(s.spatial?{ah:u.h,bh:point.h}:{}),hit:hits>0,weapon:'grenade',blast:p.blast,...impactEvent,windowSequences:windowReceipts(s,windowBefore),fireSequences:(s.fireAnimations||[]).filter(e=>e.sequence>fireBefore).map(e=>e.sequence)}]};
   refresh(s);return true;
 }
-export function previewAttack(s,a,b,burst=false,zone='torso',token=null,aimLevel='hip'){if(b?.ground)return previewPointAttack(s,a,b,burst,aimLevel);if(!alive(a)||!alive(b)||a.team===b.team)return {ok:false,reason:'Choose a living opponent'};if(a.weapon==='grenade'){if(!s.detected.has(b.id))return {ok:false,reason:'Target is not visible'};return {...previewGrenade(s,a,b),chance:100,rounds:1,cover:0};}const w=WEAPONS[a.weapon],aim=shotAim(w,aimLevel,burst),cost=aim.cost,d=distance(a,b),rounds=burst&&w.burstRounds?w.burstRounds:1;let reason='';if(a.team==='squad'&&!s.detected.has(b.id))reason='Target is not visible';else if(a.burningTurns)reason='On fire: running in panic';else if(!lineClear(s,a,b)&&!w.arc)reason='Blocked by a wall';else if(d>w.range+EPS)reason='Out of range';else if(w.mag&&(a.ammo[a.weapon]??0)<rounds)reason='Reload first';else if((combatCosts(s)||a.team==='guard')&&a.ap+EPS<cost)reason='Not enough AP';const cover=geometryNear(s,b,b,.9,'walk').some(box=>(box.kind==='crate'||box.cover)&&pointBoxDistance(b,box)<.9&&intersectsBox(a,b,{x0:box.x0-.3,x1:box.x1+.3,y0:box.y0-.3,y1:box.y1+.3}))?20:0;const chance=Math.max(5,Math.min(95,weaponAccuracy(a)+(w.accuracy||0)-(w.rangeLoss||0)*d/w.range+(aim.accuracy||0)+(AIM_ZONES[zone]?.accuracy||0)-cover+(a.stance==='kneeling'?5:a.stance==='prone'?10:0)));return {ok:!reason,reason,cost,chance:Math.round(chance),rounds,distance:d,cover};}
+export function previewAttack(s,a,b,burst=false,zone='torso',token=null,aimLevel='hip'){if(b?.ground)return previewPointAttack(s,a,b,burst,aimLevel);if(!alive(a)||!alive(b)||a.team===b.team)return {ok:false,reason:'Choose a living opponent'};if(a.weapon==='grenade'){if(!s.detected.has(b.id))return {ok:false,reason:'Target is not visible'};return {...previewGrenade(s,a,b),chance:100,rounds:1,cover:0};}const w=WEAPONS[a.weapon],aim=shotAim(w,aimLevel,burst),cost=aim.cost,d=distance(a,b),rounds=burst&&w.burstRounds?w.burstRounds:1;let reason='';if(a.team==='squad'&&!s.detected.has(b.id))reason='Target is not visible';else if(a.burningTurns)reason='On fire: running in panic';else if(!lineClear(s,a,b)&&!w.arc)reason='Blocked by a wall';else if(d>w.range+EPS)reason='Out of range';else if(w.mag&&(a.ammo[a.weapon]??0)<rounds)reason='Reload first';else if((combatCosts(s)||a.team==='guard')&&a.ap+EPS<cost)reason='Not enough AP';const cover=s.spatial?providerFor(s).combat.cover(s,a,b):geometryNear(s,b,b,.9,'walk').some(box=>(box.kind==='crate'||box.cover)&&pointBoxDistance(b,box)<.9&&intersectsBox(a,b,{x0:box.x0-.3,x1:box.x1+.3,y0:box.y0-.3,y1:box.y1+.3}))?20:0;const chance=Math.max(5,Math.min(95,weaponAccuracy(a)+(w.accuracy||0)-(w.rangeLoss||0)*d/w.range+(aim.accuracy||0)+(AIM_ZONES[zone]?.accuracy||0)-cover+(a.stance==='kneeling'?5:a.stance==='prone'?10:0)));return {ok:!reason,reason,cost,chance:Math.round(chance),rounds,distance:d,cover};}
 function kill(s,u){const living=alive(u);u.hp=0;u.ap=0;u.casualty='dead';u.burningTurns=0;u.isMoving=false;interactionRules.registerBody(s,u);if(living)log(s,u.name+' is down.');}
 function hurt(s,u,damage){if(!alive(u))return;u.hp=Math.max(0,u.hp-damageAfterResistance(u,damage));if(!u.hp)kill(s,u);}
 function flameAffects(s,a,u,heading){
+  if(s.spatial)return providerFor(s).combat.flameAffects(s,a,u,heading,WEAPONS.flamethrower.range);
   const angle=Math.abs(((headingTo(a,u)-heading+540)%360)-180);
   if(!alive(u)||u.id===a.id||distance(a,u)>WEAPONS.flamethrower.range||angle>=24)return false;
   const source=eyeHeight(a),heights=u.stance==='prone'?[.3,.42,.15]:u.stance==='kneeling'?[.75,1.15,.2]:[1.1,1.75,.5];
@@ -371,10 +390,11 @@ function flameAffects(s,a,u,heading){
   if(blockers.some(box=>box.windowPart&&boxInterval(a,u,box)?.[1]>EPS&&!!airSpan(a,u,source,source,box)))return false;
   return heights.some(height=>!blockers.some(box=>{if(box.windowPart)return false;const span=boxInterval(a,u,box);return !!span&&span[1]>EPS&&span[0]<1-EPS&&!!airSpan(a,u,source,height,box);}));
 }
+const flameShape=(s,a,range)=>s.spatial?providerFor(s).combat.flameShape(s,a,range):recordFlame(a,range,geometryNear(s,a,a,range,'flame'),s.visible);
 function resolveFlame(s,a,event={explosions:[]}){
   const impacts=[];
   for(const u of s.units)if(flameAffects(s,a,u,a.heading)){
-    const before=u.hp,visible=s.visible.has(key(u.x,u.y))&&(u.team==='squad'||s.detected.has(u.id));
+    const before=u.hp,visible=s.visible.has(cellKey(s,u))&&(u.team==='squad'||s.detected.has(u.id));
     if(!detonateImpact(s,a,u,'torso',WEAPONS.flamethrower,event)){kill(s,u);recordBurn(s,u,'ash');}
     impacts.push({id:u.id,x:u.x,y:u.y,before,after:u.hp,dead:!alive(u),visible});
   }
@@ -388,15 +408,15 @@ export function previewFlame(s,a,heading){
   else if(!(a.ammo.flamethrower>0))reason='Reload first';
   else if(a.ap+EPS<w.cost)reason='Not enough AP';
   const direction=valid?((heading%360)+360)%360:a.heading;
-  const shape=recordFlame({...a,heading:direction},w.range,geometryNear(s,a,a,w.range,'flame'),s.visible);
-  const contacts=s.units.filter(u=>(u.team==='squad'||s.detected.has(u.id))&&s.visible.has(key(u.x,u.y))&&flameAffects(s,a,u,direction)).map(u=>({id:u.id,name:u.name,team:u.team}));
+  const shape=flameShape(s,{...a,heading:direction},w.range);
+  const contacts=s.units.filter(u=>(u.team==='squad'||s.detected.has(u.id))&&s.visible.has(cellKey(s,u))&&flameAffects(s,a,u,direction)).map(u=>({id:u.id,name:u.name,team:u.team}));
   return {ok:!reason,reason,cost:w.cost,range:w.range,spread:48,heading:direction,shape,contacts};
 }
 export function fireFlame(s,a,heading){
   const p=previewFlame(s,a,heading);if(!p.ok)return false;
   stop(s);if(s.phase!=='player'){s.engaged=true;refresh(s);}
   a.ap=Math.max(0,a.ap-p.cost);a.ammo.flamethrower--;syncAmmo(a,'flamethrower');a.heading=p.heading;
-  const impactEvent={explosions:[]},fireBefore=s.fireAnimationSequence||0,windowBefore=s.windowSequence||0,flame=recordFlame(a,p.range,geometryNear(s,a,a,p.range,'flame'),s.visible),impacts=resolveFlame(s,a,impactEvent),angle=a.heading*Math.PI/180;
+  const impactEvent={explosions:[]},fireBefore=s.fireAnimationSequence||0,windowBefore=s.windowSequence||0,flame=flameShape(s,a,p.range),impacts=resolveFlame(s,a,impactEvent),angle=a.heading*Math.PI/180;
   log(s,`${a.name} fired a flamethrower cone (${p.cost} AP).`);
   for(const guard of s.units.filter(u=>u.team==='guard'&&alive(u)))if(distance(a,guard)<=p.range*2){guard.alert=true;guard.lastKnown=rememberedPoint(a);guard.alertAge=0;}
   s.effect={sequence:[{shooter:a.id,ax:a.x,ay:a.y,bx:a.x+Math.cos(angle)*p.range,by:a.y+Math.sin(angle)*p.range,incendiary:true,hit:impacts.length>0,weapon:'flamethrower',shot:0,shots:1,flame,impacts,...impactEvent,windowSequences:windowReceipts(s,windowBefore),fireSequences:(s.fireAnimations||[]).filter(e=>e.sequence>fireBefore).map(e=>e.sequence)}]};
@@ -426,6 +446,7 @@ export function previewPointAttack(s,a,point,burst=false,aimLevel='hip'){
   return {ok:!reason,reason,cost:aim?.cost??0,rounds,distance:d,cover:0,chance:Math.round(Math.max(5,Math.min(95,weaponAccuracy(a)+(w?.accuracy||0)-(w?.rangeLoss||0)*d/(w?.range||1)+(aim?.accuracy||0))))};
 }
 export function confirmedImpact(s,a,b,zone='torso'){
+  if(s.spatial)return providerFor(s).combat.impact(s,a,b,zone);
   const dx=b.x-a.x,dy=b.y-a.y,length2=dx*dx+dy*dy,source=eyeHeight(a),height=bodyHeight;
   const end=b.ground?b.h:zone==='head'?height(b):zone==='legs'?height(b)*.25:height(b)*.62,dh=end-source;
   let blocked=1+EPS,obstacle=null;
@@ -446,11 +467,11 @@ export function attack(s,a,b,burst=false,byAI=false,zone='torso',reaction=false,
   const hp=b.hp??0,sequence=[];let hits=0;
   for(let round=0;round<p.rounds&&alive(a)&&!a.burningTurns;round++){
     if(w.mag&&!(a.ammo[weapon]>0))break;if(w.mag){a.ammo[weapon]--;syncAmmo(a,weapon);}
-    const fireBefore=s.fireAnimationSequence||0,windowBefore=s.windowSequence||0,event={shooter:a.id,target:b.id,ax:a.x,ay:a.y,bx:b.x,by:b.y,incendiary:w.incendiary,hit:false,weapon,shot:round,explosions:[]};sequence.push(event);
-    if(w.incendiary){event.flame=recordFlame(a,w.range,geometryNear(s,a,a,w.range,'flame'),s.visible);event.impacts=resolveFlame(s,a,event);event.hit=event.impacts.length>0;}
+    const fireBefore=s.fireAnimationSequence||0,windowBefore=s.windowSequence||0,event={shooter:a.id,target:b.id,ax:a.x,ay:a.y,bx:b.x,by:b.y,...(s.spatial?{ah:a.h,bh:b.h+bodyHeight(b)*.62}:{}),incendiary:w.incendiary,hit:false,weapon,shot:round,explosions:[]};sequence.push(event);
+    if(w.incendiary){event.flame=flameShape(s,a,w.range);event.impacts=resolveFlame(s,a,event);event.hit=event.impacts.length>0;}
     else if(w.blast){
-      const impact=confirmedImpact(s,a,b,zone),origin=impact?.box?.windowPart?impact.point:b;event.bx=origin.x;event.by=origin.y;
-      for(const victim of s.units.filter(alive))if(alive(victim)&&distance(victim,origin)<=w.blast&&lineClear(s,origin,victim)){if(!detonateImpact(s,a,victim,'torso',w,event))hurt(s,victim,Math.round(w.damage*Math.max(.2,1-distance(victim,origin)/(w.blast+1))));event.hit=true;}
+      const impact=confirmedImpact(s,a,b,zone),origin=s.spatial?impact?.point||b:impact?.box?.windowPart?impact.point:b;event.bx=origin.x;event.by=origin.y;if(s.spatial)event.bh=origin.h;
+      for(const victim of s.units.filter(alive))if(alive(victim)&&(s.spatial?providerFor(s).combat.blastAffects(s,origin,victim,w.blast):distance(victim,origin)<=w.blast&&lineClear(s,origin,victim))){if(!detonateImpact(s,a,victim,'torso',w,event))hurt(s,victim,Math.round(w.damage*Math.max(.2,1-distance(victim,origin)/(w.blast+1))));event.hit=true;}
       windowBlast(s,origin,w.blast);
     }else{
       const rolledHit=random(s)*100<p.chance,impact=rolledHit?(w.mag||s.windows?.length?confirmedImpact(s,a,b,zone):alive(b)?{unit:b,zone}:null):null;
@@ -458,7 +479,7 @@ export function attack(s,a,b,burst=false,byAI=false,zone='torso',reaction=false,
         if(impact.box.kind==='glass'){const record=windowSystem.compile(s).find(r=>r.placement.id===impact.box.windowId),local=windowToLocal(record.placement,{...a,h:eyeHeight(a)});
           const broken=windowSystem.breakPane(s,impact.box.windowId,impact.box.paneId,impact.point,{cause:w.mag?'bullet':'melee',direction:local[2]<0?1:-1});if(broken){geometryCache.delete(s);event.glass=true;}
         }
-      }else if(impact?.unit){const victim=impact.unit;event.hit=true;event.impact={unitId:victim.id,zone:impact.zone};event.bx=victim.x;event.by=victim.y;
+      }else if(impact?.unit){const victim=impact.unit;event.hit=true;event.impact={unitId:victim.id,zone:impact.zone};event.bx=victim.x;event.by=victim.y;if(s.spatial)event.bh=impact.point?.h??victim.h+bodyHeight(victim)*.62;
         if(!detonateImpact(s,a,victim,impact.zone,w,event))hurt(s,victim,Math.round((w.pellets?w.damage*w.pellets*.48:w.damage)*(AIM_ZONES[impact.zone]?.damage||1)));
       }
     }
@@ -471,18 +492,18 @@ export function attack(s,a,b,burst=false,byAI=false,zone='torso',reaction=false,
 }
 export function equip(s,u,id){if(!canControl(s,u)||!u.pack.some(i=>i.kind===id)||u.weapon===id)return false;const cost=combatCosts(s)?u.slots.includes(id)?2:3:0;if(u.ap+EPS<cost)return false;stop(s);u.ap-=cost;u.weapon=id;log(s,'Equipped '+WEAPONS[id].name+'.');return true;}
 export function reload(s,u){if(!canControl(s,u))return false;const w=WEAPONS[u.weapon],count=Math.min(w.mag-(u.ammo[u.weapon]??0),u.ammoPouch[u.weapon]||0),cost=combatCosts(s)?3:0;if(!count||u.ap+EPS<cost)return false;stop(s);u.ap-=cost;u.ammo[u.weapon]+=count;u.ammoPouch[u.weapon]-=count;syncAmmo(u,u.weapon);log(s,'Reloaded '+count+' rounds.');return true;}
-export function endTurn(s){if(s.phase!=='player'||s.solo.status!=='active')return false;stop(s);for(const unit of s.units)fireRules.panicRun(s,unit);s.phase='enemy';s.enemyIndex=1;s.enemyDelay=.35;s.engaged=false;for(const g of s.units.filter(g=>g.team==='guard')){g.ap=g.burningTurns?0:g.maxAp;g.alertAge++;if(g.alertAge>3&&!canSee(s,g,hero(s)))g.alert=false;}s.revision++;return true;}
+export function endTurn(s){if(s.phase!=='player'||s.solo.status!=='active'||s.spatial&&providerFor(s).isMoving(s))return false;stop(s);for(const unit of s.units)fireRules.panicRun(s,unit);s.phase='enemy';s.enemyIndex=1;s.enemyDelay=.35;s.engaged=false;for(const g of s.units.filter(g=>g.team==='guard')){g.ap=g.burningTurns?0:g.maxAp;g.alertAge++;if(g.alertAge>3&&!canSee(s,g,hero(s)))g.alert=false;}s.revision++;return true;}
 // A guard within ARRIVED of its last waypoint has arrived. A route can also open at
 // its own grid node, inside that distance; it walks on to the next waypoint
 // instead of ending its turn there.
 const ARRIVED=.08;
 function enemyStep(s,dt){const u=hero(s);let g=s.units[s.enemyIndex];if(!g){fireRules.finishRound(s);s.round++;s.panicDelay=3;u.ap=alive(u)&&!u.burningTurns?u.maxAp:0;u.stamina=Math.min(u.maxStamina,u.stamina+10);s.phase='player';refresh(s);return;}if(!alive(g)||g.burningTurns||!g.alert||g.ap<.02){g.isMoving=false;s.enemyIndex++;s.enemyDelay=.15;return;}s.enemyDelay-=dt;if(s.enemyDelay>0)return;const p=previewAttack(s,g,u);if(p.ok&&canSee(s,g,u)){attack(s,g,u,false,true);s.enemyDelay=.6;return;}if(g.ammo[g.weapon]===0&&g.ap>=3){const count=Math.min(WEAPONS[g.weapon].mag,g.ammoPouch[g.weapon]||0);if(count){g.ammo[g.weapon]=count;g.ammoPouch[g.weapon]-=count;g.ap-=3;s.enemyDelay=.4;return;}}if(g.ap<WEAPONS[g.weapon].cost&&canSee(s,g,u)&&distance(g,u)<=WEAPONS[g.weapon].range){g.ap=0;return;}const path=approachPath(s,g,g.lastKnown||u),next=path?.length>1&&distance(g,path[0])<ARRIVED?path[1]:path?.[0];if(!next){g.ap=0;return;}const d=distance(g,next);if(d<ARRIVED){g.ap=0;return;}const step=Math.min(d,movementSpeed(g)*dt);if(!travel(s,g,(next.x-g.x)/d*step,(next.y-g.y)/d*step,{enemy:true,distanceBudget:step}))g.ap=0;}
-export function tick(s,dt=1/60,input=null){if(s.solo.status!=='active')return false;dt=Math.max(0,Math.min(.05,dt));s.elapsed+=dt;for(const u of s.units)u.isMoving=false;if(s.phase==='enemy'){enemyStep(s,dt);return true;}const u=hero(s);if(u.burningTurns){refresh(s);if(s.phase==='player'){s.panicDelay=Math.max(0,(s.panicDelay??3)-dt);if(!s.panicDelay)endTurn(s);}return true;}walkWhenExhausted(s,u);if(input&&Math.hypot(input.x,input.y)>.1){s.queue=[];const n=Math.max(1,Math.hypot(input.x,input.y));travel(s,u,input.x/n*movementSpeed(u)*dt,input.y/n*movementSpeed(u)*dt);}else if(s.queue.length){const p=s.queue[0],d=distance(u,p);if(d<.025)s.queue.shift();else{const step=Math.min(d,movementSpeed(u)*dt),moved=travel(s,u,(p.x-u.x)/d*step,(p.y-u.y)/d*step,{distanceBudget:step});if(!moved||s.phase==='player'&&u.ap<EPS)s.queue=[];}}else if(s.phase==='explore'||s.phase==='won')u.stamina=Math.min(u.maxStamina,u.stamina+dt*2);return true;}
+export function tick(s,dt=1/60,input=null){if(s.solo.status!=='active')return false;dt=Math.max(0,Math.min(.05,dt));s.elapsed+=dt;if(s.spatial&&providerFor(s).tick(s,dt)){refresh(s,{forceFog:!providerFor(s).isMoving(s)});return true;}for(const u of s.units)u.isMoving=false;if(s.phase==='enemy'){enemyStep(s,dt);return true;}const u=hero(s);if(u.burningTurns){refresh(s);if(s.phase==='player'){s.panicDelay=Math.max(0,(s.panicDelay??3)-dt);if(!s.panicDelay)endTurn(s);}return true;}walkWhenExhausted(s,u);if(input&&Math.hypot(input.x,input.y)>.1){s.queue=[];const n=Math.max(1,Math.hypot(input.x,input.y));travel(s,u,input.x/n*movementSpeed(u)*dt,input.y/n*movementSpeed(u)*dt);}else if(s.queue.length){const p=s.queue[0],d=distance(u,p);if(d<.025)s.queue.shift();else{const step=Math.min(d,movementSpeed(u)*dt),moved=travel(s,u,(p.x-u.x)/d*step,(p.y-u.y)/d*step,{distanceBudget:step});if(!moved||s.phase==='player'&&u.ap<EPS)s.queue=[];}}else if(s.phase==='explore'||s.phase==='won')u.stamina=Math.min(u.maxStamina,u.stamina+dt*2);return true;}
 const fireRules=createFireRules({kill,walkSegment,random,key,log});
 const fuelRules=createFuelRules({kill,ignite:fireRules.ignite,recordBurn,inside:insideWorld,log,windowBlast});
 export const ignite=(s,u)=>{const result=fireRules.ignite(s,u);if(result)refresh(s);return result;};
 export const enterFire=(s,u)=>{const result=fireRules.enterFire(s,u);if(result)refresh(s);return result;};
-const interactionRules=createInteractionSystem({hero,canControl,combatCosts,distance,geometry,blocksWalking,pointBoxDistance,refresh,stop,log,clearGeometry:s=>geometryCache.delete(s),weapons:WEAPONS,radius:RADIUS});
+const interactionRules=createInteractionSystem({hero,canControl,combatCosts,distance,geometry,spatial:providerFor,blocksWalking,pointBoxDistance,refresh,stop,log,clearGeometry:s=>geometryCache.delete(s),weapons:WEAPONS,radius:RADIUS});
 export const interactionObjects=s=>interactionRules.objects(s);
 export const nearbyInteractions=s=>interactionRules.nearby(s);
 export const previewInteraction=(s,id,action,itemId)=>interactionRules.preview(s,id,action,itemId);
@@ -498,11 +519,13 @@ export function decodeSave(text){
   const mission=missionForState(s);s.solo.missionId=mission.id;
   if(s.solo.authoredMap&&mission.id!==WINDOW_REVIEW_ID)throw Error('Unsupported authored operation save.');
   const map=s.solo.authoredMap?adaptAftSector(s.solo.authoredMap):missionMap(mission.id,mission.layoutVersion??1),{width,height}=gridDimensions(map),canonical={map:map.terrain,worldBounds:map.worldBounds};
+  if(!map.spatialProvider&&s.spatial)throw Error('Unexpected spatial save.');
+  const provider=map.spatialProvider?restoreColdwellBase(s,map):null;
   if(!Array.isArray(s.map)||s.map.length!==height||s.map.some(row=>!Array.isArray(row)||row.length!==width)||s.units.some(u=>!u||!insideWorld(canonical,u)||!Number.isFinite(u.hp)||!Number.isFinite(u.ap)||u.lastKnown&&!insideWorld(canonical,u.lastKnown)))throw Error('Unsupported solo save.');
   if(s.fogAt&&!insideWorld(canonical,s.fogAt))throw Error('Unsupported visibility save.');
-  const validCell=value=>{if(typeof value!=='string'||!/^\d+,\d+$/.test(value))return false;const [x,y]=value.split(',').map(Number);return x<width&&y<height&&insideWorld(canonical,{x,y});};
+  const validCell=value=>{if(typeof value!=='string')return false;let cell=value;if(provider){const parts=value.split('@');if(parts.length!==2||!provider.floorById.has(parts[0]))return false;cell=parts[1];}if(!/^\d+,\d+$/.test(cell))return false;const [x,y]=cell.split(',').map(Number);return x<width&&y<height&&insideWorld(canonical,{x,y});};
   if(['visible','seen'].some(name=>[...s[name]].some(value=>!validCell(value)))||[...s.detected].some(id=>!s.units.some(u=>u.id===id)))throw Error('Unsupported visibility save.');
-  if(!s.edges||typeof s.edges!=='object'||Array.isArray(s.edges)||Object.entries(s.edges).some(([edge,kind])=>{const match=/^[es]:(\d+):(\d+)$/.exec(edge);return !match||+match[1]>=width||+match[2]>=height||!['wall','door','closed-door'].includes(kind);}))throw Error('Unsupported geometry save.');
+  if(!provider&&(!s.edges||typeof s.edges!=='object'||Array.isArray(s.edges)||Object.entries(s.edges).some(([edge,kind])=>{const match=/^[es]:(\d+):(\d+)$/.exec(edge);return !match||+match[1]>=width||+match[2]>=height||!['wall','door','closed-door'].includes(kind); })))throw Error('Unsupported geometry save.');
   if(s.queue===undefined)s.queue=[];
   if(!Array.isArray(s.queue)||s.queue.some(p=>!p||!insideWorld(canonical,p,RADIUS)||!Number.isFinite(p.cost)||p.cost<0))throw Error('Unsupported movement save.');
   if(Array.isArray(s.interactables)&&s.interactables.some(object=>object?.kind!=='body'&&(!object||!insideWorld(canonical,object))))throw Error('Unsupported object save.');
@@ -515,7 +538,8 @@ export function decodeSave(text){
   if(s.solo.inspected===undefined)s.solo.inspected=[];
   if(!Array.isArray(s.solo.inspected)||s.solo.inspected.some(id=>!mission.clues.some(clue=>clue.id===id)))throw Error('Unsupported inspection save.');
   fireRules.restore(s,p=>insideWorld(canonical,p));fuelRules.restore(s);
-  return releaseFromScenery(interactionRules.restore(s));
+  interactionRules.restore(s);
+  return provider?validateColdwellObjects(s,mission):releaseFromScenery(s);
 }
 // The nearest spot around p (never p itself) where a unit could stand, scanned
 // outward in 5 cm rings of 32 bearings; null beyond maxRadius metres.
@@ -636,4 +660,4 @@ function releaseFromScenery(s){
   }
   return s;
 }
-export const Core={tankExplosionChance,ignite,enterFire,WEAPONS,AIM_ZONES,key,alive,movementModeOf,movementRate,movementSpeed,combatCosts,canControl,canSee,visibleOpponents,refresh,log,stop,travel,navigationPath,move,turnTo,setMovementMode,setStance,grenadeCost,grenadeTrajectory,grenadeAffects,grenadeBlastFootprint,previewGrenade,throwGrenade,previewFlame,fireFlame,previewPointAttack,previewAttack,attack,equip,reload,endTurn,headingTo,interactionObjects,nearbyInteractions,previewInteraction,performInteraction};
+export const Core={tankExplosionChance,ignite,enterFire,WEAPONS,AIM_ZONES,key,cellKey,visibleCells,alive,movementModeOf,movementRate,movementSpeed,combatCosts,canControl,canSee,visibleOpponents,refresh,log,stop,travel,navigationPath,move,turnTo,setMovementMode,setStance,grenadeCost,grenadeTrajectory,grenadeAffects,grenadeBlastFootprint,previewGrenade,throwGrenade,previewFlame,fireFlame,previewPointAttack,previewAttack,attack,equip,reload,endTurn,headingTo,interactionObjects,nearbyInteractions,previewInteraction,performInteraction};

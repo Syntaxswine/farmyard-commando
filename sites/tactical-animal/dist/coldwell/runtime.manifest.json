@@ -101,8 +101,8 @@
   "files": [
     {
       "file": "data.json",
-      "sha256": "d62209dcc527a5b68d41bcaa26179b22e8e72f4e8fe365cefeb4d827a30e38a6",
-      "bytes": 971972
+      "sha256": "53c081f7bcdf4bb52e55ec68d16abc879ab9091ad19ea92b446d9e0046039b89",
+      "bytes": 974186
     },
     {
       "file": "collision.bin.gz",

@@ -1,4 +1,8 @@
-import {ANIMALS,PRIMARY,SECONDARY,DEFAULT_BUILD,MISSIONS,DEFAULT_MISSION_ID,getMission,missionForState,missionMap,objectiveSecured,missionDestination,Core,normalizeBuild,buildStats,createSoloGame,hero,interaction,interact,dressing,tick,encodeSave,decodeSave,distance} from './solo-game.js';
+import {ANIMALS,PRIMARY,SECONDARY,DEFAULT_BUILD,DEFAULT_MISSION_ID,getMission,missionForState,missionMap,objectiveSecured,missionDestination,Core,normalizeBuild,buildStats,createSoloGame,hero,interaction,interact,dressing,tick,encodeSave,decodeSave,distance} from './solo-game.js';
+import {OPERATIONS} from './missions.js';
+import {prepareColdwell} from './coldwell-runtime.js';
+const coldwellTest=new URL(location.href).searchParams.get('coldwellTest'),privateColdwell=['traversal','recon'].includes(coldwellTest);
+const MISSIONS=privateColdwell?[...OPERATIONS,getMission('coldwell-traversal')]:OPERATIONS;
 import {FieldView,drawMinimap} from './field-view.js';
 import {cycleStep,nextCameraFocus,bindPressHold} from './mobile-controls.js';
 import {GrenadeAim,screenToGround} from './grenade-controls.js';
@@ -39,6 +43,7 @@ function button(parent,label,cls,pressed,onClick){const b=document.createElement
 function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,4000);}
 function renderMissionPreparation(){
   const mission=getMission(selectedMissionId),index=MISSIONS.indexOf(mission)+1;
+  document.querySelector('.edition').innerHTML='<i></i> SOLO OPERATIONS / '+String(OPERATIONS.length).padStart(2,'0');
   $('operation-select').innerHTML=MISSIONS.map(m=>`<option value="${m.id}">${safe(m.title)}</option>`).join('');$('operation-select').value=mission.id;
   $('operation-number').textContent='OP. '+String(index).padStart(3,'0');$('mission-location').textContent=mission.location;
   $('mission-heading').textContent=mission.title;$('briefing-text').textContent=mission.briefing;
@@ -66,8 +71,10 @@ function renderPrep(){renderMissionPreparation();const p=ANIMALS.find(a=>a.id===
   preparationBuilds[selectedMissionId]=normalizeBuild(build);
   try{operationStorage.savePreparation(selectedMissionId,build);}catch(error){storageWriteFailure('preparation changes',error);}
 }
+function prepareOperation(id){if(!getMission(id).spatialProvider)return null;$('deploy').disabled=true;return prepareColdwell({playable:!privateColdwell}).finally(()=>{$('deploy').disabled=false;});}
+let operationRequest=0;
 $('operation-select').onchange=()=>{
-  try{selectedMissionId=getMission($('operation-select').value).id;build=normalizeBuild(preparationBuilds[selectedMissionId]);renderPrep();}catch(error){toast(error.message);}
+  const request=++operationRequest;try{const id=getMission($('operation-select').value).id,commit=()=>{if(request!==operationRequest)return;selectedMissionId=id;build=normalizeBuild(preparationBuilds[id]);renderPrep();},pending=prepareOperation(id);if(pending)pending.then(commit,error=>{if(request===operationRequest){renderPrep();toast(error.message);}});else commit();}catch(error){renderPrep();toast(error.message);}
 };
 $('interaction-icon').append(weaponArtwork('hands',25));
 function showDialog(html,actions=[],{context=false,mode='',focusControl}={}){
@@ -104,14 +111,14 @@ function grenadeViewport(){
 function start(s,{resume=false}={}){try{
   if(state&&state!==s)storage.write();cancelAreaAim();resetStick();keys.clear();if(picker.open)closePicker();
   guardAlert.stop();guardContacts.reset([...(Array.isArray(s.solo.spottedGuardIds)?s.solo.spottedGuardIds:[]),...(resume?Core.visibleOpponents(s).map(guard=>guard.id):[])]);s.solo.spottedGuardIds=guardContacts.ids();
-  view?.dispose();$('loading').textContent='Preparing the field…';$('loading').hidden=false;state=s;selectedMissionId=s.solo.missionId;build=normalizeBuild(s.solo.build);Core.stop(s);delete s.effect;
+  view?.dispose();$('loading').textContent='Preparing the field…';$('loading').hidden=false;state=s;selectedMissionId=s.solo.missionId;build=normalizeBuild(s.solo.build);if(!resume||!s.spatial)Core.stop(s);delete s.effect;
   selected=null;interactionFocus=null;handTarget=null;grenadeAim.cancel();flameAim.cancel();lastHeldWeapon=hero(s).weapon;areaPress=false;aimViewport=null;contextKey='';resultShown=false;stanceDirection=1;movementDirection=-1;aim='hip';zone='torso';burst=false;
   $('prep').hidden=true;$('battle').hidden=false;document.body.classList.add('in-battle');active=true;paused=false;
-  view=new FieldView($('viewport'),{onPick:pick,getAimViewport:grenadeViewport,onLoading:busy=>{$('loading').hidden=!busy;},onError:message=>{$('loading').hidden=false;$('loading').textContent='Animal artwork could not load. '+message;}});
+  $('floor-controls').hidden=!s.spatial;view=new FieldView($('viewport'),{floorContainer:$('floor-controls'),onFloorChange:()=>{cancelAreaAim();resetStick();keys.clear();},onPick:pick,getAimViewport:grenadeViewport,onLoading:busy=>{$('loading').hidden=!busy;},onError:message=>{$('loading').hidden=false;$('loading').textContent='Animal artwork could not load. '+message;}});
   view.setGame(state);lastPhase=state.phase;lastTime=performance.now();lastUI=0;lastSave=lastTime;renderBattle();storage.write();
 }catch(error){active=false;view?.dispose();view=null;$('prep').hidden=false;$('battle').hidden=true;document.body.classList.remove('in-battle');toast('Cannot start 3D view: '+error.message);}}
 function backToPrep(){cancelAreaAim();resetStick();keys.clear();Core.stop(state);storage.write();guardAlert.stop();active=false;view?.dispose();view=null;$('battle').hidden=true;$('prep').hidden=false;document.body.classList.remove('in-battle');renderPrep();}
-$('deploy').onclick=()=>start(createSoloGame(build,1947,selectedMissionId));$('resume').onclick=()=>{try{const s=operationStorage.load(selectedMissionId);if(s.solo.status!=='active'){toast('That operation has ended. Deploy a new animal to begin again.');return;}start(s,{resume:true});}catch(error){toast('Could not resume: '+error.message);}};
+$('deploy').onclick=()=>{const id=selectedMissionId,chosen={...build},deploy=()=>start(createSoloGame(chosen,1947,id));try{const pending=prepareOperation(id);if(pending)pending.then(deploy,error=>toast(error.message));else deploy();}catch(error){toast(error.message);}};$('resume').onclick=()=>{const id=selectedMissionId,resume=()=>{try{const s=operationStorage.load(id);if(s.solo.status!=='active'){toast('That operation has ended. Deploy a new animal to begin again.');return;}start(s,{resume:true});}catch(error){toast('Could not resume: '+error.message);}};try{const pending=prepareOperation(id);if(pending)pending.then(resume,error=>toast(error.message));else resume();}catch(error){toast('Could not resume: '+error.message);}};
 function positionInteractionHand(){
   const button=$('interaction-hand');
   if(!handTarget||!active||paused||aiming()||!Core.canControl(state,hero(state))||!$('loading').hidden){button.hidden=true;return;}
@@ -154,6 +161,7 @@ function itemLabel(item){
   if(item.type==='ammo')return `${Core.WEAPONS[item.kind].short} ammunition ×${item.quantity}`;
   if(item.type==='dressing')return `Field dressing ×${item.quantity}`;
   if(item.type==='grenade')return `Frag grenade ×${item.quantity}`;
+  if(item.type==='mission')return item.name;
   return `${Core.WEAPONS[item.kind].name} · ${item.rounds} loaded`;
 }
 function lootWindow(id){
@@ -187,7 +195,7 @@ function reloadFromTrigger({targeting=false}={}){
 }
 function pick(p){if(!state||paused||aiming()||state.phase==='enemy'||state.solo.status!=='active')return;resetStick();if(p.interactionId){focusInteraction(p.interactionId);return;}if(p.unitId!==undefined){if(p.unitId===0){operationMenu();return;}const target=state.units.find(u=>u.id===p.unitId);if(target?.hp<=0){focusInteraction('body:'+target.id);return;}if(!state.detected.has(target?.id))return;if(hero(state).weapon==='flamethrower'){armFlame(Core.headingTo(hero(state),target));return;}Core.stop(state);Core.turnTo(state,hero(state),Core.headingTo(hero(state),target));selected={targetId:target.id};burst=false;aim=availableAim(Core.WEAPONS[hero(state).weapon],hero(state).ap);zone='torso';}
   else if(p.windowId){const u=hero(state);Core.stop(state);if(u.weapon==='flamethrower'){armFlame(Core.headingTo(u,p));return;}const target={...p,name:p.paneId?'Glass pane':'Window frame'},single=Core.previewPointAttack(state,u,target),burst=Core.previewPointAttack(state,u,target,true);showDialog(`<p class="eyebrow">WINDOW</p><h2>${safe(target.name)}</h2><p>Glass stops the first shot. Later shots pass through the opening. Frames and lower walls remain solid.</p>`,[[`Fire · ${single.cost} AP`,()=>act(()=>Core.attack(state,u,target)),'primary',!single.ok],...(Core.WEAPONS[u.weapon].burstRounds?[[`Burst · ${burst.cost} AP`,()=>act(()=>Core.attack(state,u,target,true)),'',!burst.ok]]:[]),['Return to operation',()=>{}]]);return;}
-  else{const path=Core.navigationPath(state,hero(state),p.x,p.y);if(!path){toast('No clear route to that point.');return;}view.route([hero(state),...path]);if(state.phase==='player')selected={point:p,path};else{Core.move(state,hero(state),p.x,p.y);selected=null;view.center();}}
+  else{const path=Core.navigationPath(state,hero(state),p.x,p.y,p);if(!path){toast('No clear route to that point.');return;}view.route([hero(state),...path]);if(state.phase==='player')selected={point:p,path};else{Core.move(state,hero(state),p.x,p.y,p);selected=null;view.center();}}
   contextKey='';renderBattle();if(selected)selected.targetId!==undefined?shootingMenu():operationMenu();
 }
 function shootingMenu(focusControl='zone-'+zone){
@@ -251,7 +259,7 @@ function renderContext(focusControl){if(!state)return;const u=hero(state),near=i
     const warning=reload.empty?reload.reason:p.reason||(!chosen.available?'Not enough AP':'');
     if(warning||w.blast){const note=document.createElement('p');note.className='shooting-warning';note.setAttribute('role','status');note.textContent=[warning,w.blast?'BLAST CAN HURT YOU':''].filter(Boolean).join(' · ');root.append(note);}
     restoreFocus?.focus?.({preventScroll:true});
-  }else if(selected?.point){const path=Core.navigationPath(state,u,selected.point.x,selected.point.y),cost=path?.reduce((n,p)=>n+p.cost,0)||0,d=cost/Core.movementRate(u);content('Move to this point',`${d.toFixed(1)} m · ${cost.toFixed(1)} AP${cost>u.ap?' · stops when AP runs out':''}`,'Move',()=>{Core.move(state,u,selected.point.x,selected.point.y);selected=null;view.center();},!path||u.ap<.01);
+  }else if(selected?.point){const path=Core.navigationPath(state,u,selected.point.x,selected.point.y,selected.point),cost=path?.reduce((n,p)=>n+p.cost,0)||0,d=cost/Core.movementRate(u);content('Move to this point',`${d.toFixed(1)} m · ${cost.toFixed(1)} AP${cost>u.ap?' · stops when AP runs out':''}`,'Move',()=>{Core.move(state,u,selected.point.x,selected.point.y,selected.point);selected=null;view.center();},!path||u.ap<.01);
   }else if(near){const mission=missionForState(state);content(near.label,near.kind==='extract'?mission.extraction.name:`${near.cost} AP · ${mission.objective.after}`,near.kind==='extract'?'Extract ↗':'Collect',()=>interact(state),!near.ok);}
   else if(state.detected.size){const guard=[...state.detected].map(id=>state.units.find(v=>v.id===id)).sort((a,b)=>distance(u,a)-distance(u,b))[0];content('Visible contact',`${guard.name} · ${distance(u,guard).toFixed(1)} m`,'Target',()=>pick({unitId:guard.id}));}
   if(selected&&!p){const cancel=document.createElement('button');cancel.className='cancel-context';cancel.textContent='×';cancel.setAttribute('aria-label','Cancel selection');cancel.onclick=()=>{clearTargeting();renderContext();};root.append(cancel);}
@@ -547,7 +555,7 @@ addEventListener('keyup',e=>{keys.delete(e.key.toLowerCase());if(grenadeAim.acti
 addEventListener('blur',()=>{areaPress=false;resetStick();keys.clear();clearAreaReadiness();guardAlert.stop();});document.addEventListener('visibilitychange',()=>{areaPress=false;resetStick();keys.clear();if(document.hidden){clearAreaReadiness();guardAlert.stop();storage.write();}lastTime=performance.now();});addEventListener('pagehide',event=>{storage.write();guardAlert.stop();if(!event.persisted)void guardAlert.dispose();});
 function frame(now){
   requestAnimationFrame(frame);const dt=Math.min(.05,Math.max(0,(now-lastTime)/1000));lastTime=now;if(!active||!view)return;
-  if(!paused&&!document.hidden){
+  if(!paused&&!document.hidden&&(!state.spatial||$('loading').hidden)){
     let x=stick.x,y=stick.y;if(keys.size){x=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0);y=(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);}
     const n=Math.max(1,Math.hypot(x,y));x/=n;y/=n;
     if(aiming()){
@@ -564,4 +572,12 @@ function frame(now){
   }
   view.sync(state,now);positionInteractionHand();if(now-lastUI>100){renderBattle();lastUI=now;}
 }
-renderPrep();requestAnimationFrame(frame);
+function boot(){if(privateColdwell)selectedMissionId='coldwell-'+coldwellTest;const ready=()=>{renderPrep();requestAnimationFrame(frame);},fail=error=>{selectedMissionId=DEFAULT_MISSION_ID;ready();toast(error.message);};try{const pending=prepareOperation(selectedMissionId);if(pending)pending.then(ready,fail);else ready();}catch(error){fail(error);}}
+void boot();
+
+// Only the unlisted acceptance route exposes read-only snapshots/projection.
+if(privateColdwell)globalThis.__coldwellGame=Object.freeze({
+  snapshot(){return structuredClone({active,paused,mission:state?.solo.missionId,status:state?.solo.status,hero:state&&hero(state),units:state?.units,queue:state?.queue,phase:state?.phase,inspected:state?.solo.inspected,objectives:state?.solo.objectives,spatial:state?.spatial,seen:state?.seen.size,detected:state&&[...state.detected],fireAnimationSequence:state?.fireAnimationSequence,windowSequence:state?.windowSequence,art:view?.art?.diagnostics(),actors:view?.actors.size,pendingActors:view?.pending.size,failed:view&&[...view.failed],floor:view?.floorController?.state.selectedId,mode:view?.floorController?.state.mode,renderer:view&&{calls:view.renderer.info.render.calls,triangles:view.renderer.info.render.triangles,geometries:view.renderer.info.memory.geometries,textures:view.renderer.info.memory.textures}});},
+  project:point=>view?.project(point),
+  async whenIdle(){await view?.artReady;await view?.art?.whenIdle();}
+});

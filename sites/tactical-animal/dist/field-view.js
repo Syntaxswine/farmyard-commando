@@ -28,9 +28,10 @@ const V = (x=0,y=0,z=0) => new T.Vector3(x,y,z);
 // lifetime than the interval prevents identical paths merging into one beam.
 const BURST_SHOT_INTERVAL=140,BURST_TRACER_DURATION=90;
 export class FieldView {
-  constructor(container, {onPick, onLoading, onError, getAimViewport, floorContainer}) {
+  constructor(container, {onPick, onLoading, onError, getAimViewport, floorContainer, onFloorChange=()=>{}}) {
     this.container=container;this.onPick=onPick;this.onLoading=onLoading;this.onError=onError;this.getAimViewport=getAimViewport;
     this.floorContainer=floorContainer;this.retirements=new Set();
+    this.onFloorChange=onFloorChange;
     this.renderer=new T.WebGLRenderer({antialias:true,alpha:false});
     this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));
     this.renderer.outputColorSpace=T.SRGBColorSpace;
@@ -64,11 +65,12 @@ export class FieldView {
     this.camera.position.copy(this.target).add(V(FIELD_CAMERA.x,FIELD_CAMERA.y,FIELD_CAMERA.z));this.camera.lookAt(this.target);this.camera.updateMatrixWorld();
   }
   zoom(factor){if(this.grenadeCamera){this.grenadeCamera.baseSpan=T.MathUtils.clamp(this.grenadeCamera.baseSpan*factor,6,35);return;}this.returnSpan=null;this.requestedSpan=T.MathUtils.clamp((this.requestedSpan??this.span)*factor,6,35);this.resize();}
-  viewHeight(){return this.floorController?.state.mode==='manual'?this.floorController.state.floors.find(f=>f.id===this.floorController.state.selectedId).elevationM:hero(this.state)?.h??0;}
+  viewHeight(){const contact=this.focusedId!=null&&this.state?.units.find(u=>u.id===this.focusedId&&this.state.detected.has(u.id));return this.floorController?.state.mode==='manual'?this.floorController.state.floors.find(f=>f.id===this.floorController.state.selectedId).elevationM:contact?.h??hero(this.state)?.h??0;}
   center(){if(this.grenadeCamera)this.endGrenadeAim();this.focusedId=null;this.follow=true;if(this.state){const u=hero(this.state);this.floorController?.setCharacter({id:u.id,floorId:u.floorId});this.floorController?.followCharacter();this.target.set(u.x,u.h??0,u.y);this.updateCamera();}}
-  focusOpponent(id){const u=this.state?.units.find(v=>v.id===id&&v.team==='guard'&&Core.alive(v)&&this.state.detected.has(v.id));if(!u)return false;if(this.grenadeCamera)this.endGrenadeAim();this.focusedId=id;this.follow=false;this.target.set(u.x,0,u.y);this.updateCamera();return true;}
-  ground(clientX,clientY){const r=this.container.getBoundingClientRect();this.ray.setFromCamera(new T.Vector2((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1),this.camera);if(this.state?.spatial){const ray=this.ray.ray,h=this.viewHeight(),hit=providerFor(this.state).pick(this.state,{x:ray.origin.x,y:ray.origin.z,h:ray.origin.y},{x:ray.direction.x,y:ray.direction.z,h:ray.direction.y},{min:h-.13,max:h+.05});return hit?V(hit.x,hit.h,hit.y):null;}return this.ray.ray.intersectPlane(this.plane,V());}
+  focusOpponent(id){const u=this.state?.units.find(v=>v.id===id&&v.team==='guard'&&Core.alive(v)&&this.state.detected.has(v.id));if(!u)return false;if(this.grenadeCamera)this.endGrenadeAim();this.focusedId=id;this.follow=false;this.floorController?.inspectContact({id:u.id,floorId:u.floorId,detected:true});this.target.set(u.x,u.h??0,u.y);this.updateCamera();return true;}
+  ground(clientX,clientY){const r=this.container.getBoundingClientRect();this.ray.setFromCamera(new T.Vector2((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1),this.camera);if(this.state?.spatial){const ray=this.ray.ray,h=this.viewHeight(),hit=providerFor(this.state).pick(this.state,{x:ray.origin.x,y:ray.origin.z,h:ray.origin.y},{x:ray.direction.x,y:ray.direction.z,h:ray.direction.y},{min:h-2.25,max:h+.05});return hit?Object.assign(V(hit.x,hit.h,hit.y),{floorId:hit.floorId,stairId:hit.stairId}):null;}return this.ray.ray.intersectPlane(this.plane,V());}
   interactionAnchor(object){const height=clueAnchorHeight(missionForState(this.state),object,object.kind==='door'?2.15:object.kind==='chest'?1.15:.7),point=V(object.x,(object.h??0)+height,object.y).project(this.camera);return {x:(point.x+1)*this.container.clientWidth/2,y:(1-point.y)*this.container.clientHeight/2,visible:Math.abs(point.x)<.95&&Math.abs(point.y)<.95&&Math.abs(point.z)<1};}
+  project(point){const p=V(point.x,point.h??0,point.y).project(this.camera),r=this.container.getBoundingClientRect();return {x:r.left+(p.x+1)*r.width/2,y:r.top+(1-p.y)*r.height/2,visible:Math.abs(p.x)<.95&&Math.abs(p.y)<.95&&Math.abs(p.z)<1};}
   down(e){if(e.button!==0||this.grenadeCamera)return;this.unlockSound();this.container.setPointerCapture(e.pointerId);this.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(this.pointers.size===1)this.gesture={x:e.clientX,y:e.clientY,target:this.target.clone(),moved:false,at:performance.now()};if(this.pointers.size===2){const [a,b]=[...this.pointers.values()];this.pinch={distance:Math.hypot(a.x-b.x,a.y-b.y),span:this.span};this.gesture.moved=true;}}
   drag(e){const point=this.pointers.get(e.pointerId);if(!point)return;point.x=e.clientX;point.y=e.clientY;
     if(this.pointers.size===2&&this.pinch){const [a,b]=[...this.pointers.values()];this.returnSpan=null;this.requestedSpan=T.MathUtils.clamp(this.pinch.span*this.pinch.distance/Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),6,35);this.resize();return;}
@@ -82,7 +84,7 @@ export class FieldView {
     const point=this.ground(e.clientX,e.clientY);if(!point)return;
     const picks=[...this.actors.values()].filter(a=>a.root.visible&&a.pick.visible).map(a=>a.pick).concat(this.interactionArt?.picks||[],this.windowArt?.picks||[],this.state.spatial?this.art?.picks||[]:[]);
     const hits=this.ray.intersectObjects(picks,false),hit=hits[0]?.object.userData.windowPaneId?hits.find(h=>h.object.userData.unitId!==undefined)||hits[0]:hits[0];
-    this.onPick(hit?hit.object.userData.windowId?{windowId:hit.object.userData.windowId,paneId:hit.object.userData.windowPaneId,ground:true,x:hit.point.x,y:hit.point.z,h:hit.point.y}:hit.object.userData.interactionId?{interactionId:hit.object.userData.interactionId}:{unitId:hit.object.userData.unitId}:{x:point.x,y:point.z,...(this.state.spatial?{h:point.y,floorId:this.floorController.state.selectedId}:{})});
+    this.onPick(hit?hit.object.userData.windowId?{windowId:hit.object.userData.windowId,paneId:hit.object.userData.windowPaneId,ground:true,x:hit.point.x,y:hit.point.z,h:hit.point.y}:hit.object.userData.interactionId?{interactionId:hit.object.userData.interactionId}:{unitId:hit.object.userData.unitId}:{x:point.x,y:point.z,...(this.state.spatial?{h:point.y,floorId:point.floorId||this.floorController.state.selectedId,...(point.stairId?{stairId:point.stairId}:{})}:{})});
   }
   unlockSound(){this.windowEffects?.unlock();}
   clearEffects(){this.windowEffects?.dispose();this.windowEffects=null;this.shotVisuals?.clear();this.tankEffects?.dispose();this.tankEffects=null;this.burnEffects?.dispose();this.burnEffects=null;for(const effect of this.effects){this.scene.remove(effect.line);effect.line.geometry.dispose();effect.line.material.dispose();}this.effects=[];this.flameEffects?.dispose();this.flameEffects=null;this.flameCone?.dispose();this.flameCone=null;this.flameAim=null;this.lastEffect=null;}
@@ -110,15 +112,18 @@ export class FieldView {
   }
   buildColdwellEnvironment(s){
     const generation=this.generation,provider=providerFor(s),u=hero(s);this.artBusy=true;this.propBusy=false;this.missionArtBusy=this.missionPaperBusy=false;this.renderer.localClippingEnabled=true;
-    this.floorController=createFloorNavigation({floors:provider.floors,selectedId:u.floorId,cancelPreview:()=>{this.endGrenadeAim();this.route([]);},onFloorChange:()=>{this.lastWindowKey=null;}});
+    this.floorController=createFloorNavigation({floors:provider.floors,selectedId:u.floorId,cancelPreview:event=>{if(event.source==='manual'){Core.stop(s);this.endGrenadeAim();this.route([]);this.onFloorChange(event);}},onFloorChange:()=>{this.lastWindowKey=null;}});
     if(this.floorContainer)this.floorWidget=mountFloorNavigation(this.floorContainer,this.floorController,{onError:error=>this.onError(error.message)});
     this.floorController.setCharacter({id:u.id,floorId:u.floorId});this.floorController.followCharacter();
     this.artReady=import('./coldwell-view.js').then(({ColdwellPresentation})=>{
       if(generation!==this.generation)return;
       this.art=new ColdwellPresentation(s,{onLoading:busy=>{if(generation===this.generation){this.artBusy=busy;this.reportLoading();}},onError:message=>{if(generation===this.generation){this.failed.add('coldwell-art');this.onError(message);}}});
-      this.environment.add(this.art.root);return this.art.update(s,u,{height:this.viewHeight(),...this.coldwellCutaway});
+      this.environment.add(this.art.root);return this.art.update(s,u,{height:this.viewHeight(),cutawayHeight:this.floorController.state.floors.find(f=>f.id===this.floorController.state.selectedId).elevationM,roofs:this.floorController.state.selectedId==='coldwell-roof-1',...this.coldwellCutaway});
     }).catch(error=>{if(generation===this.generation){this.artBusy=false;this.failed.add('coldwell-art');this.onError(error.message);}});
-    this.objectivePin=new T.Group();this.extractionPin=new T.Group();
+    if(!s.coldwellPreview){
+      this.propBusy=true;this.interactionArt=new InteractionScenery(s,{onLoading:busy=>{if(generation===this.generation){this.propBusy=busy;this.reportLoading();}},onError:message=>{if(generation===this.generation){this.failed.add('interaction-art');this.onError(message);}}});this.environment.add(this.interactionArt.root);this.searchHalo=new SearchHalo();
+      const mission=missionForState(s);this.objectivePin=this.makePin(mission.objective,0xe16b3d);this.extractionPin=this.makePin(mission.extraction,0xc4d29a);
+    }else{this.objectivePin=new T.Group();this.extractionPin=new T.Group();}
   }
   focusFloorPoint(point){this.follow=false;this.focusedId=null;this.floorController?.select(point.floorId);this.target.set(point.x,point.h,point.y);this.updateCamera();this.lastWindowKey=null;}
   // The art kit and its inherited model modules load only for a mission with art.
@@ -139,7 +144,7 @@ export class FieldView {
     }).catch(error=>{fail('Mission art could not load: '+error.message);return null;})
       .finally(()=>{if(generation===this.generation){this.missionArtBusy=false;this.reportLoading();}});
   }
-  makePin(point,color){const group=new T.Group();group.position.set(point.x,0,point.y);const mat=new T.MeshBasicMaterial({color,transparent:true,opacity:.8,side:T.DoubleSide});const ring=new T.Mesh(new T.RingGeometry(.36,.45,32),mat);ring.rotation.x=-Math.PI/2;ring.position.y=.035;group.add(ring);const shaft=new T.Mesh(new T.CylinderGeometry(.017,.017,1.6,6),mat.clone());shaft.position.y=.8;group.add(shaft);const flag=new T.Mesh(new T.OctahedronGeometry(.14),mat.clone());flag.position.y=1.65;group.add(flag);this.environment.add(group);return group;}
+  makePin(point,color){const group=new T.Group();group.position.set(point.x,point.h??0,point.y);const mat=new T.MeshBasicMaterial({color,transparent:true,opacity:.8,side:T.DoubleSide});const ring=new T.Mesh(new T.RingGeometry(.36,.45,32),mat);ring.rotation.x=-Math.PI/2;ring.position.y=.035;group.add(ring);const shaft=new T.Mesh(new T.CylinderGeometry(.017,.017,1.6,6),mat.clone());shaft.position.y=.8;group.add(shaft);const flag=new T.Mesh(new T.OctahedronGeometry(.14),mat.clone());flag.position.y=1.65;group.add(flag);this.environment.add(group);return group;}
   route(path=[]){this.flameCone?.hide();this.flamePreviewKey='';this.blastMarker.visible=false;this.blastArea.visible=false;this.grenadePreviewKey='';this.marker.material.color.setHex(0xf2c56a);this.pathLine.material.color.setHex(0xe6b464);this.pathLine.geometry.dispose();this.pathLine.geometry=new T.BufferGeometry().setFromPoints(path.map(p=>V(p.x,(p.h??0)+.06,p.y)));const end=path.at(-1);this.marker.visible=!!end;if(end)this.marker.position.set(end.x,(end.h??0)+.035,end.y);}
   beginGrenadeAim(){
     const baseSpan=this.grenadeCamera?.baseSpan??this.returnSpan??this.requestedSpan??this.span;
@@ -161,26 +166,28 @@ export class FieldView {
   }
   endFlameAim(options){this.flameAim=null;this.endGrenadeAim(options);}
   previewGrenade(point,preview){
+    if(this.state.spatial)point=preview.point||{...point,h:hero(this.state).h};
     if(this.grenadeCamera)this.grenadeCamera.point={...point};
     const signature=[point.x,point.y,this.state.revision,preview.ok,preview.selfDanger].join(':');
     if(signature===this.grenadePreviewKey)return;this.grenadePreviewKey=signature;
     const color=!preview.ok||preview.selfDanger?0xf08068:0xf4c77a;
     this.pathLine.material.color.setHex(color);this.pathLine.geometry.dispose();
     this.pathLine.geometry=new T.BufferGeometry().setFromPoints(Core.grenadeTrajectory(hero(this.state),point).map(p=>V(p.x,p.z,p.y)));
-    this.marker.visible=true;this.marker.position.set(point.x,.035,point.y);this.marker.material.color.setHex(color);
-    this.blastMarker.position.set(point.x,.05,point.y);this.blastMarker.material.color.setHex(color);this.blastMarker.visible=true;
+    const h=point.h??0;
+    this.marker.visible=true;this.marker.position.set(point.x,h+.035,point.y);this.marker.material.color.setHex(color);
+    this.blastMarker.position.set(point.x,h+.05,point.y);this.blastMarker.material.color.setHex(color);this.blastMarker.visible=true;
     const edge=Core.grenadeBlastFootprint(this.state,point),vertices=[];
-    for(let i=1;i<edge.length;i++)vertices.push(point.x,.045,point.y,edge[i-1].x,.045,edge[i-1].y,edge[i].x,.045,edge[i].y);
+    for(let i=1;i<edge.length;i++)vertices.push(point.x,h+.045,point.y,edge[i-1].x,h+.045,edge[i-1].y,edge[i].x,h+.045,edge[i].y);
     this.blastArea.geometry.dispose();this.blastArea.geometry=new T.BufferGeometry();this.blastArea.geometry.setAttribute('position',new T.Float32BufferAttribute(vertices,3));this.blastArea.material.color.setHex(color);this.blastArea.visible=vertices.length>0;
   }
   trackGrenadeCamera(now){
     const aim=this.grenadeCamera;if(!aim)return;
     if(aim.until&&now>=aim.until&&!(aim.kind==='flame'&&this.flameEffects?.queue.length)){this.endGrenadeAim();return;}
-    const u=hero(this.state),points=aim.kind==='flame'?(aim.shape?.rays||[]).flatMap(ray=>[{x:ray.x,y:ray.y,z:0},{x:ray.x,y:ray.y,z:1.5}]):aim.point?Core.grenadeTrajectory(u,aim.point):[{x:u.x,y:u.y,z:1.8}];
-    points.push({x:u.x,y:u.y,z:0},{x:u.x,y:u.y,z:1.8});
-    if(aim.point)for(let i=0;i<16;i++){const a=i/16*Math.PI*2;points.push({x:aim.point.x+Math.cos(a)*Core.WEAPONS.grenade.blast,y:aim.point.y+Math.sin(a)*Core.WEAPONS.grenade.blast,z:0});}
-    const frame=grenadeCameraFrame(points,{width:this.container.clientWidth,height:this.container.clientHeight,...this.getAimViewport?.()},aim.baseSpan);
-    this.target.lerp(V(frame.target.x,0,frame.target.y),.14);this.span+=(frame.span-this.span)*.14;this.resize();
+    const u=hero(this.state),base=u.h??0,points=aim.kind==='flame'?(aim.shape?.rays||[]).flatMap(ray=>[{x:ray.x,y:ray.y,z:base},{x:ray.x,y:ray.y,z:base+1.5}]):aim.point?Core.grenadeTrajectory(u,aim.point):[{x:u.x,y:u.y,z:base+1.8}];
+    points.push({x:u.x,y:u.y,z:base},{x:u.x,y:u.y,z:base+1.8});
+    if(aim.point)for(let i=0;i<16;i++){const a=i/16*Math.PI*2;points.push({x:aim.point.x+Math.cos(a)*Core.WEAPONS.grenade.blast,y:aim.point.y+Math.sin(a)*Core.WEAPONS.grenade.blast,z:aim.point.h??0});}
+    const frame=grenadeCameraFrame(points.map(p=>({...p,z:p.z-base})),{width:this.container.clientWidth,height:this.container.clientHeight,...this.getAimViewport?.()},aim.baseSpan);
+    this.target.lerp(V(frame.target.x,base,frame.target.y),.14);this.span+=(frame.span-this.span)*.14;this.resize();
   }
   async actor(u){
     if(this.actors.has(u.id)||this.pending.has(u.id)||this.failed.has(u.id))return;
@@ -219,12 +226,12 @@ export class FieldView {
         if(event.flame){this.flameEffects ||= new SoloFlameEffects(this.scene);this.flameEffects.enqueue(event,now);}continue;
       }
       const thrown=event.weapon==='grenade',burst=event.shots>1,at=now+(burst?event.shot*BURST_SHOT_INTERVAL:0);
-      const points=thrown?Core.grenadeTrajectory({x:event.ax,y:event.ay},{x:event.bx,y:event.by}).map(p=>V(p.x,p.z,p.y)):[V(event.ax,1.1,event.ay),V(event.bx,event.bh??.9,event.by)];
+      const points=thrown?Core.grenadeTrajectory({x:event.ax,y:event.ay,...(event.ah!==undefined?{h:event.ah}:{})},{x:event.bx,y:event.by,...(event.ah!==undefined?{h:event.bh}:{})}).map(p=>V(p.x,p.z,p.y)):[V(event.ax,(event.ah??0)+1.1,event.ay),V(event.bx,event.bh??.9,event.by)];
       const line=new T.Line(new T.BufferGeometry().setFromPoints(points),new T.LineBasicMaterial({color:event.incendiary?0xff7835:0xf6d68c,transparent:true,opacity:.9}));
       const visual={event,line,at,ttl:thrown?700:burst?BURST_TRACER_DURATION:240,started:!burst,previous:burst?previousRound:null};
       (this.shotVisuals??=new Map()).set(event,visual);
       line.visible=at<=now;this.scene.add(line);this.effects.push(visual);if(burst)previousRound=visual;
-      if(thrown){const ring=new T.Mesh(new T.RingGeometry(event.blast-.07,event.blast,64),new T.MeshBasicMaterial({color:0xf4a568,side:T.DoubleSide,transparent:true,opacity:.8,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.set(event.bx,.07,event.by);this.scene.add(ring);this.effects.push({line:ring,at,ttl:700});}
+      if(thrown){const ring=new T.Mesh(new T.RingGeometry(event.blast-.07,event.blast,64),new T.MeshBasicMaterial({color:0xf4a568,side:T.DoubleSide,transparent:true,opacity:.8,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.set(event.bx,(event.bh??0)+.07,event.by);this.scene.add(ring);this.effects.push({line:ring,at,ttl:700});}
     }
   }
   animateEffects(now){
@@ -245,9 +252,10 @@ export class FieldView {
   sync(s,now){this.state=s;const u=hero(s);if(this.floorController&&this.floorController.state.character?.floorId!==u.floorId)this.floorController.setCharacter({id:u.id,floorId:u.floorId});
     if(this.grenadeCamera)this.trackGrenadeCamera(now);
     if(this.returnSpan!=null){const goal=residentCameraSpan(s,{x:this.target.x,y:this.target.z},{width:this.container.clientWidth,height:this.container.clientHeight},this.returnSpan);this.span+=(goal-this.span)*.14;if(Math.abs(goal-this.span)<.01){this.span=goal;this.returnSpan=null;}this.resize();}
-    if(this.focusedId!=null){const contact=s.units.find(v=>v.id===this.focusedId&&Core.alive(v)&&s.detected.has(v.id));if(contact){this.target.lerp(V(contact.x,0,contact.y),.18);this.updateCamera();}else this.center();}
+    if(this.focusedId!=null){const contact=s.units.find(v=>v.id===this.focusedId&&Core.alive(v)&&s.detected.has(v.id));if(contact){this.target.lerp(V(contact.x,contact.h??0,contact.y),.18);this.updateCamera();}else this.center();}
     if(this.follow){this.target.lerp(V(u.x,u.h??0,u.y),.18);this.updateCamera();}
-    const window=this.residentWindow||blockWindow(s,u),visible=s.units.filter(v=>pointInWorldRect(v,window)&&(v.team==='squad'||(v.hp>0?s.detected.has(v.id):s.visible.has(Core.key(v.x,v.y)))));
+    const inBand=v=>!s.spatial||v.h>=this.viewHeight()-2.25&&v.h<=this.viewHeight()+4.25;
+    const window=this.residentWindow||blockWindow(s,u),visible=s.units.filter(v=>pointInWorldRect(v,window)&&inBand(v)&&(v.team==='squad'||(v.hp>0?s.detected.has(v.id):s.visible.has(Core.cellKey(s,v)))));
     this.reconcileActors(visible);
     if(s.effect&&s.effect!==this.lastEffect){this.lastEffect=s.effect;this.queueEffects(s.effect,now);}
     this.flameEffects?.beginFrame(now,s);
@@ -266,8 +274,8 @@ export class FieldView {
       if(a.signature!==signature||fire||a.hadFlame){a.signature=signature;a.hadFlame=!!fire;if(a.weapon!==displayedWeapon){this.burnEffects?.release(v.id);const old=a.equipment;a.equipment=createWeaponModel(displayedWeapon);a.worker.equipWeapon(a.equipment);old.dispose();a.weapon=displayedWeapon;}
         a.root.position.set(0,0,0);a.locomotion?.apply({...sample,blend:sample.pose?.prone||sample.pose?.down?0:sample.blend});a.posture.apply(sample);if(sample.pose.down)a.posture.ground();}
       a.root.position.set(sample.x,sample.h??0,sample.y);a.root.updateMatrixWorld(true);a.worker.skeleton.update();if(fire)this.flameEffects.captureMuzzle(fire,a.flameOperator.apply({...sample,hp:operator.hp},fire.seconds,fire.reduced));this.burnEffects?.pose(a,v,this.camera);}
-    if(s.revision!==this.lastRevision||window.key!==this.lastWindowKey){this.lastRevision=s.revision;this.lastWindowKey=window.key;if(s.spatial)this.art?.update(s,{x:this.target.x,y:this.target.z,h:this.viewHeight()},{height:this.viewHeight(),...this.coldwellCutaway});else this.art.update(s,u,window);this.interactionArt?.update(s,window);this.missionArt?.update(s,window);
-      const mission=missionForState(s);this.objectivePin.visible=!s.coldwellPreview&&!objectiveSecured(s)&&pointInWorldRect(mission.objective,window);this.extractionPin.visible=!s.coldwellPreview&&pointInWorldRect(mission.extraction,window);
+    if(s.revision!==this.lastRevision||window.key!==this.lastWindowKey){this.lastRevision=s.revision;this.lastWindowKey=window.key;if(s.spatial)this.art?.update(s,{x:this.target.x,y:this.target.z,h:this.viewHeight()},{height:this.viewHeight(),cutawayHeight:this.floorController.state.floors.find(f=>f.id===this.floorController.state.selectedId).elevationM,roofs:this.floorController.state.selectedId==='coldwell-roof-1',...this.coldwellCutaway});else this.art.update(s,u,window);this.interactionArt?.update(s,window,{height:this.viewHeight()});this.missionArt?.update(s,window);
+      const mission=missionForState(s);this.objectivePin.visible=!s.coldwellPreview&&!objectiveSecured(s)&&pointInWorldRect(mission.objective,window)&&inBand(mission.objective);this.extractionPin.visible=!s.coldwellPreview&&pointInWorldRect(mission.extraction,window)&&inBand(mission.extraction);
     }
     this.animateEffects(now);
     const windowStart=event=>{const shot=s.effect?.sequence?.find(e=>e.windowSequences?.includes(event.sequence));if(!shot)return now;const flame=this.flameEffects?.queue.find(e=>e.event===shot);if(flame)return flame.muzzle&&flame.last!==null?now+Math.max(0,.64-flame.elapsed)*1000:null;const visual=this.shotVisuals?.get(shot);if(visual?.started===false)return null;return (visual?.at??this.effectAt??now)+(shot.weapon==='grenade'?500:0);};

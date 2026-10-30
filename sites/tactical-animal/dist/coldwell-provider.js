@@ -1,8 +1,11 @@
 import {ColdwellGeometry} from './coldwell-geometry.js';
+import {ColdwellRigRules} from './coldwell-rigs.js';
+import {ColdwellCombat} from './coldwell-combat.js';
+import {COLDWELL_CAPABILITIES} from './coldwell-loader.js';
 import {PathFrontier} from './path-frontier.js';
 import {actorHeight,spatialDistance} from './spatial-provider.js';
 import {siloToWorld,mixPoint,floorId,toThree,fromThree,polygonContains} from './coldwell-space.js';
-import {Vector3,Ray,Plane} from './aft/tactics/vendor/three.module.js';
+import {Vector3,Ray,Plane,Box3} from './aft/tactics/vendor/three.module.js';
 
 const RADIUS=.23,EPS=1e-5;
 const xy=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -18,21 +21,37 @@ export function coldwellStairRoute(stair){
 
 export class ColdwellProvider{
   constructor(bundle){
-    this.schema=1;this.id='coldwell-native-v1';this.bundle=bundle;this.geometry=new ColdwellGeometry(bundle);this.capabilities=[];
+    this.schema=1;this.id='coldwell-native-v1';this.bundle=bundle;this.geometry=new ColdwellGeometry(bundle);this.capabilities=COLDWELL_CAPABILITIES;
     this.floors=this.geometry.floors;this.floorById=new Map(this.floors.map(f=>[f.id,f]));
     this.stairs=bundle.data.semantics.stairs.map(s=>({...s,route:coldwellStairRoute(s)}));
-    this.stairById=new Map(this.stairs.map(s=>[s.id,s]));this.navigationCache=new WeakMap();
+    this.stairById=new Map(this.stairs.map(s=>[s.id,s]));this.navigationCache=new WeakMap();this.occupancyCache=new WeakMap();this.linkCache=new WeakMap();
     this.anchors=this.stairs.flatMap(s=>[{...s.route[0],id:s.id+':bottom',stair:s,side:0},{...s.route.at(-1),id:s.id+':top',stair:s,side:1}]);
+    this.rigRules=new ColdwellRigRules(this);this.combat=new ColdwellCombat(this);
   }
   createState(){return {provider:this.id,version:1,sourceDigest:this.bundle.manifest.sourceDigest,revision:0,poses:Object.fromEntries(this.bundle.data.rigs.map(r=>[r.id,0])),transitions:{}};}
   validateState(saved){
     if(!saved||saved.provider!==this.id||saved.version!==1||saved.sourceDigest!==this.bundle.manifest.sourceDigest||!Number.isSafeInteger(saved.revision)||saved.revision<0||!saved.poses||Object.keys(saved.poses).length!==this.bundle.data.rigs.length)throw Error('Unsupported Coldwell source or state.');
-    for(const rig of this.bundle.data.rigs)if(!Number.isFinite(saved.poses[rig.id])||saved.poses[rig.id]<0||saved.poses[rig.id]>rig.maximum)throw Error('Invalid Coldwell rig save.');
-    if(!saved.transitions||Array.isArray(saved.transitions)||Object.keys(saved.transitions).length)throw Error('Unsupported Coldwell transition save.');
+    this.rigRules.validate(saved);
     return saved;
   }
   supportAt(state,point,options){return this.geometry.supportAt(state,point,options);}
   trace(state,from,to,options){return this.geometry.trace(state,from,to,options);}
+  canReach(state,actor,object){return this.rigRules.canReach(state,actor,object);}
+  previewRig(state,id,to){return this.rigRules.preview(state,id,to);}
+  startRig(state,id,to){return this.rigRules.start(state,id,to);}
+  tick(state,dt){return this.rigRules.tick(state,dt);}
+  isMoving(state){return this.rigRules.moving(state);}
+  visibilityPoints(actor,range){
+    const points=new Map();
+    for(const shape of this.geometry.support){
+      if(Math.abs(shape.h-actor.h)>range)continue;
+      const b=shape.bounds;
+      for(let y=Math.max(0,Math.ceil(b.y0),Math.ceil(actor.y-range));y<=Math.min(239,Math.floor(b.y1),Math.floor(actor.y+range));y++)for(let x=Math.max(0,Math.ceil(b.x0),Math.ceil(actor.x-range));x<=Math.min(239,Math.floor(b.x1),Math.floor(actor.x+range));x++){
+        const p={x,y,h:shape.h,floorId:shape.floorId};if(spatialDistance(actor,p)>range||!polygonContains(p,shape))continue;points.set(shape.floorId+'@'+x+','+y,p);
+      }
+    }
+    return points.values();
+  }
   profile(point,reference){
     let best=null;
     for(const stair of this.stairs){
@@ -63,8 +82,11 @@ export class ColdwellProvider{
   occupancy(state,actor,point,{units=true,resolve=false,ignoreId=actor.id}={}){
     const p=resolve?this.resolve(state,point,actor):point,height=actorHeight(actor);
     if(!p||![p.x,p.y,p.h].every(Number.isFinite)||p.x<RADIUS||p.y<RADIUS||p.x>240-RADIUS||p.y>240-RADIUS||!this.floorById.has(p.floorId))return false;
-    const support=this.supportAt(state,p,{step:!!p.stairId});if(!support||Math.abs(support.h-p.h)>(p.stairId?.221:.041))return false;
-    if(this.geometry.bodyHit(state,p,p,{height,radius:RADIUS,step:!!p.stairId}))return false;
+    const stable=!p.stairId&&Number.isInteger(p.x*2)&&Number.isInteger(p.y*2),key=stable?`${actor.stance}:${p.floorId}:${p.x}:${p.y}:${p.h}`:null;
+    let cache=this.occupancyCache.get(state.spatial),clear;
+    if(stable){const objects=(state.interactables||[]).filter(o=>o.kind==='chest').map(o=>[o.id,o.x,o.y,o.h]).join('|'),revision=state.spatial.revision+':'+objects;if(cache?.revision!==revision){cache={revision,points:new Map()};this.occupancyCache.set(state.spatial,cache);}clear=cache.points.get(key);}
+    if(clear===undefined){const support=this.supportAt(state,p,{step:!!p.stairId});clear=!!support&&Math.abs(support.h-p.h)<=(p.stairId?.221:.041)&&!this.geometry.bodyHit(state,p,p,{height,radius:RADIUS,step:!!p.stairId});if(stable){if(cache.points.size>=8192)cache.points.clear();cache.points.set(key,clear);}}
+    if(!clear)return false;
     return !units||!(state.units||[]).some(u=>u.hp>0&&u.id!==ignoreId&&xy(u,p)<2*RADIUS-EPS&&u.h+actorHeight(u)>p.h+EPS&&p.h+height>u.h+EPS);
   }
   sweep(state,actor,from,to,{units=true,resolve=true}={}){
@@ -98,6 +120,19 @@ export class ColdwellProvider{
     }
     return cache.links.get(stair.id);
   }
+  stairPart(stair,from,to){
+    const parameter=p=>{let best=Infinity,at=0;for(let i=1;i<stair.route.length;i++){const a=stair.route[i-1],b=stair.route[i],dx=b.x-a.x,dy=b.y-a.y,dh=b.h-a.h,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy+(p.h-a.h)*dh)/(dx*dx+dy*dy+dh*dh))),q=mixPoint(a,b,t),d=spatialDistance(p,q);if(d<best){best=d;at=i-1+t;}}return at;};
+    const a=parameter(from),b=parameter(to),nodes=stair.route.filter((_,i)=>i>Math.min(a,b)+EPS&&i<Math.max(a,b)-EPS);if(a>b)nodes.reverse();return [...nodes,to];
+  }
+  pathLink(state,actor,from,to){
+    if(from.stairId||to.stairId||from.h!==to.h||![from.x,from.y,to.x,to.y].every(n=>Number.isInteger(n*2)))return this.sweep(state,actor,from,to).ok;
+    let cache=this.linkCache.get(state.spatial);const revision=state.spatial.revision+':'+actor.stance+':'+(state.interactables||[]).filter(o=>o.kind==='chest').map(o=>[o.id,o.x,o.y,o.h]).join('|');
+    if(cache?.revision!==revision){cache={revision,links:new Map()};this.linkCache.set(state.spatial,cache);}
+    const a=`${from.x},${from.y}`,b=`${to.x},${to.y}`,key=from.floorId+'@'+(a<b?a+'>'+b:b+'>'+a);let clear=cache.links.get(key);
+    if(clear===undefined){clear=this.sweep(state,actor,from,to,{units:false}).ok;if(cache.links.size>=16384)cache.links.clear();cache.links.set(key,clear);}if(!clear)return false;
+    const dx=to.x-from.x,dy=to.y-from.y,length2=dx*dx+dy*dy,height=actorHeight(actor);
+    return !(state.units||[]).some(u=>{if(u.hp<=0||u.id===actor.id||u.h+actorHeight(u)<=from.h||from.h+height<=u.h)return false;const t=Math.max(0,Math.min(1,((u.x-from.x)*dx+(u.y-from.y)*dy)/(length2||1)));return Math.hypot(u.x-from.x-dx*t,u.y-from.y-dy*t)<2*RADIUS-EPS;});
+  }
   path(state,actor,destination,{rate=1,nodeLimit=8192,goals=[destination]}={}){
     const ends=goals.map(p=>this.resolve(state,p,actor)).filter(p=>p&&this.occupancy(state,actor,p)).sort((a,b)=>spatialDistance(actor,a)-spatialDistance(actor,b));if(!ends.length)return null;
     const end=ends[0],clean=p=>({x:p.x,y:p.y,h:p.h,floorId:p.floorId,...(p.stairId?{stairId:p.stairId}:{})});
@@ -108,8 +143,14 @@ export class ColdwellProvider{
     const clear=p=>{const id=key(p);if(!valid.has(id))valid.set(id,this.occupancy(state,actor,p));return valid.get(id);};
     const neighbours=p=>{
       const result=[],floor=this.floorById.get(p.floorId);if(!floor)return result;
-      const add=(q,via=null)=>{if(!clear(q))return;if(!via&&!this.sweep(state,actor,p,q).ok)return;const route=via||[q];let d=0,previous=p;for(const node of route){d+=spatialDistance(previous,node);previous=node;}result.push({point:q,route,d});};
-      for(const goal of targets)if(p.floorId===goal.floorId&&spatialDistance(p,goal)<1.1)add(goal);
+      const add=(q,via=null)=>{if(!clear(q))return;if(!via&&!this.pathLink(state,actor,p,q))return;const route=via||[q];let d=0,previous=p;for(const node of route){d+=spatialDistance(previous,node);previous=node;}result.push({point:q,route,d});};
+      for(const goal of targets){
+        const stair=goal.stairId&&this.stairById.get(goal.stairId);
+        if(stair&&(p.stair===stair||p.id==='start'&&p.stairId===stair.id)){
+          const route=this.stairPart(stair,p,goal);if(route.every((q,i)=>this.sweep(state,actor,i?route[i-1]:p,q).ok))add(goal,route);
+        }else if(p.floorId===goal.floorId&&spatialDistance(p,goal)<1.1)add(goal);
+      }
+      if(p.id==='start'&&p.stairId){const stair=this.stairById.get(p.stairId);for(const anchor of this.anchors.filter(a=>a.stair===stair)){const route=this.stairPart(stair,p,anchor);if(route.every((q,i)=>this.sweep(state,actor,i?route[i-1]:p,q).ok))add(anchor,route);}}
       const rx=Math.round(p.x*2)/2,ry=Math.round(p.y*2)/2;
       for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){const q=floorPoint(rx+dx*.5,ry+dy*.5,p.floorId);if(xy(p,q)>1e-5&&q.x>=RADIUS&&q.y>=RADIUS&&q.x<=240-RADIUS&&q.y<=240-RADIUS)add(q);}
       for(const anchor of this.anchors)if(anchor.floorId===p.floorId&&xy(anchor,p)<=.8&&anchor.id!==p.id)add(anchor);
@@ -139,7 +180,7 @@ export class ColdwellProvider{
   approachPath(state,actor,lastSeen,options){
     if(!lastSeen||!Number.isFinite(lastSeen.h)||!this.floorById.has(lastSeen.floorId))return null;
     const goals=Array.from({length:24},(_,i)=>{const angle=i/24*Math.PI*2;return {...lastSeen,x:lastSeen.x+Math.cos(angle)*.75,y:lastSeen.y+Math.sin(angle)*.75};}).filter(p=>!this.trace(state,{...p,h:p.h+1.1},{...lastSeen,h:lastSeen.h+1.1},{purpose:'sight'}));
-    return this.path(state,actor,lastSeen,{...options,goals});
+    return this.path(state,actor,lastSeen,{nodeLimit:128,...options,goals});
   }
   pick(state,from,direction,{min=-.5,max=64}={}){
     const ray=new Ray(toThree(from),new Vector3(direction.x,direction.h,direction.y).normalize());let result=null;
@@ -149,6 +190,13 @@ export class ColdwellProvider{
       const p=fromThree(point);if(!polygonContains(p,shape))continue;const distance=point.distanceTo(ray.origin);
       if(!result||distance<result.distance)result={...p,floorId:shape.floorId,distance};
     }
+    const far=ray.at(200,new Vector3());
+    // Reuse source upward-facing tread/bridge triangles for the visible hit.
+    const nearBox={min:{x:Math.min(ray.origin.x,far.x),y:Math.min(ray.origin.y,far.y),z:Math.min(ray.origin.z,far.z)},max:{x:Math.max(ray.origin.x,far.x),y:Math.max(ray.origin.y,far.y),z:Math.max(ray.origin.z,far.z)}};
+    for(const record of this.geometry.nearby(state,new Box3(new Vector3(nearBox.min.x,nearBox.min.y,nearBox.min.z),new Vector3(nearBox.max.x,nearBox.max.y,nearBox.max.z))))if(record.kind==='stair'||record.rig?.kind==='platform')this.geometry.triangles(record,triangle=>{
+      if(triangle.getNormal(new Vector3()).y<.999)return;const point=ray.intersectTriangle(triangle.a,triangle.b,triangle.c,false,new Vector3());if(!point||point.y<min||point.y>max)return;const distance=point.distanceTo(ray.origin);if(result&&result.distance<=distance)return;
+      const p=fromThree(point),resolved=this.resolve(state,p,p);if(resolved)result={...resolved,distance};
+    });
     return result;
   }
 }

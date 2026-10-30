@@ -21,6 +21,7 @@ export class FlameConePreview {
   update(preview,visible){
     if(this.disposed)return;
     const shape=preview.shape;if(!shape){this.hide();return;}
+    this.root.position.y=shape.source.h??0;
     updateFlameMask(this,shape,visible);this.bytes=this.data;
     for(const mesh of [this.fill,this.outline]){const u=mesh.material.uniforms;u.fogMask.value=this.fog;u.fogOrigin.value.set(this.rect.origin.x,this.rect.origin.y);u.fogSize.value.set(this.rect.width,this.rect.height);}
     const fill=this.fill.geometry.getAttribute('position'),edge=this.outline.geometry.getAttribute('position');let filled=0,lined=0;

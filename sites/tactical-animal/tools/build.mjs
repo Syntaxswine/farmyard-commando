@@ -51,7 +51,7 @@ for(const file of [...fs.readdirSync(source).filter(file=>file.endsWith('.html')
     const version=createHash('sha256').update(fs.readFileSync(path.join(destination,asset))).digest('hex').slice(0,12);
     html=html.replace(`href="${asset}"`,`href="${asset}?v=${version}"`);
   }
-  if(fs.existsSync(path.join(destination,'coldwell-preview.css'))){const asset='coldwell-preview.css',version=createHash('sha256').update(fs.readFileSync(path.join(destination,asset))).digest('hex').slice(0,12);html=html.replace(`href="${asset}"`,`href="${asset}?v=${version}"`);}
+  for(const asset of ['coldwell-preview.css','coldwell-controls.css'])if(fs.existsSync(path.join(destination,asset))){const version=createHash('sha256').update(fs.readFileSync(path.join(destination,asset))).digest('hex').slice(0,12);html=html.replace(`href="${asset}"`,`href="${asset}?v=${version}"`);}
   // SVG symbol sheets can gain controls while keeping their filename. Version
   // before the fragment so returning phones receive the new button symbols.
   html=html.replace(/\bhref="(assets\/[^"#?]+)(#[^"]*)?"/g,(match,asset,fragment='')=>{

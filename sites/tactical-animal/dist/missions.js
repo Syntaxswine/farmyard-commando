@@ -4,6 +4,7 @@ import {checkpointSource,checkpointMap} from './aft-sector.js';
 import {checkpointApproachMap} from './checkpoint-approaches.js';
 import {WINDOW_REVIEW_ID,WINDOW_REVIEW_MISSION,windowReviewSource} from './window-review-map.js';
 import {adaptAftSector} from './aft-sector.js';
+import {COLDWELL_DEFINITIONS} from './coldwell-missions.js';
 export const DEFAULT_MISSION_ID='night-ledger';
 const checkpoint=checkpointSource(),checkpointDoors=checkpointMap().doors;
 const bounds={x:1,y:1,w:38,h:28};
@@ -137,8 +138,11 @@ export function validateMission(definition){
 for(const definition of definitions){const errors=validateMission(definition);if(errors.length)throw Error(definition.id+': '+errors.join(' '));}
 freeze(legacyCheckpoint);
 export const MISSIONS=freeze(definitions);
+export const OPERATIONS=freeze([...MISSIONS,COLDWELL_DEFINITIONS.find(m=>m.id==='coldwell-recon')]);
+const missionAdapters=new Map();
+export function registerMissionAdapter(id,factory){if(!COLDWELL_DEFINITIONS.some(m=>m.id===id)||typeof factory!=='function')throw Error('Unsupported optional mission adapter.');if(!missionAdapters.has(id))missionAdapters.set(id,factory);}
 export function getMission(id=DEFAULT_MISSION_ID,layoutVersion){
-  const definition=id===WINDOW_REVIEW_ID?WINDOW_REVIEW_MISSION:id==='road-checkpoint'&&layoutVersion===1?legacyCheckpoint:MISSIONS.find(m=>m.id===id);
+  const definition=id===WINDOW_REVIEW_ID?WINDOW_REVIEW_MISSION:id==='road-checkpoint'&&layoutVersion===1?legacyCheckpoint:MISSIONS.find(m=>m.id===id)||COLDWELL_DEFINITIONS.find(m=>m.id===id);
   if(!definition)throw Error('Unknown operation: '+String(id)+'.');
   if(layoutVersion!==undefined&&layoutVersion!==(definition.layoutVersion??1))throw Error('Unsupported operation layout.');
   return definition;
@@ -149,6 +153,7 @@ export const missionDestination=state=>objectiveSecured(state)?missionForState(s
 
 export function missionMap(id=DEFAULT_MISSION_ID,layoutVersion){
   const mission=getMission(id,layoutVersion);
+  if(mission.spatialProvider){const factory=missionAdapters.get(mission.id);if(!factory)throw Error('The complete Coldwell runtime must load before this operation.');return factory();}
   if(mission.id===WINDOW_REVIEW_ID)return adaptAftSector(windowReviewSource());
   if(mission.sector==='aft-road-checkpoint')return checkpointMap();
   const map=mission.sector==='aft-road-checkpoint-approaches'?checkpointApproachMap():{name:mission.name,terrain:Array.from({length:30},()=>Array(40).fill('void')),edges:{}};

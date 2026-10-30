@@ -13,6 +13,8 @@
   <link rel="stylesheet" href="map-frame.css">
   <link rel="stylesheet" href="industrial-switches.css">
   <link rel="stylesheet" href="field-hardware.css">
+  <link rel="stylesheet" href="vendor/nautilus/8c4670450cb2b38c1e1abd811d633c22de9e2b7c/packages/floor-navigation/style.css">
+  <link rel="stylesheet" href="coldwell-controls.css">
 </head>
 <body>
   <main id="prep">
@@ -29,6 +31,7 @@
   </main>
   <section id="battle" hidden aria-label="Solo operation">
     <div id="viewport" role="application" aria-label="Tactical map. Tap ground to move. Drag to look around. Tap a visible guard to target."></div>
+    <div id="floor-controls" hidden aria-label="Floor inspection"></div>
     <button id="interaction-hand" class="interaction-hand" type="button" hidden aria-haspopup="dialog" aria-label="Interact with nearby object. Hold for choices."><span id="interaction-icon" aria-hidden="true"></span><strong id="interaction-label"></strong><small id="interaction-cost"></small></button>
     <div class="view-controls"><button id="zoom-in" class="industrial-switch" type="button" aria-label="Zoom in"><span class="switch-legend" aria-hidden="true"><span class="switch-icon"><svg class="switch-glyph" viewBox="0 0 32 32"><use href="assets/ui/industrial-switches/symbols.svg#zoom-in"/></svg></span></span></button><span>ZOOM</span><button id="zoom-out" class="industrial-switch" type="button" aria-label="Zoom out"><span class="switch-legend" aria-hidden="true"><span class="switch-icon"><svg class="switch-glyph" viewBox="0 0 32 32"><use href="assets/ui/industrial-switches/symbols.svg#zoom-out"/></svg></span></span></button></div>
     <button id="minimap-button" class="map-metal-frame" aria-label="Open tactical map"><canvas id="minimap" width="190" height="140"></canvas><span>MAP ↗</span></button>

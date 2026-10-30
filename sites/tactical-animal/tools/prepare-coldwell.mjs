@@ -74,7 +74,7 @@ for(const batch of infill.batches)append(batch,{frame:'site'});
 const compactSemantics=sem=>({...sem,floors:sem.floors.map(({cells,queryStatus,...floor})=>floor)});
 const data={schema:'farmyard-coldwell-data',version:1,bundle,companion,surface,surfacePanels,surfaceVolumes,
   plan:blueprint.plan,semantics:compactSemantics(mesh.semantics),infill:compactSemantics(infill.semantics),
-  rigs:[...mesh.rigs.map(r=>({...r,frame:'silo'})),...surfaceRigs].map(({batches,...rig})=>rig),batches,sourceBounds:blueprint.bounds,motionBounds:blueprint.motionBounds};
+  rigs:[...mesh.rigs.map(r=>({...r,frame:'silo'})),...surfaceRigs].map(({batches,...rig})=>({...rig,motionBounds:artManifest.rigs.find(r=>r.id===rig.id).bounds})),batches,sourceBounds:blueprint.bounds,motionBounds:blueprint.motionBounds};
 const raw=Buffer.alloc(positions.length*4);positions.forEach((n,i)=>raw.writeFloatLE(n,i*4));
 // zlib versions/platforms may produce different valid gzip containers. The
 // canonical derivative is the exact decoded Float32 byte stream. Check that
@@ -99,4 +99,4 @@ for(const [file,bytes]of outputs){
   if(check){if(!fs.existsSync(target)||!fs.readFileSync(target).equals(bytes))throw Error('Coldwell derived file is stale: '+file);}
   else{fs.mkdirSync(out,{recursive:true});fs.writeFileSync(target,bytes);}
 }
-console.log(`Coldwell ${check?'verified':'prepared'}: ${batches.length} geometry batches, ${mesh.rigs.length} rigs, ${positions.length/9} triangles; source ${sourceDigest.slice(0,12)}.`);
+console.log(`Coldwell ${check?'verified':'prepared'}: ${batches.length} geometry batches, ${data.rigs.length} rigs, ${positions.length/9} triangles; source ${sourceDigest.slice(0,12)}.`);

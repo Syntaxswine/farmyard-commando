@@ -562,7 +562,7 @@ const fireRules=createFireRules({kill,walkSegment,random,key,log});
 const fuelRules=createFuelRules({kill,ignite:fireRules.ignite,recordBurn,inside:insideWorld,log,windowBlast});
 const guardAwareness=createGuardAwareness({alive,point:rememberedPoint,distance,sees:(s,g)=>canSee(s,g,hero(s))?hero(s):null,free:freePoint,path:(s,g,p)=>navigationPath(s,g,p.x,p.y,p,{nodeLimit:128}),travel,speed:movementSpeed,refresh});
 export const reportNoise=(s,source,radius)=>guardAwareness.signal(s,source,radius);
-const guardCoordination=createGuardCoordination({alive,distance,point:rememberedPoint,approach:(s,g,p)=>approachPath(s,g,p,{nodeLimit:1024}),free:freePoint,walk:walkSegment,travel,speed:movementSpeed,shadow:(s,b,p)=>{
+const guardCoordination=createGuardCoordination({alive,distance,point:rememberedPoint,approach:(s,g,p)=>approachPath(s,g,p,{nodeLimit:1024}),free:freePoint,walk:walkSegment,travel,speed:movementSpeed,resolve:(s,b,p)=>s.spatial?providerFor(s).resolve(s,p,b):p,shadow:(s,b,p)=>{
   const shadow={...s,units:s.units.flatMap(u=>u!==b?[u]:p?[{...u,...p}]:[])};
   if(geometryCache.has(s))geometryCache.set(shadow,geometryCache.get(s));return shadow;
 }});

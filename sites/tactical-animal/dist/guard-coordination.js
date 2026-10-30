@@ -1,6 +1,6 @@
 // One deterministic request per guard per round. Yielding is a normal action in
 // the blocker's own turn; the waiting guard can use only its unspent AP on retry.
-export function createGuardCoordination({alive,distance,point,approach,free,walk,travel,speed,shadow}){
+export function createGuardCoordination({alive,distance,point,approach,free,walk,travel,speed,shadow,resolve}){
   function finish(s,g,ready){
     const request=g.yieldRequest,waiter=s.units.find(u=>u.id===request?.from);
     if(waiter?.yieldWait?.for===g.id)waiter.yieldWait.ready=ready;
@@ -17,8 +17,8 @@ export function createGuardCoordination({alive,distance,point,approach,free,walk
     for(const b of candidates){
       if(!approach(shadow(s,b,null),g,fix)?.length)continue;
       for(const radius of [1,1.4,1.8])for(let i=0;i<16;i++){
-        const a=i*Math.PI/8,q={...point(b),x:b.x+Math.cos(a)*radius,y:b.y+Math.sin(a)*radius};
-        if(!free(s,q,b.id)||!walk(s,b,q,b.id)||!approach(shadow(s,b,q),g,fix)?.length)continue;
+        const a=i*Math.PI/8,q=resolve(s,b,{...point(b),x:b.x+Math.cos(a)*radius,y:b.y+Math.sin(a)*radius});
+        if(!q||!free(s,q,b.id)||!walk(s,b,q,b.id)||!approach(shadow(s,b,q),g,fix)?.length)continue;
         b.yieldRequest={from:g.id,point:q,round:s.round,elapsed:0};g.yieldWait={for:b.id,round:s.round,ready:false};return true;
       }
     }

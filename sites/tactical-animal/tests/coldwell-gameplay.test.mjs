@@ -33,7 +33,7 @@ test('native friendly reports preserve the observed floor/height through relay a
   a.contact={point:{x:74,y:112.8,...b5},targetId:0,observerId:a.id,observedAt:0,observedRound:0,via:a.id};a.lastKnown={...a.contact.point};state.elapsed=4;state.round=1;
   reportNoise(state,a,1000);assert.deepEqual(b.lastKnown,a.contact.point);assert.equal(b.contact.observedAt,0);assert.equal(b.alertAge,1);
   const restored=decodeSave(encodeSave(state));assert.deepEqual(restored.units[2].contact,b.contact);
-  const bad=JSON.parse(encodeSave(state));bad.units[2].contact.point.floorId='missing';assert.throws(()=>decodeSave(JSON.stringify(bad)),/contact/);
+  for(const mutate of [p=>p.floorId='missing',p=>p.h+=.5]){const bad=JSON.parse(encodeSave(state));mutate(bad.units[2].contact.point);assert.throws(()=>decodeSave(JSON.stringify(bad)),/Coldwell/);}
 });
 function walk(state,destination){
   const unit=hero(state),route=Core.navigationPath(state,unit,destination.x,destination.y,destination);assert.ok(route?.length,'No route to '+JSON.stringify(destination));

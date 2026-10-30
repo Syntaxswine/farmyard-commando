@@ -65,3 +65,26 @@ elapsed time, ownership and retry state are saved and validated. No body is
 teleported or omitted from actual movement. The Road Checkpoint doorway, two-way
 contention, pending-save replay and five-guard sealed ring are covered by
 `node --test sites/tactical-animal/tests/guard-coordination.test.mjs`.
+
+## Alert, search and return
+
+The same AFT source named above supplies the small state-machine policy:
+`GUARD_STATES`, `settleRound`, `searchCells`, `searchGoal`, and
+`stepInvestigation`/`settle`. This adaptation keeps rest, alert, searching and
+standdown, without importing social, campaign or personality machinery.
+
+Three unseen rounds start a search of the last observed point and up to four
+reachable local report cells. Exploration counts one unseen interval per three
+seconds, so an alert outside combat also progresses. Searches sweep briefly at
+each point and stop after at most 18 active seconds. Return to the authored post
+uses a bounded route and restores its heading; three failed attempts or 12 active
+seconds settle safely where the guard stands. Direct sight interrupts either
+state. Hidden live hero coordinates are never a navigation fallback.
+
+Investigation paths expand at most 128 nodes; exploration admits at most two new
+plans per tick. Movement uses normal collision, stance, stamina and (during
+combat) AP. Search cells, elapsed times, sweep, retry waits, route and authored
+post survive saves. Existing pursuit-position tests now stop after two unseen
+rounds; the third intentionally begins investigation. Dedicated transition,
+exploration, blocked-return, hidden-hero and mid-search replay coverage:
+`node --test sites/tactical-animal/tests/guard-awareness.test.mjs`.

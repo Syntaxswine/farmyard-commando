@@ -17,6 +17,8 @@ export {tankExplosionChance} from './solo-fuel.js';
 import {gridDimensions,worldBounds} from './world-grid.js';
 import {PathFrontier} from './path-frontier.js';
 import {createGuardCoordination} from './guard-coordination.js';
+import {createGuardAwareness,guardState} from './guard-awareness.js';
+export {GUARD_STATES,guardState} from './guard-awareness.js';
 import {providerFor,attachSpatial,actorEye,actorHeight,spatialDistance,floorKey} from './spatial-provider.js';
 import {restoreColdwellBase,validateColdwellObjects} from './coldwell-save.js';
 import {DEFAULT_MISSION_ID,getMission,missionForState,missionMap,objectiveSecured} from './missions.js';
@@ -75,7 +77,7 @@ export function createSoloGame(build=DEFAULT_BUILD,seed=1947,missionId=DEFAULT_M
     const provider=attachSpatial(s,m.spatialProvider);s.interactables.push(...structuredClone(m.interactables||[]));
     for(const [i,unit]of s.units.entries()){const position=i===0?spawn:posts[i-1];unit.h=position.h;unit.floorId=position.floorId;unit.z=provider.floorById.get(unit.floorId)?.index;if(!provider.occupancy(s,unit,unit,{units:false}))throw Error('Coldwell actor needs valid source support and clearance: '+unit.name);}
   }
-  mapMetadata(s,m);windowSystem.restore(s);interactionRules.restore(s);refresh(s);log(s,mission.briefing);return s;
+  guardAwareness.initialize(s,posts);mapMetadata(s,m);windowSystem.restore(s);interactionRules.restore(s);refresh(s);log(s,mission.briefing);return s;
 }
 const geometryCache=new WeakMap(),GEOMETRY_BUCKET=8;
 export function geometry(s){
@@ -236,17 +238,18 @@ function visibility(s){
   for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(distance(u,{x,y})<range&&lineClear(s,u,{x,y})){const k=key(x,y);s.visible.add(k);s.seen.add(k);}
   s.fogAt={x:u.x,y:u.y};
 }
-export function refresh(s,{forceFog=false}={}){const u=hero(s);s.detected=new Set(s.units.filter(g=>g.team==='guard'&&alive(g)&&canSee(s,u,g)).map(g=>g.id));for(const g of s.units.filter(g=>g.team==='guard'&&alive(g)))if(canSee(s,g,u)){g.alert=true;g.lastKnown=rememberedPoint(u);g.alertAge=0;}if(!s.fogAt||distance(u,s.fogAt)>.25||forceFog)visibility(s);if(!alive(u)){s.phase='lost';s.solo.status='lost';s.queue=[];u.isMoving=false;s.revision++;return;}const guards=s.units.filter(g=>g.team==='guard'&&alive(g));if(!guards.length&&!firePending(s)){if(s.phase!=='won')s.queue=[];s.phase='won';}else if(s.phase!=='enemy'){const contact=s.engaged||firePending(s)||guards.some(g=>g.alert&&distance(g,u)<=WEAPONS[g.weapon].range+g.maxAp);if(contact&&s.phase!=='player'){s.phase='player';s.round++;u.ap=u.burningTurns?0:u.maxAp;s.queue=[];u.isMoving=false;log(s,'Contact. Movement now spends AP by distance.');}else if(!contact&&s.phase==='player'){s.phase='explore';s.queue=[];u.isMoving=false;log(s,'Contact broken. Real-time exploration resumed.');}}s.revision++;}
+export function refresh(s,{forceFog=false}={}){const u=hero(s);s.detected=new Set(s.units.filter(g=>g.team==='guard'&&alive(g)&&canSee(s,u,g)).map(g=>g.id));for(const g of s.units.filter(g=>g.team==='guard'&&alive(g)))if(canSee(s,g,u)){guardAwareness.observe(s,g,u);}if(!s.fogAt||distance(u,s.fogAt)>.25||forceFog)visibility(s);if(!alive(u)){s.phase='lost';s.solo.status='lost';s.queue=[];u.isMoving=false;s.revision++;return;}const guards=s.units.filter(g=>g.team==='guard'&&alive(g));if(!guards.length&&!firePending(s)){if(s.phase!=='won')s.queue=[];s.phase='won';}else if(s.phase!=='enemy'){const contact=s.engaged||firePending(s)||guards.some(g=>g.alert&&distance(g,u)<=WEAPONS[g.weapon].range+g.maxAp);if(contact&&s.phase!=='player'){s.phase='player';s.round++;u.ap=u.burningTurns?0:u.maxAp;s.queue=[];u.isMoving=false;log(s,'Contact. Movement now spends AP by distance.');}else if(!contact&&s.phase==='player'){s.phase='explore';s.queue=[];u.isMoving=false;log(s,'Contact broken. Real-time exploration resumed.');}}s.revision++;}
 export function stop(s){if(s.spatial)providerFor(s).navigation?.cancel(s);s.queue=[];hero(s).isMoving=false;s.revision++;}
 // Exhaustion changes the movement mode without cancelling held input or a route.
 function walkWhenExhausted(s,u){if(u.running&&u.stamina<=EPS*(u.stance==='prone'?3:4)){u.running=false;u.sneaking=false;u.stamina=0;s.revision++;}}
+function movementAllowed(s,u,enemy,investigation){return enemy?s.phase==='enemy'&&!u.burningTurns:investigation?alive(u)&&u.team==='guard'&&!u.burningTurns&&['explore','won'].includes(s.phase):canControl(s,u);}
 // Swept-disc collision prevents tunnelling. AP charges accepted displacement,
 // including wall slides, rather than requested input or pathfinder cells.
-export function travel(s,u,dx,dy,{enemy=false,distanceBudget}={}){if(s.spatial)return spatialTravel(s,u,dx,dy,{enemy,distanceBudget});if((enemy?s.phase!=='enemy'||u.burningTurns:!canControl(s,u))||!Number.isFinite(dx)||!Number.isFinite(dy))return 0;const requested=Math.hypot(dx,dy);if(requested<EPS)return 0;walkWhenExhausted(s,u);const rate=movementRate(u),spends=enemy||s.phase==='player',staminaRate=u.stance==='prone'?3:u.running?4:u.sneaking?2:1;const budget=Math.min(requested,spends?u.ap/rate:Infinity,u.running||u.sneaking||u.stance==='prone'?u.stamina/staminaRate:Infinity);if(budget<EPS){u.isMoving=false;return 0;}const steps=Math.ceil(budget/.07),sx=dx/requested*budget/steps,sy=dy/requested*budget/steps;let walked=0;for(let i=0;i<steps;i++){let nx=u.x+sx,ny=u.y+sy;if(!freePoint(s,{x:nx,y:ny},u.id)){if(freePoint(s,{x:nx,y:u.y},u.id))ny=u.y;else if(freePoint(s,{x:u.x,y:ny},u.id))nx=u.x;else break;}const d=Math.hypot(nx-u.x,ny-u.y);if(d<EPS)break;u.heading=Math.atan2(ny-u.y,nx-u.x)*180/Math.PI;u.x=nx;u.y=ny;walked+=d;if(spends)u.ap=Math.max(0,u.ap-d*rate);u.stamina=Math.max(0,u.stamina-d*staminaRate);u.travelled+=d;fireRules.enterFire(s,u);if(u.burningTurns)break;}u.isMoving=walked>EPS&&!u.burningTurns;walkWhenExhausted(s,u);if(walked){if(u.team==='squad'){s.solo.distance+=walked;if(spends)s.solo.apDistance+=walked*rate;}refresh(s);}return walked;}
+export function travel(s,u,dx,dy,{enemy=false,investigation=false,distanceBudget}={}){if(s.spatial)return spatialTravel(s,u,dx,dy,{enemy,investigation,distanceBudget});if(!movementAllowed(s,u,enemy,investigation)||!Number.isFinite(dx)||!Number.isFinite(dy))return 0;const requested=Math.hypot(dx,dy);if(requested<EPS)return 0;walkWhenExhausted(s,u);const rate=movementRate(u),spends=enemy||s.phase==='player',staminaRate=u.stance==='prone'?3:u.running?4:u.sneaking?2:1;const budget=Math.min(requested,spends?u.ap/rate:Infinity,u.running||u.sneaking||u.stance==='prone'?u.stamina/staminaRate:Infinity);if(budget<EPS){u.isMoving=false;return 0;}const steps=Math.ceil(budget/.07),sx=dx/requested*budget/steps,sy=dy/requested*budget/steps;let walked=0;for(let i=0;i<steps;i++){let nx=u.x+sx,ny=u.y+sy;if(!freePoint(s,{x:nx,y:ny},u.id)){if(freePoint(s,{x:nx,y:u.y},u.id))ny=u.y;else if(freePoint(s,{x:u.x,y:ny},u.id))nx=u.x;else break;}const d=Math.hypot(nx-u.x,ny-u.y);if(d<EPS)break;u.heading=Math.atan2(ny-u.y,nx-u.x)*180/Math.PI;u.x=nx;u.y=ny;walked+=d;if(spends)u.ap=Math.max(0,u.ap-d*rate);u.stamina=Math.max(0,u.stamina-d*staminaRate);u.travelled+=d;fireRules.enterFire(s,u);if(u.burningTurns)break;}u.isMoving=walked>EPS&&!u.burningTurns;walkWhenExhausted(s,u);if(walked){if(u.team==='squad'){s.solo.distance+=walked;if(spends)s.solo.apDistance+=walked*rate;}refresh(s);}return walked;}
 // A stable heap preserves tie order without sorting the whole frontier on every
 // expansion. The cap also bounds an unreachable request in a large open sector.
-function spatialTravel(s,u,dx,dy,{enemy=false,distanceBudget}={}){
-  if((enemy?s.phase!=='enemy'||u.burningTurns:!canControl(s,u))||![dx,dy].every(Number.isFinite))return 0;
+function spatialTravel(s,u,dx,dy,{enemy=false,investigation=false,distanceBudget}={}){
+  if(!movementAllowed(s,u,enemy,investigation)||![dx,dy].every(Number.isFinite))return 0;
   const horizontal=Math.hypot(dx,dy),requested=distanceBudget??horizontal;if(horizontal<EPS||!Number.isFinite(requested)||requested<=0)return 0;
   walkWhenExhausted(s,u);const provider=providerFor(s),rate=movementRate(u),spends=enemy||s.phase==='player',staminaRate=u.stance==='prone'?3:u.running?4:u.sneaking?2:1;
   const budget=Math.min(requested,spends?u.ap/rate:Infinity,u.running||u.sneaking||u.stance==='prone'?u.stamina/staminaRate:Infinity);if(budget<EPS){u.isMoving=false;return 0;}
@@ -276,12 +279,12 @@ function gridNodesAround(s,u,p){
 // the nodes walked, a start first, or null. A caller may pass sealed(reached), asked
 // once after SEALED_CHECK expansions: true ends the search as unreachable.
 const SEALED_CHECK=256;
-function gridSearch(s,u,starts,isGoal,estimate,sealed=null){
+function gridSearch(s,u,starts,isGoal,estimate,sealed=null,nodeLimit=NAVIGATION_NODE_LIMIT){
   const open=new PathFrontier(),grid=sceneryGrid(s);
   const cost=new Map(),parents=new Map(),points=new Map(),links=new Map(),passable=new Map();
   for(const start of starts){const sk=key(start.x,start.y),g=start.cost??0;if(g>=(cost.get(sk)??Infinity))continue;cost.set(sk,g);points.set(sk,{x:start.x,y:start.y});open.push({x:start.x,y:start.y,g,f:g+estimate(start)});}
   let found=null,expanded=0;
-  while(open.items.length&&expanded<NAVIGATION_NODE_LIMIT){
+  while(open.items.length&&expanded<nodeLimit){
     const p=open.pop(),pk=key(p.x,p.y);if(p.g>(cost.get(pk)??Infinity))continue;
     if(isGoal(p,pk)){found=p;break;}expanded++;
     if(sealed&&expanded===SEALED_CHECK&&sealed(cost))return null;
@@ -305,12 +308,12 @@ function smoothRoute(s,u,raw){
   while(index<raw.length){let far=index;for(let j=raw.length-1;j>=index;j--)if(walkSegment(s,a,raw[j],u.id)){far=j;break;}const b=raw[far];result.push({...b,z:0,cost:distance(a,b)*movementRate(u)});a=b;index=far+1;}
   return result;
 }
-export function navigationPath(s,u,x,y,point){
-  if(s.spatial)return providerFor(s).path(s,u,{x,y,...(point||{})},{rate:movementRate(u)});
+export function navigationPath(s,u,x,y,point,{nodeLimit=NAVIGATION_NODE_LIMIT}={}){
+  if(s.spatial)return providerFor(s).path(s,u,{x,y,...(point||{})},{rate:movementRate(u),nodeLimit});
   const end={x,y};if(!freePoint(s,end,u.id))return null;
   if(walkSegment(s,u,end,u.id))return [{...end,z:0,cost:distance(u,end)*movementRate(u)}];
   const starts=searchStarts(s,u),goals=gridNodesAround(s,u,end);if(!starts.length||!goals.length)return null;
-  const goalKeys=new Set(goals.map(p=>key(p.x,p.y))),raw=gridSearch(s,u,starts,(p,pk)=>goalKeys.has(pk),q=>distance(q,end));
+  const goalKeys=new Set(goals.map(p=>key(p.x,p.y))),raw=gridSearch(s,u,starts,(p,pk)=>goalKeys.has(pk),q=>distance(q,end),null,nodeLimit);
   if(!raw)return null;
   const via=starts.find(p=>p.x===raw[0].x&&p.y===raw[0].y).via;
   return smoothRoute(s,u,via?[via,...raw,end]:[...raw,end]);
@@ -535,7 +538,7 @@ export function attack(s,a,b,burst=false,byAI=false,zone='torso',reaction=false,
 }
 export function equip(s,u,id){if(!canControl(s,u)||!u.pack.some(i=>i.kind===id)||u.weapon===id)return false;const cost=combatCosts(s)?u.slots.includes(id)?2:3:0;if(u.ap+EPS<cost)return false;stop(s);u.ap-=cost;u.weapon=id;log(s,'Equipped '+WEAPONS[id].name+'.');return true;}
 export function reload(s,u){if(!canControl(s,u))return false;const w=WEAPONS[u.weapon],count=Math.min(w.mag-(u.ammo[u.weapon]??0),u.ammoPouch[u.weapon]||0),cost=combatCosts(s)?3:0;if(!count||u.ap+EPS<cost)return false;stop(s);u.ap-=cost;u.ammo[u.weapon]+=count;u.ammoPouch[u.weapon]-=count;syncAmmo(u,u.weapon);log(s,'Reloaded '+count+' rounds.');return true;}
-export function endTurn(s){if(s.phase!=='player'||s.solo.status!=='active'||s.spatial&&providerFor(s).isMoving(s))return false;stop(s);for(const unit of s.units)fireRules.panicRun(s,unit);s.phase='enemy';s.enemyIndex=1;s.enemyDelay=.35;s.engaged=false;for(const g of s.units.filter(g=>g.team==='guard')){g.ap=g.burningTurns?0:g.maxAp;g.alertAge++;if(g.alertAge>3&&!canSee(s,g,hero(s)))g.alert=false;}s.revision++;return true;}
+export function endTurn(s){if(s.phase!=='player'||s.solo.status!=='active'||s.spatial&&providerFor(s).isMoving(s))return false;stop(s);for(const unit of s.units)fireRules.panicRun(s,unit);s.phase='enemy';s.enemyIndex=1;s.enemyDelay=.35;s.engaged=false;for(const g of s.units.filter(g=>g.team==='guard'))g.ap=g.burningTurns?0:g.maxAp;guardAwareness.round(s);s.revision++;return true;}
 // A guard within ARRIVED of its last waypoint has arrived. A route can also open at
 // its own grid node, inside that distance; it walks on to the next waypoint
 // instead of ending its turn there.
@@ -543,9 +546,10 @@ const ARRIVED=.08;
 function enemyStep(s,dt){
   const u=hero(s),g=s.units[s.enemyIndex];
   if(!g){const retry=guardCoordination.retry(s);if(retry!==null){s.enemyIndex=retry;s.enemyDelay=.15;return;}guardCoordination.settle(s);fireRules.finishRound(s);s.round++;s.panicDelay=3;u.ap=alive(u)&&!u.burningTurns?u.maxAp:0;u.stamina=Math.min(u.maxStamina,u.stamina+10);s.phase='player';refresh(s);return;}
-  if(!alive(g)||g.burningTurns||!g.alert&&!g.yieldRequest||g.ap<.02){g.isMoving=false;s.enemyIndex++;s.enemyDelay=.15;return;}
+  if(!alive(g)||g.burningTurns||!g.alert&&!g.yieldRequest&&!['searching','standdown'].includes(guardState(g))||g.ap<.02){g.isMoving=false;s.enemyIndex++;s.enemyDelay=.15;return;}
   s.enemyDelay-=dt;if(s.enemyDelay>0)return;
   if(guardCoordination.step(s,g,dt))return;
+  if(!g.alert&&guardAwareness.step(s,g,dt)){if(g.ap<.02||guardState(g)==='rest')g.ap=0;return;}
   const zone=guardFireZone(s,g,u);if(zone){attack(s,g,u,false,true,zone);s.enemyDelay=.6;return;}
   if(g.ammo[g.weapon]===0&&g.ap>=3){const count=Math.min(WEAPONS[g.weapon].mag,g.ammoPouch[g.weapon]||0);if(count){g.ammo[g.weapon]=count;g.ammoPouch[g.weapon]-=count;g.ap-=3;s.enemyDelay=.4;return;}}
   if(g.ap<WEAPONS[g.weapon].cost&&canSee(s,g,u)&&distance(g,u)<=WEAPONS[g.weapon].range){g.ap=0;return;}
@@ -553,9 +557,10 @@ function enemyStep(s,dt){
   if(!next){if(!path&&guardCoordination.request(s,g,g.lastKnown)){g.isMoving=false;s.enemyIndex++;s.enemyDelay=.15;}else g.ap=0;return;}
   const d=distance(g,next);if(d<ARRIVED){g.ap=0;return;}const step=Math.min(d,movementSpeed(g)*dt);if(!travel(s,g,(next.x-g.x)/d*step,(next.y-g.y)/d*step,{enemy:true,distanceBudget:step}))g.ap=0;
 }
-export function tick(s,dt=1/60,input=null){if(s.solo.status!=='active')return false;dt=Math.max(0,Math.min(.05,dt));s.elapsed+=dt;if(s.spatial&&providerFor(s).tick(s,dt)){refresh(s,{forceFog:!providerFor(s).isMoving(s)});return true;}for(const u of s.units)u.isMoving=false;if(s.phase==='enemy'){enemyStep(s,dt);return true;}const u=hero(s);if(u.burningTurns){refresh(s);if(s.phase==='player'){s.panicDelay=Math.max(0,(s.panicDelay??3)-dt);if(!s.panicDelay)endTurn(s);}return true;}walkWhenExhausted(s,u);if(input&&Math.hypot(input.x,input.y)>.1){if(s.spatial)providerFor(s).navigation?.cancel(s);s.queue=[];const n=Math.max(1,Math.hypot(input.x,input.y));travel(s,u,input.x/n*movementSpeed(u)*dt,input.y/n*movementSpeed(u)*dt);}else if(s.queue.length){const p=s.queue[0],d=distance(u,p);if(d<.025)s.queue.shift();else{const step=Math.min(d,movementSpeed(u)*dt),moved=travel(s,u,(p.x-u.x)/d*step,(p.y-u.y)/d*step,{distanceBudget:step});if(!moved||s.phase==='player'&&u.ap<EPS)s.queue=[];}}else if(s.phase==='explore'||s.phase==='won')u.stamina=Math.min(u.maxStamina,u.stamina+dt*2);return true;}
+export function tick(s,dt=1/60,input=null){if(s.solo.status!=='active')return false;dt=Math.max(0,Math.min(.05,dt));s.elapsed+=dt;if(s.spatial&&providerFor(s).tick(s,dt)){refresh(s,{forceFog:!providerFor(s).isMoving(s)});return true;}for(const u of s.units)u.isMoving=false;if(s.phase==='enemy'){enemyStep(s,dt);return true;}if(['explore','won'].includes(s.phase))guardAwareness.explore(s,dt);const u=hero(s);if(u.burningTurns){refresh(s);if(s.phase==='player'){s.panicDelay=Math.max(0,(s.panicDelay??3)-dt);if(!s.panicDelay)endTurn(s);}return true;}walkWhenExhausted(s,u);if(input&&Math.hypot(input.x,input.y)>.1){if(s.spatial)providerFor(s).navigation?.cancel(s);s.queue=[];const n=Math.max(1,Math.hypot(input.x,input.y));travel(s,u,input.x/n*movementSpeed(u)*dt,input.y/n*movementSpeed(u)*dt);}else if(s.queue.length){const p=s.queue[0],d=distance(u,p);if(d<.025)s.queue.shift();else{const step=Math.min(d,movementSpeed(u)*dt),moved=travel(s,u,(p.x-u.x)/d*step,(p.y-u.y)/d*step,{distanceBudget:step});if(!moved||s.phase==='player'&&u.ap<EPS)s.queue=[];}}else if(s.phase==='explore'||s.phase==='won')u.stamina=Math.min(u.maxStamina,u.stamina+dt*2);return true;}
 const fireRules=createFireRules({kill,walkSegment,random,key,log});
 const fuelRules=createFuelRules({kill,ignite:fireRules.ignite,recordBurn,inside:insideWorld,log,windowBlast});
+const guardAwareness=createGuardAwareness({alive,point:rememberedPoint,distance,sees:(s,g)=>canSee(s,g,hero(s))?hero(s):null,free:freePoint,path:(s,g,p)=>navigationPath(s,g,p.x,p.y,p,{nodeLimit:128}),travel,speed:movementSpeed,refresh});
 const guardCoordination=createGuardCoordination({alive,distance,point:rememberedPoint,approach:approachPath,free:freePoint,walk:walkSegment,travel,speed:movementSpeed,shadow:(s,b,p)=>{
   const shadow={...s,units:s.units.flatMap(u=>u!==b?[u]:p?[{...u,...p}]:[])};
   if(geometryCache.has(s))geometryCache.set(shadow,geometryCache.get(s));return shadow;
@@ -599,6 +604,7 @@ export function decodeSave(text){
   fireRules.restore(s,p=>insideWorld(canonical,p));fuelRules.restore(s);
   interactionRules.restore(s);
   guardCoordination.restore(s,p=>insideWorld(canonical,p,RADIUS));
+  guardAwareness.restore(s,p=>insideWorld(canonical,p)&&(!provider||Number.isFinite(p.h)&&provider.floorById.has(p.floorId)),s.solo.authoredMap?.guards||mission.guards);
   return provider?validateColdwellObjects(s,mission):releaseFromScenery(s);
 }
 // The nearest spot around p (never p itself) where a unit could stand, scanned

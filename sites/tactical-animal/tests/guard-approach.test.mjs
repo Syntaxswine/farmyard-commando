@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {createSoloGame,DEFAULT_BUILD,Core,hero,distance,canSee,tick,encodeSave,decodeSave,navigationPath,lineClear,freePoint,walkSegment,standIns,approachPath,QUARRY_REACH} from '../dist/solo-game.js';
+// Pursuit-position assertions stop before the third unseen round starts the
+// new bounded investigation; guard-awareness.test.mjs covers that transition.
 const directGridStart=(s,g)=>[-1,0,1].some(dy=>[-1,0,1].some(dx=>{const q={x:Math.round(g.x)+dx,y:Math.round(g.y)+dy};return freePoint(s,q,g.id)&&walkSegment(s,g,q,g.id);}));
 
 test('in a seeded census on every mission, no guard stalls while a firing node is reachable',{timeout:60000},()=>{
@@ -92,7 +94,7 @@ test('a guard whose animal was last seen in a doorway shut since closes on the d
   // nothing can see it. Whichever half of the doorway it fell in, each guard closes on
   // the clear point nearest it on its own side: west guards stay west, east guards east.
   for(const x of [7.4,7.6])for(const [guardAt,west] of [[{x:4.5,y:18},true],[{x:10.5,y:18},false]]){
-    const lastKnown={x,y:18},{s,g}=approach('night-ledger',{x:33,y:5},guardAt,{lastKnown,heading:0,rounds:3});
+    const lastKnown={x,y:18},{s,g}=approach('night-ledger',{x:33,y:5},guardAt,{lastKnown,heading:0,rounds:2});
     assert.equal(freePoint(s,lastKnown,null,{units:false}),false);
     const where=`last seen at x ${x}, guard from ${guardAt.x}: ended at ${g.x.toFixed(2)},${g.y.toFixed(2)}`;
     assert.ok(distance(g,guardAt)>1&&distance(g,{x:7.5,y:18})<QUARRY_REACH+.5,where);
@@ -112,7 +114,7 @@ test('off the axis of a shut door, the guard takes the side it can walk to',()=>
   // the door line the outside's clearance edge is 0.6 m off, past where a scan
   // stopping 0.5 m beyond the first clear ring looks; that guard stayed put.
   for(const y of [115.3,115.21]){
-    const lastKnown={x:117,y},{s,g}=approach('road-checkpoint',{x:20,y:20},{x:88,y:120},{lastKnown,heading:0,rounds:3});
+    const lastKnown={x:117,y},{s,g}=approach('road-checkpoint',{x:20,y:20},{x:88,y:120},{lastKnown,heading:0,rounds:2});
     assert.equal(freePoint(s,lastKnown,null,{units:false}),false);
     assert.ok(distance(g,{x:88,y:120})>3&&g.y>115.5,`last seen at y ${y}: the guard ended at ${g.x.toFixed(2)},${g.y.toFixed(2)}`);
   }
@@ -123,12 +125,12 @@ test('off the axis of a shut door, the guard takes the side it can walk to',()=>
   for(const [mission,heroAt,guardAt,lastKnown,outside] of [['road-checkpoint',{x:20,y:20},{x:100.3,y:116.2},{x:117,y:115.3},q=>q.y>115.5],['night-ledger',{x:33,y:5},{x:7.8,y:12.2},{x:7.75,y:18},q=>q.x<7.5]]){
     const s=field(mission,heroAt,guardAt,{lastKnown}),g=s.units[1],[near,far]=[...standIns(s,lastKnown)].sort((a,b)=>distance(a,g)-distance(b,g)),path=approachPath(s,g,lastKnown);
     assert.ok(!outside(near)&&outside(far)&&path?.length>1,`${mission}: the nearer stand-in is inside and the plan is a search (${JSON.stringify(path)})`);
-    const {g:end}=approach(mission,heroAt,guardAt,{lastKnown,heading:0,rounds:3});
+    const {g:end}=approach(mission,heroAt,guardAt,{lastKnown,heading:0,rounds:2});
     assert.ok(distance(end,guardAt)>3&&outside(end),`${mission}: from ${guardAt.x},${guardAt.y} the guard ended at ${end.x.toFixed(2)},${end.y.toFixed(2)}`);
   }
   // Night Ledger: a guard 2.5 m from the warehouse door outside takes the outside, not
   // the inside 10.5 m round by the south gap.
-  const near=approach('night-ledger',{x:33,y:5},{x:7,y:20.5},{lastKnown:{x:7.75,y:18},heading:0,rounds:3});
+  const near=approach('night-ledger',{x:33,y:5},{x:7,y:20.5},{lastKnown:{x:7.75,y:18},heading:0,rounds:2});
   assert.ok(near.g.x<7.5&&distance(near.g,{x:7.5,y:18})<QUARRY_REACH+.5,`the guard ended at ${near.g.x.toFixed(2)},${near.g.y.toFixed(2)}`);
 });
 
@@ -172,7 +174,7 @@ test('under an open leaf, the stand-ins sit on its two faces and none behind the
     assert.equal(stands.length,2,JSON.stringify(stands));
     assert.ok(stands.every(q=>q.x>7.58)&&stands.some(q=>q.y<17.36)&&stands.some(q=>q.y>17.52),`stand-ins ${JSON.stringify(stands)}`);
     for(const guardAt of [{x:6.5,y:15},{x:4,y:14},{x:5,y:20.5}]){
-      const {s:play,g}=approach('night-ledger',{x:33,y:5},guardAt,{lastKnown,heading:0,doors:true,rounds:3});
+      const {s:play,g}=approach('night-ledger',{x:33,y:5},guardAt,{lastKnown,heading:0,doors:true,rounds:2});
       assert.ok(stands.some(q=>lineClear(play,{...g,stance:'standing'},{...q,stance:'standing'})),`from ${guardAt.x},${guardAt.y} the guard ended at ${g.x.toFixed(2)},${g.y.toFixed(2)}, seeing neither face of the leaf`);
     }
   }
@@ -288,7 +290,7 @@ test('the way out of such a strip is a straight walk, even where no node of the 
 test('a last-seen point inside a prop an old save predates still draws the guard to it',()=>{
   // A save from before the ration scale was solid may hold a last-seen point on its clue
   // spot, 0.78 m from clear ground; the stand-in scan reaches it there.
-  const lastKnown={x:8,y:20},{s,g}=approach('short-measure',{x:33,y:5},{x:13.5,y:19.3},{lastKnown,heading:0,doors:true,rounds:3});
+  const lastKnown={x:8,y:20},{s,g}=approach('short-measure',{x:33,y:5},{x:13.5,y:19.3},{lastKnown,heading:0,doors:true,rounds:2});
   assert.equal(freePoint(s,lastKnown,null,{units:false}),false);
   assert.ok(distance(g,{x:13.5,y:19.3})>2&&distance(g,lastKnown)<QUARRY_REACH+1,`the guard ended at ${g.x.toFixed(2)},${g.y.toFixed(2)}`);
 });
@@ -324,7 +326,7 @@ test('a routed approach still ends 0.75 m short of where the animal was seen',()
   // No straight walk at first: the search takes the guard to a node within
   // QUARRY_REACH that sees the spot, and from there it walks straight to 0.75 m short.
   const lastKnown={x:23.324,y:23.319};
-  const {g,saw}=approach('night-ledger',{x:5,y:24},{x:19.933,y:18.749},{lastKnown,heading:0,rounds:3});
+  const {g,saw}=approach('night-ledger',{x:5,y:24},{x:19.933,y:18.749},{lastKnown,heading:0,rounds:2});
   assert.equal(saw,false);
   assert.ok(distance(g,lastKnown)<=.75+.08,`the guard stopped ${distance(g,lastKnown).toFixed(2)} m away (reach ${QUARRY_REACH} m)`);
 });

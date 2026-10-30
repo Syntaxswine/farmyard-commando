@@ -27,6 +27,9 @@ test('Coldwell proving views compile real standard/depth/distance shaders and di
     await art.locator('#unload').click();await expect.poll(async()=>JSON.parse(await art.locator('#diagnostics').textContent()).residentEntries).toBe(0);
     await art.locator('#restore').click();await expect.poll(async()=>JSON.parse(await art.locator('#diagnostics').textContent()).residentEntries).toBeGreaterThan(0);
     report.artProbe=await art.evaluate(()=>window.__windowNativeProbe.snapshot());await art.locator('#dispose').click();await expect(art.locator('#render-status')).toContainText('Art disposed');report.artDisposed=JSON.parse(await art.locator('#diagnostics').textContent());expect(report.artDisposed.residentEntries).toBe(0);
+    // Finish each owned page and its video when its checks end. Leaving both
+    // recordings open makes context shutdown flush several minutes at once.
+    await art.close();report.artPageClosed=true;await checkpoint();
     field=await context.newPage();observe(field,'actual-fieldview',report);await field.goto(origin+'/coldwell-preview.html');await ready(field);report.fieldWebGL=await field.evaluate(inspectWebGL,'#viewport canvas');expect(report.fieldWebGL.available).toBe(true);
     for(const id of ['approach','gatehouse','portal','b1','b5','shaft']){
       await field.locator('#'+id).click();await ready(field);await expect.poll(async()=>(await preview(field)).art.pendingRequests).toBe(0);
@@ -43,6 +46,7 @@ test('Coldwell proving views compile real standard/depth/distance shaders and di
     for(const p of [report.artProbe,report.fieldProbe]){expect(p.shaders.filter(s=>!s.ok)).toEqual([]);expect(p.links.filter(s=>!s.ok)).toEqual([]);}
     for(const log of report.pages){expect(log.errors,JSON.stringify(log)).toEqual([]);expect(log.console.filter(m=>m.type==='error'),JSON.stringify(log)).toEqual([]);expect(log.requests.filter(r=>r.status||r.error!=='net::ERR_ABORTED'),JSON.stringify(log)).toEqual([]);}
     await field.evaluate(()=>window.__coldwellPreview.dispose());const disposed=await preview(field);expect(disposed.retiredArt.disposed).toBe(true);expect(disposed.retiredArt.residentEntries).toBe(0);expect(disposed.retiredArt.counters.createdGeometries).toBe(disposed.retiredArt.counters.disposedGeometries);expect(disposed.retiredArt.counters.createdTextures).toBe(disposed.retiredArt.counters.disposedTextures);report.fieldDisposed=disposed;
+    await field.close();report.fieldPageClosed=true;await checkpoint();
   }});
 });
 

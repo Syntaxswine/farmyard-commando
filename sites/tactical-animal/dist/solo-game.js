@@ -562,7 +562,7 @@ const fireRules=createFireRules({kill,walkSegment,random,key,log});
 const fuelRules=createFuelRules({kill,ignite:fireRules.ignite,recordBurn,inside:insideWorld,log,windowBlast});
 const guardAwareness=createGuardAwareness({alive,point:rememberedPoint,distance,sees:(s,g)=>canSee(s,g,hero(s))?hero(s):null,free:freePoint,path:(s,g,p)=>navigationPath(s,g,p.x,p.y,p,{nodeLimit:128}),travel,speed:movementSpeed,refresh});
 export const reportNoise=(s,source,radius)=>guardAwareness.signal(s,source,radius);
-const guardCoordination=createGuardCoordination({alive,distance,point:rememberedPoint,approach:approachPath,free:freePoint,walk:walkSegment,travel,speed:movementSpeed,shadow:(s,b,p)=>{
+const guardCoordination=createGuardCoordination({alive,distance,point:rememberedPoint,approach:(s,g,p)=>approachPath(s,g,p,{nodeLimit:1024}),free:freePoint,walk:walkSegment,travel,speed:movementSpeed,shadow:(s,b,p)=>{
   const shadow={...s,units:s.units.flatMap(u=>u!==b?[u]:p?[{...u,...p}]:[])};
   if(geometryCache.has(s))geometryCache.set(shadow,geometryCache.get(s));return shadow;
 }});
@@ -681,8 +681,8 @@ function searchStarts(s,g){
   }
   return [...starts.values()];
 }
-export function approachPath(s,g,lastSeen){
-  if(s.spatial)return providerFor(s).approachPath(s,g,lastSeen,{rate:movementRate(g)});
+export function approachPath(s,g,lastSeen,{nodeLimit=NAVIGATION_NODE_LIMIT}={}){
+  if(s.spatial)return providerFor(s).approachPath(s,g,lastSeen,{rate:movementRate(g),nodeLimit:Math.min(128,nodeLimit)});
   const quarries=standIns(s,lastSeen);if(!quarries.length)return null;
   // The straight walk tries the stand-ins nearest first; the search weighs them all.
   for(const quarry of [...quarries].sort((a,b)=>distance(a,g)-distance(b,g))){
@@ -709,7 +709,7 @@ export function approachPath(s,g,lastSeen){
     return true;
   };
   const estimate=quarries.length===1?q=>Math.max(0,distance(q,quarries[0])-QUARRY_REACH):q=>Math.min(...quarries.map(c=>Math.max(0,distance(q,c)-QUARRY_REACH)));
-  const raw=gridSearch(s,g,starts,(p,pk)=>goalKeys.has(pk),estimate,sealed);if(!raw)return null;
+  const raw=gridSearch(s,g,starts,(p,pk)=>goalKeys.has(pk),estimate,sealed,nodeLimit);if(!raw)return null;
   const via=starts.find(p=>p.x===raw[0].x&&p.y===raw[0].y).via;
   return smoothRoute(s,g,via?[via,...raw]:raw);
 }

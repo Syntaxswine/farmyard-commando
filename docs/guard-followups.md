@@ -52,7 +52,8 @@ apply. Normal starts keep their existing route and tie order. Regression command
 ## Friendly blockers
 
 An alert guard with no route can ask one later, higher-ID ally to yield. At most
-four candidate allies and 48 standing points each are considered; a hypothetical
+four candidate allies and 48 standing points each are considered; each hypothetical
+search expands at most 1024 flat nodes (128 native nodes), and a hypothetical
 route must become legal with that ally standing at the yield point. Source
 geometry is shared, live bodies are checked anew. A trapped actor with no legal
 10 cm start among 32 bearings makes no remote request. The low-ID priority avoids

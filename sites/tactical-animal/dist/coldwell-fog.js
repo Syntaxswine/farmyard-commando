@@ -28,7 +28,7 @@ export class ColdwellFog{
       shader.vertexShader='varying vec3 vFarmyardWorld;\n'+shader.vertexShader;
       shader.vertexShader=shader.vertexShader.replace('#include <project_vertex>',`vec4 farmyardWorld=vec4(transformed,1.);\n#ifdef USE_INSTANCING\nfarmyardWorld=instanceMatrix*farmyardWorld;\n#endif\nvFarmyardWorld=(modelMatrix*farmyardWorld).xyz;\n#include <project_vertex>`);
       shader.fragmentShader='varying vec3 vFarmyardWorld;uniform sampler2D coldwellFog;\n'+shader.fragmentShader;
-      const sample=`vec2 farmyardCell=floor(vFarmyardWorld.xz+vec2(.5));float farmyardFloor=clamp(floor((vFarmyardWorld.y+.025)/2.12),0.,22.);vec2 farmyardAtlas=vec2(mod(farmyardFloor,6.)*240.,floor(farmyardFloor/6.)*240.)+farmyardCell;float farmyardKnown=texture2D(coldwellFog,(farmyardAtlas+vec2(.5))/vec2(1440.,960.)).r;if(any(lessThan(farmyardCell,vec2(0.)))||any(greaterThanEqual(farmyardCell,vec2(240.)))||farmyardKnown<.01)discard;`;
+      const sample=`vec2 farmyardCell=floor(vFarmyardWorld.xz);float farmyardFloor=clamp(floor((vFarmyardWorld.y+.025)/2.12),0.,22.);vec2 farmyardAtlas=vec2(mod(farmyardFloor,6.)*240.,floor(farmyardFloor/6.)*240.)+farmyardCell;float farmyardKnown=texture2D(coldwellFog,(farmyardAtlas+vec2(.5))/vec2(1440.,960.)).r;if(any(lessThan(farmyardCell,vec2(0.)))||any(greaterThanEqual(farmyardCell,vec2(240.)))||farmyardKnown<.01)discard;`;
       shader.fragmentShader=shader.fragmentShader.replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\n'+sample);
       if(!shadow)shader.fragmentShader=shader.fragmentShader.replace('#include <dithering_fragment>','gl_FragColor.rgb*=farmyardKnown;\n#include <dithering_fragment>');
     };

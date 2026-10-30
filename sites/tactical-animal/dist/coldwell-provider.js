@@ -26,11 +26,14 @@ export class ColdwellProvider{
     this.stairs=bundle.data.semantics.stairs.map(s=>({...s,route:coldwellStairRoute(s)}));
     this.stairById=new Map(this.stairs.map(s=>[s.id,s]));this.navigationCache=new WeakMap();this.occupancyCache=new WeakMap();this.linkCache=new WeakMap();
     this.anchors=this.stairs.flatMap(s=>[{...s.route[0],id:s.id+':bottom',stair:s,side:0},{...s.route.at(-1),id:s.id+':top',stair:s,side:1}]);
+    this.floorIndex=new Map(this.floors.map((f,i)=>[f.id,i]));this.floorExtra=this.floors.map((_,i)=>this.floors.map((_,j)=>i===j?0:Infinity));
+    for(const stair of this.stairs){let length=0;for(let i=1;i<stair.route.length;i++)length+=spatialDistance(stair.route[i-1],stair.route[i]);const a=this.floorIndex.get(stair.fromFloorId),b=this.floorIndex.get(stair.toFloorId),extra=length-xy(stair.route[0],stair.route.at(-1));this.floorExtra[a][b]=this.floorExtra[b][a]=Math.min(this.floorExtra[a][b],extra);}
+    for(let k=0;k<this.floors.length;k++)for(let i=0;i<this.floors.length;i++)for(let j=0;j<this.floors.length;j++)this.floorExtra[i][j]=Math.min(this.floorExtra[i][j],this.floorExtra[i][k]+this.floorExtra[k][j]);
     this.rigRules=new ColdwellRigRules(this);this.combat=new ColdwellCombat(this);
   }
-  createState(){return {provider:this.id,version:1,sourceDigest:this.bundle.manifest.sourceDigest,revision:0,poses:Object.fromEntries(this.bundle.data.rigs.map(r=>[r.id,0])),transitions:{}};}
+  createState(){return {provider:this.id,version:2,sourceDigest:this.bundle.manifest.sourceDigest,revision:0,poses:Object.fromEntries(this.bundle.data.rigs.map(r=>[r.id,0])),transitions:{}};}
   validateState(saved){
-    if(!saved||saved.provider!==this.id||saved.version!==1||saved.sourceDigest!==this.bundle.manifest.sourceDigest||!Number.isSafeInteger(saved.revision)||saved.revision<0||!saved.poses||Object.keys(saved.poses).length!==this.bundle.data.rigs.length)throw Error('Unsupported Coldwell source or state.');
+    if(!saved||saved.provider!==this.id||saved.version!==2||saved.sourceDigest!==this.bundle.manifest.sourceDigest||!Number.isSafeInteger(saved.revision)||saved.revision<0||!saved.poses||Object.keys(saved.poses).length!==this.bundle.data.rigs.length)throw Error('Unsupported Coldwell source or state.');
     this.rigRules.validate(saved);
     return saved;
   }
@@ -46,8 +49,8 @@ export class ColdwellProvider{
     for(const shape of this.geometry.support){
       if(Math.abs(shape.h-actor.h)>range)continue;
       const b=shape.bounds;
-      for(let y=Math.max(0,Math.ceil(b.y0),Math.ceil(actor.y-range));y<=Math.min(239,Math.floor(b.y1),Math.floor(actor.y+range));y++)for(let x=Math.max(0,Math.ceil(b.x0),Math.ceil(actor.x-range));x<=Math.min(239,Math.floor(b.x1),Math.floor(actor.x+range));x++){
-        const p={x,y,h:shape.h,floorId:shape.floorId};if(spatialDistance(actor,p)>range||!polygonContains(p,shape))continue;points.set(shape.floorId+'@'+x+','+y,p);
+      for(let y=Math.max(0,Math.ceil(b.y0-.5),Math.ceil(actor.y-range-.5));y<=Math.min(239,Math.floor(b.y1-.5),Math.floor(actor.y+range-.5));y++)for(let x=Math.max(0,Math.ceil(b.x0-.5),Math.ceil(actor.x-range-.5));x<=Math.min(239,Math.floor(b.x1-.5),Math.floor(actor.x+range-.5));x++){
+        const p={x:x+.5,y:y+.5,h:shape.h,floorId:shape.floorId};if(spatialDistance(actor,p)>range||!polygonContains(p,shape))continue;points.set(shape.floorId+'@'+x+','+y,p);
       }
     }
     return points.values();
@@ -133,12 +136,18 @@ export class ColdwellProvider{
     const dx=to.x-from.x,dy=to.y-from.y,length2=dx*dx+dy*dy,height=actorHeight(actor);
     return !(state.units||[]).some(u=>{if(u.hp<=0||u.id===actor.id||u.h+actorHeight(u)<=from.h||from.h+height<=u.h)return false;const t=Math.max(0,Math.min(1,((u.x-from.x)*dx+(u.y-from.y)*dy)/(length2||1)));return Math.hypot(u.x-from.x-dx*t,u.y-from.y-dy*t)<2*RADIUS-EPS;});
   }
+  floorOptions(point){const stair=point.stairId&&this.stairById.get(point.stairId);return stair?[stair.route[0],stair.route.at(-1)].map(p=>({index:this.floorIndex.get(p.floorId),extra:spatialDistance(point,p)-xy(point,p)})):[{index:this.floorIndex.get(point.floorId),extra:0}];}
   path(state,actor,destination,{rate=1,nodeLimit=8192,goals=[destination]}={}){
-    const ends=goals.map(p=>this.resolve(state,p,actor)).filter(p=>p&&this.occupancy(state,actor,p)).sort((a,b)=>spatialDistance(actor,a)-spatialDistance(actor,b));if(!ends.length)return null;
+    this.lastSearch={expanded:0,found:false,nodeLimit};
+    const ends=goals.map(p=>this.resolve(state,p,actor)).filter(p=>p&&this.occupancy(state,actor,p)&&Number.isFinite(this.floorExtra[this.floorIndex.get(actor.floorId)]?.[this.floorIndex.get(p.floorId)])).sort((a,b)=>spatialDistance(actor,a)-spatialDistance(actor,b));if(!ends.length)return null;
     const end=ends[0],clean=p=>({x:p.x,y:p.y,h:p.h,floorId:p.floorId,...(p.stairId?{stairId:p.stairId}:{})});
     if(actor.floorId===end.floorId&&!actor.stairId&&!end.stairId&&this.sweep(state,actor,actor,end).ok)return [{...clean(end),cost:spatialDistance(actor,end)*rate}];
     const key=p=>p.id||`${p.floorId}@${p.x},${p.y}`,open=new PathFrontier(),cost=new Map(),parents=new Map(),points=new Map(),links=new Map(),valid=new Map();
-    const start={...actor,id:'start'},targets=ends.map((p,i)=>({...p,id:'goal:'+i})),estimate=p=>Math.min(...ends.map(end=>spatialDistance(p,end)));let expanded=0,found=null;
+    const start={...actor,id:'start'},targets=ends.map((p,i)=>({...p,id:'goal:'+i})),endOptions=ends.map(p=>this.floorOptions(p));
+    // Every authored floor transition adds its actual stair length beyond the
+    // endpoints' horizontal displacement. This is an admissible lower bound
+    // for the existing A* graph, including partial stair endpoints.
+    const estimate=p=>{const options=this.floorOptions(p);return Math.min(...ends.map((end,i)=>Math.max(spatialDistance(p,end),xy(p,end)+Math.min(...options.flatMap(a=>endOptions[i].map(b=>a.extra+this.floorExtra[a.index][b.index]+b.extra))))));};let expanded=0,found=null;
     const floorPoint=(x,y,floor)=>({x,y,h:this.floorById.get(floor).elevationM,floorId:floor});
     const clear=p=>{const id=key(p);if(!valid.has(id))valid.set(id,this.occupancy(state,actor,p));return valid.get(id);};
     const neighbours=p=>{

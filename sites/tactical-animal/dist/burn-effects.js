@@ -7,7 +7,7 @@ import {createWorkerLocomotion} from './aft/tactics/worker-locomotion.js';
 import {createTankBlastMotion,TANK_TIME} from './designer/a20b343a0234/tactics/tank-blast-motion.js';
 
 const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
-const cell=p=>`${p.floorId?p.floorId+'@':''}${Math.round(p.x)},${Math.round(p.y)}`;
+const cell=p=>`${p.floorId?p.floorId+'@':''}${p.floorId?Math.floor(p.x):Math.round(p.x)},${p.floorId?Math.floor(p.y):Math.round(p.y)}`;
 export function burnSegments(event){
   const points=event.route.map(p=>({x:p.x,y:p.h??0,z:p.y})),segments=[];let part=[points[0]],last=null;
   for(let i=1;i<points.length;i++){

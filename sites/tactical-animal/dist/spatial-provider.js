@@ -17,7 +17,7 @@ export function attachSpatial(state,id,saved){
   const provider=providers.get(id);if(!provider)throw Error('Required spatial provider is not loaded.');
   const value=saved??provider.createState();provider.validateState(value);state.spatial=value;bindings.set(state,provider);return provider;
 }
-export const floorKey=(point,x=point.x,y=point.y)=>`${point.floorId}@${Math.round(x)},${Math.round(y)}`;
+export const floorKey=(point,x=point.x,y=point.y)=>`${point.floorId}@${Math.floor(x)},${Math.floor(y)}`;
 export const spatialDistance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,(a.h??0)-(b.h??0));
 export const actorHeight=actor=>actor.stance==='prone'?.42:actor.stance==='kneeling'?1.15:1.75;
 export const actorEye=actor=>(actor.h??0)+(actor.stance==='prone'?.3:actor.stance==='kneeling'?.75:1.1);

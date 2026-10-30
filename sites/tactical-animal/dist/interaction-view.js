@@ -36,10 +36,10 @@ export class InteractionScenery {
       }
   }
   release(id){const record=this.records.get(id),mesh=record.sprite||record.leaf||record.marker;mesh.removeFromParent();mesh.material.dispose();this.records.delete(id);}
-  update(state,window=blockWindow(state,state.units?.find(unit=>unit.team==='squad')||{x:0,y:0}),{height}={}){
+  update(state,window=blockWindow(state,state.units?.find(unit=>unit.team==='squad')||{x:0,y:0}),{height,floorHeight=height}={}){
     if(this.disposed)return;
     if(this.assets){
-      const resident=state.interactables.filter(object=>pointInWorldRect(object,window)&&(!state.spatial||object.h>=height-2.25&&object.h<=height+4.25)),ids=new Set(resident.map(object=>object.id));
+      const resident=state.interactables.filter(object=>pointInWorldRect(object,window)&&(!state.spatial||object.h>=height-2.25&&object.h<=floorHeight+.05)),ids=new Set(resident.map(object=>object.id));
       for(const id of this.records.keys())if(!ids.has(id))this.release(id);
       for(const object of resident)if(!this.records.has(object.id))this.create(object);
       this.window=window;
@@ -47,7 +47,7 @@ export class InteractionScenery {
     for(const object of state.interactables){
       const record=this.records.get(object.id);if(!record)continue;
       const cells=object.kind==='door'?[`${Math.floor(object.x)},${Math.floor(object.y)}`,`${Math.ceil(object.x)},${Math.ceil(object.y)}`]:[`${Math.round(object.x)},${Math.round(object.y)}`];
-      const qualified=state.spatial?cells.map(cell=>object.floorId+'@'+cell):cells;
+      const qualified=state.spatial?[`${object.floorId}@${Math.floor(object.x)},${Math.floor(object.y)}`]:cells;
       const known=qualified.some(cell=>state.seen.has(cell)),visible=qualified.some(cell=>state.visible.has(cell)),h=object.h??0;
       if(record.sprite){
         record.sprite.visible=known;record.sprite.position.set(object.x,h+.015,object.y);record.sprite.scale.set(1.15,object.open?1.1:.9,1);

@@ -20,6 +20,7 @@ import {clampCameraPoint,residentCameraSpan} from './render-residency.js';
 import {SearchHalo,searchHaloCandidates,searchHaloTarget} from './search-halo.js';
 import {WindowScenery,WindowEffects} from './window-view.js';
 import {providerFor} from './spatial-provider.js';
+import {drawColdwellMinimap} from './coldwell-minimap.js';
 import {createFloorNavigation} from './vendor/nautilus/8c4670450cb2b38c1e1abd811d633c22de9e2b7c/packages/floor-navigation/index.js';
 import {mountFloorNavigation} from './vendor/nautilus/8c4670450cb2b38c1e1abd811d633c22de9e2b7c/packages/floor-navigation/dom.js';
 
@@ -83,7 +84,7 @@ export class FieldView {
     const g=this.gesture;this.gesture=null;this.pinch=null;if(!g||g.moved||e.type==='pointercancel')return;
     const point=this.ground(e.clientX,e.clientY);if(!point)return;
     const picks=[...this.actors.values()].filter(a=>a.root.visible&&a.pick.visible).map(a=>a.pick).concat(this.interactionArt?.picks||[],this.windowArt?.picks||[],this.state.spatial?this.art?.picks||[]:[]);
-    const hits=this.ray.intersectObjects(picks,false),hit=hits[0]?.object.userData.windowPaneId?hits.find(h=>h.object.userData.unitId!==undefined)||hits[0]:hits[0];
+    const hits=this.ray.intersectObjects(picks,false).filter(hit=>!this.state.spatial||hit.distance<=this.ray.ray.origin.distanceTo(point)+.05),hit=hits[0]?.object.userData.windowPaneId?hits.find(h=>h.object.userData.unitId!==undefined)||hits[0]:hits[0];
     this.onPick(hit?hit.object.userData.windowId?{windowId:hit.object.userData.windowId,paneId:hit.object.userData.windowPaneId,ground:true,x:hit.point.x,y:hit.point.z,h:hit.point.y}:hit.object.userData.interactionId?{interactionId:hit.object.userData.interactionId}:{unitId:hit.object.userData.unitId}:{x:point.x,y:point.z,...(this.state.spatial?{h:point.y,floorId:point.floorId||this.floorController.state.selectedId,...(point.stairId?{stairId:point.stairId}:{})}:{})});
   }
   unlockSound(){this.windowEffects?.unlock();}
@@ -254,7 +255,8 @@ export class FieldView {
     if(this.returnSpan!=null){const goal=residentCameraSpan(s,{x:this.target.x,y:this.target.z},{width:this.container.clientWidth,height:this.container.clientHeight},this.returnSpan);this.span+=(goal-this.span)*.14;if(Math.abs(goal-this.span)<.01){this.span=goal;this.returnSpan=null;}this.resize();}
     if(this.focusedId!=null){const contact=s.units.find(v=>v.id===this.focusedId&&Core.alive(v)&&s.detected.has(v.id));if(contact){this.target.lerp(V(contact.x,contact.h??0,contact.y),.18);this.updateCamera();}else this.center();}
     if(this.follow){this.target.lerp(V(u.x,u.h??0,u.y),.18);this.updateCamera();}
-    const inBand=v=>!s.spatial||v.h>=this.viewHeight()-2.25&&v.h<=this.viewHeight()+4.25;
+    const selectedFloor=s.spatial?providerFor(s).floorById.get(this.floorController.state.selectedId):null;
+    const inBand=v=>!s.spatial||v.h>=this.viewHeight()-2.25&&v.h<=this.viewHeight()+4.25&&providerFor(s).floorById.get(v.floorId)?.index<=selectedFloor.index;
     const window=this.residentWindow||blockWindow(s,u),visible=s.units.filter(v=>pointInWorldRect(v,window)&&inBand(v)&&(v.team==='squad'||(v.hp>0?s.detected.has(v.id):s.visible.has(Core.cellKey(s,v)))));
     this.reconcileActors(visible);
     if(s.effect&&s.effect!==this.lastEffect){this.lastEffect=s.effect;this.queueEffects(s.effect,now);}
@@ -274,7 +276,7 @@ export class FieldView {
       if(a.signature!==signature||fire||a.hadFlame){a.signature=signature;a.hadFlame=!!fire;if(a.weapon!==displayedWeapon){this.burnEffects?.release(v.id);const old=a.equipment;a.equipment=createWeaponModel(displayedWeapon);a.worker.equipWeapon(a.equipment);old.dispose();a.weapon=displayedWeapon;}
         a.root.position.set(0,0,0);a.locomotion?.apply({...sample,blend:sample.pose?.prone||sample.pose?.down?0:sample.blend});a.posture.apply(sample);if(sample.pose.down)a.posture.ground();}
       a.root.position.set(sample.x,sample.h??0,sample.y);a.root.updateMatrixWorld(true);a.worker.skeleton.update();if(fire)this.flameEffects.captureMuzzle(fire,a.flameOperator.apply({...sample,hp:operator.hp},fire.seconds,fire.reduced));this.burnEffects?.pose(a,v,this.camera);}
-    if(s.revision!==this.lastRevision||window.key!==this.lastWindowKey){this.lastRevision=s.revision;this.lastWindowKey=window.key;if(s.spatial)this.art?.update(s,{x:this.target.x,y:this.target.z,h:this.viewHeight()},{height:this.viewHeight(),cutawayHeight:this.floorController.state.floors.find(f=>f.id===this.floorController.state.selectedId).elevationM,roofs:this.floorController.state.selectedId==='coldwell-roof-1',...this.coldwellCutaway});else this.art.update(s,u,window);this.interactionArt?.update(s,window,{height:this.viewHeight()});this.missionArt?.update(s,window);
+    if(s.revision!==this.lastRevision||window.key!==this.lastWindowKey){this.lastRevision=s.revision;this.lastWindowKey=window.key;if(s.spatial)this.art?.update(s,{x:this.target.x,y:this.target.z,h:this.viewHeight()},{height:this.viewHeight(),cutawayHeight:this.floorController.state.floors.find(f=>f.id===this.floorController.state.selectedId).elevationM,roofs:this.floorController.state.selectedId==='coldwell-roof-1',...this.coldwellCutaway});else this.art.update(s,u,window);this.interactionArt?.update(s,window,{height:this.viewHeight(),floorHeight:selectedFloor?.elevationM});this.missionArt?.update(s,window);
       const mission=missionForState(s);this.objectivePin.visible=!s.coldwellPreview&&!objectiveSecured(s)&&pointInWorldRect(mission.objective,window)&&inBand(mission.objective);this.extractionPin.visible=!s.coldwellPreview&&pointInWorldRect(mission.extraction,window)&&inBand(mission.extraction);
     }
     this.animateEffects(now);
@@ -291,7 +293,7 @@ export class FieldView {
   dispose(){this.generation++;this.clearGestures();this.clearEffects();this.pending.clear();this.resizeObserver.disconnect();this.container.removeEventListener('pointerdown',this.pointerDown);this.container.removeEventListener('pointermove',this.pointerMove);this.container.removeEventListener('pointerup',this.pointerUp);this.container.removeEventListener('pointercancel',this.pointerUp);this.container.removeEventListener('wheel',this.wheel);for(const a of [...this.actors.values(),...this.parkedActors.values()])this.disposeActor(a);this.actors.clear();this.parkedActors.clear();this.clearEnvironment();this.daylight.dispose();this.marker.geometry.dispose();this.marker.material.dispose();this.blastMarker.geometry.dispose();this.blastMarker.material.dispose();this.blastArea.geometry.dispose();this.blastArea.material.dispose();this.pathLine.geometry.dispose();this.pathLine.material.dispose();this.renderer.dispose();this.renderer.domElement.remove();return Promise.allSettled([...(this.retirements||[])]);}
 }
 
-export function drawMinimap(canvas,s){const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,bounds=worldBounds(s);ctx.fillStyle='#1b2219';ctx.fillRect(0,0,w,h);const scale=Math.min((w-12)/bounds.w,(h-12)/bounds.h),ox=(w-bounds.w*scale)/2,oy=(h-bounds.h*scale)/2;
+export function drawMinimap(canvas,s,options){if(s.spatial)return drawColdwellMinimap(canvas,s,options);const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,bounds=worldBounds(s);ctx.fillStyle='#1b2219';ctx.fillRect(0,0,w,h);const scale=Math.min((w-12)/bounds.w,(h-12)/bounds.h),ox=(w-bounds.w*scale)/2,oy=(h-bounds.h*scale)/2;
   for(const cell of s.seen){const [x,y]=cell.split(',').map(Number);if(x<bounds.x||x>=bounds.x+bounds.w||y<bounds.y||y>=bounds.y+bounds.h)continue;const tile=s.map[y]?.[x];if(!tile)continue;ctx.fillStyle=tile==='crate'?'#746b4e':tile==='floor'||tile==='ground-concrete'?'#686d51':tile==='ground-asphalt'?'#575954':'#3e4b31';ctx.fillRect(ox+(x-bounds.x)*scale,oy+(y-bounds.y)*scale,scale+.2,scale+.2);}
   ctx.strokeStyle='#acaa88';ctx.lineWidth=Math.max(1,scale*.14);ctx.beginPath();for(const [edge,kind] of Object.entries(s.edges)){if(kind==='door')continue;const [axis,xs,ys]=edge.split(':'),x=+xs,y=+ys;if(!s.seen.has(Core.key(x,y)))continue;if(axis==='e'){ctx.moveTo(ox+(x-bounds.x+.5)*scale,oy+(y-bounds.y-.5)*scale);ctx.lineTo(ox+(x-bounds.x+.5)*scale,oy+(y-bounds.y+.5)*scale);}else{ctx.moveTo(ox+(x-bounds.x-.5)*scale,oy+(y-bounds.y+.5)*scale);ctx.lineTo(ox+(x-bounds.x+.5)*scale,oy+(y-bounds.y+.5)*scale);}}ctx.stroke();
   const dot=(p,color,r)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(ox+(p.x-bounds.x)*scale,oy+(p.y-bounds.y)*scale,r,0,Math.PI*2);ctx.fill();};

@@ -1,6 +1,6 @@
-#floor-controls{position:absolute;z-index:5;top:calc(env(safe-area-inset-top) + 90px);left:12px;width:min(310px,calc(100% - 24px));padding:8px;background:#17241eef;border:1px solid #747c61;border-radius:4px;pointer-events:auto}
+#floor-controls{position:absolute;z-index:5;top:calc(env(safe-area-inset-top) + 140px);left:12px;width:min(310px,calc(100% - 24px));padding:8px;background:#17241eef;border:1px solid #747c61;border-radius:4px;pointer-events:auto}
 #floor-controls[hidden]{display:none}
 #floor-controls .fn-heading{display:none}
 #floor-controls .fn-modes{gap:4px}
 #floor-controls .fn-mode{display:none}
-@media(max-width:680px){#floor-controls{top:calc(env(safe-area-inset-top) + 76px);width:230px;padding:5px;left:8px}#floor-controls .fn-strip{gap:3px}#floor-controls .fn-button{font-size:11px;min-height:32px;padding:5px 3px}#floor-controls .fn-modes .fn-button{min-height:30px}#floor-controls .fn-readout{font-size:10px}}
+@media(max-width:680px){#floor-controls{top:calc(env(safe-area-inset-top) + 130px);width:230px;padding:5px;left:8px}#floor-controls .fn-strip{gap:3px}#floor-controls .fn-button{font-size:11px;min-height:32px;padding:5px 3px}#floor-controls .fn-modes .fn-button{min-height:30px}#floor-controls .fn-readout{font-size:10px}}

@@ -13,13 +13,13 @@ export function createFuelRules({kill,ignite,recordBurn,inside,log,windowBlast=(
     wearer.tanksExploded=true;wearer.ammo.flamethrower=0;wearer.ammoPouch.flamethrower=0;
     wearer.pack=(wearer.pack||[]).filter(i=>i.kind!=='flamethrower');wearer.slots=(wearer.slots||[]).filter(id=>id!=='flamethrower');
     if(wearer.weapon==='flamethrower')wearer.weapon='hands';
-    s.fires??=[];const fires=[],{width,height}=gridDimensions(s);
-    for(let y=Math.max(0,Math.ceil(origin.y-5));y<=Math.min(height-1,Math.floor(origin.y+5));y++)for(let x=Math.max(0,Math.ceil(origin.x-5));x<=Math.min(width-1,Math.floor(origin.x+5));x++){
-      if(!inside(s,{x,y})||Math.hypot(x-origin.x,y-origin.y)>5)continue;
-      const support=provider?.supportAt(s,{x,y,h:origin.h},{radius:.04,maxDrop:.23,maxRise:.23});
+    s.fires??=[];const fires=[],{width,height}=gridDimensions(s),offset=provider?.5:0;
+    for(let y=Math.max(0,Math.ceil(origin.y-5-offset));y<=Math.min(height-1,Math.floor(origin.y+5-offset));y++)for(let x=Math.max(0,Math.ceil(origin.x-5-offset));x<=Math.min(width-1,Math.floor(origin.x+5-offset));x++){
+      const point={x:x+offset,y:y+offset};if(!inside(s,point)||Math.hypot(point.x-origin.x,point.y-origin.y)>5)continue;
+      const support=provider?.supportAt(s,{...point,h:origin.h},{radius:.04,maxDrop:.23,maxRise:.23});
       if(provider? !support||!provider.combat.blastAffects(s,origin,support,5):['void','water'].includes(s.map[y][x]))continue;
-      const old=s.fires.find(p=>p.x===x&&p.y===y&&(p.z||0)===origin.z);
-      if(old)old.turns=3;else{const p={x,y,z:origin.z,turns:3,...(support?{h:support.h,floorId:support.floorId}:{})};s.fires.push(p);fires.push({...p});}
+      const old=s.fires.find(p=>p.x===point.x&&p.y===point.y&&(p.z||0)===origin.z);
+      if(old)old.turns=3;else{const p={...point,z:origin.z,turns:3,...(support?{h:support.h,floorId:support.floorId}:{})};s.fires.push(p);fires.push({...p});}
     }
     // Three integer-centred AFT cells span a physical 3 m square. Keep that
     // square centred on the actual fractional blast position; never snap actors.

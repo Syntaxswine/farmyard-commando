@@ -36,7 +36,8 @@ export function createFireRules({kill,walkSegment,random,key,log}){
     if(s.fires)s.fires=s.fires.map(p=>({...p,turns:p.turns-1})).filter(p=>p.turns>0);
   }
   function restore(s,inside){
-    if(s.fires!==undefined&&(!Array.isArray(s.fires)||s.fires.some(p=>!p||!Number.isInteger(p.x)||!Number.isInteger(p.y)||!inside(p)||!Number.isInteger(p.turns)||p.turns<1||p.turns>3||(s.spatial?!Number.isFinite(p.h)||!providerFor(s).floorById.has(p.floorId)||!providerFor(s).supportAt(s,p,{radius:.04,maxRise:.03,maxDrop:.03}):(p.z??0)!==0))))throw Error('Unsupported fire save.');
+    const coordinate=n=>s.spatial?Number.isFinite(n)&&n===Math.floor(n)+.5:Number.isInteger(n);
+    if(s.fires!==undefined&&(!Array.isArray(s.fires)||s.fires.some(p=>!p||!coordinate(p.x)||!coordinate(p.y)||!inside(p)||!Number.isInteger(p.turns)||p.turns<1||p.turns>3||(s.spatial?!Number.isFinite(p.h)||!providerFor(s).floorById.has(p.floorId)||!providerFor(s).supportAt(s,p,{radius:.04,maxRise:.03,maxDrop:.03}):(p.z??0)!==0))))throw Error('Unsupported fire save.');
     const cells=new Set();for(const p of s.fires||[]){const k=s.spatial?floorKey(p):key(p.x,p.y);if(cells.has(k))throw Error('Duplicate fire cell.');cells.add(k);}
     for(const u of s.units){
       if(u.burningTurns!==undefined&&(!Number.isInteger(u.burningTurns)||u.burningTurns<0||u.burningTurns>3)||u.fireActedRound!==undefined&&(!Number.isInteger(u.fireActedRound)||u.fireActedRound<0||u.fireActedRound>s.round)||u.burnedRemains!==undefined&&typeof u.burnedRemains!=='boolean'||u.burnedRemains&&u.hp>0||u.burningTurns&&(u.hp<=0||u.ap!==0||!s.spatial&&u.stance!=='standing'||u.running||u.sneaking))throw Error('Unsupported burn save.');

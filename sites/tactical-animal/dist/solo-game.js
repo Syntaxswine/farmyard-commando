@@ -218,13 +218,14 @@ function visibility(s){
   const provider=providerFor(s);if(provider){
     const u=hero(s),range=35;s.visible=new Set([cellKey(s,u)]);s.seen.add(cellKey(s,u));
     for(const p of provider.visibilityPoints(u,range)){
-      if(!provider.trace(s,{x:u.x,y:u.y,h:actorEye(u)},{...p,h:p.h+.04},{purpose:'sight'})){const k=cellKey(s,p);s.visible.add(k);s.seen.add(k);}
+      if(!provider.trace(s,{x:u.x,y:u.y,h:actorEye(u)},{...p,h:p.h+1.1},{purpose:'sight'})){const k=cellKey(s,p);s.visible.add(k);s.seen.add(k);}
     }
     // A visible chest or door must not conceal itself by occluding the ground
     // underneath its own footprint. Reveal its cell from its actual surface.
     for(const object of s.interactables)if(Number.isFinite(object.h)&&distance(u,object)<=range&&!provider.trace(s,{x:u.x,y:u.y,h:actorEye(u)},{x:object.x,y:object.y,h:object.h+(object.anchorHeight??.8)},{purpose:'sight',ignoreRig:object.rigId||object.id})){
       const k=cellKey(s,object);s.visible.add(k);s.seen.add(k);
     }
+    for(const id of s.detected){const target=s.units.find(unit=>unit.id===id);if(target){const k=cellKey(s,target);s.visible.add(k);s.seen.add(k);}}
     s.fogAt=rememberedPoint(u);return;
   }
   const u=hero(s),b=worldBounds(s),{width,height}=gridDimensions(s),range=35;

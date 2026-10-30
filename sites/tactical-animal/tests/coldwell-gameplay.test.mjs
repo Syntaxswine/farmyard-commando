@@ -6,6 +6,8 @@ import {ColdwellProvider} from '../dist/coldwell-provider.js';
 import {registerSpatialProvider,spatialDistance} from '../dist/spatial-provider.js';
 import {registerColdwellOperations} from '../dist/coldwell-operation.js';
 import {coldwellFogOffset,ColdwellFog} from '../dist/coldwell-fog.js';
+import {drawColdwellMinimap} from '../dist/coldwell-minimap.js';
+import {recordFlame,flameFogMask} from '../dist/flame-event.js';
 import {Core,createSoloGame,hero,encodeSave,decodeSave,tick,objectiveSecured} from '../dist/solo-game.js';
 const bundle=await loadColdwell({baseURL:new URL('../dist/coldwell/',import.meta.url),fetcher:async u=>new Response(fs.readFileSync(u))}),provider=new ColdwellProvider(bundle);
 registerSpatialProvider(provider.id,provider);registerColdwellOperations(provider);
@@ -43,7 +45,7 @@ test('native tread picking and partial stair routing retain continuous height af
 
 test('records use the shared chest and take-all transaction, require the clue, and persist without duplicate collection',()=>{
   const state=fresh('coldwell-recon'),unit=hero(state);Object.assign(unit,{x:74,y:112.8,...b5});Core.refresh(state,{forceFog:true});state.phase='player';unit.ap=30;
-  assert.ok(state.visible.has('coldwell-datum-17@75,113'),'The visible chest must not hide itself by blocking the ground beneath it.');
+  assert.ok(state.visible.has('coldwell-datum-17@75,112'),'The visible chest must not hide itself by blocking the ground beneath it.');
   assert.equal(Core.performInteraction(state,'coldwell-records-chest','open').ok,true);assert.match(Core.previewInteraction(state,'coldwell-records-chest','take-all').reason,/duty sheet/);assert.equal(objectiveSecured(state),false);
   state.solo.inspected.push('coldwell-gatehouse-clue');const before=unit.ap;assert.equal(Core.performInteraction(state,'coldwell-records-chest','take-all').ok,true);assert.equal(unit.ap,before-1);assert.equal(objectiveSecured(state),true);assert.equal(Core.previewInteraction(state,'coldwell-records-chest','take-all').ok,false);
   const restored=decodeSave(encodeSave(state));assert.equal(objectiveSecured(restored),true);assert.equal(restored.interactables.find(o=>o.id==='coldwell-records-chest').inventory.length,0);
@@ -86,4 +88,22 @@ test('the reused ray-BVH visibility probe agrees with the full source candidate 
   try{for(const from of [{x:72,y:114.1,h:45.62},{x:75,y:117,h:37.14},{x:149.5,y:103.5,h:37.14}])for(let i=0;i<16;i++){
     const to={x:from.x+Math.cos(i)*8,y:from.y+Math.sin(i)*8,h:from.h+(i%3-1)*2.12};provider.geometry.world=world;const fast=!!provider.trace(state,from,to,{purpose:'sight'});provider.geometry.world={...world,traceSegment:()=>null};assert.equal(fast,!!provider.trace(state,from,to,{purpose:'sight'}));
   }}finally{provider.geometry.world=world;}
+});
+
+test('canonical corner cells remain in bounds and restore at every map edge',()=>{
+  const state=fresh(),unit=hero(state);
+  for(const [x,y]of [[.24,.24],[239.76,.24],[.24,239.76],[239.76,239.76]]){Object.assign(unit,{x,y,...ground});Core.refresh(state,{forceFog:true});const cell=Core.cellKey(state,unit);assert.ok(state.visible.has(cell));assert.equal(cell,`coldwell-datum-22@${Math.floor(x)},${Math.floor(y)}`);assert.equal(hero(decodeSave(encodeSave(state))).x,x);}
+  const obsolete=JSON.parse(encodeSave(state));obsolete.spatial.version=1;assert.throws(()=>decodeSave(JSON.stringify(obsolete)),/Unsupported Coldwell/);
+});
+
+test('native minimap paints only the inspected floor and emits finite canonical coordinates',()=>{
+  const state=fresh('coldwell-recon');state.seen=new Set(['coldwell-datum-22@75,112','coldwell-datum-17@75,112']);const calls=[];
+  const ctx=Object.fromEntries(['fillRect','beginPath','moveTo','lineTo','stroke','arc','fill','save','translate','rotate','closePath','restore','fillText'].map(name=>[name,(...args)=>calls.push({name,args})]));
+  drawColdwellMinimap({width:190,height:140,getContext:()=>ctx},state,{floorId:'coldwell-datum-17'});assert.equal(calls.filter(c=>c.name==='fillRect').length,2);assert.ok(calls.some(c=>c.name==='fillText'&&c.args[0]==='B5'));assert.equal(calls.some(c=>c.name==='translate'),false);
+  for(const call of calls)for(const value of call.args)if(typeof value==='number')assert.ok(Number.isFinite(value));
+});
+
+test('native flame and persistent fire share canonical cell centres without shifting legacy grids',()=>{
+  const source={id:0,x:104.75,y:190.75,h:46.64,floorId:ground.floorId,heading:0,stance:'standing'},shape=recordFlame(source,1,[],new Set(['104,190']));assert.equal(shape.sourceVisible,true);assert.equal(flameFogMask(shape,new Set(['coldwell-datum-22@104,190']))[0],255);
+  const state=fresh(),unit=hero(state);state.fires=[{x:104.5,y:189.5,z:22,...ground,turns:3}];const restored=decodeSave(encodeSave(state));assert.equal(restored.fires[0].x,104.5);Object.assign(unit,{x:104.75,y:189.75});assert.equal(Core.enterFire(state,unit),true);
 });

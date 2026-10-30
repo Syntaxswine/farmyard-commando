@@ -21,10 +21,11 @@ export class ColdwellPresentation{
   syncState(state){this.state=state;this.fog?.update(state);if(this.art){this.art.syncDynamicState(state.spatial.poses);this.fog?.install(this.art.root);}}
   update(state,focus,{height=focus.h,cutawayHeight=height,roofs=false,canopies=true,display=true,plane}={}){
     this.syncState(state);if(this.disposed)return Promise.resolve();
-    const region=coldwellVisibleRegion({...focus,h:height},{roofs}),ceiling=plane||(cutawayHeight<46.63?{normal:[0,-1,0],constant:cutawayHeight+1.88}:null);region.cutaway={roofs,canopies,display,...(ceiling?{plane:ceiling}:{})};
+    const region=coldwellVisibleRegion({...focus,h:height},{roofs}),ceilingHeight=cutawayHeight<46.63?Math.max(cutawayHeight+1.88,height+.05):null,ceiling=plane||(ceilingHeight!==null?{normal:[0,-1,0],constant:ceilingHeight}:null);region.cutaway={roofs,canopies,display,...(ceiling?{plane:ceiling}:{})};
+    if(ceilingHeight!==null)region.heightBands[0].max=Math.min(region.heightBands[0].max,ceilingHeight);
     // Outdoor canopies cross several storey bands, with no occupied floors above
     // the ground. Keep their actual upper extent rather than clipping tree tops.
-    if(height>=46.63&&canopies){region.heightBands[0].max=56;}
+    if(cutawayHeight>=46.63&&canopies){region.heightBands[0].max=56;}
     const key=JSON.stringify([region.rect,region.heightBands,region.cutaway]);if(key===this.key)return this.pending||Promise.resolve();
     this.key=key;this.region=region;const request=++this.request;this.onLoading(true);
     this.pending=this.ready.then(async art=>{

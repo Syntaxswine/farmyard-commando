@@ -1,7 +1,7 @@
 import * as T from './aft/tactics/vendor/three.module.js';
 import {createPaintedBlastEffects,loadPaintedBlastTextures} from './designer/a20b343a0234/tactics/painted-blast-effects.js';
 import {tankCentre} from './designer/a20b343a0234/tactics/tank-blast-motion.js';
-const base=new URL('./designer/a20b343a0234/tactics/',import.meta.url),V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z),key=p=>`${p.floorId?p.floorId+'@':''}${Math.round(p.x)},${Math.round(p.y)}`;
+const base=new URL('./designer/a20b343a0234/tactics/',import.meta.url),V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z),key=p=>`${p.floorId?p.floorId+'@':''}${p.floorId?Math.floor(p.x):Math.round(p.x)},${p.floorId?Math.floor(p.y):Math.round(p.y)}`;
 export class SoloTankEffects{
   constructor(scene,{loadTexture=url=>new T.TextureLoader().loadAsync(url),reducedMotion=()=>globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false,onError=error=>console.warn('Fuel artwork unavailable; simulation continues.',error)}={}){
     Object.assign(this,{scene,loadTexture,reducedMotion,onError,bursts:new Map(),sequence:0,disposed:false});
@@ -43,7 +43,7 @@ export class SoloTankEffects{
     this.make(this.ground,true);if(this.ground.effects){this.ground.effects.setVisibility(visible);this.ground.effects.update(this.reduced?100:100+this.now/1000,{camera,contract:this.ground.contract});}
   }
   drawSpatial(camera){
-    const visible=floor=>[...this.state.visible].filter(k=>k.startsWith(floor+'@')).map(k=>{const [x,z]=k.split('@')[1].split(',').map(Number);return {x,z};});
+    const visible=floor=>[...this.state.visible].filter(k=>k.startsWith(floor+'@')).map(k=>{const [x,z]=k.split('@')[1].split(',').map(Number);return {x:x+.5,z:z+.5};});
     for(const b of this.bursts.values())if(!b.waiting&&this.now>=b.start&&(!b.worn||b.originFixed)){this.make(b);if(b.effects){b.effects.setVisibility(visible(b.floorId));b.effects.update((this.now-b.start)/1000,{camera,contract:{origin:{x:0,y:0},fires:[]},groundOpacity:0});}}
     const withheld=new Set([...this.bursts.values()].filter(b=>b.waiting||this.now<b.start).flatMap(b=>(b.event.fires||[]).map(key))),groups=new Map();
     for(const p of this.state.fires||[])if(p.turns>0&&this.state.visible.has(key(p))&&!withheld.has(key(p))){const id=p.floorId+'@'+p.h;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(p);}

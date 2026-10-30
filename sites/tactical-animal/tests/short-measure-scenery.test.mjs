@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from '../dist/aft/tactics/vendor/three.module.js';
-import {createSoloGame,DEFAULT_BUILD,Core,hero,distance,geometry,freePoint,walkSegment,lineClear,navigationPath,previewGrenade,encodeSave,decodeSave,tick,getMission,approachPath} from '../dist/solo-game.js';
+import {createSoloGame,DEFAULT_BUILD,Core,hero,distance,geometry,freePoint,walkSegment,lineClear,navigationPath,previewGrenade,encodeSave,decodeSave,tick,getMission,approachPath,confirmedImpact} from '../dist/solo-game.js';
 import {missionScenery,missionArtBindings,clueAnchorHeight,SCENERY_DIGEST} from '../dist/mission-scenery.js';
 import {SHORT_MEASURE_SOLIDS,SOLIDS_VERSION,SOLIDS_DIGEST} from '../dist/mission-art/short-measure/solids.js';
 import {solidPartBoxes} from '../dist/mission-art/short-measure/solid-parts.js';
@@ -136,8 +136,8 @@ function office(shooter,target){
 test('the desk keeps its open air: a kneeling shot passes under the top, a standing shot stops on it',()=>{
   for(const [shooter,hit] of [['kneeling',true],['standing',false]]){
     const {s,u,g}=office(shooter,'kneeling'),p=Core.previewAttack(s,u,g);
-    assert.ok(p.ok,p.reason);assert.ok(p.chance>30);
-    assert.ok(Core.attack(s,u,g,false,false,'torso',false,'hip'));
+    assert.equal(p.ok,hit,p.reason);if(hit)assert.ok(p.chance>30);else{assert.equal(p.chance,0);assert.ok(confirmedImpact(s,u,g).box,'the same desk still physically intercepts the torso ray');}
+    assert.equal(Core.attack(s,u,g,false,false,'torso',false,'hip'),hit);
     assert.equal(g.hp<100,hit,`${shooter} shooter`);
   }
 });

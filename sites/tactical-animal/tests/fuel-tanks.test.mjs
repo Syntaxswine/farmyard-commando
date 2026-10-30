@@ -39,7 +39,10 @@ test('conditional failures preserve a loaded tank and ordinary damage',()=>{
 
 test('the actual intercepted character and impact zone determine the detonation',()=>{
   const f=fixture(),selected=f.s.units[2];Object.assign(selected,{x:18,y:25.23,hp:1000});refresh(f.s,{forceFog:true});
-  f.s.seed=seedFor(.25,true,true,Core.previewAttack(f.s,f.a,selected).chance/100);assert.ok(Core.attack(f.s,f.a,selected));
+  assert.equal(Core.previewAttack(f.s,f.a,selected).ok,false,'an intervening body is not a clear shot at the selected target');
+  // A deliberate point shot still has to resolve the real first body and zone.
+  const point={ground:true,x:selected.x,y:selected.y,h:1.75*.62};f.s.seen.add(Core.key(point.x,point.y));
+  f.s.seed=seedFor(.25,true,true,Core.previewPointAttack(f.s,f.a,point).chance/100);assert.ok(Core.attack(f.s,f.a,point));
   assert.deepEqual(f.s.effect.sequence[0].impact,{unitId:f.b.id,zone:'torso'});assert.equal(f.b.tanksExploded,true);assert.equal(selected.hp,1000);
 });
 
@@ -74,8 +77,11 @@ test('a later burst impact can detonate after the first conditional roll fails',
 
 test('a scenery-intercepted ray never rolls against the intended tank',()=>{
   const f=fixture();f.s={...f.s,obstacles:[{x0:8,x1:9,y0:24,y1:27,height:2,kind:'crate'}]};
-  f.s.seed=seedFor(.9,true,true,Core.previewAttack(f.s,f.a,f.b,false,'weapon').chance/100);const seed=f.s.seed;
-  assert.ok(Core.attack(f.s,f.a,f.b,false,false,'weapon'));assert.equal(f.s.seed,next(seed));assert.equal(f.b.hp,1000);assert.equal(f.b.tanksExploded,undefined);
+  assert.equal(Core.previewAttack(f.s,f.a,f.b,false,'weapon').chance,0);const blocked=encodeSave(f.s);
+  assert.equal(Core.attack(f.s,f.a,f.b,false,false,'weapon'),false);assert.equal(encodeSave(f.s),blocked);
+  const point={ground:true,x:f.b.x,y:f.b.y,h:1.75*.62};f.s.seen.add(Core.key(point.x,point.y));
+  f.s.seed=seedFor(.9,true,true,Core.previewPointAttack(f.s,f.a,point).chance/100);const seed=f.s.seed;
+  assert.ok(Core.attack(f.s,f.a,point));assert.equal(f.s.seed,next(seed));assert.equal(f.b.hp,1000);assert.equal(f.b.tanksExploded,undefined);
 });
 
 test('an overlapping fuel blast never refreshes an existing mid-burn countdown',()=>{

@@ -85,7 +85,10 @@ state. Hidden live hero coordinates are never a navigation fallback.
 Investigation paths expand at most 128 nodes; exploration admits at most two new
 plans per tick. Movement uses normal collision, stance, stamina and (during
 combat) AP. Search cells, elapsed times, sweep, retry waits, route and authored
-post survive saves. Existing pursuit-position tests now stop after two unseen
+post, queued candidates and a pending reachability probe survive saves. Candidate
+reachability is checked one plan at a time under the tick quota; only a validated
+route adds a local cell to the sweep. Source floor resolution happens before a
+candidate is queued. Existing pursuit-position tests now stop after two unseen
 rounds; the third intentionally begins investigation. Dedicated transition,
 exploration, blocked-return, hidden-hero and mid-search replay coverage:
 `node --test sites/tactical-animal/tests/guard-awareness.test.mjs`.
@@ -149,3 +152,31 @@ glass. An active search at the four-round cutoff is reported separately from a
 settled guard that never fired. Historical counts are not used as new results.
 The browser workflow accepts the Coldwell base branch as well as main so this
 stacked draft gets the same exact-head native checks before integration.
+
+The retained sample at `9a390ea` covers 120 seed-3 blocked approaches and 259
+firearm rounds: none had an invalid physical first impact. Three guards settled
+without firing where the oracle found no firing node; 26 were still investigating
+at the four-round cutoff. Road Checkpoint seed 9001 covers three runs / 36 rounds,
+90 alert guard turns (37 judged unobstructed-plan cases), plus 42 investigation
+turns. No judged case lacked a plan because of another body; one retained a detour
+over a metre longer. This is a sample, not a global absence-of-blocking claim.
+Exact output is in `docs/reviews/guard-followups-census.txt`.
+
+The first full local check completed all 22 floor intervals but exceeded
+its five-minute test deadline. An isolated run also reached the exact bottom,
+with a 3 ms request and 11.9 s off-thread plan, in 332 s total on this machine.
+Recon had recovered the records and returned to
+ground before its ten-minute process deadline. The CPU physical-sweep allowance
+is now ten minutes, and full Recon fifteen minutes. The strict request/cancel
+100 ms checks, 30-second cold planning, exact arrivals, legal played commands,
+resource/save checks, browser assertions and the CI job's overall deadline remain.
+Three older desk/tank tests are updated to the intended blocked-target rejection;
+deliberate point shots still prove actual intervening-body/solid impacts and
+conditional fuel rolls. No gameplay assertion is skipped.
+
+Final local reruns pass: 411 flat checks, all reviewed replay hashes, the
+351-waypoint/22-floor route (2.1 ms request, 17.5 s off-thread plan), and the
+complete Recon controller (34 steps, 2,177 frames, 312.76 m, five rounds,
+110 HP, records secured and extracted). Native search startup's stair fixture
+completes in 0.22 s after deferring reachability, versus 14.6 s before. This is
+CPU test evidence on this desktop, not a real-phone frame-rate measurement.

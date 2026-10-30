@@ -1,11 +1,11 @@
 {
   "source": "Intentional guard-state, shot-exposure and report changes; original goldens remain in scenery-neutrality-baseline.json. See docs/reviews/guard-followups-replays.json",
   "base": "783f45baf935bed592f423e6bf8ed852648e5cfa",
-  "runtimeRevision": "e0c1e20809806384c7b183c8daf9e5fca2fcb89d",
+  "runtimeRevision": "9a390eac25a60ff66d9b09491aa1a462ebb19bf3",
   "sourceHashes": {
-    "solo-game.js": "ac03a3d7f4d7b47e72976a6ad99dbdb7c08e5090aec0fd98a20135acf39128b3",
-    "guard-awareness.js": "8d0b16a2a95a7129e7ac5b15c0e81dd423dfdfcd7490859819ae477c53c0a4c4",
-    "guard-coordination.js": "60ca9b31c0d891ad9e0fd2a75ce8fe7086370c16efe022359b205e94bd17e90d"
+    "solo-game.js": "08eaf07a5d84f5340f7d856e733d686d015885dc82fd1d036886c6d35f9eca46",
+    "guard-awareness.js": "57dee158c51b2bef0eac2b4d9d8a352177759e5c05a316808d1bcdc6644c0c45",
+    "guard-coordination.js": "c84bffaa5ec5fe6943f90c9437f3d9e5a156fe92e18566328e0a26dd9d11a4c8"
   },
   "rows": [
     {

@@ -62,7 +62,9 @@ function play(T,c){
 function oracle(c){
   const s=field(ref,c.doors),u=ref.hero(s),g=s.units[1];for(const other of s.units.slice(2))other.hp=0;Object.assign(u,c.heroAt);Object.assign(g,c.guardAt);
   const range=Math.min(ref.Core.WEAPONS[g.weapon].range,26),key=p=>p.x+','+p.y,best=new Map(),open=[];
-  const fires=p=>dist(p,u)<=range&&ref.lineClear(s,{...p,stance:'standing'},{...u,stance:'standing'});
+  // A perception ray alone can see past a desk while the selected torso ray
+  // hits its top. The oracle asks the actual first-impact query at each zone.
+  const fires=p=>dist(p,u)<=range&&['torso','head','legs','weapon'].some(zone=>ref.confirmedImpact(s,{...g,...p},u,zone)?.unit?.id===u.id);
   for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const q={x:Math.round(g.x)+dx,y:Math.round(g.y)+dy};if(ref.freePoint(s,q,g.id)&&ref.walkSegment(s,g,q,g.id)){best.set(key(q),dist(g,q));open.push({p:q,d:dist(g,q)});}}
   for(let n=0;open.length&&n<20000;n++){open.sort((a,b)=>a.d-b.d);const {p,d}=open.shift();if(d>best.get(key(p)))continue;if(fires(p))return +d.toFixed(1);
     for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const q={x:p.x+dx,y:p.y+dy},nd=d+Math.hypot(dx,dy);if((dx||dy)&&nd<(best.get(key(q))??Infinity)&&ref.freePoint(s,q,g.id)&&ref.walkSegment(s,p,q,g.id)){best.set(key(q),nd);open.push({p:q,d:nd});}}}

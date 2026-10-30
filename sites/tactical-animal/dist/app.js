@@ -252,7 +252,7 @@ function renderContext(focusControl){if(!state)return;const u=hero(state),near=i
     const zones=bank('BODY LOCATION','zone-bank',columns);
     for(const value of ['torso','head','weapon','legs']){
       const preview=Core.previewAttack(state,u,target,burst,value,null,aim),label=Core.AIM_ZONES[value].label;
-      hardware(zones,{control:'zone-'+value,label:`Target ${label.toLowerCase()}. ${preview.chance}% hit chance.`,paint:label.toUpperCase(),icon:'target-'+value,mark:`${preview.chance}% HIT`,pressed:zone===value,amber:true,onClick:()=>zone=value});
+      hardware(zones,{control:'zone-'+value,label:`Target ${label.toLowerCase()}. ${preview.chance}% ${preview.breach?'first-shot target':'target'} hit chance.`,paint:label.toUpperCase(),icon:'target-'+value,mark:`${preview.chance}% HIT`,pressed:zone===value,amber:true,onClick:()=>zone=value});
     }
     const aiming=bank('AIM LEVEL','aim-bank',columns);
     for(const option of choices)hardware(aiming,{
@@ -260,7 +260,7 @@ function renderContext(focusControl){if(!state)return;const u=hero(state),near=i
       paint:{hip:'QUICK SHOT',aimed:'AIMED',full:'FULL AIM'}[option.id],icon:'aim-'+option.id,mark:`${option.cost} AP`,pressed:aim===option.id,disabled:!option.available,apShort:!option.available,amber:true,onClick:()=>aim=option.id
     });
     const ready=reload.empty?reload.ok:p.ok&&Core.canControl(state,u)&&chosen.available;
-    const fire=hardware(root,{control:'fire',label:reload.empty?`Reload ${w.short}. ${reload.cost} AP. ${reload.reserve} spare rounds.`:`${burst?'Fire burst':'Fire'}. ${p.chance}% hit chance. ${p.cost} AP.`,paint:reload.empty?'RELOAD':'FIRE',icon:reload.empty?'reload':'fire',mark:`${reload.empty?reload.cost:p.cost} AP`,bar:true,red:true,lit:false,disabled:!ready,apShort:reload.empty?reload.apShort:!chosen.available,rerender:false,onClick:()=>{
+    const fire=hardware(root,{control:'fire',label:reload.empty?`Reload ${w.short}. ${reload.cost} AP. ${reload.reserve} spare rounds.`:`${burst?'Fire burst':'Fire'}. ${p.chance}% ${p.breach?'first-shot target':'target'} hit chance. ${p.cost} AP.`,paint:reload.empty?'RELOAD':'FIRE',icon:reload.empty?'reload':'fire',mark:`${reload.empty?reload.cost:p.cost} AP`,bar:true,red:true,lit:false,disabled:!ready,apShort:reload.empty?reload.apShort:!chosen.available,rerender:false,onClick:()=>{
       if(reload.empty){reloadFromTrigger({targeting:true});return;}
       closeDialog();act(()=>Core.attack(state,u,target,burst,false,zone,false,aim));
       if(triggerReloadStatus(u).empty&&selected?.targetId===target.id&&Core.alive(target)&&state.detected.has(target.id)&&Core.canControl(state,u))shootingMenu('fire');
@@ -272,7 +272,7 @@ function renderContext(focusControl){if(!state)return;const u=hero(state),near=i
       hardware(fireRow,{control:firingBurst?'burst':'single',label:`${mode} fire. ${firingBurst?w.burstRounds:1} round${firingBurst?'s':''}.`,paint:mode.toUpperCase(),icon:firingBurst?'fire-burst':'fire-single',mark:`${choice.cost} AP`,pressed:burst===firingBurst,apShort:!choice.available,onClick:()=>burst=firingBurst});
     }
     hardware(fireRow,{control:'exit',label:'Exit targeting without firing.',paint:'EXIT',icon:'exit',mark:'',rerender:false,onClick:exitTargeting});
-    const warning=reload.empty?reload.reason:p.reason||(!chosen.available?'Not enough AP':'');
+    const warning=reload.empty?reload.reason:p.reason||p.warning||(!chosen.available?'Not enough AP':'');
     if(warning||w.blast){const note=document.createElement('p');note.className='shooting-warning';note.setAttribute('role','status');note.textContent=[warning,w.blast?'BLAST CAN HURT YOU':''].filter(Boolean).join(' · ');root.append(note);}
     restoreFocus?.focus?.({preventScroll:true});
   }else if(selected?.point){const path=state.spatial?selected.path:Core.navigationPath(state,u,selected.point.x,selected.point.y,selected.point),cost=path?.reduce((n,p)=>n+p.cost,0)||0,d=cost/Core.movementRate(u);content('Move to this point',`${d.toFixed(1)} m · ${cost.toFixed(1)} AP${cost>u.ap?' · stops when AP runs out':''}`,'Move',()=>{if(state.spatial){if(!Core.acceptNavigationPath(state,u,path)){const point=selected.point;selected=null;planSpatialMove(point);return;}}else Core.move(state,u,selected.point.x,selected.point.y,selected.point);selected=null;view.center();},!path||u.ap<.01);

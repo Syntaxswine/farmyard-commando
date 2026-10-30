@@ -32,8 +32,8 @@ export function targetRegion(sprite,zone){
 
 export function createTargetMonitor(state,target,preview,zone='torso',document=globalThis.document){
   if(!target||target.hp<=0||target.team!=='guard'||!state.detected.has(target.id))return null;
-  const candidates=spriteCandidates(target),figure=document.createElement('figure'),id='target-monitor-'+(++monitorSequence);figure.className='target-monitor';figure.dataset.zone=zone;figure.dataset.chance=String(preview.chance??0);
-  figure.setAttribute('aria-label',`${target.name}. ${label[zone]||label.torso} highlighted. ${preview.chance??0}% hit chance.`);
+  const candidates=spriteCandidates(target),figure=document.createElement('figure'),id='target-monitor-'+(++monitorSequence);figure.className='target-monitor';figure.dataset.zone=zone;figure.dataset.chance=String(preview.chance??0);figure.dataset.exposure=preview.breach?'glass':preview.exposed===false?'blocked':'clear';
+  figure.setAttribute('aria-label',`${target.name}. ${label[zone]||label.torso} highlighted. ${preview.chance??0}% ${preview.breach?'first-shot target':'target'} hit chance.${preview.reason?' '+preview.reason+'.':''}`);
   const glass=document.createElement('div');glass.className='target-glass';
   const glow=document.createElement('span');glow.className='target-center-light';glow.setAttribute('aria-hidden','true');
   const caption=document.createElement('figcaption');caption.className='target-monitor-caption';
@@ -61,7 +61,7 @@ export function createTargetMonitor(state,target,preview,zone='torso',document=g
     frame.append(svg('rect',{x,y,width:w,height:h,rx:3,class:'target-body-highlight','data-zone':zone}));
     frame.append(svg('path',{d:wide?`M${x+w/2} ${y}V${cy}H226`:`M${x+w} ${y+h/2}H218V${cy}H226`,class:'target-hit-leader'}));
     const chance=svg('text',{x:230,y:cy,class:'target-hit-percent'});chance.textContent=`${preview.chance??0}%`;
-    const body=svg('text',{x:231,y:cy+18,class:'target-hit-location'});body.textContent=label[zone]||label.torso;
+    const body=svg('text',{x:231,y:cy+18,class:'target-hit-location'});body.textContent=(label[zone]||label.torso)+(preview.breach?' · FIRST SHOT':preview.exposed===false?' · BLOCKED':'');
     frame.append(chance,body);glass.replaceChildren(frame,glow);status.textContent=sprite.reference?'POSE REFERENCE':'ACQUIRING TARGET';
   }
   draw(0);return figure;

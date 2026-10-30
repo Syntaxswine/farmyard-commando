@@ -39,3 +39,12 @@ Intentional replay changes: guards may now shoot a different exposed zone, with
 that zone's accuracy and damage, or reposition when no body zone is exposed.
 Blocked player shots no longer spend AP/ammo/RNG. Historical census totals from
 earlier revisions have not been rerun and are not claimed here.
+
+## Player narrow passages
+
+Flat player navigation shares `searchStarts` with guards. If no grid node is a
+straight walk away, its bounded 32-bearing scan supplies costed escape points.
+Reconstruction retains the selected escape via before legal smoothing and the
+exact clicked endpoint. Live bodies and ordinary movement/AP/save rules still
+apply. Normal starts keep their existing route and tie order. Regression command:
+`node --test sites/tactical-animal/tests/player-strip.test.mjs`.

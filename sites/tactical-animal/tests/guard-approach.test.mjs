@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {createSoloGame,DEFAULT_BUILD,Core,hero,distance,canSee,tick,encodeSave,decodeSave,navigationPath,lineClear,freePoint,walkSegment,standIns,approachPath,QUARRY_REACH} from '../dist/solo-game.js';
+const directGridStart=(s,g)=>[-1,0,1].some(dy=>[-1,0,1].some(dx=>{const q={x:Math.round(g.x)+dx,y:Math.round(g.y)+dy};return freePoint(s,q,g.id)&&walkSegment(s,g,q,g.id);}));
 
 test('in a seeded census on every mission, no guard stalls while a firing node is reachable',{timeout:60000},()=>{
   // tools/guard-census.mjs, 40 approaches a mission whose 0.75 m spot is solid: the
@@ -221,7 +222,7 @@ test('a guard that steps into a strip no grid node is a straight walk from walks
   for(const o of base.interactables)if(o.kind==='door'&&['ration-west','ration-east','packing-west','packing-east','dispatch-west'].includes(o.id)){o.open=true;base.edges[o.edge]='door';}
   const s={...base},u=hero(s),g=s.units[2],lastKnown={x:2.074,y:18.537};for(const other of s.units.slice(1))if(other!==g)other.hp=0;
   Object.assign(u,{x:33,y:24,ap:20,hp:10000,maxHp:10000});Object.assign(g,{x:8.367,y:22.905,heading:180,alert:true,lastKnown:{...lastKnown},alertAge:0});
-  assert.ok(freePoint(s,g,g.id)&&!navigationPath(s,g,lastKnown.x,lastKnown.y),'the strip still has no grid node a straight walk away');
+  assert.ok(freePoint(s,g,g.id)&&!directGridStart(s,g),'the strip still has no grid node a straight walk away');
   const out=approachPath(s,g,lastKnown);
   assert.ok(out?.length&&walkSegment(s,g,out[0],g.id),`inside the strip the plan's first leg is a straight walk: ${JSON.stringify(out?.[0])}`);
   Object.assign(g,{x:9.806,y:22.865});s.engaged=true;s.phase='player';Core.refresh(s,{forceFog:true});
@@ -239,7 +240,7 @@ test('a guard in such a strip leaves by the way that is shortest to walk',()=>{
   const s={...base},g=s.units[2];for(const other of s.units.slice(1))if(other!==g)other.hp=0;Object.assign(hero(s),{x:33,y:5});
   for(const [from,lastKnown,east] of [[{x:7.76,y:22.94},{x:13,y:23.2},true],[{x:8.44,y:22.93},{x:4.5,y:23.6},false]]){
     Object.assign(g,from);
-    assert.ok(freePoint(s,g,g.id)&&!navigationPath(s,g,lastKnown.x,lastKnown.y),`${from.x},${from.y} lies in the strip`);
+    assert.ok(freePoint(s,g,g.id)&&!directGridStart(s,g),`${from.x},${from.y} lies in the strip`);
     const path=approachPath(s,g,lastKnown),walk=path.reduce((total,w,i)=>total+distance(w,i?path[i-1]:g),0);
     assert.ok((path[0].x>from.x)===east&&walk<distance(from,lastKnown),`from ${from.x},${from.y}: ${walk.toFixed(2)} m, first leg to ${path[0].x.toFixed(2)},${path[0].y.toFixed(2)}`);
   }
@@ -279,7 +280,7 @@ test('the way out of such a strip is a straight walk, even where no node of the 
   base.obstacles=[...(base.obstacles||[]),{x0:23,x1:26,y0:18.6,y1:19.5-.03-radius,height:1,kind:'crate'},{x0:23,x1:26,y0:19.5+.03+radius,y1:20.4,height:1,kind:'crate'},{x0:22.6,x1:23,y0:18.6,y1:20.4,height:1,kind:'crate'}];
   const s={...base},g=s.units[1],lastKnown={x:29,y:22};for(const other of s.units.slice(2))other.hp=0;Object.assign(hero(s),{x:33,y:5});
   Object.assign(g,{x:24.9,y:19.5,alert:true,lastKnown:{...lastKnown},alertAge:0});
-  assert.ok(freePoint(s,g,g.id)&&!navigationPath(s,g,lastKnown.x,lastKnown.y),'no grid node is a straight walk from the guard');
+  assert.ok(freePoint(s,g,g.id)&&!directGridStart(s,g),'no grid node is a straight walk from the guard');
   const path=approachPath(s,g,lastKnown);
   assert.ok(path?.length>1&&walkSegment(s,g,path[0],g.id)&&path[0].x>25.99&&path[0].x<26.1,`first legs ${JSON.stringify(path?.slice(0,2))}`);
 });

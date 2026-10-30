@@ -308,9 +308,11 @@ export function navigationPath(s,u,x,y,point){
   if(s.spatial)return providerFor(s).path(s,u,{x,y,...(point||{})},{rate:movementRate(u)});
   const end={x,y};if(!freePoint(s,end,u.id))return null;
   if(walkSegment(s,u,end,u.id))return [{...end,z:0,cost:distance(u,end)*movementRate(u)}];
-  const start=gridNodesAround(s,u,u)[0],goals=gridNodesAround(s,u,end);if(!start||!goals.length)return null;
-  const goalKeys=new Set(goals.map(p=>key(p.x,p.y))),raw=gridSearch(s,u,[start],(p,pk)=>goalKeys.has(pk),q=>distance(q,end));
-  return raw&&smoothRoute(s,u,[...raw,end]);
+  const starts=searchStarts(s,u),goals=gridNodesAround(s,u,end);if(!starts.length||!goals.length)return null;
+  const goalKeys=new Set(goals.map(p=>key(p.x,p.y))),raw=gridSearch(s,u,starts,(p,pk)=>goalKeys.has(pk),q=>distance(q,end));
+  if(!raw)return null;
+  const via=starts.find(p=>p.x===raw[0].x&&p.y===raw[0].y).via;
+  return smoothRoute(s,u,via?[via,...raw,end]:[...raw,end]);
 }
 export function move(s,u,x,y,point){if(!canControl(s,u))return false;const path=navigationPath(s,u,x,y,point);if(!path?.length)return false;s.queue=path;s.revision++;return true;}
 export function requestNavigationPath(s,u,point){

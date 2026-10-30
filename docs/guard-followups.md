@@ -180,3 +180,14 @@ complete Recon controller (34 steps, 2,177 frames, 312.76 m, five rounds,
 110 HP, records secured and extracted). Native search startup's stair fixture
 completes in 0.22 s after deferring reachability, versus 14.6 s before. This is
 CPU test evidence on this desktop, not a real-phone frame-rate measurement.
+
+The first exact-head CI run at `5bb3716` passed all 477 repository tests and five
+of six browser scenarios. The navigation trace showed a 264 ms map tap followed
+by a nine-second joystick input call while the worker plan completed in 3.69 s;
+the test then observed a completed plan instead of proving pending cancellation.
+The harness now queues trusted native CDP touch gestures in order without waiting
+for the map-release frame acknowledgement. It retains every pending-state,
+latency, resource, worker-disposal and exact-arrival assertion, and preserves the
+event-time receipt even on failure. Context-close acknowledgement has a 30 s
+grace bound after a recorded 10 s timeout; actual context/browser/server closure
+and released ports are still mandatory. Gameplay and worker timing are unchanged.

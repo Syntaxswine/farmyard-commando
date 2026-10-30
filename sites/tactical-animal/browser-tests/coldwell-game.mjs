@@ -9,9 +9,10 @@ async function seed(page,id,text){await page.addInitScript(({id,text})=>localSto
 // Real game UI, real shaders and public-command save checkpoints. No simulation
 // state setter, renderer substitute or post-load position change is available.
 export async function checkColdwellGame(context,{root,origin,output,report,observe,shot,scenario='all'}){
+  report.gameViews=[];
   const fixtures=JSON.parse(await fs.readFile(path.join(root,'artifacts/window-browser/coldwell-checkpoints.json'),'utf8'));expect(fixtures.result.passed).toBe(true);expect(fixtures.fullyPlayed).toBe(true);expect(fixtures.sourceHead).toBe(report.testedSha);report.playedRoute=fixtures.result;
   if(scenario==='gatehouse'||scenario==='all'){
-  const game=await context.newPage();observe(game,'actual-coldwell-game',report);report.gameViews=[];
+  const game=await context.newPage();observe(game,'actual-coldwell-game',report);
   await seed(game,'coldwell-traversal',fixtures.states['quiet-gatehouse']);await game.goto(origin+'/game.html?coldwellTest=traversal');await expect(game.locator('#resume')).toBeVisible();await game.locator('#resume').click();await loaded(game);
   expect((await snapshot(game)).hero.floorId).toBe('coldwell-datum-22');expect((await snapshot(game)).actors).toBeGreaterThan(0);await shot(game,'game-gatehouse');report.gameViews.push({id:'gatehouse',...await snapshot(game)});
   await clickWorld(game,{x:94.5,y:142,h:47.3});await expect(game.locator('#interaction-label')).toHaveText('Open');await game.locator('#interaction-hand').tap();await expect.poll(async()=>(await snapshot(game)).spatial.poses['surface-door:s:94:141']).toBe(90);await shot(game,'game-door-open');

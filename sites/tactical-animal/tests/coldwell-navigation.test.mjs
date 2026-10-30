@@ -23,7 +23,9 @@ function setup(kind,count){
 async function searching(state){for(let i=0;i<400;i++){if(Core.navigationStatus(state).searching)return;await delay(10);}assert.fail('The real worker did not begin its search.');}
 async function retire(state){Core.disposeNavigation(state);await Promise.all([...workers].map(w=>w.terminate()));}
 
-for(const [kind,count] of cases)test(`one public request plans and completes all ${count} authored ${kind} intervals`,{timeout:300000},async()=>{
+// The 351-waypoint physical sweep can exceed five minutes under the complete
+// parallel suite. UI request/cancel and cold-planning bounds below stay strict.
+for(const [kind,count] of cases)test(`one public request plans and completes all ${count} authored ${kind} intervals`,{timeout:600000},async()=>{
   const {state,actor,stairs,end}=setup(kind,count);let beats=0;const timer=setInterval(()=>beats++,10),started=performance.now();
   try{
     const pending=Core.requestNavigationPath(state,actor,end),returned=performance.now()-started;assert.ok(returned<100,'Request creation must return to the UI immediately.');

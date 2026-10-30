@@ -100,3 +100,17 @@ test('targeting symbols keep the release version before their SVG fragment',asyn
   assert.equal(url.search,'?v=crt-review');assert.equal(url.hash,'#exit');
   assert.match(url.pathname,/assets\/ui\/industrial-switches\/symbols\.svg$/);
 });
+
+test('a physically blocked torso is labelled and cannot fire until an exposed zone is selected',()=>{
+  const {a,guard}=targeting();
+  Object.assign(a.u,{x:29.4,y:6.1});Object.assign(guard,{x:34.6,y:6.1,stance:'kneeling'});
+  // The intervening living body is part of the real shot query even when it
+  // does not obstruct the perception ray or change scenery geometry.
+  const blocker=a.s.units.find(u=>u!==a.u&&u!==guard);Object.assign(blocker,{x:32,y:6.1,hp:100,stance:'prone'});
+  // First put the blocker on the torso ray, then remove it without changing
+  // visibility: targeting must immediately use the physical result each time.
+  blocker.stance='standing';button(a,'zone-torso').click();
+  assert.equal(monitor(a).dataset.exposure,'blocked');assert.equal(monitor(a).dataset.chance,'0');assert.equal(button(a,'fire').disabled,true);
+  blocker.hp=0;button(a,'zone-torso').click();
+  assert.equal(monitor(a).dataset.exposure,'clear');assert.equal(button(a,'fire').disabled,false);
+});

@@ -38,7 +38,7 @@ export async function withColdwellNative(testInfo,{output,report,run}){
         if(!size)throw Error('Native recording is empty.');report.videos.push({file,bytes:size});
       }
     };
-    for(const [name,close,deadline]of [['trace',()=>context?.tracing.stop({path:path.join(output,'native-trace.zip')}),60000],['videos',saveVideos,30000],['context',()=>context?.close()],['browser',()=>browser?.close()],['server',()=>server.close()]]){
+    for(const [name,close,deadline]of [['trace',()=>context?.tracing.stop({path:path.join(output,'native-trace.zip')}),60000],['videos',saveVideos,30000],['context',()=>context?.close(),30000],['browser',()=>browser?.close()],['server',()=>server.close()]]){
       const at=performance.now();try{await bounded(Promise.resolve().then(close),deadline);report[name+'Closed']=true;}catch(error){report.cleanupErrors.push({name,error:String(error)});}finally{report.cleanupTimings[name]={durationMs:performance.now()-at,deadlineMs:deadline??10000};}
     }
     report.browserDisconnected=!browser?.isConnected();report.helper.exited=child.exitCode!==null||child.signalCode!==null;if(report.helper.exited)clearTimeout(retire);report.helper.portReleased=await portReleased(report.helper.port);report.passed=!failure&&!report.cleanupErrors.length&&report.helper.exited&&report.helper.portReleased;

@@ -8,10 +8,42 @@ import {registerColdwellOperations} from '../dist/coldwell-operation.js';
 import {coldwellFogOffset,ColdwellFog} from '../dist/coldwell-fog.js';
 import {drawColdwellMinimap} from '../dist/coldwell-minimap.js';
 import {recordFlame,flameFogMask} from '../dist/flame-event.js';
-import {Core,createSoloGame,hero,encodeSave,decodeSave,tick,objectiveSecured} from '../dist/solo-game.js';
+import {Core,createSoloGame,hero,encodeSave,decodeSave,tick,objectiveSecured,confirmedImpact,reportNoise} from '../dist/solo-game.js';
 const bundle=await loadColdwell({baseURL:new URL('../dist/coldwell/',import.meta.url),fetcher:async u=>new Response(fs.readFileSync(u))}),provider=new ColdwellProvider(bundle);
 registerSpatialProvider(provider.id,provider);registerColdwellOperations(provider);
 const fresh=(id='coldwell-traversal',build)=>createSoloGame(build,1947,id),ground={h:46.64,floorId:'coldwell-datum-22'},b5={h:36.04,floorId:'coldwell-datum-17'};
+
+test('native selected-zone preview agrees with partial-height chest and intervening capsule impacts',()=>{
+  const state=fresh('coldwell-recon'),a=hero(state),b=state.units[1];state.units=[a,b];Object.assign(a,{x:104.5,y:170,...ground,ap:100});Object.assign(b,{x:104.5,y:174,...ground,stance:'kneeling',hp:1000});
+  // A diagnostic instance uses the normal shared chest footprint on supported
+  // open source ground; it does not alter the imported mesh/source pack.
+  state.interactables.push({id:'diagnostic-chest',kind:'chest',x:104.5,y:172,...ground,inventory:[]});Core.refresh(state);state.detected.add(b.id);
+  assert.ok(provider.occupancy(state,a,a)&&provider.occupancy(state,b,b));
+  let blocked=0,clear=0;
+  for(const zone of ['torso','head','legs','weapon']){const impact=confirmedImpact(state,a,b,zone),p=Core.previewAttack(state,a,b,false,zone),exposed=impact?.unit?.id===b.id;
+    assert.equal(p.exposed,exposed);assert.equal(p.ok,exposed);if(exposed){clear++;assert.ok(p.chance>0);}else{blocked++;assert.equal(p.chance,0);}
+  }
+  assert.ok(blocked>0&&clear>0,'native partial cover exposes some body locations');
+  state.interactables.pop();const blocker={...structuredClone(b),id:99,name:'Intervening capsule',y:172,stance:'standing'};state.units.push(blocker);
+  assert.equal(confirmedImpact(state,a,b,'torso').unit.id,99);assert.equal(Core.previewAttack(state,a,b).chance,0);
+});
+
+test('native friendly reports preserve the observed floor/height through relay and save',()=>{
+  const state=fresh('coldwell-recon'),a=state.units[1],b=state.units[2];
+  a.contact={point:{x:74,y:112.8,...b5},targetId:0,observerId:a.id,observedAt:0,observedRound:0,via:a.id};a.lastKnown={...a.contact.point};state.elapsed=4;state.round=1;
+  reportNoise(state,a,1000);assert.deepEqual(b.lastKnown,a.contact.point);assert.equal(b.contact.observedAt,0);assert.equal(b.alertAge,1);
+  const restored=decodeSave(encodeSave(state));assert.deepEqual(restored.units[2].contact,b.contact);
+  for(const mutate of [p=>p.floorId='missing',p=>p.h+=.5]){const bad=JSON.parse(encodeSave(state));mutate(bad.units[2].contact.point);assert.throws(()=>decodeSave(JSON.stringify(bad)),/Coldwell/);}
+});
+
+test('a lost stair observation resolves local search cells onto their actual source floors before saving',()=>{
+  const state=fresh('coldwell-recon'),guard=state.units[5],fix=provider.stairById.get('portal-stair-21').route.at(-2);state.units=[hero(state),guard];
+  Object.assign(guard,fix,{z:provider.floorById.get(fix.floorId).index,alert:true,state:'alert',lastKnown:{...fix},alertAge:2});state.phase='player';
+  const started=performance.now();assert.ok(Core.endTurn(state));assert.equal(guard.state,'searching');assert.ok(guard.search.candidates.length>0);assert.equal(guard.search.cells.length,1);
+  assert.ok(performance.now()-started<1000,'search startup must not run a batch of native path searches');
+  for(const cell of [...guard.search.cells,...guard.search.candidates]){const resolved=provider.resolve(state,cell,cell);assert.ok(resolved);assert.ok(spatialDistance(cell,resolved)<.025);assert.equal(cell.floorId,resolved.floorId);}
+  assert.doesNotThrow(()=>decodeSave(encodeSave(state)));
+});
 function walk(state,destination){
   const unit=hero(state),route=Core.navigationPath(state,unit,destination.x,destination.y,destination);assert.ok(route?.length,'No route to '+JSON.stringify(destination));
   for(const point of route){const distance=spatialDistance(unit,point);Core.travel(state,unit,point.x-unit.x,point.y-unit.y,{distanceBudget:distance});assert.ok(spatialDistance(unit,point)<.025,'Stopped before '+JSON.stringify(point));}

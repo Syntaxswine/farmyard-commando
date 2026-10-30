@@ -4,6 +4,18 @@ import path from 'node:path';
 const snapshot=page=>page.evaluate(()=>window.__coldwellGame.snapshot());
 async function loaded(page){await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await expect(page.locator('#loading')).toBeHidden({timeout:60000});await page.evaluate(()=>window.__coldwellGame.whenIdle());await expect.poll(async()=>(await snapshot(page)).pendingActors).toBe(0);expect((await snapshot(page)).failed).toEqual([]);}
 async function clickWorld(page,point){const p=await page.evaluate(point=>window.__coldwellGame.project(point),point);expect(p.visible).toBe(true);await page.touchscreen.tap(p.x,p.y);}
+async function planAndCancel(context,page,point,stick){
+  const p=await page.evaluate(point=>window.__coldwellGame.project(point),point);expect(p.visible).toBe(true);
+  const input=await context.newCDPSession(page),touch=(x,y)=>({type:'touchStart',touchPoints:[{x,y,id:0,radiusX:1,radiusY:1,force:1}]}),end={type:'touchEnd',touchPoints:[]};
+  try{
+    await input.send('Input.dispatchTouchEvent',touch(p.x,p.y));
+    // Queue the next trusted native gesture behind map release, before waiting
+    // for its renderer/frame acknowledgement. Awaiting a full tap here can let
+    // an exact worker plan finish before the cancel gesture is even dispatched.
+    const released=input.send('Input.dispatchTouchEvent',end),cancel=input.send('Input.dispatchTouchEvent',touch(stick.x+stick.width/2,stick.y+stick.height/2));
+    await Promise.all([released,cancel]);await input.send('Input.dispatchTouchEvent',end);
+  }finally{await input.detach();}
+}
 async function seed(page,id,text){await page.addInitScript(({id,text})=>localStorage.setItem('tactical-animal-operation-v3:'+id,text),{id,text});}
 
 // Real game UI, real shaders and public-command save checkpoints. No simulation
@@ -50,10 +62,12 @@ export async function checkColdwellGame(context,{root,origin,output,report,obser
       addEventListener('pointerdown',event=>{if(event.target.closest('#joystick')&&input)window.__navigationInput.push({before:input.before,after:window.__coldwellGame.snapshot().navigation,handlerMs:performance.now()-input.at});});
     });
     const before=await snapshot(page),destination={x:72,y:114.1,h:36.04},stick=await page.locator('#joystick').boundingBox();
-    await clickWorld(page,destination);await page.touchscreen.tap(stick.x+stick.width/2,stick.y+stick.height/2);
+    await planAndCancel(context,page,destination,stick);
+    // Preserve the event-time receipt even if a later assertion fails.
+    report.navigationCancellation={before,inputs:await page.evaluate(()=>window.__navigationInput),observed:await snapshot(page),gesture:'trusted native CDP touch sequence'};
     await expect.poll(async()=>(await snapshot(page)).navigation.status).toBe('cancelled');
     const cancelled=await snapshot(page),inputs=await page.evaluate(()=>window.__navigationInput);expect(inputs.length).toBe(1);expect(inputs[0].before.pending).toBe(true);expect(inputs[0].after.pending).toBe(false);expect(inputs[0].handlerMs).toBeLessThan(250);expect(cancelled.navigation.worker).toBe(false);expect(cancelled.queue).toEqual([]);expect(cancelled.hero.x).toBe(before.hero.x);expect(cancelled.hero.y).toBe(before.hero.y);expect(cancelled.hero.h).toBe(before.hero.h);expect(cancelled.hero.ap).toBe(before.hero.ap);expect(cancelled.hero.ammo).toEqual(before.hero.ammo);
-    report.navigationCancellation={inputs,before,cancelled};await loaded(page);await shot(page,'game-deep-route-cancelled');
+    report.navigationCancellation={...report.navigationCancellation,inputs,before,cancelled};await loaded(page);await shot(page,'game-deep-route-cancelled');
     for(let i=0;i<5;i++)await page.keyboard.press('PageDown');await loaded(page);expect((await snapshot(page)).floor).toBe('coldwell-datum-17');
     await clickWorld(page,destination);await expect.poll(async()=>(await snapshot(page)).navigation.status,{timeout:60000}).toBe('complete');const planned=await snapshot(page);expect(planned.navigation.search.coarse).toBe(true);expect(planned.navigation.durationMs).toBeLessThan(30000);report.navigationPlanned=planned;await shot(page,'game-five-floor-route');
     await expect.poll(async()=>{const d=await snapshot(page);return d.hero.floorId==='coldwell-datum-17'&&Math.hypot(d.hero.x-72,d.hero.y-114.1,d.hero.h-36.04)<.03&&d.queue.length===0;},{timeout:240000}).toBe(true);

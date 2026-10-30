@@ -1,0 +1,193 @@
+# Guard follow-ups
+
+These changes are stacked on Coldwell runtime `783f45b` (PR #28). The source
+pack, artwork and frozen AFT/editor copies are unchanged.
+
+## Selected shot location
+
+Firearm previews call the same `confirmedImpact` query used by accepted rounds.
+The displayed percentage is a chance to hit the selected target: a solid or
+intervening body yields 0% and disables that shot. Partial cover still permits
+perception. An intact pane is a legal deliberate breach with 0% first-round
+target chance and an explicit warning; the normal aim roll still determines
+whether the round hits the pane, and later burst rounds query the new opening.
+Area weapons and deliberate point/window shots keep their own policies.
+
+Guards prefer exposed torso, head, legs, then weapon. This small policy is adapted
+from `enemyTurn`/`fleeTurn` in the original Animal Factory Tactics 3D
+`game/dist/tactics/core/engine.js`; source SHA-256:
+`6c05dd9a65999e0914650d6b8ffdd7edacb9fa4712f6f7ad8d05fe9e5dff8584`.
+No donor engine is imported or modified. Glass is a fallback after exposed zones.
+Shot receipts include the chosen zone. The census firing-node oracle now checks
+physical first impact at those zones instead of a perception-only ray.
+
+Focused regression command (repository root):
+
+```
+node --test sites/tactical-animal/tests/shot-exposure.test.mjs sites/tactical-animal/tests/targeting-monitor.test.mjs sites/tactical-animal/tests/guard-approach.test.mjs sites/tactical-animal/tests/window-integration.test.mjs
+```
+
+The fixture uses the unchanged shipping-manifest desk and the reported 0.92 m
+crate. For each blocked standing torso, 200 rejected attempts spend no ammo, AP
+or RNG; all four zones are compared with actual impact for standing and kneeling
+shooters. A seed-0 guard chooses the exposed head (its low-probability misses are
+normal); seed 2048 proves an accepted head roll reaches the body. Existing window
+tests prove direct frame targeting and pane-break/burst behavior. The approach
+suite runs seed 3, 40 blocked approaches on each of three missions.
+
+Intentional replay changes: guards may now shoot a different exposed zone, with
+that zone's accuracy and damage, or reposition when no body zone is exposed.
+Blocked player shots no longer spend AP/ammo/RNG. Historical census totals from
+earlier revisions have not been rerun and are not claimed here.
+
+## Player narrow passages
+
+Flat player navigation shares `searchStarts` with guards. If no grid node is a
+straight walk away, its bounded 32-bearing scan supplies costed escape points.
+Reconstruction retains the selected escape via before legal smoothing and the
+exact clicked endpoint. Live bodies and ordinary movement/AP/save rules still
+apply. Normal starts keep their existing route and tie order. Regression command:
+`node --test sites/tactical-animal/tests/player-strip.test.mjs`.
+
+## Friendly blockers
+
+An alert guard with no route can ask one later, higher-ID ally to yield. At most
+four candidate allies and 48 standing points each are considered; each hypothetical
+search expands at most 1024 flat nodes (128 native nodes), and a hypothetical
+route must become legal with that ally standing at the yield point. Source
+geometry is shared, live bodies are checked anew. A trapped actor with no legal
+10 cm start among 32 bearings makes no remote request. The low-ID priority avoids
+reciprocal requests. Each guard requests at most once per round.
+
+The blocker yields in its own turn through ordinary `travel`, paying actual AP
+and stamina, for at most one second. The waiter gets one retry with its remaining
+AP after that turn. Failed or expired requests clear at round end. Pending point,
+elapsed time, ownership and retry state are saved and validated. No body is
+teleported or omitted from actual movement. The Road Checkpoint doorway, two-way
+contention, pending-save replay and five-guard sealed ring are covered by
+`node --test sites/tactical-animal/tests/guard-coordination.test.mjs`.
+
+## Alert, search and return
+
+The same AFT source named above supplies the small state-machine policy:
+`GUARD_STATES`, `settleRound`, `searchCells`, `searchGoal`, and
+`stepInvestigation`/`settle`. This adaptation keeps rest, alert, searching and
+standdown, without importing social, campaign or personality machinery.
+
+Three unseen rounds start a search of the last observed point and up to four
+reachable local report cells. Exploration counts one unseen interval per three
+seconds, so an alert outside combat also progresses. Searches sweep briefly at
+each point and stop after at most 18 active seconds. Return to the authored post
+uses a bounded route and restores its heading; three failed attempts or 12 active
+seconds settle safely where the guard stands. Direct sight interrupts either
+state. Hidden live hero coordinates are never a navigation fallback.
+
+Investigation paths expand at most 128 nodes; exploration admits at most two new
+plans per tick. Movement uses normal collision, stance, stamina and (during
+combat) AP. Search cells, elapsed times, sweep, retry waits, route and authored
+post, queued candidates and a pending reachability probe survive saves. Candidate
+reachability is checked one plan at a time under the tick quota; only a validated
+route adds a local cell to the sweep. Source floor resolution happens before a
+candidate is queued. Existing pursuit-position tests now stop after two unseen
+rounds; the third intentionally begins investigation. Dedicated transition,
+exploration, blocked-return, hidden-hero and mid-search replay coverage:
+`node --test sites/tactical-animal/tests/guard-awareness.test.mjs`.
+
+## Contact reports and sound
+
+The AFT `shout`/last-known report policy is adapted to the solo simulation.
+Each firsthand sighting records its point, target, original observer, simulation
+time and round. A friendly discharge relays a usable hostile snapshot, retaining
+those original fields and recording only its forwarding guard. A listener keeps
+newer information, and its equally fresh firsthand observation wins. Forwarding
+does not create a sighting or reset its age. Reports expire after three unseen
+rounds or nine simulation seconds; old report records remain historical data.
+
+Player/unknown shots and friendly shots without a usable hostile fix supply only
+the audible shooter's point. Listeners without stronger contact information enter
+the AFT suspicious state and investigate that sound before returning. Hearing is
+not permission to fire through cover. Firearm, directional flame and grenade
+hooks share this policy and retain their previous hearing radii. A guard never
+overwrites its own hostile fix with its own gun's location.
+
+Tests cover real combat hooks, relay chains, stale reports, newer firsthand fixes,
+audible radii, save validation, and native floor/height preservation. The native
+provider also checks every selected body zone against actual partial-height
+chest/capsule impact. Commands:
+
+```
+node --test sites/tactical-animal/tests/guard-reports.test.mjs sites/tactical-animal/tests/guard-awareness.test.mjs sites/tactical-animal/tests/flame-aim.test.mjs sites/tactical-animal/tests/shot-exposure.test.mjs
+node --test sites/tactical-animal/tests/coldwell-gameplay.test.mjs
+```
+
+These passed 22 focused checks (including all 54 flame gameplay comparisons) and
+15 full-provider gameplay checks. Friendly report metadata and guard state/post
+fields intentionally change serialized replay hashes from the first command;
+later decision changes follow the explicit policies above, rather than a scenery
+or source-art change.
+
+## Replay and census evidence
+
+`tools/audit-guard-replays.mjs` snapshots the exact `783f45b` JavaScript import
+closure, reproduces every historical golden hash, then compares the candidate
+after every public command. `docs/reviews/guard-followups-replays.json` contains
+the revision, normalized runtime SHA-256 values, seeds, command counts, hashes,
+comparison definition and the first differences. New guard metadata is listed
+separately from the played-state comparison. Original goldens remain unchanged;
+`guard-followups-baseline.json` pins the reviewed new behavior.
+
+| Mission / seed | Commands | First changed played command (zero based) | Reason |
+| --- | ---: | --- | --- |
+| Night Ledger / 3 | 150 | 8: grenade | Sound investigation replaces an unobserved hostile fix. |
+| Night Ledger / 4 | 150 | 40: shot | Listeners investigate the sound source. |
+| Night Ledger / 6 | 150 | 5: flame | Listeners investigate the sound source. |
+| Night Ledger / 8 | 200 | 13: shot | Listeners investigate the sound source. |
+| Road Checkpoint / 1 | 40 | 30: end turn | Resting guards no longer accrue unseen alert age. |
+| Road Checkpoint / 2 | 40 | None | Played state stays equal; physical preview/metadata changes only. |
+
+The census prints revision/module hashes, seed, requested/actual denominator,
+timings, and a physical chosen-zone shot oracle. A firearm round is invalid when
+its pre-discharge first impact is neither its target nor deliberately targeted
+glass. An active search at the four-round cutoff is reported separately from a
+settled guard that never fired. Historical counts are not used as new results.
+The browser workflow accepts the Coldwell base branch as well as main so this
+stacked draft gets the same exact-head native checks before integration.
+
+The retained sample at `9a390ea` covers 120 seed-3 blocked approaches and 259
+firearm rounds: none had an invalid physical first impact. Three guards settled
+without firing where the oracle found no firing node; 26 were still investigating
+at the four-round cutoff. Road Checkpoint seed 9001 covers three runs / 36 rounds,
+90 alert guard turns (37 judged unobstructed-plan cases), plus 42 investigation
+turns. No judged case lacked a plan because of another body; one retained a detour
+over a metre longer. This is a sample, not a global absence-of-blocking claim.
+Exact output is in `docs/reviews/guard-followups-census.txt`.
+
+The first full local check completed all 22 floor intervals but exceeded
+its five-minute test deadline. An isolated run also reached the exact bottom,
+with a 3 ms request and 11.9 s off-thread plan, in 332 s total on this machine.
+Recon had recovered the records and returned to
+ground before its ten-minute process deadline. The CPU physical-sweep allowance
+is now ten minutes, and full Recon fifteen minutes. The strict request/cancel
+100 ms checks, 30-second cold planning, exact arrivals, legal played commands,
+resource/save checks, browser assertions and the CI job's overall deadline remain.
+Three older desk/tank tests are updated to the intended blocked-target rejection;
+deliberate point shots still prove actual intervening-body/solid impacts and
+conditional fuel rolls. No gameplay assertion is skipped.
+
+Final local reruns pass: 411 flat checks, all reviewed replay hashes, the
+351-waypoint/22-floor route (2.1 ms request, 17.5 s off-thread plan), and the
+complete Recon controller (34 steps, 2,177 frames, 312.76 m, five rounds,
+110 HP, records secured and extracted). Native search startup's stair fixture
+completes in 0.22 s after deferring reachability, versus 14.6 s before. This is
+CPU test evidence on this desktop, not a real-phone frame-rate measurement.
+
+The first exact-head CI run at `5bb3716` passed all 477 repository tests and five
+of six browser scenarios. The navigation trace showed a 264 ms map tap followed
+by a nine-second joystick input call while the worker plan completed in 3.69 s;
+the test then observed a completed plan instead of proving pending cancellation.
+The harness now queues trusted native CDP touch gestures in order without waiting
+for the map-release frame acknowledgement. It retains every pending-state,
+latency, resource, worker-disposal and exact-arrival assertion, and preserves the
+event-time receipt even on failure. Context-close acknowledgement has a 30 s
+grace bound after a recorded 10 s timeout; actual context/browser/server closure
+and released ports are still mandatory. Gameplay and worker timing are unchanged.

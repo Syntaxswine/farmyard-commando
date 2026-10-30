@@ -27,7 +27,7 @@ export async function withColdwellNative(testInfo,{output,report,run}){
     await run(context,checkpoint);report.controlsAndShadersPassed=true;
   }catch(error){failure=error;report.failure=String(error.stack||error);await checkpoint();for(const [i,page]of (context?.pages()||[]).entries())if(!page.isClosed())await page.screenshot({path:path.join(output,'failure-'+i+'.png'),fullPage:true,timeout:10000}).catch(()=>{});
   }finally{
-    report.cleanupErrors=[];
+    report.cleanupErrors=[];report.cleanupTimings={};
     const saveVideos=async()=>{
       report.videos=[];
       for(const {page,video,file} of recordings){
@@ -38,7 +38,9 @@ export async function withColdwellNative(testInfo,{output,report,run}){
         if(!size)throw Error('Native recording is empty.');report.videos.push({file,bytes:size});
       }
     };
-    for(const [name,close,deadline]of [['trace',()=>context?.tracing.stop({path:path.join(output,'native-trace.zip')})],['videos',saveVideos,30000],['context',()=>context?.close()],['browser',()=>browser?.close()],['server',()=>server.close()]])try{await bounded(Promise.resolve().then(close),deadline);report[name+'Closed']=true;}catch(error){report.cleanupErrors.push({name,error:String(error)});}
+    for(const [name,close,deadline]of [['trace',()=>context?.tracing.stop({path:path.join(output,'native-trace.zip')}),60000],['videos',saveVideos,30000],['context',()=>context?.close()],['browser',()=>browser?.close()],['server',()=>server.close()]]){
+      const at=performance.now();try{await bounded(Promise.resolve().then(close),deadline);report[name+'Closed']=true;}catch(error){report.cleanupErrors.push({name,error:String(error)});}finally{report.cleanupTimings[name]={durationMs:performance.now()-at,deadlineMs:deadline??10000};}
+    }
     report.browserDisconnected=!browser?.isConnected();report.helper.exited=child.exitCode!==null||child.signalCode!==null;if(report.helper.exited)clearTimeout(retire);report.helper.portReleased=await portReleased(report.helper.port);report.passed=!failure&&!report.cleanupErrors.length&&report.helper.exited&&report.helper.portReleased;
     await checkpoint();await testInfo.attach('coldwell-native-'+report.stage,{path:file,contentType:'application/json'});
   }

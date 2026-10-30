@@ -7,7 +7,7 @@ import {withColdwellNative,observe} from './coldwell-native-session.mjs';
 import {checkColdwellGame} from './coldwell-game.mjs';
 const origin='http://127.0.0.1:4178';
 const preview=page=>page.evaluate(()=>window.__coldwellPreview.snapshot());
-async function ready(page){await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await expect(page.locator('#loading')).toHaveText('Preview ready',{timeout:60000});await page.evaluate(()=>window.__coldwellPreview.whenIdle());}
+async function ready(page){await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await expect(page.locator('#loading')).toHaveText('Preview ready',{timeout:60000});await page.evaluate(()=>window.__coldwellPreview.whenIdle());await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await expect.poll(async()=>(await preview(page)).renderer.calls,{timeout:60000}).toBeGreaterThan(0);}
 
 test('Coldwell proving views compile real standard/depth/distance shaders and dispose bounded FieldView',async({},testInfo)=>{
   const output=path.join(root,'artifacts/window-browser/coldwell'),report={stage:'proving',views:[],fieldViews:[],gameplayAdmission:'Feature branch candidate; architect owns release'};

@@ -3,10 +3,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 const root=path.resolve(fileURLToPath(new URL('../../../dist/',import.meta.url)));
-const record=fileURLToPath(new URL('../../../artifacts/window-browser/helper-server.json',import.meta.url)),started=new Date(),expiryAt=new Date(started.getTime()+18*60*1000);
+const record=fileURLToPath(new URL('../../../artifacts/window-browser/helper-server.json',import.meta.url)),started=new Date(),expiryAt=new Date(started.getTime()+21*60*1000);
 fs.mkdirSync(path.dirname(record),{recursive:true});
 let creationTicks=null;try{creationTicks=fs.readFileSync('/proc/'+process.pid+'/stat','utf8').split(') ').at(-1).split(' ')[19];}catch{}
-fs.writeFileSync(record,JSON.stringify({pid:process.pid,creationTicks,createdAt:started.toISOString(),executable:process.execPath,owner:'Farmyard native PR acceptance',project:root,purpose:'Temporary isolated HTTP fixture',port:4178,expiresAt:expiryAt.toISOString(),stop:'Playwright webServer graceful SIGTERM; eighteen-minute automatic expiry',restart:{source:'sites/tactical-animal/browser-tests/serve.mjs',cwd:'sites/tactical-animal/browser-tests',runtime:'Node 24',testedSha:process.env.TESTED_SHA||null,inputs:'verified static dist/ build',outputs:'artifacts/window-browser/',arguments:[]}},null,2));
+fs.writeFileSync(record,JSON.stringify({pid:process.pid,creationTicks,createdAt:started.toISOString(),executable:process.execPath,owner:'Farmyard native PR acceptance',project:root,purpose:'Temporary isolated HTTP fixture',port:4178,expiresAt:expiryAt.toISOString(),stop:'Playwright webServer graceful SIGTERM; twenty-one-minute automatic expiry',restart:{source:'sites/tactical-animal/browser-tests/serve.mjs',cwd:'sites/tactical-animal/browser-tests',runtime:'Node 24',testedSha:process.env.TESTED_SHA||null,inputs:'verified static dist/ build',outputs:'artifacts/window-browser/',arguments:[]}},null,2));
 const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.ogg':'audio/ogg'};
 const server=http.createServer((req,res)=>{
   let file;try{const url=new URL(req.url,'http://localhost');file=path.resolve(root,'.'+decodeURIComponent(url.pathname==='/'?'/index.html':url.pathname));}catch{res.writeHead(400).end();return;}
@@ -15,4 +15,4 @@ const server=http.createServer((req,res)=>{
 });
 let closing=false;function stop(){if(closing)return;closing=true;clearTimeout(expiry);server.close(()=>process.exit(0));server.closeAllConnections();}
 const expiry=setTimeout(stop,Math.max(1,expiryAt.getTime()-Date.now()));expiry.unref();process.on('SIGTERM',stop);process.on('SIGINT',stop);
-server.listen(4178,'127.0.0.1',()=>console.log('Isolated test server: 127.0.0.1:4178; eighteen-minute expiry; owned by Playwright webServer.'));
+server.listen(4178,'127.0.0.1',()=>console.log('Isolated test server: 127.0.0.1:4178; twenty-one-minute expiry; owned by Playwright webServer.'));

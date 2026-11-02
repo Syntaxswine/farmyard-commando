@@ -7,8 +7,6 @@ on:
       - 'maps/mount-dora/**'
       - 'tools/test-mount-dora-walkthrough.mjs'
       - '.github/workflows/mount-dora-walkthrough.yml'
-  push:
-    branches: [codex/mount-dora-walkthrough]
   workflow_dispatch:
 permissions:
   contents: read

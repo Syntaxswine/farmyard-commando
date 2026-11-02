@@ -552,6 +552,26 @@ def build_project(project=PROJECT):
                         for index in range(y * width + left, y * width + right):
                             if terrain[index] != WATER:
                                 green[index] = greenery
+    # A pitch can be nested in a park polygon. It must not inherit the park's
+    # procedural trees, and hard courts need a visible existing ground proxy.
+    # Keep overlapping/historical source polygons; do not invent court markings.
+    for feature in features:
+        if feature["tags"].get("leisure") != "pitch" or feature["geometry"]["type"] != "MultiPolygon":
+            continue
+        tags = feature["tags"]
+        surface = {"asphalt": "ground-asphalt", "concrete": "ground-concrete",
+                   "clay": "ground-dirt", "grass": "ground-grass"}.get(tags.get("surface"))
+        source = "mapped-surface-tag" if surface else "existing-grass-blockout"
+        if not surface and tags.get("sport") in ("tennis", "pickleball"):
+            surface, source = "ground-asphalt", "declared-hard-court-proxy"
+        feature["nativeSportsSurface"] = {"terrain": surface or "ground-grass", "source": source,
+                                           "proceduralGreenery": False, "courtMarkings": False,
+                                           "note": "Mapped sport polygons, not a current court inventory or surveyed surfacing."}
+        polygons = feature["geometry"]["coordinates"]
+        if surface:
+            paint_polygon(terrain, polygons, CODE[surface], width, depth, land_only=True)
+        for y, left, right in polygon_spans(polygons, width, depth):
+            green[y * width + left:y * width + right] = bytes(right - left)
     # Sidewalks first, then every mapped carriageway/path; no cross-junction curb
     # paints over a later road. Left/right follow OSM way direction in east/south.
     for feature in roads:
@@ -676,14 +696,15 @@ def build_project(project=PROJECT):
     manifest = {"kind": "mount-dora-native-project", "version": 1, "id": config["id"], "name": config["name"], "target": config["target"],
                 "projection": config["projection"], "extent": {"widthM": width, "depthM": depth}, "sectorSize": size, "columns": extent["columns"], "rows": extent["rows"],
                 "featuresFile": "features.json", "atlasFile": "atlas.svg", "sectors": sectors, "sources": source_records,
-                "generation": {"tool": "tools/maps/build-mount-dora.py", "version": 1, "configFile": "source/authoring-config.json", "configSHA256": config_digest,
+                "generation": {"tool": "tools/maps/build-mount-dora.py", "version": 2, "configFile": "source/authoring-config.json", "configSHA256": config_digest,
                                "sourceDigest": digest, "terrainCodebook": list(KINDS), "globalTerrainSHA256": sha(terrain),
                                "sampleRule": "Global cell centre (column*240+x+0.5, row*240+y+0.5); one global raster sliced without seam repaint.",
                                "nativeCoordinates": "Wall metre endpoints = global east/south - sectorOrigin - 0.5; tile indices remain integer cells.",
                                "defaultRoadWidthsM": WIDTHS, "sidewalkWidthM": 1.5, "sidewalkPresence": "Mapped sidewalk=yes/both/left/right only; separate footways retain their source geometry.",
                                "waterPolicy": "Fill complete source polygons first; land cover never creates land in water. Only mapped building footprints, bridges or wooden-surface paths can provide source-backed support over water.",
                                "vegetation": {"seed": 1947, "gridM": 12, "jitterM": 3, "parkAcceptancePercent": 25, "woodAcceptancePercent": 80, "wetlandAcceptancePercent": 50,
-                                              "policy": "Mapped tree cell proxies plus declared seeded broadleaf/reed scatter on mapped land vegetation; not surveyed species or individual tree positions."},
+                                              "policy": "Mapped tree cell proxies plus declared seeded broadleaf/reed scatter on mapped land vegetation, excluding all mapped sports pitches; not surveyed species or individual tree positions."},
+                               "sportsSurfaces": "Mapped pitch polygons exclude procedural greenery; tennis/pickleball use a declared existing asphalt proxy unless a supported source surface tag is present. No invented court lines or current inventory claim.",
                                "buildingDefaults": {"stories": 1, "material": "brick", "heightM": 2, "slabM": .12, "pitchM": 2.12,
                                                     "policy": "Native-kit closed exterior proxies; integer tagged levels1..5 honored. Source outlines/holes retained; no invented entrances/interiors; shared party wall ownership retained."}},
                 "landmarks": config.get("landmarkOverrides", []),

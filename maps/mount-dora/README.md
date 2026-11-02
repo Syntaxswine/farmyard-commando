@@ -11,6 +11,11 @@ and downloads individual sectors; its isolated review host can open them in the
 actual pinned workshop. The maps are authoring documents, not a new Farmyard
 combat operation. Opening a sector does not stream neighboring sectors into it.
 
+The published [sector atlas](https://syntaxswine.github.io/farmyard-commando/maps/mount-dora/workshop/)
+offers the geographic overview and JSON downloads. Direct opening is available
+only on the matching isolated Nautilus review host. The older AFT designer
+embedded in the game is not evidence that Nautilus wall-run extensions render.
+
 ## What is authored
 
 - Roads and paths, the complete Lake Dora shoreline polygon, park and wetland
@@ -25,6 +30,9 @@ combat operation. Opening a sector does not stream neighboring sectors into it.
   generation records.
 - Declared mapped-tree proxies and seeded vegetation. These are scenery
   approximations, not a survey of individual trees or species.
+- Mapped sports pitches exclude procedural trees. Tennis and pickleball polygons
+  use a declared existing asphalt ground proxy without invented court markings;
+  overlapping source records are retained rather than asserted as a current count.
 
 **Thirty-nine sectors pass the existing native import contract.** A05, A06 and
 A07 contain only lake water. Their geographic files are complete, but the
@@ -86,6 +94,23 @@ retained byte for byte; `.gitattributes` prevents newline conversion from
 invalidating their provenance. The workshop README documents the additional
 exact-version API and browser checks, including editing, Undo/Redo and reopening
 exported JSON. The basic format check alone is not evidence of native rendering.
+
+## Editor findings
+
+The [workshop feedback](../../docs/maps/mount-dora-editor-feedback.json) separates
+observed behavior from proposals. The [art handoff](../../docs/art/mount-dora/shortcomings.md)
+also records the real catalogue and source renderer limits.
+
+| Missing capability | Effect on this project |
+| --- | --- |
+| Terrain-only authoring validation | Three all-water maps cannot open without invented mission markers. |
+| Native town/georeference and shared cross-sector ownership | The atlas supplies context; a whole building cannot yet be edited across map boundaries as one object. |
+| Continuous elevation authoring | Real road grades, sloped ground and boardwalk elevations remain unmodeled. |
+| Freely placed facade/outdoor components and cross-map roof ownership | Landmark palettes and studies are useful references, but are not registered placements on the final sectors. |
+
+The existing arbitrary-angle wall runs, Import/Export, terrain tools and
+Undo/Redo are reused. The sector atlas adds selection and safe explicit opening;
+it does not replace those editor systems.
 
 ## Source credit
 

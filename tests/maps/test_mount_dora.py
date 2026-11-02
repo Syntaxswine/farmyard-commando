@@ -181,6 +181,25 @@ class MountDoraGeneration(unittest.TestCase):
         self.assertEqual(len(slivers),self.project["metrics"]["unrepresentedWallSlivers"])
         self.assertTrue(all(d["lengthM"] < .1 for d in slivers))
 
+    def test_sports_pitches_exclude_seeded_trees_and_hard_courts_are_visible(self):
+        pitches = [f for f in self.features.values() if f["tags"].get("leisure") == "pitch"]
+        pitch_cells, courts = set(), []
+        for feature in pitches:
+            cells = {(x,y) for y,left,right in BUILDER.polygon_spans(feature["geometry"]["coordinates"],1440,1680) for x in range(left,right)}
+            pitch_cells.update(cells)
+            self.assertFalse(feature["nativeSportsSurface"]["proceduralGreenery"])
+            if feature["tags"].get("sport") in ("tennis","pickleball"):
+                courts.append(feature)
+                self.assertEqual(feature["nativeSportsSurface"]["terrain"],"ground-asphalt")
+                self.assertGreater(sum(self.grid[y*1440+x] == BUILDER.CODE["ground-asphalt"] for x,y in cells),len(cells)*.9)
+        self.assertEqual(len(pitches),11)
+        self.assertEqual(len(courts),6)
+        for sector in self.project["sectors"]:
+            ox,oy = sector["origin"]["x"],sector["origin"]["y"]
+            for prop in self.maps[sector["id"]]["props"]:
+                if prop["mountDora"]["placement"] == "declared-seeded-greenery":
+                    self.assertNotIn((ox+prop["x"],oy+prop["y"]),pitch_cells)
+
     def test_preview_anchors_are_connected_existing_safe_cells_and_no_enemies(self):
         for sector in self.project["sectors"]:
             mapping = self.maps[sector["id"]]

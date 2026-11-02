@@ -10,7 +10,7 @@ import {installNativeProbe,inspectWebGL} from '../sites/tactical-animal/browser-
 const shelterReview=false;
 // The two-core software-rendering runner uses a normal 800x600 desktop window.
 // Keep the complete route/assertions and 390x844 touch coverage; video is opt-in.
-const desktopViewport=process.env.CI?{width:800,height:600}:{width:1440,height:1000},recordVideo=process.env.WALKTHROUGH_VIDEO==='1';
+const desktopViewport={width:800,height:600},recordVideo=process.env.WALKTHROUGH_VIDEO==='1';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),site=path.join(root,'dist'),out=path.join(root,'artifacts/mount-dora-travel-speed',shelterReview?'native-shelter':'native');
 fs.mkdirSync(out,{recursive:true});
 const {chromium}=await import(pathToFileURL(path.join(root,'sites/tactical-animal/browser-tests/node_modules/playwright/index.mjs')).href);

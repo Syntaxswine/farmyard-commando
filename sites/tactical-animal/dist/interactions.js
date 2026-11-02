@@ -40,6 +40,7 @@ export function createInteractionSystem({hero,canControl,combatCosts,distance,ge
       return unit&&unit.hp<=0?{...object,x:unit.x,y:unit.y}:null;
     }).filter(Boolean);
     const mission=missionForState(state);
+    if(mission.exploration)return result;
     if(!objectiveSecured(state))result.push({...mission.objective,inventory:[]});
     result.push({...mission.extraction,id:'extraction',kind:'extract',inventory:[]});
     return result;

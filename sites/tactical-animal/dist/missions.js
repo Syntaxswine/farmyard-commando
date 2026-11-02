@@ -4,6 +4,7 @@ import {checkpointSource,checkpointMap} from './aft-sector.js';
 import {checkpointApproachMap} from './checkpoint-approaches.js';
 import {WINDOW_REVIEW_ID,WINDOW_REVIEW_MISSION,windowReviewSource} from './window-review-map.js';
 import {adaptAftSector} from './aft-sector.js';
+import {TOUR_ID,TOUR_ACTIVITY} from './mount-dora-activity.js';
 export const DEFAULT_MISSION_ID='night-ledger';
 const checkpoint=checkpointSource(),checkpointDoors=checkpointMap().doors;
 const bounds={x:1,y:1,w:38,h:28};
@@ -138,17 +139,18 @@ for(const definition of definitions){const errors=validateMission(definition);if
 freeze(legacyCheckpoint);
 export const MISSIONS=freeze(definitions);
 export function getMission(id=DEFAULT_MISSION_ID,layoutVersion){
-  const definition=id===WINDOW_REVIEW_ID?WINDOW_REVIEW_MISSION:id==='road-checkpoint'&&layoutVersion===1?legacyCheckpoint:MISSIONS.find(m=>m.id===id);
+  const definition=id===TOUR_ID?TOUR_ACTIVITY:id===WINDOW_REVIEW_ID?WINDOW_REVIEW_MISSION:id==='road-checkpoint'&&layoutVersion===1?legacyCheckpoint:MISSIONS.find(m=>m.id===id);
   if(!definition)throw Error('Unknown operation: '+String(id)+'.');
   if(layoutVersion!==undefined&&layoutVersion!==(definition.layoutVersion??1))throw Error('Unsupported operation layout.');
   return definition;
 }
 export const missionForState=state=>getMission(state.solo.missionId??DEFAULT_MISSION_ID,state.solo.layoutVersion??1);
-export const objectiveSecured=state=>!!(state.solo.objectives?.[missionForState(state).objective.id]??(missionForState(state).id===DEFAULT_MISSION_ID&&state.solo.ledger));
-export const missionDestination=state=>objectiveSecured(state)?missionForState(state).extraction:missionForState(state).objective;
+export const objectiveSecured=state=>!missionForState(state).exploration&&!!(state.solo.objectives?.[missionForState(state).objective.id]??(missionForState(state).id===DEFAULT_MISSION_ID&&state.solo.ledger));
+export const missionDestination=state=>missionForState(state).exploration?null:objectiveSecured(state)?missionForState(state).extraction:missionForState(state).objective;
 
 export function missionMap(id=DEFAULT_MISSION_ID,layoutVersion){
   const mission=getMission(id,layoutVersion);
+  if(mission.exploration)throw Error('Load town sources before starting the walking tour.');
   if(mission.id===WINDOW_REVIEW_ID)return adaptAftSector(windowReviewSource());
   if(mission.sector==='aft-road-checkpoint')return checkpointMap();
   const map=mission.sector==='aft-road-checkpoint-approaches'?checkpointApproachMap():{name:mission.name,terrain:Array.from({length:30},()=>Array(40).fill('void')),edges:{}};

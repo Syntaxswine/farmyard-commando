@@ -13,7 +13,8 @@ const project=read('project.json'),features=read('features.json').features;
 const provenance={commit:'2502646482218524fd5129641da769bb82462e4d',sourcePath:'packages/map-core/wall-runs.js',bytes:8795,sha256:'6d01eb4b49d6ba20ae71e4bb2cab095c80e63be5d14b6ff43f509a9cfc76633d'};
 const args=process.argv.slice(2);
 assert(args.length===0||args.length===2&&args[0]==='--wall-module','Usage: node tools/maps/review-mount-dora-routes.mjs [--wall-module exact-source-file]');
-const wallFile=args.length?path.resolve(args[1]):path.join(artifact,'wall-runs.mjs');
+const runtimeWall=path.join(root,'sites/tactical-animal/dist/mount-dora-source/wall-runs.js');
+const wallFile=args.length?path.resolve(args[1]):fs.existsSync(runtimeWall)?runtimeWall:path.join(artifact,'wall-runs.mjs');
 assert.equal(hash(fs.readFileSync(wallFile)),provenance.sha256,'Use exact reviewed source bytes.');
 const {wallRunsIntersect,WALL_KIT}=await import(pathToFileURL(wallFile).href);
 assert.equal(WALL_KIT.thickness,.16);
@@ -116,13 +117,16 @@ const nativeWalls={wallRuns:{version:1,segments:walls}};
 const game=p=>({x:p[0]-.5,y:p[1]-.5,h:.8});
 for(let i=1;i<cornerTown.length;i++)assert(!wallRunsIntersect(nativeWalls,game(cornerTown[i-1]),game(cornerTown[i]),{radius}));
 assert(!wallRunsIntersect(nativeWalls,game([460.5,508.5]),game([488.5,508.5]),{radius}));
+for(let x=460;x<=488;x++)assert(open[508*width+x],'Clear source approach cannot cross blocked terrain or a vegetation anchor.');
 assert(wallRunsIntersect(nativeWalls,game([480.5,508.5]),game([480.5,500.5]),{radius}));
 const output={schema:'mount-dora-route-evidence/1',sourceProjectSHA256:hash(fs.readFileSync(path.join(town,'project.json'))),sourceDigest:project.generation.sourceDigest,
  coordinateFrame:'town east/south metres; game = town - (0.5,0.5)',bounds:[0,0,width,height],actorRadiusM:radius,wallQuerySource:provenance,
  scope:'Offline outdoor source-terrain/reference-wall evidence. Final production art solids and streaming behavior require actual runtime tests.',
  terrainPolicy:'Water and closed building floor masks excluded; source vegetation anchors conservatively reserved. Existing Nautilus wall query checks 0.23m radius at 0.8m height.',
  spawn:{name:'Donnelly Park west approach',townPoint:spawn.town},reachableOutdoorCells:tail,reachedLandSectors:bySector.filter(s=>s.reachedOutdoorCells>0).length,
- sectors:bySector,routes,seamSamples,cornerLoop:{sectors:['B02','C02','C03','B03'],townPoints:cornerTown},
+ sectors:bySector,routes,seamSamples,
+ boardwalkLanes:features.filter(f=>['osm-way-548471563','osm-way-688219167'].includes(f.id)).map(f=>({sourceId:f.id,townPoints:f.geometry.coordinates,policy:'Follow the mapped centre line when validating production rails; source-only grid paths may touch a new side rail.'})),
+ cornerLoop:{sectors:['B02','C02','C03','B03'],townPoints:cornerTown},
  crossSectorBuilding:{sourceId:'osm-way-557051202',sectors:['B03','C03'],clearApproachTown:[[460.5,508.5],[488.5,508.5]],blockedWallProbeTown:[[480.5,508.5],[480.5,500.5]]}};
 fs.mkdirSync(path.join(town,'playable'),{recursive:true});
 fs.writeFileSync(path.join(town,'playable/route-fixtures.json'),JSON.stringify(output,null,2)+'\n');

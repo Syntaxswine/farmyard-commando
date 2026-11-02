@@ -1460,6 +1460,84 @@
       ]
     }
   ],
+  "boardwalkLanes": [
+    {
+      "sourceId": "osm-way-548471563",
+      "townPoints": [
+        [
+          665.969,
+          1296.5786
+        ],
+        [
+          615.5621,
+          1325.8834
+        ]
+      ],
+      "policy": "Follow the mapped centre line when validating production rails; source-only grid paths may touch a new side rail."
+    },
+    {
+      "sourceId": "osm-way-688219167",
+      "townPoints": [
+        [
+          615.5621,
+          1325.8834
+        ],
+        [
+          601.2688,
+          1326.2825
+        ],
+        [
+          585.2087,
+          1370.2499
+        ],
+        [
+          557.5008,
+          1400.4297
+        ],
+        [
+          520.8983,
+          1402.7463
+        ],
+        [
+          506.3413,
+          1408.4099
+        ],
+        [
+          465.8921,
+          1424.1481
+        ],
+        [
+          412.9457,
+          1434.3002
+        ],
+        [
+          373.7852,
+          1428.6142
+        ],
+        [
+          343.8705,
+          1424.2803
+        ],
+        [
+          331.5002,
+          1440.8829
+        ],
+        [
+          325.271,
+          1460.2009
+        ],
+        [
+          324.1967,
+          1481.6912
+        ],
+        [
+          348.575,
+          1544.733
+        ]
+      ],
+      "policy": "Follow the mapped centre line when validating production rails; source-only grid paths may touch a new side rail."
+    }
+  ],
   "cornerLoop": {
     "sectors": [
       "B02",

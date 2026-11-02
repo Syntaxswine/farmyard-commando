@@ -48,6 +48,12 @@ anchor cells. All **39 land sectors** are in one reachable outdoor component.
 The Palm Island approach lies on a mapped bridge/wood route over the source
 lake polygon, rather than merely on a wooden path on land.
 
+The fixture also retains both original boardwalk centre lines. Production side
+rails can legitimately intersect a source-only grid route that hugged the deck
+edge. Validate movement through the actual lane and its joins; the old grid
+turn points are not an instruction to cross a rail. Early geometry checks found
+the mapped centre lines clear at the 0.23 m animal radius.
+
 This is reference geometry evidence, not proof of the finished runtime. Final
 tests must apply production landmark supports, loading failures, scene/resource
 retirement and save/resume. Route fixtures must be walked through the real

@@ -55,3 +55,15 @@ The art preview server prints its dynamic loopback URL, allows only this art sub
 The normal Farmyard production build deliberately remains unchanged and does not publish this authoring project. Root owns the complete town integration and workshop bundle. This PR stays draft for architect review; there is no game/engine pin update or independent main/Pages promotion.
 
 `source/geometry-compatibility.json` verifies all nine reused AFT geometry/factory modules against immutable objects in both released Farmyard and the fixed Nautilus target. They match exactly after CRLF/LF normalization. The gallery retains the exact original building/roof modules and painted image bytes.
+
+## Reviewed result
+
+At art runtime commit **2b3755d3dcc427e7007e6c58f6ddf29772a8bbb2**, all seven studies rendered through **native WebGL 2** in the current in-app browser. The original 768 × 500 frames and contact sheet are saved alongside this document. Native rendering is now available; the older Coldwell browser limitation does not apply to this review.
+
+All **397** repository tests pass, including **seven** focused art checks; the production build passes. The 390 × 844 gallery has no horizontal overflow and preserves image proportions. All seven temporary study instances, their owned materials/geometry and the temporary renderer were disposed. The gallery tab and HTTP helper are closed; its port was released and restart source preserved.
+
+[Exact-commit QA and hashes](review.json) · [DOM-visible browser/resource observations](browser-review.json) · [Workshop shortcomings](shortcomings.md).
+
+![Native shape and material studies](native-studies.png)
+
+These are local reference studies. Precise site geometry remains the architect's map; the hotel, pavilion, boardwalk and lighthouse do not acquire surveyed interiors/heights or unsupported native placement bindings from these images.

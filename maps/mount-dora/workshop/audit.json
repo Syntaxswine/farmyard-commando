@@ -1,0 +1,1327 @@
+{
+  "schemaVersion": 1,
+  "nautilusCommit": "2502646482218524fd5129641da769bb82462e4d",
+  "source": {
+    "nautilusCommit": "2502646482218524fd5129641da769bb82462e4d",
+    "trackedBlobsVerified": 2297
+  },
+  "sourceMode": "project",
+  "projectId": "mount-dora-downtown",
+  "projectSha256": "b0be9d50d045f919b0187513c5c4dbee9643bcdb3f3ee89f6555cfafd6485680",
+  "sourceDigest": "2b742d1768425de6a41a60818a0d2fd3a72b71f1969de94a50ff9041ce216193",
+  "sectorCount": 42,
+  "expectedSectorCount": 42,
+  "geographicFileCount": 42,
+  "nativeReadyCount": 39,
+  "sectors": [
+    {
+      "id": "A01",
+      "file": "sectors/A01.map.json",
+      "sha256": "94903db92563bde96b6826603dad12ac01aea5d710b9a52265173026732860b2",
+      "bytes": 982997,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 170,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "texture",
+        "options": {
+          "groundKind": "ground-concrete"
+        },
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "aa2eb92eb80eb5efb8761580db2f9ad7aa9007bb34b299dbdbb6d8b44b809b49"
+    },
+    {
+      "id": "B01",
+      "file": "sectors/B01.map.json",
+      "sha256": "029dc6a59938ab27fdd0eedb8c2b5086b2e0e0270fb7e14ec7d96e58c5cdac5c",
+      "bytes": 1019590,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 241,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "5fa5d45f8484c85794e615ae624c8fb5f1619ac31d7dbc96d9ce40d411a21ef6"
+    },
+    {
+      "id": "C01",
+      "file": "sectors/C01.map.json",
+      "sha256": "63d5df7dd75d6f7efcb4062ed380e359f367f916bd3ad47245e7d25f659afe78",
+      "bytes": 1028676,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 270,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "535c6a4e5732792445acb95f804181ad95d218856755e8074b1fc87f47b58932"
+    },
+    {
+      "id": "D01",
+      "file": "sectors/D01.map.json",
+      "sha256": "afdb5b7ee639d7d6946ffcac134fb550300de5dd30528ebf5a674e7b46e1421a",
+      "bytes": 1015508,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 277,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "262eb3c92d17bb43fa852ccdbd8ef812355b4b4c58afea9e5925ff78a86938f1"
+    },
+    {
+      "id": "E01",
+      "file": "sectors/E01.map.json",
+      "sha256": "7214c49682bee9275ec314555346b1e5a8a77dc8a76ae2903a311198d94b738b",
+      "bytes": 996080,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 235,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "7003a3c1f302ef311f61d5abefa899e203fa5063481f633635fb50ac154729b6"
+    },
+    {
+      "id": "F01",
+      "file": "sectors/F01.map.json",
+      "sha256": "aa7aae8f0a65d0b22a93c062f84fc23e28251bda43e98c9bc97b70c4599be425",
+      "bytes": 985694,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 206,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "34fe342f21d9c855fd19948b382710a884b6d8f20d51bc652093697494923f21"
+    },
+    {
+      "id": "A02",
+      "file": "sectors/A02.map.json",
+      "sha256": "7a8adb0a658d66707ba612f6d4eb49fe6b6564a96e3ca2fcd3263c0311681ea3",
+      "bytes": 909320,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 112,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "3156d90c58d9f8c3cfc49ae7fd599cb23b7cbbbb0ac2b74ed6cfcafdcdcc1897"
+    },
+    {
+      "id": "B02",
+      "file": "sectors/B02.map.json",
+      "sha256": "88954ddf652194f362ffa804d2ac299b03524658aa7d067c686ee2b04b5158ff",
+      "bytes": 1019128,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 187,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "c7166a1063a6aa6e5fffc7c5b42f276eff2d30105a08fc77fd2c3eca0b320bfa"
+    },
+    {
+      "id": "C02",
+      "file": "sectors/C02.map.json",
+      "sha256": "836c3c9d2dfa7e0a106216f7dd24582a9f1ef205eda32afa7462dfd051f3ae84",
+      "bytes": 1020283,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 234,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "texture",
+        "options": {
+          "groundKind": "ground-concrete"
+        },
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "7c6e216d2a952419ce91b4ee1b1241c0857496390ab8ca2d212fd7929d1adec0"
+    },
+    {
+      "id": "D02",
+      "file": "sectors/D02.map.json",
+      "sha256": "7af3112c7b5a2d58a708c3c00521ccc4d3a3a5d3699baceeb59b699753895ad6",
+      "bytes": 991305,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 231,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "96531952f03999443e9cd5fe82f7f8363a8f1cd817c8cf1a9bc972f6446e8331"
+    },
+    {
+      "id": "E02",
+      "file": "sectors/E02.map.json",
+      "sha256": "fbcf8494d9c88361be022c36f69ee8195f0beab56b9f0789337d7827757ce2cf",
+      "bytes": 1139882,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 161,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "d79c634ad73c704643a86250373f80569240e98833d7fb9629e344008b3614b4"
+    },
+    {
+      "id": "F02",
+      "file": "sectors/F02.map.json",
+      "sha256": "6d406d8efdbcbfbcb80e457b46af04b9c186617a7904e32c1b06a5b12a0fbce1",
+      "bytes": 984768,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 106,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "b0cc76349e38b81faeb1aec22b838d4babfb7ef5e3f393603ce4574a458b750a"
+    },
+    {
+      "id": "A03",
+      "file": "sectors/A03.map.json",
+      "sha256": "a437879e170a10beaed7084db047a6e803384667900b94dee4640ad1bd7c1a0f",
+      "bytes": 674282,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 46,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 96,
+          "y": 8,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "1d634f17c696e25dd528e3ddd98ea77bf25ac43e57b6ed9f74951144b1ba24e3"
+    },
+    {
+      "id": "B03",
+      "file": "sectors/B03.map.json",
+      "sha256": "e8f214b89da6b84ab45a790918960ed0f69140f6c3fedb9441d78e22a323d09c",
+      "bytes": 1141311,
+      "levels": 4,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 334,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "7f65437fe6152880216aba1ec8e88e1c020519ab3cfecb7aa5923ce4dc4d1788"
+    },
+    {
+      "id": "C03",
+      "file": "sectors/C03.map.json",
+      "sha256": "79d6e248e1b13fc8b17e4a750a4655cf1973a8dbd22efe95474d82f2e6e45f67",
+      "bytes": 1051264,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 234,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "63736c01d1b7892763fe0374c4bca82a12d3cae010ebb63617033397b126cf5e"
+    },
+    {
+      "id": "D03",
+      "file": "sectors/D03.map.json",
+      "sha256": "94b9cee73b8e46bc064d5b7df9d7946264a148f1cc48a8e00dc89e57a527fca5",
+      "bytes": 1004317,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 188,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "95b3ebd1ff0c0ca630a69382ef42f5ada3afeee8a66ca7d25ed2435b0019b114"
+    },
+    {
+      "id": "E03",
+      "file": "sectors/E03.map.json",
+      "sha256": "9cbf9d4c66b78b81ea978f983dad44f8034dc56424bf0e458f2ff254e7da4fef",
+      "bytes": 1003278,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 175,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "texture",
+        "options": {
+          "groundKind": "ground-concrete"
+        },
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "cc0790b97b04a70b5d7aa08a009fb79744beb156d6cd6c3fe775fb181d0a5ad4"
+    },
+    {
+      "id": "F03",
+      "file": "sectors/F03.map.json",
+      "sha256": "f3010185122fa5b806f3044745c2c9b684d39ce0588335e2f5f5c7b4a23775e9",
+      "bytes": 986091,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 193,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "texture",
+        "options": {
+          "groundKind": "ground-concrete"
+        },
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "c9a8fe29e595d15b1b619ecfd9190b250682d42762d3f152dbe0f04900810bb1"
+    },
+    {
+      "id": "A04",
+      "file": "sectors/A04.map.json",
+      "sha256": "96f7d94e0ae4d276822f2d01b5a865c35c64a4de31380bb94a2d597893b6d0d1",
+      "bytes": 489243,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 3,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 195,
+          "y": 8,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "229dc5764afad867c23dc8cf1df8ccb6c43e03cb7c0ee5cefa86275d62dbdf49"
+    },
+    {
+      "id": "B04",
+      "file": "sectors/B04.map.json",
+      "sha256": "e05996ad62ab729ab6fe6fea821a3445ce1ec820d65a29b4baccf09fa8625df7",
+      "bytes": 915251,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 212,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "58fae763fe97573f7df1d573272dc48f4ec35fcd8dbd4ec0458ae22a380e865e"
+    },
+    {
+      "id": "C04",
+      "file": "sectors/C04.map.json",
+      "sha256": "55fce15483aa29830e347807655516c3d9cff57f706693dffd295b88d766476a",
+      "bytes": 1017619,
+      "levels": 5,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 153,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "4168362c911639a243f1ad4d8e5c425d6274399a576270123e90fe6f243aaaa8"
+    },
+    {
+      "id": "D04",
+      "file": "sectors/D04.map.json",
+      "sha256": "f7e2ab694ed6493af887d3f9edf8554dba6c62fc3dd3c35fd58b465b0628ce68",
+      "bytes": 973575,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 167,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "af7c6231a90034c0ca7771928421e09c2f5d348d0d5eb3cbebcb3165afa2dac1"
+    },
+    {
+      "id": "E04",
+      "file": "sectors/E04.map.json",
+      "sha256": "98d28431db193ddc7997b9b373863d7ac5da0feb8ec7b1dd529bd52964e65c6f",
+      "bytes": 963349,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 159,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "1d04d6e1a8ff5177c8c79d1378cc60e766baf8e4eeaff06ed1b10a807e96a5a0"
+    },
+    {
+      "id": "F04",
+      "file": "sectors/F04.map.json",
+      "sha256": "c4575d26728cdbf9530f76ceeb1ccd48a31024bb04bd58720bc09b369e4fa544",
+      "bytes": 974376,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 137,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "8fce5d0e419b30cf898a8285cdee643ab423c204baca429fc9145ade668d6f64"
+    },
+    {
+      "id": "A05",
+      "file": "sectors/A05.map.json",
+      "sha256": "f5e56b6f1d74b3b80915e4a16a4ce63a2676974fb4b9e3a760b7a17f9c5623f7",
+      "bytes": 461927,
+      "levels": 3,
+      "nativeReady": false,
+      "errors": [
+        "Place exactly four valid squad starts."
+      ],
+      "features": {
+        "wallRuns": 0,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      }
+    },
+    {
+      "id": "B05",
+      "file": "sectors/B05.map.json",
+      "sha256": "6ca07ce5e9ea07677b5115b7b06e94bedc68e824bf521c33e55ac249a62f3c37",
+      "bytes": 523706,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 0,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 85,
+          "y": 8,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "584258cc9b40e4898cc01f2492ef670e80741a7d2353594bdfbb258f0fa213e2"
+    },
+    {
+      "id": "C05",
+      "file": "sectors/C05.map.json",
+      "sha256": "7da6aa61e949a5cd56c31bf30e61d1b612e2f39b9a1c5aa8374a0b0c781ccf1f",
+      "bytes": 763561,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 27,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 8,
+          "y": 8,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "1aa8e1b722912d2f15ca46a058b5d991f039d17b9e726c3d298908550e79f69a"
+    },
+    {
+      "id": "D05",
+      "file": "sectors/D05.map.json",
+      "sha256": "9de8005053ff638a8975478f77fc836b2fe3ea03d1bbadd725a78b60b7ccb61f",
+      "bytes": 983363,
+      "levels": 4,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 107,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "7df0c5d854423492e394ca4c7b014467c1f070496ca4ec7a809a2268bcc2c8f7"
+    },
+    {
+      "id": "E05",
+      "file": "sectors/E05.map.json",
+      "sha256": "04381dba4cbbbf8e92f54fee46dabf3a845775782f9515d8d736df79e4bc7b3b",
+      "bytes": 992295,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 220,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "a932dbc0618a25776124d43bab904227deb5ac37b275ba11f04f2ca270ce3547"
+    },
+    {
+      "id": "F05",
+      "file": "sectors/F05.map.json",
+      "sha256": "147d260f0c376b0ea0692e9a3c3009ae876397fc0f55814ded4bdc87e1ec4676",
+      "bytes": 1042200,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 204,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "7b18b6fcaf12d80eeccb5467a5bf518653bbbac77a3249506ca8c5fb64478431"
+    },
+    {
+      "id": "A06",
+      "file": "sectors/A06.map.json",
+      "sha256": "f7b7c600c6c93b1296848af15208e2dc10ccd251b0deea2120d4a8fce42f8044",
+      "bytes": 461928,
+      "levels": 3,
+      "nativeReady": false,
+      "errors": [
+        "Place exactly four valid squad starts."
+      ],
+      "features": {
+        "wallRuns": 0,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      }
+    },
+    {
+      "id": "B06",
+      "file": "sectors/B06.map.json",
+      "sha256": "3a03bad678bf142f6369d00853b89de1f25aa4760379cd68f4af105f2b8ee69f",
+      "bytes": 514053,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 0,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 206,
+          "y": 162,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "2e891a9e82efd396622f7ec60971a9df6e5e86f68e00c386247d0aae14762b3d"
+    },
+    {
+      "id": "C06",
+      "file": "sectors/C06.map.json",
+      "sha256": "ab66241e21522cace142a9ff58d9b11879debad22500c23770e076bf53919002",
+      "bytes": 698486,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 10,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 151,
+          "y": 8,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "31351f1a26b698ad00e09d3459525b11122d0e673b9f94df6be0b59188504101"
+    },
+    {
+      "id": "D06",
+      "file": "sectors/D06.map.json",
+      "sha256": "c51d4e2884962285c0b23fd2d53d81d2b0748f7924065d29d4ea3b419fb7ce48",
+      "bytes": 972909,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 139,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "3ce28f99611acf398bdc0132c30ab38123da70b3bcc26bfd4f23ad7ef1dfb835"
+    },
+    {
+      "id": "E06",
+      "file": "sectors/E06.map.json",
+      "sha256": "87eccd51478ae1044927b1e3763d7bb36efcdec5779ff68d6a8d9d176e3e4f5e",
+      "bytes": 963555,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 146,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "135f349b87c6e1c2784a3b152fe68546ee0f7dcd8aee4993ed3400c80085e03a"
+    },
+    {
+      "id": "F06",
+      "file": "sectors/F06.map.json",
+      "sha256": "29c1fc31eb9e294d6673da7b3d6ff31484e7abb967f5a7c859aebcd5d95695aa",
+      "bytes": 968151,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 160,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "9efe61f7fb8aaa5558d47ed4cf796705874fed4cc58e19e86b78b0b479707e4f"
+    },
+    {
+      "id": "A07",
+      "file": "sectors/A07.map.json",
+      "sha256": "e9f10df83a9842ddc0bbbe6b88dab598b2d3f6b662b21a74644e889f951e3935",
+      "bytes": 461928,
+      "levels": 3,
+      "nativeReady": false,
+      "errors": [
+        "Place exactly four valid squad starts."
+      ],
+      "features": {
+        "wallRuns": 0,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      }
+    },
+    {
+      "id": "B07",
+      "file": "sectors/B07.map.json",
+      "sha256": "1fe3fea108bad87d26c42127fbd173271f7d5bef5a7b0790d1e2cdc93944f30d",
+      "bytes": 624360,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 0,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 107,
+          "y": 8,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "dbc70d4eece509d3644e019954b36a8c184e6dfaab89c911ccf3bf32c650ff10"
+    },
+    {
+      "id": "C07",
+      "file": "sectors/C07.map.json",
+      "sha256": "20562bc155189786a9f646dd0d3692283882a95b958f7f236c1fe71228f134f1",
+      "bytes": 796856,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 78,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "6289cbc2b6e9a21a22bd42f001d9c2391decaaf8b8837f7a49ded29bda0efb48"
+    },
+    {
+      "id": "D07",
+      "file": "sectors/D07.map.json",
+      "sha256": "b64edbf7bc01d7531cfb409bf5b2d70c957bd5f84384359ada8acaf52868110d",
+      "bytes": 991213,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 191,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "baf985dfdb27abbec07f035b26dc9053352a5e2ab276841cbf1cc51a85a19be9"
+    },
+    {
+      "id": "E07",
+      "file": "sectors/E07.map.json",
+      "sha256": "9a50c2621f2394a8af06832f8253702dc488d885ec610bf67cdd5baf558785c8",
+      "bytes": 928092,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 86,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "1f59867ec457a55af5471a13443bed3fdc94d35539ccb873c2ba70d097d35637"
+    },
+    {
+      "id": "F07",
+      "file": "sectors/F07.map.json",
+      "sha256": "58267e89ad9671624f0ed1342f0631a56305f3d50bb3e505543d371d96972d34",
+      "bytes": 868039,
+      "levels": 3,
+      "nativeReady": true,
+      "errors": [],
+      "features": {
+        "wallRuns": 15,
+        "slopedRoofs": 0,
+        "buildingPrefabs": 0
+      },
+      "changedSourceValues": [],
+      "nativeAddedPaths": [
+        "$.starts.0.character",
+        "$.starts.1.character",
+        "$.starts.2.character",
+        "$.starts.3.character"
+      ],
+      "editCommand": {
+        "tool": "floor",
+        "start": {
+          "x": 18,
+          "y": 18,
+          "z": 0
+        }
+      },
+      "history": true,
+      "exportReopen": true,
+      "normalizedSha256": "0ba84f31f0a1bd81b7476a6cff8fdc6ef8807307e753a62f7be3a41b7d805399"
+    }
+  ],
+  "unexpectedErrors": []
+}

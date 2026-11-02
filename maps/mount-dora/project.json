@@ -1,0 +1,3113 @@
+{
+  "kind": "mount-dora-native-project",
+  "version": 1,
+  "id": "mount-dora-downtown",
+  "name": "Mount Dora downtown and lakefront",
+  "target": {
+    "editor": "Nautilus map workshop",
+    "revision": "2502646482218524fd5129641da769bb82462e4d",
+    "format": "aft-map-v2",
+    "gameAdoption": false
+  },
+  "projection": {
+    "kind": "WGS84-ECEF-local-tangent-east-south",
+    "ellipsoid": {
+      "semiMajorM": 6378137,
+      "eccentricitySquared": 0.0066943799901413165
+    },
+    "reference": {
+      "lat": 28.8010291,
+      "lon": -81.6442229,
+      "name": "Donnelly Park geocoding reference"
+    },
+    "townOffsetM": {
+      "x": 480,
+      "y": 480
+    },
+    "up": "h",
+    "horizontalAxes": {
+      "x": "east",
+      "y": "south"
+    },
+    "metresPerTile": 1,
+    "legacyTileCentreOffsetM": 0.5
+  },
+  "extent": {
+    "widthM": 1440,
+    "depthM": 1680
+  },
+  "sectorSize": 240,
+  "columns": 6,
+  "rows": 7,
+  "featuresFile": "features.json",
+  "atlasFile": "atlas.svg",
+  "sectors": [
+    {
+      "id": "A01",
+      "column": 0,
+      "row": 0,
+      "origin": {
+        "x": 0,
+        "y": 0
+      },
+      "file": "sectors/A01.map.json",
+      "neighbors": {
+        "north": null,
+        "east": "B01",
+        "south": "A02",
+        "west": null
+      },
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 44134,
+          "ground-asphalt": 6472,
+          "floor": 6994
+        },
+        "terrainSHA256": "8c31f262cfe84bfbc43f68835c7ae679f5d57ca0c7d7b762d44e2c70a21c2c25",
+        "sourceWaterCells": 0,
+        "buildingCount": 29,
+        "wallRunCount": 170,
+        "nativePanelCount": 1903,
+        "propCount": 0,
+        "bytes": 982997,
+        "sha256": "94903db92563bde96b6826603dad12ac01aea5d710b9a52265173026732860b2"
+      },
+      "buildingIds": [
+        "osm-way-1240419908",
+        "osm-way-1240419909",
+        "osm-way-1240419910",
+        "osm-way-1240419911",
+        "osm-way-1240419912",
+        "osm-way-1240419913",
+        "osm-way-1240419914",
+        "osm-way-1240419915",
+        "osm-way-1240419916",
+        "osm-way-1240419917",
+        "osm-way-1240419919",
+        "osm-way-1240419920",
+        "osm-way-1240419921",
+        "osm-way-1240419922",
+        "osm-way-1240419923",
+        "osm-way-1240419924",
+        "osm-way-1240419925",
+        "osm-way-1240419926",
+        "osm-way-1240419928",
+        "osm-way-1240419929",
+        "osm-way-1240419930",
+        "osm-way-1240419932",
+        "osm-way-1240419933",
+        "osm-way-1240419934",
+        "osm-way-1240419935",
+        "osm-way-1240419936",
+        "osm-way-1240419939",
+        "osm-way-1240419940",
+        "osm-way-1240419947"
+      ]
+    },
+    {
+      "id": "B01",
+      "column": 1,
+      "row": 0,
+      "origin": {
+        "x": 240,
+        "y": 0
+      },
+      "file": "sectors/B01.map.json",
+      "neighbors": {
+        "north": null,
+        "east": "C01",
+        "south": "B02",
+        "west": "A01"
+      },
+      "bounds": {
+        "x": 240,
+        "y": 0,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 41001,
+          "ground-asphalt": 7828,
+          "floor": 8771
+        },
+        "terrainSHA256": "2e8007eaa60c81f304dd1245738dbd1d4f1be4437238944e8b60cf0221f3566f",
+        "sourceWaterCells": 0,
+        "buildingCount": 45,
+        "wallRunCount": 241,
+        "nativePanelCount": 2654,
+        "propCount": 0,
+        "bytes": 1019590,
+        "sha256": "029dc6a59938ab27fdd0eedb8c2b5086b2e0e0270fb7e14ec7d96e58c5cdac5c"
+      },
+      "buildingIds": [
+        "osm-way-1240419869",
+        "osm-way-1240419885",
+        "osm-way-1240419891",
+        "osm-way-1240419892",
+        "osm-way-1240419893",
+        "osm-way-1240419894",
+        "osm-way-1240419895",
+        "osm-way-1240419896",
+        "osm-way-1240419897",
+        "osm-way-1240419898",
+        "osm-way-1240419899",
+        "osm-way-1240419900",
+        "osm-way-1240419901",
+        "osm-way-1240419902",
+        "osm-way-1240419903",
+        "osm-way-1240419904",
+        "osm-way-1240419905",
+        "osm-way-1240419906",
+        "osm-way-1240419907",
+        "osm-way-1240419942",
+        "osm-way-1240419944",
+        "osm-way-1240419948",
+        "osm-way-1240419949",
+        "osm-way-1240419950",
+        "osm-way-1240419951",
+        "osm-way-1240419952",
+        "osm-way-1240419953",
+        "osm-way-1240419954",
+        "osm-way-1240419955",
+        "osm-way-1240419956",
+        "osm-way-1240419957",
+        "osm-way-1240419958",
+        "osm-way-1240419959",
+        "osm-way-1240419960",
+        "osm-way-1240419961",
+        "osm-way-1240419962",
+        "osm-way-1240419963",
+        "osm-way-1240419964",
+        "osm-way-1240419968",
+        "osm-way-1240419969",
+        "osm-way-1240419998",
+        "osm-way-558582548",
+        "osm-way-558582549",
+        "osm-way-558898706",
+        "osm-way-558898707"
+      ]
+    },
+    {
+      "id": "C01",
+      "column": 2,
+      "row": 0,
+      "origin": {
+        "x": 480,
+        "y": 0
+      },
+      "file": "sectors/C01.map.json",
+      "neighbors": {
+        "north": null,
+        "east": "D01",
+        "south": "C02",
+        "west": "B01"
+      },
+      "bounds": {
+        "x": 480,
+        "y": 0,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 40855,
+          "ground-asphalt": 6789,
+          "ground-concrete": 806,
+          "floor": 9150
+        },
+        "terrainSHA256": "8b747fad6c93e58f6121767e5e3602277068c4fb07b10ddd49c4469ab98a3604",
+        "sourceWaterCells": 0,
+        "buildingCount": 57,
+        "wallRunCount": 270,
+        "nativePanelCount": 2992,
+        "propCount": 1,
+        "bytes": 1028676,
+        "sha256": "63d5df7dd75d6f7efcb4062ed380e359f367f916bd3ad47245e7d25f659afe78"
+      },
+      "buildingIds": [
+        "osm-way-1240419747",
+        "osm-way-1240419748",
+        "osm-way-1240419836",
+        "osm-way-1240419837",
+        "osm-way-1240419838",
+        "osm-way-1240419839",
+        "osm-way-1240419840",
+        "osm-way-1240419841",
+        "osm-way-1240419842",
+        "osm-way-1240419843",
+        "osm-way-1240419844",
+        "osm-way-1240419845",
+        "osm-way-1240419846",
+        "osm-way-1240419851",
+        "osm-way-1240419852",
+        "osm-way-1240419853",
+        "osm-way-1240419854",
+        "osm-way-1240419855",
+        "osm-way-1240419856",
+        "osm-way-1240419857",
+        "osm-way-1240419858",
+        "osm-way-1240419859",
+        "osm-way-1240419860",
+        "osm-way-1240419861",
+        "osm-way-1240419870",
+        "osm-way-1240419871",
+        "osm-way-1240419872",
+        "osm-way-1240419873",
+        "osm-way-1240419874",
+        "osm-way-1240419875",
+        "osm-way-1240419876",
+        "osm-way-1240419877",
+        "osm-way-1240419886",
+        "osm-way-1240419887",
+        "osm-way-1240419888",
+        "osm-way-1240419889",
+        "osm-way-1240419890",
+        "osm-way-1240419965",
+        "osm-way-1240419970",
+        "osm-way-1240419971",
+        "osm-way-1240419972",
+        "osm-way-1240419973",
+        "osm-way-1240419974",
+        "osm-way-1240419975",
+        "osm-way-1240419976",
+        "osm-way-1240419977",
+        "osm-way-1240419978",
+        "osm-way-1240419979",
+        "osm-way-1240419980",
+        "osm-way-1240419981",
+        "osm-way-1240419982",
+        "osm-way-1240419983",
+        "osm-way-1240419992",
+        "osm-way-1240420042",
+        "osm-way-1240420043",
+        "osm-way-1240420044",
+        "osm-way-1240420045"
+      ]
+    },
+    {
+      "id": "D01",
+      "column": 3,
+      "row": 0,
+      "origin": {
+        "x": 720,
+        "y": 0
+      },
+      "file": "sectors/D01.map.json",
+      "neighbors": {
+        "north": null,
+        "east": "E01",
+        "south": "D02",
+        "west": "C01"
+      },
+      "bounds": {
+        "x": 720,
+        "y": 0,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 43982,
+          "ground-asphalt": 5402,
+          "floor": 8216
+        },
+        "terrainSHA256": "290d7e22c9180cd38a9c9610657d4a2e65cce8c473c025ef0a2e571936eb0f36",
+        "sourceWaterCells": 0,
+        "buildingCount": 58,
+        "wallRunCount": 277,
+        "nativePanelCount": 2865,
+        "propCount": 0,
+        "bytes": 1015508,
+        "sha256": "afdb5b7ee639d7d6946ffcac134fb550300de5dd30528ebf5a674e7b46e1421a"
+      },
+      "buildingIds": [
+        "osm-way-1240419733",
+        "osm-way-1240419734",
+        "osm-way-1240419738",
+        "osm-way-1240419739",
+        "osm-way-1240419747",
+        "osm-way-1240419748",
+        "osm-way-1240419749",
+        "osm-way-1240419750",
+        "osm-way-1240419753",
+        "osm-way-1240419754",
+        "osm-way-1240419755",
+        "osm-way-1240419756",
+        "osm-way-1240419757",
+        "osm-way-1240419758",
+        "osm-way-1240419759",
+        "osm-way-1240419760",
+        "osm-way-1240419761",
+        "osm-way-1240419762",
+        "osm-way-1240419763",
+        "osm-way-1240419764",
+        "osm-way-1240419765",
+        "osm-way-1240419766",
+        "osm-way-1240419767",
+        "osm-way-1240419768",
+        "osm-way-1240419775",
+        "osm-way-1240419804",
+        "osm-way-1240419807",
+        "osm-way-1240419808",
+        "osm-way-1240419809",
+        "osm-way-1240419810",
+        "osm-way-1240419817",
+        "osm-way-1240419818",
+        "osm-way-1240419819",
+        "osm-way-1240419820",
+        "osm-way-1240419821",
+        "osm-way-1240419822",
+        "osm-way-1240419823",
+        "osm-way-1240419824",
+        "osm-way-1240419825",
+        "osm-way-1240419826",
+        "osm-way-1240419827",
+        "osm-way-1240419828",
+        "osm-way-1240419829",
+        "osm-way-1240419830",
+        "osm-way-1240419831",
+        "osm-way-1240419832",
+        "osm-way-1240419833",
+        "osm-way-1240419834",
+        "osm-way-1240419835",
+        "osm-way-1240419847",
+        "osm-way-1240419848",
+        "osm-way-1240419849",
+        "osm-way-1240419850",
+        "osm-way-1240419852",
+        "osm-way-1240419858",
+        "osm-way-1240420045",
+        "osm-way-1240420046",
+        "osm-way-1240420047"
+      ]
+    },
+    {
+      "id": "E01",
+      "column": 4,
+      "row": 0,
+      "origin": {
+        "x": 960,
+        "y": 0
+      },
+      "file": "sectors/E01.map.json",
+      "neighbors": {
+        "north": null,
+        "east": "F01",
+        "south": "E02",
+        "west": "D01"
+      },
+      "bounds": {
+        "x": 960,
+        "y": 0,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 45407,
+          "ground-asphalt": 4625,
+          "ground-concrete": 684,
+          "floor": 6884
+        },
+        "terrainSHA256": "8c5d007631c9f37bafb16f9ce82293479fc0953eabc4d5aa1f5754ecbd4142e5",
+        "sourceWaterCells": 0,
+        "buildingCount": 50,
+        "wallRunCount": 235,
+        "nativePanelCount": 2435,
+        "propCount": 0,
+        "bytes": 996080,
+        "sha256": "7214c49682bee9275ec314555346b1e5a8a77dc8a76ae2903a311198d94b738b"
+      },
+      "buildingIds": [
+        "osm-way-1240419735",
+        "osm-way-1240419736",
+        "osm-way-1240419737",
+        "osm-way-1240419769",
+        "osm-way-1240419770",
+        "osm-way-1240419771",
+        "osm-way-1240419772",
+        "osm-way-1240419773",
+        "osm-way-1240419774",
+        "osm-way-1240419776",
+        "osm-way-1240419777",
+        "osm-way-1240419778",
+        "osm-way-1240419779",
+        "osm-way-1240419780",
+        "osm-way-1240419781",
+        "osm-way-1240419782",
+        "osm-way-1240419783",
+        "osm-way-1240419784",
+        "osm-way-1240419786",
+        "osm-way-1240419787",
+        "osm-way-1240419788",
+        "osm-way-1240419789",
+        "osm-way-1240419790",
+        "osm-way-1240419791",
+        "osm-way-1240419792",
+        "osm-way-1240419794",
+        "osm-way-1240419795",
+        "osm-way-1240419796",
+        "osm-way-1240419797",
+        "osm-way-1240419798",
+        "osm-way-1240419799",
+        "osm-way-1240419800",
+        "osm-way-1240419802",
+        "osm-way-1240419803",
+        "osm-way-1240419805",
+        "osm-way-1240419806",
+        "osm-way-1240419807",
+        "osm-way-1240419808",
+        "osm-way-1240419809",
+        "osm-way-1240419810",
+        "osm-way-1240419811",
+        "osm-way-1240419812",
+        "osm-way-1240419813",
+        "osm-way-1240419814",
+        "osm-way-1240419815",
+        "osm-way-1240419816",
+        "osm-way-1241962502",
+        "osm-way-1241962512",
+        "osm-way-1241962513",
+        "osm-way-1241962514"
+      ]
+    },
+    {
+      "id": "F01",
+      "column": 5,
+      "row": 0,
+      "origin": {
+        "x": 1200,
+        "y": 0
+      },
+      "file": "sectors/F01.map.json",
+      "neighbors": {
+        "north": null,
+        "east": null,
+        "south": "F02",
+        "west": "E01"
+      },
+      "bounds": {
+        "x": 1200,
+        "y": 0,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 44830,
+          "ground-asphalt": 6333,
+          "floor": 6437
+        },
+        "terrainSHA256": "df1789b17b790fcb2e39c468f113db9924c88304940ef6a58cf4294a819a3fa8",
+        "sourceWaterCells": 0,
+        "buildingCount": 42,
+        "wallRunCount": 206,
+        "nativePanelCount": 2166,
+        "propCount": 0,
+        "bytes": 985694,
+        "sha256": "aa7aae8f0a65d0b22a93c062f84fc23e28251bda43e98c9bc97b70c4599be425"
+      },
+      "buildingIds": [
+        "osm-way-1240419782",
+        "osm-way-1240419792",
+        "osm-way-1240419793",
+        "osm-way-1240419801",
+        "osm-way-1240419802",
+        "osm-way-1241962427",
+        "osm-way-1241962428",
+        "osm-way-1241962429",
+        "osm-way-1241962430",
+        "osm-way-1241962431",
+        "osm-way-1241962432",
+        "osm-way-1241962433",
+        "osm-way-1241962434",
+        "osm-way-1241962435",
+        "osm-way-1241962436",
+        "osm-way-1241962437",
+        "osm-way-1241962438",
+        "osm-way-1241962439",
+        "osm-way-1241962440",
+        "osm-way-1241962441",
+        "osm-way-1241962442",
+        "osm-way-1241962443",
+        "osm-way-1241962444",
+        "osm-way-1241962445",
+        "osm-way-1241962446",
+        "osm-way-1241962447",
+        "osm-way-1241962448",
+        "osm-way-1241962449",
+        "osm-way-1241962450",
+        "osm-way-1241962451",
+        "osm-way-1241962452",
+        "osm-way-1241962453",
+        "osm-way-1241962454",
+        "osm-way-1241962455",
+        "osm-way-1241962486",
+        "osm-way-1241962487",
+        "osm-way-1241962494",
+        "osm-way-1241962495",
+        "osm-way-1241962502",
+        "osm-way-1241962503",
+        "osm-way-1241962514",
+        "osm-way-1241962515"
+      ]
+    },
+    {
+      "id": "A02",
+      "column": 0,
+      "row": 1,
+      "origin": {
+        "x": 0,
+        "y": 240
+      },
+      "file": "sectors/A02.map.json",
+      "neighbors": {
+        "north": "A01",
+        "east": "B02",
+        "south": "A03",
+        "west": null
+      },
+      "bounds": {
+        "x": 0,
+        "y": 240,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 39380,
+          "water": 6034,
+          "ground-asphalt": 7696,
+          "ground-concrete": 85,
+          "floor": 4405
+        },
+        "terrainSHA256": "ae69f4bcdf51ca01b621ce1bb34af090bb7aa3add270a0a2c44bc0a5e4288071",
+        "sourceWaterCells": 6034,
+        "buildingCount": 7,
+        "wallRunCount": 112,
+        "nativePanelCount": 828,
+        "propCount": 0,
+        "bytes": 909320,
+        "sha256": "7a8adb0a658d66707ba612f6d4eb49fe6b6564a96e3ca2fcd3263c0311681ea3"
+      },
+      "buildingIds": [
+        "osm-way-1240419916",
+        "osm-way-1240419917",
+        "osm-way-558582526",
+        "osm-way-558582527",
+        "osm-way-558582532",
+        "osm-way-558582533",
+        "osm-way-558582534"
+      ]
+    },
+    {
+      "id": "B02",
+      "column": 1,
+      "row": 1,
+      "origin": {
+        "x": 240,
+        "y": 240
+      },
+      "file": "sectors/B02.map.json",
+      "neighbors": {
+        "north": "B01",
+        "east": "C02",
+        "south": "B03",
+        "west": "A02"
+      },
+      "bounds": {
+        "x": 240,
+        "y": 240,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 40403,
+          "ground-asphalt": 7575,
+          "ground-concrete": 355,
+          "floor": 9267
+        },
+        "terrainSHA256": "8dc768ce2ac6fd2e325a1adabca51162fff77008a6c20a4f7bd960a990b50abe",
+        "sourceWaterCells": 0,
+        "buildingCount": 25,
+        "wallRunCount": 187,
+        "nativePanelCount": 2086,
+        "propCount": 1,
+        "bytes": 1019128,
+        "sha256": "88954ddf652194f362ffa804d2ac299b03524658aa7d067c686ee2b04b5158ff"
+      },
+      "buildingIds": [
+        "osm-relation-7980769",
+        "osm-way-1240419650",
+        "osm-way-1240419651",
+        "osm-way-1240419652",
+        "osm-way-1240419653",
+        "osm-way-1240419654",
+        "osm-way-1240419655",
+        "osm-way-1240419656",
+        "osm-way-1240419657",
+        "osm-way-1240419658",
+        "osm-way-1240419659",
+        "osm-way-1240419660",
+        "osm-way-1240419661",
+        "osm-way-1240419865",
+        "osm-way-1240419866",
+        "osm-way-547799531",
+        "osm-way-547799532",
+        "osm-way-547799533",
+        "osm-way-556839859",
+        "osm-way-556839860",
+        "osm-way-556839861",
+        "osm-way-556839862",
+        "osm-way-556839863",
+        "osm-way-556839864",
+        "osm-way-558582536"
+      ]
+    },
+    {
+      "id": "C02",
+      "column": 2,
+      "row": 1,
+      "origin": {
+        "x": 480,
+        "y": 240
+      },
+      "file": "sectors/C02.map.json",
+      "neighbors": {
+        "north": "C01",
+        "east": "D02",
+        "south": "C03",
+        "west": "B02"
+      },
+      "bounds": {
+        "x": 480,
+        "y": 240,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 42095,
+          "ground-asphalt": 6782,
+          "ground-concrete": 590,
+          "floor": 8133
+        },
+        "terrainSHA256": "b6467866ccd8e5803a8cbf5c12b8c69b0a700e612d59353f98eac5382167c430",
+        "sourceWaterCells": 0,
+        "buildingCount": 41,
+        "wallRunCount": 234,
+        "nativePanelCount": 2565,
+        "propCount": 4,
+        "bytes": 1020283,
+        "sha256": "836c3c9d2dfa7e0a106216f7dd24582a9f1ef205eda32afa7462dfd051f3ae84"
+      },
+      "buildingIds": [
+        "osm-way-1240419662",
+        "osm-way-1240419663",
+        "osm-way-1240419664",
+        "osm-way-1240419665",
+        "osm-way-1240419666",
+        "osm-way-1240419667",
+        "osm-way-1240419668",
+        "osm-way-1240419669",
+        "osm-way-1240419670",
+        "osm-way-1240419671",
+        "osm-way-1240419672",
+        "osm-way-1240419673",
+        "osm-way-1240419674",
+        "osm-way-1240419675",
+        "osm-way-1240419681",
+        "osm-way-1240419688",
+        "osm-way-1240419689",
+        "osm-way-1240419690",
+        "osm-way-1240419691",
+        "osm-way-1240419692",
+        "osm-way-1240419746",
+        "osm-way-1240419862",
+        "osm-way-1240419863",
+        "osm-way-1240419864",
+        "osm-way-1240419867",
+        "osm-way-1240419868",
+        "osm-way-1240419878",
+        "osm-way-1240419879",
+        "osm-way-1240419880",
+        "osm-way-1240419881",
+        "osm-way-1240419882",
+        "osm-way-1240419883",
+        "osm-way-1240419884",
+        "osm-way-556809461",
+        "osm-way-556839862",
+        "osm-way-558582536",
+        "osm-way-558582537",
+        "osm-way-558582538",
+        "osm-way-558582539",
+        "osm-way-558582540",
+        "osm-way-558582541"
+      ]
+    },
+    {
+      "id": "D02",
+      "column": 3,
+      "row": 1,
+      "origin": {
+        "x": 720,
+        "y": 240
+      },
+      "file": "sectors/D02.map.json",
+      "neighbors": {
+        "north": "D01",
+        "east": "E02",
+        "south": "D03",
+        "west": "C02"
+      },
+      "bounds": {
+        "x": 720,
+        "y": 240,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 46435,
+          "ground-gravel": 235,
+          "ground-asphalt": 3731,
+          "ground-concrete": 263,
+          "floor": 6936
+        },
+        "terrainSHA256": "b4c591398c89890eff4ad5edf58c09dc655a902c2f7d40579f868ee370d66ab3",
+        "sourceWaterCells": 0,
+        "buildingCount": 42,
+        "wallRunCount": 231,
+        "nativePanelCount": 2370,
+        "propCount": 0,
+        "bytes": 991305,
+        "sha256": "7af3112c7b5a2d58a708c3c00521ccc4d3a3a5d3699baceeb59b699753895ad6"
+      },
+      "buildingIds": [
+        "osm-way-1240419676",
+        "osm-way-1240419677",
+        "osm-way-1240419678",
+        "osm-way-1240419679",
+        "osm-way-1240419680",
+        "osm-way-1240419681",
+        "osm-way-1240419682",
+        "osm-way-1240419683",
+        "osm-way-1240419684",
+        "osm-way-1240419685",
+        "osm-way-1240419686",
+        "osm-way-1240419687",
+        "osm-way-1240419691",
+        "osm-way-1240419698",
+        "osm-way-1240419699",
+        "osm-way-1240419700",
+        "osm-way-1240419701",
+        "osm-way-1240419702",
+        "osm-way-1240419703",
+        "osm-way-1240419704",
+        "osm-way-1240419712",
+        "osm-way-1240419713",
+        "osm-way-1240419714",
+        "osm-way-1240419719",
+        "osm-way-1240419720",
+        "osm-way-1240419721",
+        "osm-way-1240419722",
+        "osm-way-1240419723",
+        "osm-way-1240419724",
+        "osm-way-1240419725",
+        "osm-way-1240419732",
+        "osm-way-1240419740",
+        "osm-way-1240419741",
+        "osm-way-1240419742",
+        "osm-way-1240419743",
+        "osm-way-1240419744",
+        "osm-way-1240419745",
+        "osm-way-1240419750",
+        "osm-way-1240419751",
+        "osm-way-1240419752",
+        "osm-way-1240419864",
+        "osm-way-558898704"
+      ]
+    },
+    {
+      "id": "E02",
+      "column": 4,
+      "row": 1,
+      "origin": {
+        "x": 960,
+        "y": 240
+      },
+      "file": "sectors/E02.map.json",
+      "neighbors": {
+        "north": "E01",
+        "east": "F02",
+        "south": "E03",
+        "west": "D02"
+      },
+      "bounds": {
+        "x": 960,
+        "y": 240,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 38112,
+          "ground-gravel": 6,
+          "ground-asphalt": 4480,
+          "ground-concrete": 809,
+          "floor": 14193
+        },
+        "terrainSHA256": "f90f7b26cf25a6290da81b7da4985cb3a3f91ecca4e16ce098536e2091603cdd",
+        "sourceWaterCells": 0,
+        "buildingCount": 32,
+        "wallRunCount": 161,
+        "nativePanelCount": 3027,
+        "propCount": 0,
+        "bytes": 1139882,
+        "sha256": "fbcf8494d9c88361be022c36f69ee8195f0beab56b9f0789337d7827757ce2cf"
+      },
+      "buildingIds": [
+        "osm-way-1240417435",
+        "osm-way-1240417436",
+        "osm-way-1240417437",
+        "osm-way-1240417441",
+        "osm-way-1240417445",
+        "osm-way-1240417446",
+        "osm-way-1240417447",
+        "osm-way-1240417449",
+        "osm-way-1240417450",
+        "osm-way-1240419704",
+        "osm-way-1240419705",
+        "osm-way-1240419706",
+        "osm-way-1240419707",
+        "osm-way-1240419708",
+        "osm-way-1240419715",
+        "osm-way-1240419716",
+        "osm-way-1240419717",
+        "osm-way-1240419718",
+        "osm-way-1240419726",
+        "osm-way-1240419727",
+        "osm-way-1240419728",
+        "osm-way-1240419729",
+        "osm-way-1240419730",
+        "osm-way-1240419731",
+        "osm-way-1240419785",
+        "osm-way-548039694",
+        "osm-way-548039695",
+        "osm-way-548039696",
+        "osm-way-548039697",
+        "osm-way-548039698",
+        "osm-way-548039699",
+        "osm-way-558898701"
+      ]
+    },
+    {
+      "id": "F02",
+      "column": 5,
+      "row": 1,
+      "origin": {
+        "x": 1200,
+        "y": 240
+      },
+      "file": "sectors/F02.map.json",
+      "neighbors": {
+        "north": "F01",
+        "east": null,
+        "south": "F03",
+        "west": "E02"
+      },
+      "bounds": {
+        "x": 1200,
+        "y": 240,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 40071,
+          "ground-asphalt": 9208,
+          "ground-concrete": 1115,
+          "bridge": 102,
+          "floor": 7104
+        },
+        "terrainSHA256": "10de79c0232dc1f14de848a76e0e1ff4a27c174ba82cc9ee84ad69620bd739e5",
+        "sourceWaterCells": 0,
+        "buildingCount": 17,
+        "wallRunCount": 106,
+        "nativePanelCount": 1466,
+        "propCount": 16,
+        "bytes": 984768,
+        "sha256": "6d406d8efdbcbfbcb80e457b46af04b9c186617a7904e32c1b06a5b12a0fbce1"
+      },
+      "buildingIds": [
+        "osm-relation-7995943",
+        "osm-way-1240417418",
+        "osm-way-1240417419",
+        "osm-way-1240417435",
+        "osm-way-1240417438",
+        "osm-way-1240417439",
+        "osm-way-1240417440",
+        "osm-way-1240417447",
+        "osm-way-1240417448",
+        "osm-way-548039696",
+        "osm-way-548039698",
+        "osm-way-548039700",
+        "osm-way-548039701",
+        "osm-way-548039702",
+        "osm-way-548039703",
+        "osm-way-548039704",
+        "osm-way-558020268"
+      ]
+    },
+    {
+      "id": "A03",
+      "column": 0,
+      "row": 2,
+      "origin": {
+        "x": 0,
+        "y": 480
+      },
+      "file": "sectors/A03.map.json",
+      "neighbors": {
+        "north": "A02",
+        "east": "B03",
+        "south": "A04",
+        "west": null
+      },
+      "bounds": {
+        "x": 0,
+        "y": 480,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 17149,
+          "water": 33328,
+          "ground-dirt": 127,
+          "ground-gravel": 30,
+          "ground-asphalt": 4382,
+          "ground-concrete": 553,
+          "floor": 2031
+        },
+        "terrainSHA256": "bfbc888a0a1c9a1028eca23cc5dd992f1592ea54afbd7730fbed81b23cf72705",
+        "sourceWaterCells": 33328,
+        "buildingCount": 8,
+        "wallRunCount": 46,
+        "nativePanelCount": 527,
+        "propCount": 0,
+        "bytes": 674282,
+        "sha256": "a437879e170a10beaed7084db047a6e803384667900b94dee4640ad1bd7c1a0f"
+      },
+      "buildingIds": [
+        "osm-way-1240419644",
+        "osm-way-1240419645",
+        "osm-way-1240419646",
+        "osm-way-1240419647",
+        "osm-way-1240419648",
+        "osm-way-1240419649",
+        "osm-way-556100367",
+        "osm-way-556562407"
+      ]
+    },
+    {
+      "id": "B03",
+      "column": 1,
+      "row": 2,
+      "origin": {
+        "x": 240,
+        "y": 480
+      },
+      "file": "sectors/B03.map.json",
+      "neighbors": {
+        "north": "B02",
+        "east": "C03",
+        "south": "B04",
+        "west": "A03"
+      },
+      "bounds": {
+        "x": 240,
+        "y": 480,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 28532,
+          "ground-dirt": 194,
+          "ground-gravel": 321,
+          "ground-asphalt": 10036,
+          "ground-concrete": 2016,
+          "floor": 16501
+        },
+        "terrainSHA256": "aecfed4f00fe176f2471736ed1d848f6306781b96be119cd75b4e66dfb4b26fa",
+        "sourceWaterCells": 0,
+        "buildingCount": 60,
+        "wallRunCount": 334,
+        "nativePanelCount": 4024,
+        "propCount": 2,
+        "bytes": 1141311,
+        "sha256": "e8f214b89da6b84ab45a790918960ed0f69140f6c3fedb9441d78e22a323d09c"
+      },
+      "buildingIds": [
+        "osm-relation-7980769",
+        "osm-relation-8005634",
+        "osm-way-1240419650",
+        "osm-way-547799531",
+        "osm-way-548253391",
+        "osm-way-548253392",
+        "osm-way-548253393",
+        "osm-way-548253395",
+        "osm-way-556562382",
+        "osm-way-556562383",
+        "osm-way-556562385",
+        "osm-way-556562386",
+        "osm-way-556562387",
+        "osm-way-556562388",
+        "osm-way-556562389",
+        "osm-way-556562390",
+        "osm-way-556562391",
+        "osm-way-556562392",
+        "osm-way-556562395",
+        "osm-way-556562396",
+        "osm-way-556562397",
+        "osm-way-556562405",
+        "osm-way-556562406",
+        "osm-way-556562407",
+        "osm-way-556562408",
+        "osm-way-556562409",
+        "osm-way-556562410",
+        "osm-way-556809467",
+        "osm-way-556809470",
+        "osm-way-557051202",
+        "osm-way-557349895",
+        "osm-way-557349896",
+        "osm-way-557494933",
+        "osm-way-558337882",
+        "osm-way-558337883",
+        "osm-way-558337884",
+        "osm-way-558337885",
+        "osm-way-558337886",
+        "osm-way-558337887",
+        "osm-way-558337888",
+        "osm-way-558337889",
+        "osm-way-558337890",
+        "osm-way-558337891",
+        "osm-way-558337892",
+        "osm-way-558337893",
+        "osm-way-558337894",
+        "osm-way-558337896",
+        "osm-way-558337897",
+        "osm-way-558337898",
+        "osm-way-558337899",
+        "osm-way-558337900",
+        "osm-way-558337901",
+        "osm-way-558337902",
+        "osm-way-558337903",
+        "osm-way-558533851",
+        "osm-way-558582531",
+        "osm-way-560095903",
+        "osm-way-560095904",
+        "osm-way-560095905",
+        "osm-way-560095906"
+      ]
+    },
+    {
+      "id": "C03",
+      "column": 2,
+      "row": 2,
+      "origin": {
+        "x": 480,
+        "y": 480
+      },
+      "file": "sectors/C03.map.json",
+      "neighbors": {
+        "north": "C02",
+        "east": "D03",
+        "south": "C04",
+        "west": "B03"
+      },
+      "bounds": {
+        "x": 480,
+        "y": 480,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 35074,
+          "ground-asphalt": 10446,
+          "ground-concrete": 902,
+          "floor": 11178
+        },
+        "terrainSHA256": "e51ce83da56f7e40bf7c12d4516a9171f3db35f1a90e0d0483ea929b585edcd6",
+        "sourceWaterCells": 0,
+        "buildingCount": 42,
+        "wallRunCount": 234,
+        "nativePanelCount": 2664,
+        "propCount": 4,
+        "bytes": 1051264,
+        "sha256": "79d6e248e1b13fc8b17e4a750a4655cf1973a8dbd22efe95474d82f2e6e45f67"
+      },
+      "buildingIds": [
+        "osm-way-1240419460",
+        "osm-way-1240419461",
+        "osm-way-1240419462",
+        "osm-way-1240419463",
+        "osm-way-1240419464",
+        "osm-way-1240419465",
+        "osm-way-1240419466",
+        "osm-way-1240419467",
+        "osm-way-1240419479",
+        "osm-way-1240419481",
+        "osm-way-1240419482",
+        "osm-way-1240419483",
+        "osm-way-1240419484",
+        "osm-way-1240419485",
+        "osm-way-1240419486",
+        "osm-way-1240419487",
+        "osm-way-1240419692",
+        "osm-way-1240419693",
+        "osm-way-1240419694",
+        "osm-way-1240419695",
+        "osm-way-556562397",
+        "osm-way-556562398",
+        "osm-way-556562399",
+        "osm-way-556562400",
+        "osm-way-556562402",
+        "osm-way-556809460",
+        "osm-way-556809462",
+        "osm-way-556809463",
+        "osm-way-556809464",
+        "osm-way-556809468",
+        "osm-way-556809469",
+        "osm-way-556809470",
+        "osm-way-556839865",
+        "osm-way-557051202",
+        "osm-way-558337892",
+        "osm-way-558533868",
+        "osm-way-558533869",
+        "osm-way-558533870",
+        "osm-way-558533871",
+        "osm-way-558533872",
+        "osm-way-558533873",
+        "osm-way-562093773"
+      ]
+    },
+    {
+      "id": "D03",
+      "column": 3,
+      "row": 2,
+      "origin": {
+        "x": 720,
+        "y": 480
+      },
+      "file": "sectors/D03.map.json",
+      "neighbors": {
+        "north": "D02",
+        "east": "E03",
+        "south": "D04",
+        "west": "C03"
+      },
+      "bounds": {
+        "x": 720,
+        "y": 480,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 38834,
+          "ground-gravel": 181,
+          "ground-asphalt": 9966,
+          "ground-concrete": 791,
+          "floor": 7828
+        },
+        "terrainSHA256": "d8a89997e561aa2bfd23528e8b3c4638936a1fbec72d524b6c5ccb7da387b8bf",
+        "sourceWaterCells": 0,
+        "buildingCount": 28,
+        "wallRunCount": 188,
+        "nativePanelCount": 2040,
+        "propCount": 0,
+        "bytes": 1004317,
+        "sha256": "94b9cee73b8e46bc064d5b7df9d7946264a148f1cc48a8e00dc89e57a527fca5"
+      },
+      "buildingIds": [
+        "osm-way-1240419468",
+        "osm-way-1240419469",
+        "osm-way-1240419470",
+        "osm-way-1240419471",
+        "osm-way-1240419472",
+        "osm-way-1240419473",
+        "osm-way-1240419474",
+        "osm-way-1240419475",
+        "osm-way-1240419476",
+        "osm-way-1240419477",
+        "osm-way-1240419478",
+        "osm-way-1240419479",
+        "osm-way-1240419480",
+        "osm-way-1240419488",
+        "osm-way-1240419489",
+        "osm-way-1240419490",
+        "osm-way-1240419491",
+        "osm-way-1240419492",
+        "osm-way-1240419493",
+        "osm-way-1240419501",
+        "osm-way-1240419502",
+        "osm-way-1240419503",
+        "osm-way-1240419694",
+        "osm-way-1240419696",
+        "osm-way-1240419697",
+        "osm-way-1240419711",
+        "osm-way-558898703",
+        "osm-way-558898704"
+      ]
+    },
+    {
+      "id": "E03",
+      "column": 4,
+      "row": 2,
+      "origin": {
+        "x": 960,
+        "y": 480
+      },
+      "file": "sectors/E03.map.json",
+      "neighbors": {
+        "north": "E02",
+        "east": "F03",
+        "south": "E04",
+        "west": "D03"
+      },
+      "bounds": {
+        "x": 960,
+        "y": 480,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 42327,
+          "ground-asphalt": 5507,
+          "ground-concrete": 1020,
+          "floor": 8746
+        },
+        "terrainSHA256": "6b7a467fa2561ab5e43d7dc25d0a9aa66e3638302b987ef02057734e45cb4316",
+        "sourceWaterCells": 0,
+        "buildingCount": 34,
+        "wallRunCount": 175,
+        "nativePanelCount": 2126,
+        "propCount": 0,
+        "bytes": 1003278,
+        "sha256": "9cbf9d4c66b78b81ea978f983dad44f8034dc56424bf0e458f2ff254e7da4fef"
+      },
+      "buildingIds": [
+        "osm-way-1240417442",
+        "osm-way-1240417444",
+        "osm-way-1240419493",
+        "osm-way-1240419494",
+        "osm-way-1240419495",
+        "osm-way-1240419496",
+        "osm-way-1240419497",
+        "osm-way-1240419498",
+        "osm-way-1240419499",
+        "osm-way-1240419500",
+        "osm-way-1240419504",
+        "osm-way-1240419505",
+        "osm-way-1240419506",
+        "osm-way-1240419507",
+        "osm-way-1240419508",
+        "osm-way-1240419509",
+        "osm-way-1240419510",
+        "osm-way-1240419511",
+        "osm-way-1240419512",
+        "osm-way-1240419513",
+        "osm-way-1240419514",
+        "osm-way-1240419515",
+        "osm-way-1240419516",
+        "osm-way-1240419517",
+        "osm-way-1240419518",
+        "osm-way-1240419519",
+        "osm-way-1240419520",
+        "osm-way-1240419709",
+        "osm-way-1240419710",
+        "osm-way-546915176",
+        "osm-way-546924450",
+        "osm-way-557374685",
+        "osm-way-558898700",
+        "osm-way-558898701"
+      ]
+    },
+    {
+      "id": "F03",
+      "column": 5,
+      "row": 2,
+      "origin": {
+        "x": 1200,
+        "y": 480
+      },
+      "file": "sectors/F03.map.json",
+      "neighbors": {
+        "north": "F02",
+        "east": null,
+        "south": "F04",
+        "west": "E03"
+      },
+      "bounds": {
+        "x": 1200,
+        "y": 480,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 43313,
+          "ground-asphalt": 6830,
+          "ground-concrete": 988,
+          "floor": 6469
+        },
+        "terrainSHA256": "271916a77ad0cc16a28fc93bde22336f249aaa08eb3417c376d7d7ec583f2181",
+        "sourceWaterCells": 0,
+        "buildingCount": 37,
+        "wallRunCount": 193,
+        "nativePanelCount": 2067,
+        "propCount": 0,
+        "bytes": 986091,
+        "sha256": "f3010185122fa5b806f3044745c2c9b684d39ce0588335e2f5f5c7b4a23775e9"
+      },
+      "buildingIds": [
+        "osm-relation-7995943",
+        "osm-relation-7995944",
+        "osm-way-1240417347",
+        "osm-way-1240417348",
+        "osm-way-1240417349",
+        "osm-way-1240417350",
+        "osm-way-1240417351",
+        "osm-way-1240417364",
+        "osm-way-1240417365",
+        "osm-way-1240417366",
+        "osm-way-1240417367",
+        "osm-way-1240417368",
+        "osm-way-1240417369",
+        "osm-way-1240417420",
+        "osm-way-1240417421",
+        "osm-way-1240417422",
+        "osm-way-1240417423",
+        "osm-way-1240417424",
+        "osm-way-1240417425",
+        "osm-way-1240417426",
+        "osm-way-1240417427",
+        "osm-way-1240417428",
+        "osm-way-1240417429",
+        "osm-way-1240417430",
+        "osm-way-1240417431",
+        "osm-way-1240417432",
+        "osm-way-1240417433",
+        "osm-way-1240417434",
+        "osm-way-1240417443",
+        "osm-way-1240419520",
+        "osm-way-546924450",
+        "osm-way-556119634",
+        "osm-way-557374684",
+        "osm-way-558020271",
+        "osm-way-558020272",
+        "osm-way-559231076",
+        "osm-way-559231078"
+      ]
+    },
+    {
+      "id": "A04",
+      "column": 0,
+      "row": 3,
+      "origin": {
+        "x": 0,
+        "y": 720
+      },
+      "file": "sectors/A04.map.json",
+      "neighbors": {
+        "north": "A03",
+        "east": "B04",
+        "south": "A05",
+        "west": null
+      },
+      "bounds": {
+        "x": 0,
+        "y": 720,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 3251,
+          "water": 54000,
+          "ground-dirt": 101,
+          "ground-asphalt": 21,
+          "ground-concrete": 107,
+          "floor": 120
+        },
+        "terrainSHA256": "883bf4404d7f1532eb7df1d95dcbf10e2f7126a4ba34a5478d2d39c426e005bb",
+        "sourceWaterCells": 54000,
+        "buildingCount": 1,
+        "wallRunCount": 3,
+        "nativePanelCount": 34,
+        "propCount": 0,
+        "bytes": 489243,
+        "sha256": "96f7d94e0ae4d276822f2d01b5a865c35c64a4de31380bb94a2d597893b6d0d1"
+      },
+      "buildingIds": [
+        "osm-way-1240419649"
+      ]
+    },
+    {
+      "id": "B04",
+      "column": 1,
+      "row": 3,
+      "origin": {
+        "x": 240,
+        "y": 720
+      },
+      "file": "sectors/B04.map.json",
+      "neighbors": {
+        "north": "B03",
+        "east": "C04",
+        "south": "B05",
+        "west": "A04"
+      },
+      "bounds": {
+        "x": 240,
+        "y": 720,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 28625,
+          "water": 4168,
+          "woodland": 10540,
+          "ground-dirt": 381,
+          "ground-asphalt": 7121,
+          "ground-concrete": 1545,
+          "floor": 5220
+        },
+        "terrainSHA256": "fe8dd21a9ca9c6f0a1ced34507e2e95f142b6927e8fa1fac0c81a2b63cecfb29",
+        "sourceWaterCells": 4168,
+        "buildingCount": 23,
+        "wallRunCount": 212,
+        "nativePanelCount": 1441,
+        "propCount": 68,
+        "bytes": 915251,
+        "sha256": "e05996ad62ab729ab6fe6fea821a3445ce1ec820d65a29b4baccf09fa8625df7"
+      },
+      "buildingIds": [
+        "osm-way-556562385",
+        "osm-way-556562393",
+        "osm-way-556562394",
+        "osm-way-557349895",
+        "osm-way-557349896",
+        "osm-way-558533852",
+        "osm-way-558533853",
+        "osm-way-558533854",
+        "osm-way-558533874",
+        "osm-way-558533875",
+        "osm-way-559770164",
+        "osm-way-560095890",
+        "osm-way-560095891",
+        "osm-way-560095892",
+        "osm-way-560095893",
+        "osm-way-560095894",
+        "osm-way-560095895",
+        "osm-way-560095896",
+        "osm-way-560095897",
+        "osm-way-560095898",
+        "osm-way-560095899",
+        "osm-way-560095903",
+        "osm-way-560095904"
+      ]
+    },
+    {
+      "id": "C04",
+      "column": 2,
+      "row": 3,
+      "origin": {
+        "x": 480,
+        "y": 720
+      },
+      "file": "sectors/C04.map.json",
+      "neighbors": {
+        "north": "C03",
+        "east": "D04",
+        "south": "C05",
+        "west": "B04"
+      },
+      "bounds": {
+        "x": 480,
+        "y": 720,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 44357,
+          "ground-asphalt": 8041,
+          "ground-concrete": 382,
+          "floor": 4820
+        },
+        "terrainSHA256": "0d0e6df096b7481ecde2abd10b1f5bec933fda6021c47be5842f1b2b451ac154",
+        "sourceWaterCells": 0,
+        "buildingCount": 24,
+        "wallRunCount": 153,
+        "nativePanelCount": 2249,
+        "propCount": 8,
+        "bytes": 1017619,
+        "sha256": "55fce15483aa29830e347807655516c3d9cff57f706693dffd295b88d766476a"
+      },
+      "buildingIds": [
+        "osm-way-1240419486",
+        "osm-way-1240419551",
+        "osm-way-1240419552",
+        "osm-way-1240419555",
+        "osm-way-1240419556",
+        "osm-way-1240419557",
+        "osm-way-1240419558",
+        "osm-way-1240419559",
+        "osm-way-556562402",
+        "osm-way-557349882",
+        "osm-way-558533854",
+        "osm-way-558533855",
+        "osm-way-558533856",
+        "osm-way-558533860",
+        "osm-way-558533861",
+        "osm-way-558533862",
+        "osm-way-558533863",
+        "osm-way-558533864",
+        "osm-way-558533865",
+        "osm-way-558533866",
+        "osm-way-558533867",
+        "osm-way-560095886",
+        "osm-way-560095887",
+        "osm-way-560095888"
+      ]
+    },
+    {
+      "id": "D04",
+      "column": 3,
+      "row": 3,
+      "origin": {
+        "x": 720,
+        "y": 720
+      },
+      "file": "sectors/D04.map.json",
+      "neighbors": {
+        "north": "D03",
+        "east": "E04",
+        "south": "D05",
+        "west": "C04"
+      },
+      "bounds": {
+        "x": 720,
+        "y": 720,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 46040,
+          "ground-asphalt": 5373,
+          "ground-concrete": 84,
+          "floor": 6103
+        },
+        "terrainSHA256": "b3da2765a257d6260aa4ef2a8c2a4d6885f8ef2be9da1e941f74d5ee099060bf",
+        "sourceWaterCells": 0,
+        "buildingCount": 27,
+        "wallRunCount": 167,
+        "nativePanelCount": 1740,
+        "propCount": 0,
+        "bytes": 973575,
+        "sha256": "f7e2ab694ed6493af887d3f9edf8554dba6c62fc3dd3c35fd58b465b0628ce68"
+      },
+      "buildingIds": [
+        "osm-way-1240419526",
+        "osm-way-1240419529",
+        "osm-way-1240419530",
+        "osm-way-1240419531",
+        "osm-way-1240419532",
+        "osm-way-1240419533",
+        "osm-way-1240419534",
+        "osm-way-1240419535",
+        "osm-way-1240419536",
+        "osm-way-1240419537",
+        "osm-way-1240419538",
+        "osm-way-1240419539",
+        "osm-way-1240419540",
+        "osm-way-1240419545",
+        "osm-way-1240419546",
+        "osm-way-1240419547",
+        "osm-way-1240419548",
+        "osm-way-1240419549",
+        "osm-way-1240419550",
+        "osm-way-1240419551",
+        "osm-way-1240419553",
+        "osm-way-1240419554",
+        "osm-way-1240419560",
+        "osm-way-1240419561",
+        "osm-way-1240419565",
+        "osm-way-1240419566",
+        "osm-way-1240419568"
+      ]
+    },
+    {
+      "id": "E04",
+      "column": 4,
+      "row": 3,
+      "origin": {
+        "x": 960,
+        "y": 720
+      },
+      "file": "sectors/E04.map.json",
+      "neighbors": {
+        "north": "E03",
+        "east": "F04",
+        "south": "E05",
+        "west": "D04"
+      },
+      "bounds": {
+        "x": 960,
+        "y": 720,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 47435,
+          "ground-asphalt": 4611,
+          "floor": 5554
+        },
+        "terrainSHA256": "6f5fec508463dfbdc316aa89a83336665f1e14ee20a3ef91b8a39696edf92afb",
+        "sourceWaterCells": 0,
+        "buildingCount": 30,
+        "wallRunCount": 159,
+        "nativePanelCount": 1709,
+        "propCount": 0,
+        "bytes": 963349,
+        "sha256": "98d28431db193ddc7997b9b373863d7ac5da0feb8ec7b1dd529bd52964e65c6f"
+      },
+      "buildingIds": [
+        "osm-way-1240419520",
+        "osm-way-1240419521",
+        "osm-way-1240419522",
+        "osm-way-1240419523",
+        "osm-way-1240419524",
+        "osm-way-1240419525",
+        "osm-way-1240419526",
+        "osm-way-1240419527",
+        "osm-way-1240419528",
+        "osm-way-1240419540",
+        "osm-way-1240419541",
+        "osm-way-1240419542",
+        "osm-way-1240419543",
+        "osm-way-1240419544",
+        "osm-way-1240419567",
+        "osm-way-1240419568",
+        "osm-way-1240419569",
+        "osm-way-1240419575",
+        "osm-way-1240419576",
+        "osm-way-1240419577",
+        "osm-way-1240419584",
+        "osm-way-1240419585",
+        "osm-way-1240419590",
+        "osm-way-1240419591",
+        "osm-way-1240419592",
+        "osm-way-1240419593",
+        "osm-way-1240419594",
+        "osm-way-1240419595",
+        "osm-way-1240419596",
+        "osm-way-1240419597"
+      ]
+    },
+    {
+      "id": "F04",
+      "column": 5,
+      "row": 3,
+      "origin": {
+        "x": 1200,
+        "y": 720
+      },
+      "file": "sectors/F04.map.json",
+      "neighbors": {
+        "north": "F03",
+        "east": null,
+        "south": "F05",
+        "west": "E04"
+      },
+      "bounds": {
+        "x": 1200,
+        "y": 720,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 41242,
+          "ground-asphalt": 9411,
+          "ground-concrete": 1190,
+          "floor": 5757
+        },
+        "terrainSHA256": "6123448b30ee42a6fbd1ee6294e8399e9b8aed00c7f04aa3125d3f509c901921",
+        "sourceWaterCells": 0,
+        "buildingCount": 27,
+        "wallRunCount": 137,
+        "nativePanelCount": 1605,
+        "propCount": 0,
+        "bytes": 974376,
+        "sha256": "c4575d26728cdbf9530f76ceeb1ccd48a31024bb04bd58720bc09b369e4fa544"
+      },
+      "buildingIds": [
+        "osm-way-1240417332",
+        "osm-way-1240417333",
+        "osm-way-1240417334",
+        "osm-way-1240417335",
+        "osm-way-1240417336",
+        "osm-way-1240417337",
+        "osm-way-1240417338",
+        "osm-way-1240417339",
+        "osm-way-1240417340",
+        "osm-way-1240417341",
+        "osm-way-1240417342",
+        "osm-way-1240417343",
+        "osm-way-1240417344",
+        "osm-way-1240417345",
+        "osm-way-1240417346",
+        "osm-way-1240417347",
+        "osm-way-1240417348",
+        "osm-way-1240417349",
+        "osm-way-1240417350",
+        "osm-way-1240419520",
+        "osm-way-1240419642",
+        "osm-way-556119632",
+        "osm-way-556844353",
+        "osm-way-557154681",
+        "osm-way-558020273",
+        "osm-way-558020274",
+        "osm-way-559231080"
+      ]
+    },
+    {
+      "id": "A05",
+      "column": 0,
+      "row": 4,
+      "origin": {
+        "x": 0,
+        "y": 960
+      },
+      "file": "sectors/A05.map.json",
+      "neighbors": {
+        "north": "A04",
+        "east": "B05",
+        "south": "A06",
+        "west": null
+      },
+      "bounds": {
+        "x": 0,
+        "y": 960,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": false,
+        "reason": "Existing native validator requires four distinct walkable starts and one walkable travel marker; this sector has no five safe connected existing land cells. Water is preserved without fake platforms.",
+        "validatorRefusal": "Place exactly four valid squad starts."
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "water": 57600
+        },
+        "terrainSHA256": "b03c161546b8ac65df8c904de01a8e4a85ce5fa4f8b1738a5e49fc99e8788794",
+        "sourceWaterCells": 57600,
+        "buildingCount": 0,
+        "wallRunCount": 0,
+        "nativePanelCount": 0,
+        "propCount": 0,
+        "bytes": 461927,
+        "sha256": "f5e56b6f1d74b3b80915e4a16a4ce63a2676974fb4b9e3a760b7a17f9c5623f7"
+      },
+      "buildingIds": []
+    },
+    {
+      "id": "B05",
+      "column": 1,
+      "row": 4,
+      "origin": {
+        "x": 240,
+        "y": 960
+      },
+      "file": "sectors/B05.map.json",
+      "neighbors": {
+        "north": "B04",
+        "east": "C05",
+        "south": "B06",
+        "west": "A05"
+      },
+      "bounds": {
+        "x": 240,
+        "y": 960,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 6294,
+          "water": 47981,
+          "woodland": 2605,
+          "ground-asphalt": 455,
+          "ground-concrete": 265
+        },
+        "terrainSHA256": "3e563eb693c42f5464b5359461b32ac4f89287d096a4765084adf71914a0b887",
+        "sourceWaterCells": 47981,
+        "buildingCount": 0,
+        "wallRunCount": 0,
+        "nativePanelCount": 0,
+        "propCount": 27,
+        "bytes": 523706,
+        "sha256": "6ca07ce5e9ea07677b5115b7b06e94bedc68e824bf521c33e55ac249a62f3c37"
+      },
+      "buildingIds": []
+    },
+    {
+      "id": "C05",
+      "column": 2,
+      "row": 4,
+      "origin": {
+        "x": 480,
+        "y": 960
+      },
+      "file": "sectors/C05.map.json",
+      "neighbors": {
+        "north": "C04",
+        "east": "D05",
+        "south": "C06",
+        "west": "B05"
+      },
+      "bounds": {
+        "x": 480,
+        "y": 960,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 26501,
+          "water": 23054,
+          "ground-asphalt": 2688,
+          "ground-concrete": 1337,
+          "floor": 4020
+        },
+        "terrainSHA256": "ed353cbee549917cf71edbc6043b0bc20b4cee930f6de3bfd4d84029d3a522b7",
+        "sourceWaterCells": 23054,
+        "buildingCount": 5,
+        "wallRunCount": 27,
+        "nativePanelCount": 531,
+        "propCount": 28,
+        "bytes": 763561,
+        "sha256": "7da6aa61e949a5cd56c31bf30e61d1b612e2f39b9a1c5aa8374a0b0c781ccf1f"
+      },
+      "buildingIds": [
+        "osm-way-557349882",
+        "osm-way-557349883",
+        "osm-way-557349890",
+        "osm-way-557349891",
+        "osm-way-557349892"
+      ]
+    },
+    {
+      "id": "D05",
+      "column": 3,
+      "row": 4,
+      "origin": {
+        "x": 720,
+        "y": 960
+      },
+      "file": "sectors/D05.map.json",
+      "neighbors": {
+        "north": "D04",
+        "east": "E05",
+        "south": "D06",
+        "west": "C05"
+      },
+      "bounds": {
+        "x": 720,
+        "y": 960,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 44708,
+          "ground-asphalt": 4331,
+          "ground-concrete": 292,
+          "floor": 8269
+        },
+        "terrainSHA256": "bb59284302193c63941334bd2bc928a4c9f8e7d28002954df811acf5f80e5335",
+        "sourceWaterCells": 0,
+        "buildingCount": 16,
+        "wallRunCount": 107,
+        "nativePanelCount": 1468,
+        "propCount": 10,
+        "bytes": 983363,
+        "sha256": "9de8005053ff638a8975478f77fc836b2fe3ea03d1bbadd725a78b60b7ccb61f"
+      },
+      "buildingIds": [
+        "osm-way-1240419560",
+        "osm-way-1240419561",
+        "osm-way-1240419562",
+        "osm-way-1240419563",
+        "osm-way-1240419564",
+        "osm-way-1240419565",
+        "osm-way-1240419566",
+        "osm-way-1240419604",
+        "osm-way-1240419605",
+        "osm-way-1240419606",
+        "osm-way-557349883",
+        "osm-way-557349884",
+        "osm-way-557349885",
+        "osm-way-557349886",
+        "osm-way-557349887",
+        "osm-way-557349888"
+      ]
+    },
+    {
+      "id": "E05",
+      "column": 4,
+      "row": 4,
+      "origin": {
+        "x": 960,
+        "y": 960
+      },
+      "file": "sectors/E05.map.json",
+      "neighbors": {
+        "north": "E04",
+        "east": "F05",
+        "south": "E06",
+        "west": "D05"
+      },
+      "bounds": {
+        "x": 960,
+        "y": 960,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 46310,
+          "ground-asphalt": 4116,
+          "floor": 7174
+        },
+        "terrainSHA256": "562d6e7b86db89f3c738e617cf7ce39dd9eb7c4d0cd8e227fade3132a2a83e6b",
+        "sourceWaterCells": 0,
+        "buildingCount": 43,
+        "wallRunCount": 220,
+        "nativePanelCount": 2338,
+        "propCount": 0,
+        "bytes": 992295,
+        "sha256": "04381dba4cbbbf8e92f54fee46dabf3a845775782f9515d8d736df79e4bc7b3b"
+      },
+      "buildingIds": [
+        "osm-way-1240415861",
+        "osm-way-1240415862",
+        "osm-way-1240415863",
+        "osm-way-1240415864",
+        "osm-way-1240415865",
+        "osm-way-1240415866",
+        "osm-way-1240415867",
+        "osm-way-1240415868",
+        "osm-way-1240415869",
+        "osm-way-1240415870",
+        "osm-way-1240415871",
+        "osm-way-1240415872",
+        "osm-way-1240415873",
+        "osm-way-1240415874",
+        "osm-way-1240415875",
+        "osm-way-1240415876",
+        "osm-way-1240419569",
+        "osm-way-1240419570",
+        "osm-way-1240419571",
+        "osm-way-1240419572",
+        "osm-way-1240419573",
+        "osm-way-1240419574",
+        "osm-way-1240419575",
+        "osm-way-1240419576",
+        "osm-way-1240419577",
+        "osm-way-1240419578",
+        "osm-way-1240419579",
+        "osm-way-1240419580",
+        "osm-way-1240419581",
+        "osm-way-1240419582",
+        "osm-way-1240419583",
+        "osm-way-1240419584",
+        "osm-way-1240419585",
+        "osm-way-1240419586",
+        "osm-way-1240419587",
+        "osm-way-1240419588",
+        "osm-way-1240419589",
+        "osm-way-1240419598",
+        "osm-way-1240419599",
+        "osm-way-1240419600",
+        "osm-way-1240419601",
+        "osm-way-1240419640",
+        "osm-way-1240419641"
+      ]
+    },
+    {
+      "id": "F05",
+      "column": 5,
+      "row": 4,
+      "origin": {
+        "x": 1200,
+        "y": 960
+      },
+      "file": "sectors/F05.map.json",
+      "neighbors": {
+        "north": "F04",
+        "east": null,
+        "south": "F06",
+        "west": "E05"
+      },
+      "bounds": {
+        "x": 1200,
+        "y": 960,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 37690,
+          "ground-asphalt": 7685,
+          "ground-concrete": 686,
+          "floor": 11539
+        },
+        "terrainSHA256": "8fe2553f4370b62f11ea6a53aba96272066ab92900d88299f5b6ef140cdb49f2",
+        "sourceWaterCells": 0,
+        "buildingCount": 27,
+        "wallRunCount": 204,
+        "nativePanelCount": 2268,
+        "propCount": 0,
+        "bytes": 1042200,
+        "sha256": "147d260f0c376b0ea0692e9a3c3009ae876397fc0f55814ded4bdc87e1ec4676"
+      },
+      "buildingIds": [
+        "osm-way-1240415876",
+        "osm-way-1240415877",
+        "osm-way-1240415878",
+        "osm-way-1240415879",
+        "osm-way-1240415880",
+        "osm-way-1240415881",
+        "osm-way-1240415882",
+        "osm-way-1240415883",
+        "osm-way-1240415884",
+        "osm-way-1240415885",
+        "osm-way-1240415886",
+        "osm-way-1240415887",
+        "osm-way-1240415888",
+        "osm-way-1240415889",
+        "osm-way-1240415890",
+        "osm-way-1240415891",
+        "osm-way-1240415892",
+        "osm-way-1240415893",
+        "osm-way-1240415894",
+        "osm-way-1240415895",
+        "osm-way-1240415906",
+        "osm-way-556119630",
+        "osm-way-557154671",
+        "osm-way-557154672",
+        "osm-way-557154673",
+        "osm-way-557154681",
+        "osm-way-558020275"
+      ]
+    },
+    {
+      "id": "A06",
+      "column": 0,
+      "row": 5,
+      "origin": {
+        "x": 0,
+        "y": 1200
+      },
+      "file": "sectors/A06.map.json",
+      "neighbors": {
+        "north": "A05",
+        "east": "B06",
+        "south": "A07",
+        "west": null
+      },
+      "bounds": {
+        "x": 0,
+        "y": 1200,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": false,
+        "reason": "Existing native validator requires four distinct walkable starts and one walkable travel marker; this sector has no five safe connected existing land cells. Water is preserved without fake platforms.",
+        "validatorRefusal": "Place exactly four valid squad starts."
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "water": 57600
+        },
+        "terrainSHA256": "b03c161546b8ac65df8c904de01a8e4a85ce5fa4f8b1738a5e49fc99e8788794",
+        "sourceWaterCells": 57600,
+        "buildingCount": 0,
+        "wallRunCount": 0,
+        "nativePanelCount": 0,
+        "propCount": 0,
+        "bytes": 461928,
+        "sha256": "f7b7c600c6c93b1296848af15208e2dc10ccd251b0deea2120d4a8fce42f8044"
+      },
+      "buildingIds": []
+    },
+    {
+      "id": "B06",
+      "column": 1,
+      "row": 5,
+      "origin": {
+        "x": 240,
+        "y": 1200
+      },
+      "file": "sectors/B06.map.json",
+      "neighbors": {
+        "north": "B05",
+        "east": "C06",
+        "south": "B07",
+        "west": "A06"
+      },
+      "bounds": {
+        "x": 240,
+        "y": 1200,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 6890,
+          "water": 50197,
+          "ground-dirt": 199,
+          "bridge": 314
+        },
+        "terrainSHA256": "df2ecdcb821e359e2f80069f01f6b50c41867a35f7f0e9b6189073e32a8f1bed",
+        "sourceWaterCells": 50268,
+        "buildingCount": 0,
+        "wallRunCount": 0,
+        "nativePanelCount": 0,
+        "propCount": 21,
+        "bytes": 514053,
+        "sha256": "3a03bad678bf142f6369d00853b89de1f25aa4760379cd68f4af105f2b8ee69f"
+      },
+      "buildingIds": []
+    },
+    {
+      "id": "C06",
+      "column": 2,
+      "row": 5,
+      "origin": {
+        "x": 480,
+        "y": 1200
+      },
+      "file": "sectors/C06.map.json",
+      "neighbors": {
+        "north": "C05",
+        "east": "D06",
+        "south": "C07",
+        "west": "B06"
+      },
+      "bounds": {
+        "x": 480,
+        "y": 1200,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 26391,
+          "water": 26123,
+          "ground-dirt": 369,
+          "ground-asphalt": 3455,
+          "ground-concrete": 443,
+          "ground-wood-planks": 108,
+          "bridge": 360,
+          "floor": 351
+        },
+        "terrainSHA256": "b9f9b700b9e085a5c2422e91a8afece170bff7ed2f4eab6495677865ccaa92f3",
+        "sourceWaterCells": 26392,
+        "buildingCount": 2,
+        "wallRunCount": 10,
+        "nativePanelCount": 120,
+        "propCount": 34,
+        "bytes": 698486,
+        "sha256": "ab66241e21522cace142a9ff58d9b11879debad22500c23770e076bf53919002"
+      },
+      "buildingIds": [
+        "osm-way-1241962354",
+        "osm-way-1241962355"
+      ]
+    },
+    {
+      "id": "D06",
+      "column": 3,
+      "row": 5,
+      "origin": {
+        "x": 720,
+        "y": 1200
+      },
+      "file": "sectors/D06.map.json",
+      "neighbors": {
+        "north": "D05",
+        "east": "E06",
+        "south": "D07",
+        "west": "C06"
+      },
+      "bounds": {
+        "x": 720,
+        "y": 1200,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 44610,
+          "ground-asphalt": 6143,
+          "ground-concrete": 655,
+          "floor": 6192
+        },
+        "terrainSHA256": "1e57868cba5e909153813c527257e944c51314da2711d984dae2996cd641be08",
+        "sourceWaterCells": 0,
+        "buildingCount": 28,
+        "wallRunCount": 139,
+        "nativePanelCount": 1766,
+        "propCount": 9,
+        "bytes": 972909,
+        "sha256": "c51d4e2884962285c0b23fd2d53d81d2b0748f7924065d29d4ea3b419fb7ce48"
+      },
+      "buildingIds": [
+        "osm-way-1240419607",
+        "osm-way-1240419608",
+        "osm-way-1241962347",
+        "osm-way-1241962348",
+        "osm-way-1241962349",
+        "osm-way-1241962350",
+        "osm-way-1241962353",
+        "osm-way-1241962357",
+        "osm-way-1241962358",
+        "osm-way-1241962359",
+        "osm-way-1241962360",
+        "osm-way-1241962361",
+        "osm-way-1241962362",
+        "osm-way-1241962363",
+        "osm-way-1241962364",
+        "osm-way-1241962365",
+        "osm-way-1241962366",
+        "osm-way-1241962367",
+        "osm-way-1241962368",
+        "osm-way-1241962369",
+        "osm-way-1241962370",
+        "osm-way-1241962371",
+        "osm-way-1241962372",
+        "osm-way-1241962373",
+        "osm-way-1241962375",
+        "osm-way-1241962379",
+        "osm-way-1241962380",
+        "osm-way-557349878"
+      ]
+    },
+    {
+      "id": "E06",
+      "column": 4,
+      "row": 5,
+      "origin": {
+        "x": 960,
+        "y": 1200
+      },
+      "file": "sectors/E06.map.json",
+      "neighbors": {
+        "north": "E05",
+        "east": "F06",
+        "south": "E07",
+        "west": "D06"
+      },
+      "bounds": {
+        "x": 960,
+        "y": 1200,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 46488,
+          "ground-asphalt": 5551,
+          "floor": 5561
+        },
+        "terrainSHA256": "ab6903a5e08c97193388fad9a87b0dfa7924eeabb2f01290d7ac931be2b5105a",
+        "sourceWaterCells": 0,
+        "buildingCount": 31,
+        "wallRunCount": 146,
+        "nativePanelCount": 1733,
+        "propCount": 0,
+        "bytes": 963555,
+        "sha256": "87eccd51478ae1044927b1e3763d7bb36efcdec5779ff68d6a8d9d176e3e4f5e"
+      },
+      "buildingIds": [
+        "osm-way-1240416235",
+        "osm-way-1240416236",
+        "osm-way-1240416238",
+        "osm-way-1240416239",
+        "osm-way-1240416243",
+        "osm-way-1240416244",
+        "osm-way-1240419602",
+        "osm-way-1240419603",
+        "osm-way-1240419609",
+        "osm-way-1240419610",
+        "osm-way-1240419611",
+        "osm-way-1240419612",
+        "osm-way-1240419613",
+        "osm-way-1240419614",
+        "osm-way-1240419615",
+        "osm-way-1240419616",
+        "osm-way-1240419617",
+        "osm-way-1240419618",
+        "osm-way-1240419619",
+        "osm-way-1240419620",
+        "osm-way-1240419621",
+        "osm-way-1240419622",
+        "osm-way-1240419624",
+        "osm-way-1240419625",
+        "osm-way-1240419627",
+        "osm-way-1240419628",
+        "osm-way-1240419629",
+        "osm-way-1240419630",
+        "osm-way-1240419631",
+        "osm-way-1240419632",
+        "osm-way-1241962378"
+      ]
+    },
+    {
+      "id": "F06",
+      "column": 5,
+      "row": 5,
+      "origin": {
+        "x": 1200,
+        "y": 1200
+      },
+      "file": "sectors/F06.map.json",
+      "neighbors": {
+        "north": "F05",
+        "east": null,
+        "south": "F07",
+        "west": "E06"
+      },
+      "bounds": {
+        "x": 1200,
+        "y": 1200,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 45470,
+          "ground-asphalt": 6053,
+          "ground-concrete": 675,
+          "floor": 5402
+        },
+        "terrainSHA256": "a4e275c66135d1c9d3de5d397e1e5e9d8febc2bd52f89413239f0f12ce83823c",
+        "sourceWaterCells": 0,
+        "buildingCount": 30,
+        "wallRunCount": 160,
+        "nativePanelCount": 1785,
+        "propCount": 1,
+        "bytes": 968151,
+        "sha256": "29c1fc31eb9e294d6673da7b3d6ff31484e7abb967f5a7c859aebcd5d95695aa"
+      },
+      "buildingIds": [
+        "osm-way-1240415887",
+        "osm-way-1240416190",
+        "osm-way-1240416191",
+        "osm-way-1240416193",
+        "osm-way-1240416194",
+        "osm-way-1240416195",
+        "osm-way-1240416196",
+        "osm-way-1240416197",
+        "osm-way-1240416216",
+        "osm-way-1240416217",
+        "osm-way-1240416219",
+        "osm-way-1240416220",
+        "osm-way-1240416221",
+        "osm-way-1240416222",
+        "osm-way-1240416223",
+        "osm-way-1240416224",
+        "osm-way-1240416225",
+        "osm-way-1240416226",
+        "osm-way-1240416227",
+        "osm-way-1240416228",
+        "osm-way-1240416229",
+        "osm-way-1240416230",
+        "osm-way-1240416231",
+        "osm-way-1240416234",
+        "osm-way-1240416235",
+        "osm-way-1240416236",
+        "osm-way-1240416237",
+        "osm-way-1240419622",
+        "osm-way-1240419623",
+        "osm-way-1240419626"
+      ]
+    },
+    {
+      "id": "A07",
+      "column": 0,
+      "row": 6,
+      "origin": {
+        "x": 0,
+        "y": 1440
+      },
+      "file": "sectors/A07.map.json",
+      "neighbors": {
+        "north": "A06",
+        "east": "B07",
+        "south": null,
+        "west": null
+      },
+      "bounds": {
+        "x": 0,
+        "y": 1440,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": false,
+        "reason": "Existing native validator requires four distinct walkable starts and one walkable travel marker; this sector has no five safe connected existing land cells. Water is preserved without fake platforms.",
+        "validatorRefusal": "Place exactly four valid squad starts."
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "water": 57600
+        },
+        "terrainSHA256": "b03c161546b8ac65df8c904de01a8e4a85ce5fa4f8b1738a5e49fc99e8788794",
+        "sourceWaterCells": 57600,
+        "buildingCount": 0,
+        "wallRunCount": 0,
+        "nativePanelCount": 0,
+        "propCount": 0,
+        "bytes": 461928,
+        "sha256": "e9f10df83a9842ddc0bbbe6b88dab598b2d3f6b662b21a74644e889f951e3935"
+      },
+      "buildingIds": []
+    },
+    {
+      "id": "B07",
+      "column": 1,
+      "row": 6,
+      "origin": {
+        "x": 240,
+        "y": 1440
+      },
+      "file": "sectors/B07.map.json",
+      "neighbors": {
+        "north": "B06",
+        "east": "C07",
+        "south": null,
+        "west": "A07"
+      },
+      "bounds": {
+        "x": 240,
+        "y": 1440,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 22025,
+          "water": 35175,
+          "ground-dirt": 178,
+          "bridge": 222
+        },
+        "terrainSHA256": "0c0bbb7d2e14617a3e3fcf679accdeea81c67bf61ec3454efdba0841367af213",
+        "sourceWaterCells": 35320,
+        "buildingCount": 0,
+        "wallRunCount": 0,
+        "nativePanelCount": 0,
+        "propCount": 64,
+        "bytes": 624360,
+        "sha256": "1fe3fea108bad87d26c42127fbd173271f7d5bef5a7b0790d1e2cdc93944f30d"
+      },
+      "buildingIds": []
+    },
+    {
+      "id": "C07",
+      "column": 2,
+      "row": 6,
+      "origin": {
+        "x": 480,
+        "y": 1440
+      },
+      "file": "sectors/C07.map.json",
+      "neighbors": {
+        "north": "C06",
+        "east": "D07",
+        "south": null,
+        "west": "B07"
+      },
+      "bounds": {
+        "x": 480,
+        "y": 1440,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 34488,
+          "water": 18060,
+          "ground-asphalt": 1312,
+          "bridge": 285,
+          "floor": 3455
+        },
+        "terrainSHA256": "ca9cb987b3e4ee70abc06aa02048634df6bf2ea3c2152fb4071cd3b5d1bc4eec",
+        "sourceWaterCells": 18118,
+        "buildingCount": 12,
+        "wallRunCount": 78,
+        "nativePanelCount": 943,
+        "propCount": 67,
+        "bytes": 796856,
+        "sha256": "20562bc155189786a9f646dd0d3692283882a95b958f7f236c1fe71228f134f1"
+      },
+      "buildingIds": [
+        "osm-way-1241962331",
+        "osm-way-1241962332",
+        "osm-way-1241962333",
+        "osm-way-1241962334",
+        "osm-way-1241962335",
+        "osm-way-1241962336",
+        "osm-way-1241962337",
+        "osm-way-1241962338",
+        "osm-way-1241962339",
+        "osm-way-1241962340",
+        "osm-way-1241962341",
+        "osm-way-1241962342"
+      ]
+    },
+    {
+      "id": "D07",
+      "column": 3,
+      "row": 6,
+      "origin": {
+        "x": 720,
+        "y": 1440
+      },
+      "file": "sectors/D07.map.json",
+      "neighbors": {
+        "north": "D06",
+        "east": "E07",
+        "south": null,
+        "west": "C07"
+      },
+      "bounds": {
+        "x": 720,
+        "y": 1440,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 45727,
+          "water": 428,
+          "ground-asphalt": 3207,
+          "floor": 8238
+        },
+        "terrainSHA256": "bdfd141ace6dc03a7f7917401f5a3490b6897b4b4a2d9cc0395d6eb120840cfb",
+        "sourceWaterCells": 428,
+        "buildingCount": 37,
+        "wallRunCount": 191,
+        "nativePanelCount": 2265,
+        "propCount": 27,
+        "bytes": 991213,
+        "sha256": "b64edbf7bc01d7531cfb409bf5b2d70c957bd5f84384359ada8acaf52868110d"
+      },
+      "buildingIds": [
+        "osm-way-1240416331",
+        "osm-way-1241962304",
+        "osm-way-1241962305",
+        "osm-way-1241962306",
+        "osm-way-1241962307",
+        "osm-way-1241962308",
+        "osm-way-1241962309",
+        "osm-way-1241962310",
+        "osm-way-1241962311",
+        "osm-way-1241962312",
+        "osm-way-1241962319",
+        "osm-way-1241962320",
+        "osm-way-1241962321",
+        "osm-way-1241962322",
+        "osm-way-1241962323",
+        "osm-way-1241962324",
+        "osm-way-1241962325",
+        "osm-way-1241962326",
+        "osm-way-1241962327",
+        "osm-way-1241962328",
+        "osm-way-1241962329",
+        "osm-way-1241962330",
+        "osm-way-1241962343",
+        "osm-way-1241962344",
+        "osm-way-1241962345",
+        "osm-way-1241962346",
+        "osm-way-1241962347",
+        "osm-way-1241962350",
+        "osm-way-1241962351",
+        "osm-way-1241962352",
+        "osm-way-1241962353",
+        "osm-way-1241962356",
+        "osm-way-1241962373",
+        "osm-way-1241962374",
+        "osm-way-1241962375",
+        "osm-way-1241962376",
+        "osm-way-1241962377"
+      ]
+    },
+    {
+      "id": "E07",
+      "column": 4,
+      "row": 6,
+      "origin": {
+        "x": 960,
+        "y": 1440
+      },
+      "file": "sectors/E07.map.json",
+      "neighbors": {
+        "north": "E06",
+        "east": "F07",
+        "south": null,
+        "west": "D07"
+      },
+      "bounds": {
+        "x": 960,
+        "y": 1440,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 49220,
+          "ground-asphalt": 4644,
+          "floor": 3736
+        },
+        "terrainSHA256": "9f07f2af10ed0d0c81b82cd32fe794e4afa12f4d23b89d729b3ce7201722054d",
+        "sourceWaterCells": 0,
+        "buildingCount": 20,
+        "wallRunCount": 86,
+        "nativePanelCount": 1109,
+        "propCount": 0,
+        "bytes": 928092,
+        "sha256": "9a50c2621f2394a8af06832f8253702dc488d885ec610bf67cdd5baf558785c8"
+      },
+      "buildingIds": [
+        "osm-way-1240416240",
+        "osm-way-1240416241",
+        "osm-way-1240416243",
+        "osm-way-1240416332",
+        "osm-way-1240419631",
+        "osm-way-1240419632",
+        "osm-way-1240419633",
+        "osm-way-1240419634",
+        "osm-way-1240419635",
+        "osm-way-1240419636",
+        "osm-way-1240419637",
+        "osm-way-1240419638",
+        "osm-way-1240419639",
+        "osm-way-1241962313",
+        "osm-way-1241962314",
+        "osm-way-1241962315",
+        "osm-way-1241962316",
+        "osm-way-1241962317",
+        "osm-way-1241962318",
+        "osm-way-1241962319"
+      ]
+    },
+    {
+      "id": "F07",
+      "column": 5,
+      "row": 6,
+      "origin": {
+        "x": 1200,
+        "y": 1440
+      },
+      "file": "sectors/F07.map.json",
+      "neighbors": {
+        "north": "F06",
+        "east": null,
+        "south": null,
+        "west": "E07"
+      },
+      "bounds": {
+        "x": 1200,
+        "y": 1440,
+        "widthM": 240,
+        "depthM": 240
+      },
+      "nativeImport": {
+        "ready": true
+      },
+      "metrics": {
+        "terrainCells": 57600,
+        "terrainCounts": {
+          "ground-grass": 49093,
+          "woodland": 3691,
+          "ground-asphalt": 3158,
+          "ground-concrete": 435,
+          "bridge": 444,
+          "floor": 779
+        },
+        "terrainSHA256": "f60dfc5b9c036ba96728809900527b1efdd9d0deb8f9ba533d30f7d198a15bf3",
+        "sourceWaterCells": 0,
+        "buildingCount": 4,
+        "wallRunCount": 15,
+        "nativePanelCount": 203,
+        "propCount": 21,
+        "bytes": 868039,
+        "sha256": "58267e89ad9671624f0ed1342f0631a56305f3d50bb3e505543d371d96972d34"
+      },
+      "buildingIds": [
+        "osm-way-1240416232",
+        "osm-way-1240416233",
+        "osm-way-1240416235",
+        "osm-way-1240416242"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "file": "source/osm-downtown-snapshot.json",
+      "metadata": "source/osm-source.json",
+      "sha256": "b23d6838d52b393670781cdacc0146b8bc0b83c9bbf6e0503a7bd77ecbfcbef0",
+      "bytes": 3385887
+    },
+    {
+      "file": "source/osm-lake-dora-full.json",
+      "metadata": "source/osm-lake-source.json",
+      "sha256": "3e685324e09fa75b15d7ce39aeb2c596d6b39a0fe26ea42ec31491bf5c36291d",
+      "bytes": 272596
+    },
+    {
+      "file": "source/osm-east-margin.json",
+      "metadata": "source/osm-east-source.json",
+      "sha256": "8119246e108258efbb502cb869f320d2ea884ad3ab86ca54d8944ad2ed09599a",
+      "bytes": 540105
+    }
+  ],
+  "generation": {
+    "tool": "tools/maps/build-mount-dora.py",
+    "version": 1,
+    "configFile": "source/authoring-config.json",
+    "configSHA256": "4cc975da476f51560b11892d3c8a2597b41875419f30bef134b2dccad5d1694a",
+    "sourceDigest": "2b742d1768425de6a41a60818a0d2fd3a72b71f1969de94a50ff9041ce216193",
+    "terrainCodebook": [
+      "ground-grass",
+      "water",
+      "woodland",
+      "ground-dirt",
+      "ground-gravel",
+      "ground-asphalt",
+      "ground-concrete",
+      "ground-wood-planks",
+      "bridge",
+      "floor"
+    ],
+    "globalTerrainSHA256": "05437ce2a798d2ef341f3c0628616730cbec8cb7dc9e37e28c8e4a824208a5ec",
+    "sampleRule": "Global cell centre (column*240+x+0.5, row*240+y+0.5); one global raster sliced without seam repaint.",
+    "nativeCoordinates": "Wall metre endpoints = global east/south - sectorOrigin - 0.5; tile indices remain integer cells.",
+    "defaultRoadWidthsM": {
+      "secondary": 8,
+      "tertiary": 7,
+      "residential": 6,
+      "unclassified": 6,
+      "service": 3.5,
+      "pedestrian": 4,
+      "cycleway": 2.5,
+      "footway": 2,
+      "path": 1.5,
+      "steps": 1.5,
+      "track": 3,
+      "living_street": 5
+    },
+    "sidewalkWidthM": 1.5,
+    "sidewalkPresence": "Mapped sidewalk=yes/both/left/right only; separate footways retain their source geometry.",
+    "waterPolicy": "Fill complete source polygons first; land cover never creates land in water. Only mapped building footprints, bridges or wooden-surface paths can provide source-backed support over water.",
+    "vegetation": {
+      "seed": 1947,
+      "gridM": 12,
+      "jitterM": 3,
+      "parkAcceptancePercent": 25,
+      "woodAcceptancePercent": 80,
+      "wetlandAcceptancePercent": 50,
+      "policy": "Mapped tree cell proxies plus declared seeded broadleaf/reed scatter on mapped land vegetation; not surveyed species or individual tree positions."
+    },
+    "buildingDefaults": {
+      "stories": 1,
+      "material": "brick",
+      "heightM": 2,
+      "slabM": 0.12,
+      "pitchM": 2.12,
+      "policy": "Native-kit closed exterior proxies; integer tagged levels1..5 honored. Source outlines/holes retained; no invented entrances/interiors; shared party wall ownership retained."
+    }
+  },
+  "landmarks": [
+    {
+      "id": "mount-dora-lighthouse",
+      "source": {
+        "type": "node",
+        "id": 2704687214
+      },
+      "label": "Mount Dora Lighthouse",
+      "role": "lighthouse",
+      "latitude": 28.7948053,
+      "longitude": -81.6440151,
+      "townMetres": {
+        "x": 500.2877,
+        "y": 1169.7989
+      },
+      "note": "Named public landmark node in the retained OSM snapshot; it is not tagged man_made=lighthouse. Placement is a geographic reference, not a surveyed footprint."
+    },
+    {
+      "id": "elizabeth-evans-park",
+      "source": {
+        "type": "way",
+        "id": 486656245
+      },
+      "label": "Elizabeth Evans Park",
+      "role": "park",
+      "note": "The retained OSM polygon is named Evans Park; official City of Mount Dora references use Elizabeth Evans Park."
+    }
+  ],
+  "calibration": {
+    "userMeasuredFt": 4857.27,
+    "userMeasuredM": 1480.495896,
+    "description": "User screenshot ruler from10th Avenue toward southern Palm Island. Use as a scale check, not a coordinate rescaling instruction.",
+    "mappedComparisonEndpoints": [
+      {
+        "source": "osm-way-688219167",
+        "description": "Named Palm Island Parkway reaches town y1544.733; approximately1515m south of mapped10th Avenue."
+      },
+      {
+        "source": "osm-way-508450238",
+        "description": "Separate wooden boardwalk reaches farther south to town y1612.463; do not conflate it with the named Parkway endpoint."
+      }
+    ]
+  },
+  "coverageNotes": [
+    "The full rectangle preserves the western Johns Avenue segment near town y1647. Its eastern South Highland junction near y1752 lies outside this1680m-deep cropped downtown project.",
+    "The eastern supplement closes the original API query's approximately11m shortfall beyond town x1429; all raw snapshots remain unchanged and attributed.",
+    "Regional route/admin relations and four residential land-use relations can have members outside the local query. They are not complete local physical geometry; retain diagnostics and do not fill unknown holes."
+  ],
+  "metrics": {
+    "sectors": 42,
+    "nativeImportReady": 39,
+    "nativeImportRefused": 3,
+    "featureCount": 3126,
+    "featureCategories": {
+      "beach": 1,
+      "building": 950,
+      "context": 63,
+      "park": 21,
+      "parking": 18,
+      "point": 1717,
+      "road": 351,
+      "water": 1,
+      "wetland": 2,
+      "wood": 2
+    },
+    "buildingCount": 950,
+    "crossSectorBuildings": 88,
+    "roadCount": 350,
+    "excludedProposedRoads": 1,
+    "wallRuns": 5814,
+    "props": 413,
+    "terrainCounts": {
+      "ground-grass": 1454789,
+      "water": 471348,
+      "woodland": 16836,
+      "ground-dirt": 1549,
+      "ground-gravel": 773,
+      "ground-asphalt": 211464,
+      "ground-concrete": 19073,
+      "ground-wood-planks": 108,
+      "bridge": 1727,
+      "floor": 241533
+    },
+    "unrepresentedWallSlivers": 7
+  },
+  "limitations": [
+    "Geographic map-authoring source, not a deployed Farmyard mission or a property survey.",
+    "Flat terrain; no elevation survey, true building heights, real interiors or mapped entrance survey is inferred.",
+    "One-metre cell-centre floor/terrain masks approximate exact source polygons, whose vector geometry remains in features.json.",
+    "Native wall runs retain angled exterior/courtyard boundaries; sub0.1m run slivers cannot be represented and are listed in features.json diagnostics.",
+    "Native wall butt joints, per-run texture phases and one-metre floor stair-step boundaries retain the workshop's existing limits.",
+    "Water-only sectors remain complete in the atlas/source but the existing four-start/one-exit native validator refuses them.",
+    "Road widths, sidewalk widths, bridge/steps heights and seeded vegetation are declared authoring approximations, not measurements.",
+    "No suggested future roads are painted; no enemies or gameplay objectives are authored."
+  ]
+}

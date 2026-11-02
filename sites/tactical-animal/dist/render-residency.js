@@ -19,16 +19,22 @@ export function groundCameraExtents(viewport){
   return {x:(Math.abs(z)*aspect+Math.abs(x)*length/y)/horizontal/2,y:(Math.abs(x)*aspect+Math.abs(z)*length/y)/horizontal/2};
 }
 
-export function residentCameraSpan(state,point,viewport,requested){
-  const dimensions=gridDimensions(state);
-  if(dimensions.width<=72&&dimensions.height<=72)return requested;
-  const focus=clampCameraPoint(state,point),window=blockWindow(state,focus),bounds=worldBounds(state),extent=groundCameraExtents(viewport);
-  let span=requested;
-  // The outside of the playable world is allowed to show the field background.
-  // Only internal chunk boundaries constrain the field of view.
+// Close views retain nine blocks; zoomed-out views use at most 25. A 120m window
+// still touches at most four 240m source sectors. Simulation bounds never change.
+export const MAX_CAMERA_SPAN=70;
+function fittedSpan(state,focus,viewport,window,requested){
+  const bounds=worldBounds(state),extent=groundCameraExtents(viewport);let span=requested;
   if(window.x>bounds.x)span=Math.min(span,(focus.x-window.x+.5)/extent.x);
   if(window.x+window.w<bounds.x+bounds.w)span=Math.min(span,(window.x+window.w-.5-focus.x)/extent.x);
   if(window.y>bounds.y)span=Math.min(span,(focus.y-window.y+.5)/extent.y);
   if(window.y+window.h<bounds.y+bounds.h)span=Math.min(span,(window.y+window.h-.5-focus.y)/extent.y);
   return Math.max(.1,span-1e-6);
+}
+export function residentWindowForCamera(state,point,viewport,requested){
+  const focus=clampCameraPoint(state,point),near=blockWindow(state,focus);
+  return fittedSpan(state,focus,viewport,near,requested)+1e-5>=requested?near:blockWindow(state,focus,5);
+}
+export function residentCameraSpan(state,point,viewport,requested,window=residentWindowForCamera(state,point,viewport,requested)){
+  const dimensions=gridDimensions(state);if(dimensions.width<=72&&dimensions.height<=72)return requested;
+  return fittedSpan(state,clampCameraPoint(state,point),viewport,window,requested);
 }

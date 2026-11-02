@@ -1,3 +1,5 @@
+import {movementPresentation} from './locomotion-sample.js';
+import {boundedElapsed} from './frame-timing.js';
 import {getTourWorld} from './mount-dora-activity.js';
 import * as T from './aft/tactics/vendor/three.module.js';
 import {ANIMAL_MOTION_CATALOG} from './aft/tactics/animal-motion-catalog.js';
@@ -17,7 +19,7 @@ import {SoloTankEffects} from './tank-effects.js';
 import {createFlameOperator} from './flame-pose.js';
 import {FlameConePreview} from './flame-aim-view.js';
 import {blockWindow,pointInWorldRect,worldBounds} from './world-grid.js';
-import {clampCameraPoint,residentCameraSpan} from './render-residency.js';
+import {clampCameraPoint,residentCameraSpan,residentWindowForCamera,MAX_CAMERA_SPAN} from './render-residency.js';
 import {SearchHalo,searchHaloCandidates,searchHaloTarget} from './search-halo.js';
 import {WindowScenery,WindowEffects} from './window-view.js';
 
@@ -52,23 +54,26 @@ export class FieldView {
   resize(){const w=this.container.clientWidth,h=this.container.clientHeight;if(!w||!h)return;this.renderer.setSize(w,h,false);this.updateCamera();}
   updateCamera(){
     const w=this.container?.clientWidth,h=this.container?.clientHeight;
-    if(this.state){const point=clampCameraPoint(this.state,{x:this.target.x,y:this.target.z});this.target.set(point.x,0,point.y);this.residentWindow=blockWindow(this.state,point);}
+    const requested=this.grenadeCamera||this.returnSpan!=null?this.span:this.requestedSpan??this.span,viewport={width:w,height:h};
+    if(this.state){const point=clampCameraPoint(this.state,{x:this.target.x,y:this.target.z});this.target.set(point.x,0,point.y);this.residentWindow=residentWindowForCamera(this.state,point,viewport,requested);}
     if(w&&h){
-      const requested=this.grenadeCamera||this.returnSpan!=null?this.span:this.requestedSpan??this.span;
-      this.span=this.state?residentCameraSpan(this.state,{x:this.target.x,y:this.target.z},{width:w,height:h},requested):requested;
+      this.span=this.state?residentCameraSpan(this.state,{x:this.target.x,y:this.target.z},viewport,requested,this.residentWindow):requested;
       this.camera.left=-this.span*w/h/2;this.camera.right=this.span*w/h/2;this.camera.top=this.span/2;this.camera.bottom=-this.span/2;this.camera.near=.1;this.camera.far=120;this.camera.updateProjectionMatrix();
     }
     this.camera.position.copy(this.target).add(V(FIELD_CAMERA.x,FIELD_CAMERA.y,FIELD_CAMERA.z));this.camera.lookAt(this.target);this.camera.updateMatrixWorld();
   }
   projectWorldPoint(point){const r=this.container.getBoundingClientRect(),p=V(point.x,point.h||0,point.y).project(this.camera);return {x:r.left+(p.x+1)*r.width/2,y:r.top+(1-p.y)*r.height/2,visible:p.x>=-1&&p.x<=1&&p.y>=-1&&p.y<=1&&p.z>=-1&&p.z<=1};}
-  zoom(factor){if(this.grenadeCamera){this.grenadeCamera.baseSpan=T.MathUtils.clamp(this.grenadeCamera.baseSpan*factor,6,35);return;}this.returnSpan=null;this.requestedSpan=T.MathUtils.clamp((this.requestedSpan??this.span)*factor,6,35);this.resize();}
+  zoomLimit(){return this.state?residentCameraSpan(this.state,{x:this.target.x,y:this.target.z},{width:this.container.clientWidth,height:this.container.clientHeight},MAX_CAMERA_SPAN):MAX_CAMERA_SPAN;}
+  canZoom(factor){const span=this.grenadeCamera?.baseSpan??this.requestedSpan??this.span,max=this.grenadeCamera?MAX_CAMERA_SPAN:this.zoomLimit();return factor>1?span<max-.01:span>6.01;}
+  zoom(factor){if(this.grenadeCamera){this.grenadeCamera.baseSpan=T.MathUtils.clamp(this.grenadeCamera.baseSpan*factor,6,MAX_CAMERA_SPAN);return;}this.returnSpan=null;this.requestedSpan=T.MathUtils.clamp((this.requestedSpan??this.span)*factor,6,this.zoomLimit());this.resize();}
+
   center(){if(this.grenadeCamera)this.endGrenadeAim();this.focusedId=null;this.follow=true;if(this.state){const u=hero(this.state);this.target.set(u.x,0,u.y);this.updateCamera();}}
   focusOpponent(id){const u=this.state?.units.find(v=>v.id===id&&v.team==='guard'&&Core.alive(v)&&this.state.detected.has(v.id));if(!u)return false;if(this.grenadeCamera)this.endGrenadeAim();this.focusedId=id;this.follow=false;this.target.set(u.x,0,u.y);this.updateCamera();return true;}
   ground(clientX,clientY){const r=this.container.getBoundingClientRect();this.ray.setFromCamera(new T.Vector2((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1),this.camera);return this.ray.ray.intersectPlane(this.plane,V());}
   interactionAnchor(object){const height=clueAnchorHeight(missionForState(this.state),object,object.kind==='door'?2.15:object.kind==='chest'?1.15:.7),point=V(object.x,height,object.y).project(this.camera);return {x:(point.x+1)*this.container.clientWidth/2,y:(1-point.y)*this.container.clientHeight/2,visible:Math.abs(point.x)<.95&&Math.abs(point.y)<.95&&Math.abs(point.z)<1};}
   down(e){if(e.button!==0||this.grenadeCamera)return;this.unlockSound();this.container.setPointerCapture(e.pointerId);this.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(this.pointers.size===1)this.gesture={x:e.clientX,y:e.clientY,target:this.target.clone(),moved:false,at:performance.now()};if(this.pointers.size===2){const [a,b]=[...this.pointers.values()];this.pinch={distance:Math.hypot(a.x-b.x,a.y-b.y),span:this.span};this.gesture.moved=true;}}
   drag(e){const point=this.pointers.get(e.pointerId);if(!point)return;point.x=e.clientX;point.y=e.clientY;
-    if(this.pointers.size===2&&this.pinch){const [a,b]=[...this.pointers.values()];this.returnSpan=null;this.requestedSpan=T.MathUtils.clamp(this.pinch.span*this.pinch.distance/Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),6,35);this.resize();return;}
+    if(this.pointers.size===2&&this.pinch){const [a,b]=[...this.pointers.values()];this.returnSpan=null;this.requestedSpan=T.MathUtils.clamp(this.pinch.span*this.pinch.distance/Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),6,this.zoomLimit());this.resize();return;}
     if(!this.gesture)return;const dx=e.clientX-this.gesture.x,dy=e.clientY-this.gesture.y;if(Math.hypot(dx,dy)<8&&!this.gesture.moved)return;this.gesture.moved=true;this.follow=false;this.focusedId=null;
     // Map screen displacement to the ground plane using the current camera basis.
     const right=V().setFromMatrixColumn(this.camera.matrixWorld,0),up=V().setFromMatrixColumn(this.camera.matrixWorld,1);up.y=0;up.normalize();
@@ -84,7 +89,7 @@ export class FieldView {
   unlockSound(){this.windowEffects?.unlock();}
   clearEffects(){this.windowEffects?.dispose();this.windowEffects=null;this.shotVisuals?.clear();this.tankEffects?.dispose();this.tankEffects=null;this.burnEffects?.dispose();this.burnEffects=null;for(const effect of this.effects){this.scene.remove(effect.line);effect.line.geometry.dispose();effect.line.material.dispose();}this.effects=[];this.flameEffects?.dispose();this.flameEffects=null;this.flameCone?.dispose();this.flameCone=null;this.flameAim=null;this.lastEffect=null;}
   clearGestures(){for(const id of this.pointers.keys())if(this.container.hasPointerCapture(id))this.container.releasePointerCapture(id);this.pointers.clear();this.gesture=null;this.pinch=null;this.grenadeCamera=null;this.flameAim=null;this.flameCone?.hide();this.returnSpan=null;this.focusedId=null;}
-  setGame(s){this.generation++;this.clearGestures();this.clearEffects();this.span=this.requestedSpan=13;this.state=s;this.residentWindow=null;this.lastWindowKey=null;this.samples.clear();this.failed.clear();for(const a of [...this.actors.values(),...(this.parkedActors?.values()||[])])this.disposeActor(a);this.actors.clear();this.parkedActors?.clear();this.pending.clear();this.clearEnvironment();this.buildEnvironment(s);this.center();this.resize();this.lastRevision=-1;this.lastLightAt=undefined;this.lastEffect=s.effect||null;this.route([]);}
+  setGame(s){this.generation++;this.clearGestures();this.clearEffects();this.span=this.requestedSpan=13;this.state=s;this.residentWindow=null;this.lastWindowKey=null;this.samples.clear();this.failed.clear();for(const a of [...this.actors.values(),...(this.parkedActors?.values()||[])])this.disposeActor(a);this.actors.clear();this.parkedActors?.clear();this.pending.clear();this.clearEnvironment();this.buildEnvironment(s);this.center();this.resize();this.lastRevision=-1;this.lastLightAt=undefined;this.lastFrameAt=undefined;this.lastEffect=s.effect||null;this.route([]);}
   reportLoading(){this.onLoading(this.artBusy||this.propBusy||this.missionArtBusy||this.missionPaperBusy||this.pending.size>0||this.failed.size>0);}
   // Mission art owns its geometry; detach it before the generic traversal below.
   clearEnvironment(){this.windowArt?.dispose();this.windowArt=null;this.windowEffects?.dispose();this.windowEffects=null;this.searchHalo?.dispose();this.searchHalo=null;this.missionArt?.dispose();this.missionArt=null;this.missionArtBusy=this.missionPaperBusy=false;this.interactionArt?.dispose();this.interactionArt=null;this.art?.dispose();this.art=null;this.environment.traverse(o=>{o.geometry?.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});this.environment.clear();for(const t of this.disposables)t.dispose();this.disposables=[];}
@@ -160,14 +165,14 @@ export class FieldView {
     for(let i=1;i<edge.length;i++)vertices.push(point.x,.045,point.y,edge[i-1].x,.045,edge[i-1].y,edge[i].x,.045,edge[i].y);
     this.blastArea.geometry.dispose();this.blastArea.geometry=new T.BufferGeometry();this.blastArea.geometry.setAttribute('position',new T.Float32BufferAttribute(vertices,3));this.blastArea.material.color.setHex(color);this.blastArea.visible=vertices.length>0;
   }
-  trackGrenadeCamera(now){
+  trackGrenadeCamera(now,elapsed=1/60){
     const aim=this.grenadeCamera;if(!aim)return;
     if(aim.until&&now>=aim.until&&!(aim.kind==='flame'&&this.flameEffects?.queue.length)){this.endGrenadeAim();return;}
     const u=hero(this.state),points=aim.kind==='flame'?(aim.shape?.rays||[]).flatMap(ray=>[{x:ray.x,y:ray.y,z:0},{x:ray.x,y:ray.y,z:1.5}]):aim.point?Core.grenadeTrajectory(u,aim.point):[{x:u.x,y:u.y,z:1.8}];
     points.push({x:u.x,y:u.y,z:0},{x:u.x,y:u.y,z:1.8});
     if(aim.point)for(let i=0;i<16;i++){const a=i/16*Math.PI*2;points.push({x:aim.point.x+Math.cos(a)*Core.WEAPONS.grenade.blast,y:aim.point.y+Math.sin(a)*Core.WEAPONS.grenade.blast,z:0});}
     const frame=grenadeCameraFrame(points,{width:this.container.clientWidth,height:this.container.clientHeight,...this.getAimViewport?.()},aim.baseSpan);
-    this.target.lerp(V(frame.target.x,0,frame.target.y),.14);this.span+=(frame.span-this.span)*.14;this.resize();
+    const blend=T.MathUtils.damp(0,1,-60*Math.log(.86),elapsed);this.target.lerp(V(frame.target.x,0,frame.target.y),blend);this.span+=(frame.span-this.span)*blend;this.resize();
   }
   async actor(u){
     if(this.actors.has(u.id)||this.pending.has(u.id)||this.failed.has(u.id))return;
@@ -193,7 +198,7 @@ export class FieldView {
     for(const [id,actor]of this.actors){
       if(desired.has(id))continue;actor.root.visible=false;actor.root.removeFromParent();this.actors.delete(id);this.parkedActors.set(id,actor);
     }
-    for(const id of desired){const actor=this.parkedActors.get(id);if(!actor)continue;this.parkedActors.delete(id);this.actors.set(id,actor);this.scene.add(actor.root);}
+    for(const id of desired){const actor=this.parkedActors.get(id);if(!actor)continue;this.parkedActors.delete(id);this.actors.set(id,actor);this.scene.add(actor.root);const previous=this.samples?.get(id),unit=units.find(u=>u.id===id);if(previous)this.samples.set(id,{...previous,travelled:unit.travelled});}
     // A small LRU keeps recently crossed actors warm without retaining a sector
     // full of GPU rigs. All simulation units remain untouched in state.units.
     while(this.parkedActors.size>8){const [id,actor]=this.parkedActors.entries().next().value;this.parkedActors.delete(id);this.samples.delete(id);this.disposeActor(actor);}
@@ -203,14 +208,14 @@ export class FieldView {
     this.effectAt=now;let previousRound=null;
     for(const event of effect.sequence||[effect]){
       if(event.weapon==='flamethrower'||event.incendiary){
-        if(event.flame){this.flameEffects ||= new SoloFlameEffects(this.scene);this.flameEffects.enqueue(event,now);}continue;
+        if(event.flame){this.flameEffects ||= new SoloFlameEffects(this.scene);this.flameEffects.enqueue(event,now+(event.catchupDelayMs||0));}continue;
       }
-      const thrown=event.weapon==='grenade',burst=event.shots>1,at=now+(burst?event.shot*BURST_SHOT_INTERVAL:0);
+      const thrown=event.weapon==='grenade',burst=event.shots>1,at=now+(event.catchupDelayMs||0)+(burst?event.shot*BURST_SHOT_INTERVAL:0);
       const points=thrown?Core.grenadeTrajectory({x:event.ax,y:event.ay},{x:event.bx,y:event.by}).map(p=>V(p.x,p.z,p.y)):[V(event.ax,1.1,event.ay),V(event.bx,event.bh??.9,event.by)];
       const line=new T.Line(new T.BufferGeometry().setFromPoints(points),new T.LineBasicMaterial({color:event.incendiary?0xff7835:0xf6d68c,transparent:true,opacity:.9}));
-      const visual={event,line,at,ttl:thrown?700:burst?BURST_TRACER_DURATION:240,started:!burst,previous:burst?previousRound:null};
+      const visual={event,line,at,ttl:thrown?700:burst?BURST_TRACER_DURATION:240,started:!burst&&at<=now,previous:burst||event.catchupDelayMs?previousRound:null};
       (this.shotVisuals??=new Map()).set(event,visual);
-      line.visible=at<=now;this.scene.add(line);this.effects.push(visual);if(burst)previousRound=visual;
+      line.visible=at<=now;this.scene.add(line);this.effects.push(visual);if(burst||event.catchupDelayMs||(effect.sequence?.length||0)>1)previousRound=visual;
       if(thrown){const ring=new T.Mesh(new T.RingGeometry(event.blast-.07,event.blast,64),new T.MeshBasicMaterial({color:0xf4a568,side:T.DoubleSide,transparent:true,opacity:.8,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.set(event.bx,.07,event.by);this.scene.add(ring);this.effects.push({line:ring,at,ttl:700});}
     }
   }
@@ -229,11 +234,14 @@ export class FieldView {
       this.shotVisuals?.delete(effect.event);this.scene.remove(effect.line);effect.line.geometry.dispose();effect.line.material.dispose();return false;
     });
   }
-  sync(s,now){this.state=s;const u=hero(s);
-    if(this.grenadeCamera)this.trackGrenadeCamera(now);
-    if(this.returnSpan!=null){const goal=residentCameraSpan(s,{x:this.target.x,y:this.target.z},{width:this.container.clientWidth,height:this.container.clientHeight},this.returnSpan);this.span+=(goal-this.span)*.14;if(Math.abs(goal-this.span)<.01){this.span=goal;this.returnSpan=null;}this.resize();}
-    if(this.focusedId!=null){const contact=s.units.find(v=>v.id===this.focusedId&&Core.alive(v)&&s.detected.has(v.id));if(contact){this.target.lerp(V(contact.x,0,contact.y),.18);this.updateCamera();}else this.center();}
-    if(this.follow){this.target.lerp(V(u.x,0,u.y),.18);this.updateCamera();}
+  updateFollowCamera(s,now){this.state=s;const u=hero(s),elapsed=this.lastFrameAt===undefined?1/60:boundedElapsed((now-this.lastFrameAt)/1000),followBlend=T.MathUtils.damp(0,1,-60*Math.log(.82),elapsed),zoomBlend=T.MathUtils.damp(0,1,-60*Math.log(.86),elapsed);this.lastFrameAt=now;
+    if(this.grenadeCamera)this.trackGrenadeCamera(now,elapsed);
+    if(this.returnSpan!=null){const goal=residentCameraSpan(s,{x:this.target.x,y:this.target.z},{width:this.container.clientWidth,height:this.container.clientHeight},this.returnSpan);this.span+=(goal-this.span)*zoomBlend;if(Math.abs(goal-this.span)<.01){this.span=goal;this.returnSpan=null;}this.resize();}
+    if(this.focusedId!=null){const contact=s.units.find(v=>v.id===this.focusedId&&Core.alive(v)&&s.detected.has(v.id));if(contact){this.target.lerp(V(contact.x,0,contact.y),followBlend);this.updateCamera();}else this.center();}
+    if(this.follow){this.target.lerp(V(u.x,0,u.y),followBlend);this.updateCamera();}
+    return elapsed;
+  }
+  sync(s,now){this.frameCount=(this.frameCount||0)+1;this.state=s;const u=hero(s),elapsed=this.updateFollowCamera(s,now),motionBlend=T.MathUtils.damp(0,1,-60*Math.log(.8),elapsed),poseBlend=T.MathUtils.damp(0,1,-60*Math.log(.85),elapsed);
     const window=this.residentWindow||blockWindow(s,u),visible=s.units.filter(v=>pointInWorldRect(v,window)&&(v.team==='squad'||(v.hp>0?s.detected.has(v.id):s.visible.has(Core.key(v.x,v.y)))));
     this.reconcileActors(visible);
     if(s.effect&&s.effect!==this.lastEffect){this.lastEffect=s.effect;this.queueEffects(s.effect,now);}
@@ -244,7 +252,7 @@ export class FieldView {
     this.tankEffects?.observe(s,now,visible,burnStart);this.tankEffects?.captureOrigins(this.actors);
     this.burnEffects?.observe(s,now,visible,burnStart);if(this.burnEffects)this.burnEffects.tankEffects=this.tankEffects;
     for(const [id,a] of this.actors)a.root.visible=visible.some(v=>v.id===id);
-    for(const v of visible){let a=this.actors.get(v.id);if(!a){this.actor(v);continue;}const old=this.samples.get(v.id)||{blend:0,pose:{kneel:0,prone:0,down:v.hp<=0?1:0,dead:v.hp<=0?1:0}},blend=old.blend+((v.isMoving?1:0)-old.blend)*.2,goal={kneel:v.stance==='kneeling'?1:0,prone:v.stance==='prone'?1:0,down:v.hp<=0?1:0,dead:v.hp<=0?1:0};const pose=Object.fromEntries(Object.entries(goal).map(([k,value])=>[k,Math.abs(value-old.pose[k])<.005?value:old.pose[k]+(value-old.pose[k])*.15]));const sample={...v,distance:v.travelled,blend:blend<.001?0:blend,pose};this.samples.set(v.id,sample);a.root.visible=true;a.pick.visible=true;a.ring.visible=v.hp>0;a.pick.scale.set(v.hp>0?1:1.6,v.hp>0?1:.2,v.hp>0?1:1.6);a.pick.position.set(0,v.hp>0?.9:.18,0);a.ring.position.set(0,.018,0);a.shadow.position.set(0,.01,0);a.pick.userData.interactionId=v.hp<=0?'body:'+v.id:null;
+    for(const v of visible){let a=this.actors.get(v.id);if(!a){this.actor(v);continue;}const motion=movementPresentation(v,this.samples.get(v.id)),old=this.samples.get(v.id)||{blend:0,pose:{kneel:0,prone:0,down:v.hp<=0?1:0,dead:v.hp<=0?1:0}},blend=old.blend+((motion.moving?1:0)-old.blend)*motionBlend,goal={kneel:v.stance==='kneeling'?1:0,prone:v.stance==='prone'?1:0,down:v.hp<=0?1:0,dead:v.hp<=0?1:0};const pose=Object.fromEntries(Object.entries(goal).map(([k,value])=>[k,Math.abs(value-old.pose[k])<.005?value:old.pose[k]+(value-old.pose[k])*poseBlend]));const sample={...v,distance:motion.distance,blend:blend<.001?0:blend,pose};this.samples.set(v.id,sample);a.root.visible=true;a.pick.visible=true;a.ring.visible=v.hp>0;a.pick.scale.set(v.hp>0?1:1.6,v.hp>0?1:.2,v.hp>0?1:1.6);a.pick.position.set(0,v.hp>0?.9:.18,0);a.ring.position.set(0,.018,0);a.shadow.position.set(0,.01,0);a.pick.userData.interactionId=v.hp<=0?'body:'+v.id:null;
       if(v.id===0&&this.flameAim)sample.heading=this.flameAim.heading;
       // An emitted spray may kill its own operator through a fuel blast. Fit
       // the recorded pre-impact discharge without reviving simulation state.

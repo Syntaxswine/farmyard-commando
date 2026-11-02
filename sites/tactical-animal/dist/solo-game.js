@@ -1,3 +1,4 @@
+import {boundedElapsed,SIMULATION_STEP_SECONDS} from './frame-timing.js';
 import {TOUR_ID,getTourWorld,bindTourWorld,isTour} from './mount-dora-activity.js';
 import {encodeTourProgress} from './mount-dora-progress.js';
 import {WEAPONS,AIM_ZONES} from './aft/tactics/solo-weapon-data.js';
@@ -36,7 +37,7 @@ export const hero=s=>s.units.find(u=>u.team==='squad');
 export const alive=u=>!!u&&u.hp>0;
 export const movementModeOf=u=>u.sneaking?'sneak':u.running?'run':'walk';
 export const movementRate=u=>(u.stance==='prone'?8:u.stance==='kneeling'?4:2)*(u.running?.5:u.sneaking?1.5:1);
-export const movementSpeed=u=>(u.stance==='prone'?.9:u.stance==='kneeling'?1.8:3.6)*(u.running?2:u.sneaking?.5:1);
+export const movementSpeed=u=>(u.stance==='prone'?1.8:u.stance==='kneeling'?3.6:7.2)*(u.running?2:u.sneaking?.5:1);
 export const combatCosts=s=>['player','enemy'].includes(s.phase)||s.units.some(g=>g.team==='guard'&&alive(g)&&g.alert);
 export const canControl=(s,u)=>alive(u)&&!u.burningTurns&&u.team==='squad'&&['explore','player','won'].includes(s.phase)&&s.solo.status==='active';
 export function validBuild(b){return !!b&&ANIMALS.some(a=>a.id===b.animal)&&PRIMARY.includes(b.primary)&&SECONDARY.includes(b.secondary)&&UTILITIES.includes(b.utility);}
@@ -220,11 +221,11 @@ function visibility(s){
 }
 export function refresh(s,{forceFog=false}={}){const u=hero(s),town=getTourWorld(s);if(town){if(forceFog)delete s.fogAt;town.reveal(s,u);s.phase='explore';s.revision++;return;}s.detected=new Set(s.units.filter(g=>g.team==='guard'&&alive(g)&&canSee(s,u,g)).map(g=>g.id));for(const g of s.units.filter(g=>g.team==='guard'&&alive(g)))if(canSee(s,g,u)){g.alert=true;g.lastKnown={x:u.x,y:u.y};g.alertAge=0;}if(!s.fogAt||distance(u,s.fogAt)>.25||forceFog)visibility(s);if(!alive(u)){s.phase='lost';s.solo.status='lost';s.queue=[];u.isMoving=false;s.revision++;return;}const guards=s.units.filter(g=>g.team==='guard'&&alive(g));if(!guards.length&&!firePending(s)){if(s.phase!=='won')s.queue=[];s.phase='won';}else if(s.phase!=='enemy'){const contact=s.engaged||firePending(s)||guards.some(g=>g.alert&&distance(g,u)<=WEAPONS[g.weapon].range+g.maxAp);if(contact&&s.phase!=='player'){s.phase='player';s.round++;u.ap=u.burningTurns?0:u.maxAp;s.queue=[];u.isMoving=false;log(s,'Contact. Movement now spends AP by distance.');}else if(!contact&&s.phase==='player'){s.phase='explore';s.queue=[];u.isMoving=false;log(s,'Contact broken. Real-time exploration resumed.');}}s.revision++;}
 export function stop(s){s.queue=[];hero(s).isMoving=false;s.revision++;}
-// Exhaustion changes the movement mode without cancelling held input or a route.
-function walkWhenExhausted(s,u){if(u.running&&u.stamina<=EPS*(u.stance==='prone'?3:4)){u.running=false;u.sneaking=false;u.stamina=0;s.revision++;}}
+// Stamina is temporarily disabled game-wide. Re-enabling requires the documented
+// minimum 300s continuous-run budget and recovery while stationary.
 // Swept-disc collision prevents tunnelling. AP charges accepted displacement,
 // including wall slides, rather than requested input or pathfinder cells.
-export function travel(s,u,dx,dy,{enemy=false}={}){if((enemy?s.phase!=='enemy'||u.burningTurns:!canControl(s,u))||!Number.isFinite(dx)||!Number.isFinite(dy))return 0;const requested=Math.hypot(dx,dy);if(requested<EPS)return 0;walkWhenExhausted(s,u);const rate=movementRate(u),spends=enemy||s.phase==='player',staminaRate=u.stance==='prone'?3:u.running?4:u.sneaking?2:1;const budget=Math.min(requested,spends?u.ap/rate:Infinity,u.running||u.sneaking||u.stance==='prone'?u.stamina/staminaRate:Infinity);if(budget<EPS){u.isMoving=false;return 0;}const steps=Math.ceil(budget/.07),sx=dx/requested*budget/steps,sy=dy/requested*budget/steps;let walked=0;for(let i=0;i<steps;i++){let nx=u.x+sx,ny=u.y+sy;if(!freePoint(s,{x:nx,y:ny},u.id)){if(freePoint(s,{x:nx,y:u.y},u.id))ny=u.y;else if(freePoint(s,{x:u.x,y:ny},u.id))nx=u.x;else break;}const d=Math.hypot(nx-u.x,ny-u.y);if(d<EPS)break;u.heading=Math.atan2(ny-u.y,nx-u.x)*180/Math.PI;u.x=nx;u.y=ny;walked+=d;if(spends)u.ap=Math.max(0,u.ap-d*rate);u.stamina=Math.max(0,u.stamina-d*staminaRate);u.travelled+=d;fireRules.enterFire(s,u);if(u.burningTurns)break;}u.isMoving=walked>EPS&&!u.burningTurns;walkWhenExhausted(s,u);if(walked){if(u.team==='squad'){s.solo.distance+=walked;if(spends)s.solo.apDistance+=walked*rate;}refresh(s);}return walked;}
+export function travel(s,u,dx,dy,{enemy=false}={}){if((enemy?s.phase!=='enemy'||u.burningTurns:!canControl(s,u))||!Number.isFinite(dx)||!Number.isFinite(dy))return 0;const requested=Math.hypot(dx,dy);if(requested<EPS)return 0;const rate=movementRate(u),spends=enemy||s.phase==='player';const budget=Math.min(requested,spends?u.ap/rate:Infinity);if(budget<EPS){u.isMoving=false;return 0;}const steps=Math.ceil(budget/.07),sx=dx/requested*budget/steps,sy=dy/requested*budget/steps;let walked=0;for(let i=0;i<steps;i++){let nx=u.x+sx,ny=u.y+sy;if(!freePoint(s,{x:nx,y:ny},u.id)){if(freePoint(s,{x:nx,y:u.y},u.id))ny=u.y;else if(freePoint(s,{x:u.x,y:ny},u.id))nx=u.x;else break;}const d=Math.hypot(nx-u.x,ny-u.y);if(d<EPS)break;u.heading=Math.atan2(ny-u.y,nx-u.x)*180/Math.PI;u.x=nx;u.y=ny;walked+=d;if(spends)u.ap=Math.max(0,u.ap-d*rate);u.travelled+=d;fireRules.enterFire(s,u);if(u.burningTurns)break;}u.isMoving=walked>EPS&&!u.burningTurns;if(walked){if(u.team==='squad'){s.solo.distance+=walked;if(spends)s.solo.apDistance+=walked*rate;}refresh(s);}return walked;}
 // A stable heap preserves tie order without sorting the whole frontier on every
 // expansion. The cap also bounds an unreachable request in a large open sector.
 export const NAVIGATION_NODE_LIMIT=8192;
@@ -284,8 +285,8 @@ export function navigationPath(s,u,x,y){
 }
 export function move(s,u,x,y){if(!canControl(s,u))return false;const path=navigationPath(s,u,x,y);if(!path?.length)return false;s.queue=path;s.revision++;return true;}
 export function turnTo(s,u,heading){if(!canControl(s,u)||!Number.isFinite(heading))return false;u.heading=heading;refresh(s);return true;}
-export function setMovementMode(s,u,mode){if(!canControl(s,u)||!['run','sneak','walk'].includes(mode))return false;stop(s);u.running=mode==='run';u.sneaking=mode==='sneak';walkWhenExhausted(s,u);s.revision++;return true;}
-export function setStance(s,u,stance){if(!canControl(s,u)||!['standing','kneeling','prone'].includes(stance)||u.stance===stance)return false;stop(s);u.stance=stance;refresh(s,{forceFog:true});return true;}
+export function setMovementMode(s,u,mode){if(!canControl(s,u)||!['run','sneak','walk'].includes(mode))return false;u.running=mode==='run';u.sneaking=mode==='sneak';s.revision++;return true;}
+export function setStance(s,u,stance){if(!canControl(s,u)||!['standing','kneeling','prone'].includes(stance)||u.stance===stance)return false;u.stance=stance;refresh(s,{forceFog:true});return true;}
 const random=s=>{s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296;};
 export const grenadeCost=u=>WEAPONS.grenade.cost*(['pistol','pistol-offhand','smg'].includes(u.weapon)?.5:1);
 export function grenadeTrajectory(a,b){
@@ -458,7 +459,15 @@ export function endTurn(s){if(isTour(s))return false;if(s.phase!=='player'||s.so
 // instead of ending its turn there.
 const ARRIVED=.08;
 function enemyStep(s,dt){const u=hero(s);let g=s.units[s.enemyIndex];if(!g){fireRules.finishRound(s);s.round++;s.panicDelay=3;u.ap=alive(u)&&!u.burningTurns?u.maxAp:0;u.stamina=Math.min(u.maxStamina,u.stamina+10);s.phase='player';refresh(s);return;}if(!alive(g)||g.burningTurns||!g.alert||g.ap<.02){g.isMoving=false;s.enemyIndex++;s.enemyDelay=.15;return;}s.enemyDelay-=dt;if(s.enemyDelay>0)return;const p=previewAttack(s,g,u);if(p.ok&&canSee(s,g,u)){attack(s,g,u,false,true);s.enemyDelay=.6;return;}if(g.ammo[g.weapon]===0&&g.ap>=3){const count=Math.min(WEAPONS[g.weapon].mag,g.ammoPouch[g.weapon]||0);if(count){g.ammo[g.weapon]=count;g.ammoPouch[g.weapon]-=count;g.ap-=3;s.enemyDelay=.4;return;}}if(g.ap<WEAPONS[g.weapon].cost&&canSee(s,g,u)&&distance(g,u)<=WEAPONS[g.weapon].range){g.ap=0;return;}const path=approachPath(s,g,g.lastKnown||u),next=path?.length>1&&distance(g,path[0])<ARRIVED?path[1]:path?.[0];if(!next){g.ap=0;return;}const d=distance(g,next);if(d<ARRIVED){g.ap=0;return;}const step=Math.min(d,movementSpeed(g)*dt);if(!travel(s,g,(next.x-g.x)/d*step,(next.y-g.y)/d*step,{enemy:true}))g.ap=0;}
-export function tick(s,dt=1/60,input=null){if(s.solo.status!=='active')return false;dt=Math.max(0,Math.min(.05,dt));s.elapsed+=dt;for(const u of s.units)u.isMoving=false;if(s.phase==='enemy'){enemyStep(s,dt);return true;}const u=hero(s);if(u.burningTurns){refresh(s);if(s.phase==='player'){s.panicDelay=Math.max(0,(s.panicDelay??3)-dt);if(!s.panicDelay)endTurn(s);}return true;}walkWhenExhausted(s,u);if(input&&Math.hypot(input.x,input.y)>.1){s.queue=[];const n=Math.max(1,Math.hypot(input.x,input.y));travel(s,u,input.x/n*movementSpeed(u)*dt,input.y/n*movementSpeed(u)*dt);}else if(s.queue.length){const p=s.queue[0],d=distance(u,p);if(d<.025)s.queue.shift();else{const step=Math.min(d,movementSpeed(u)*dt),moved=travel(s,u,(p.x-u.x)/d*step,(p.y-u.y)/d*step);if(!moved||s.phase==='player'&&u.ap<EPS)s.queue=[];}}else if(s.phase==='explore'||s.phase==='won')u.stamina=Math.min(u.maxStamina,u.stamina+dt*2);return true;}
+// Every frame reuses the same movement/turn step; stop catch-up at control-phase changes.
+export function tick(s,dt=1/60,input=null){
+  if(s.solo.status!=='active')return false;
+  const seconds=boundedElapsed(dt),steps=Math.max(1,Math.ceil((seconds-1e-9)/SIMULATION_STEP_SECONDS)),receipts=[];let previous=s.effect;
+  for(let i=0;i<steps;i++){const phase=s.phase;tickStep(s,seconds/steps,input);if(s.effect&&s.effect!==previous){receipts.push({effect:s.effect,at:i*seconds/steps});previous=s.effect;}if(s.phase!==phase||s.solo.status!=='active')break;}
+  if(receipts.length>1)s.effect={...s.effect,sequence:receipts.flatMap(({effect,at})=>(effect.sequence||[effect]).map(event=>({...event,catchupDelayMs:(event.catchupDelayMs||0)+(at-receipts[0].at)*1000})))};
+  return true;
+}
+function tickStep(s,dt,input){s.elapsed+=dt;for(const u of s.units)u.isMoving=false;if(s.phase==='enemy'){enemyStep(s,dt);return true;}const u=hero(s);if(u.burningTurns){refresh(s);if(s.phase==='player'){s.panicDelay=Math.max(0,(s.panicDelay??3)-dt);if(!s.panicDelay)endTurn(s);}return true;}if(input&&Math.hypot(input.x,input.y)>.1){s.queue=[];const n=Math.max(1,Math.hypot(input.x,input.y));travel(s,u,input.x/n*movementSpeed(u)*dt,input.y/n*movementSpeed(u)*dt);}else if(s.queue.length){const p=s.queue[0],d=distance(u,p);if(d<.025)s.queue.shift();else{const step=Math.min(d,movementSpeed(u)*dt),moved=travel(s,u,(p.x-u.x)/d*step,(p.y-u.y)/d*step);if(!moved||s.phase==='player'&&u.ap<EPS)s.queue=[];}}else if(s.phase==='explore'||s.phase==='won')u.stamina=Math.min(u.maxStamina,u.stamina+dt*2);return true;}
 const fireRules=createFireRules({kill,walkSegment,random,key,log});
 const fuelRules=createFuelRules({kill,ignite:fireRules.ignite,recordBurn,inside:insideWorld,log,windowBlast});
 export const ignite=(s,u)=>{const result=fireRules.ignite(s,u);if(result)refresh(s);return result;};

@@ -28,7 +28,7 @@ test('actual Core travel follows both mapped boardwalk centre lines, joins and r
 });
 test('streamed resume retains position/resources and firing/turn actions cannot alter the free tour',async()=>{
   const s=await loadTownTour({build:DEFAULT_BUILD,fetcher,projectURL}),w=getTourWorld(s),u=hero(s);
-  try{u.ammo.assault=4;u.stamina=0;u.running=true;const before={x:u.x,y:u.y},round=s.round;tick(s,.05,{x:1,y:0});assert(!u.running);assert(u.x>before.x);
+  try{u.ammo.assault=4;u.stamina=0;u.running=true;const before={x:u.x,y:u.y},round=s.round;tick(s,.05,{x:1,y:0});assert(u.running);assert.equal(u.stamina,0);assert(u.x>before.x);
     assert.equal(Core.endTurn(s),false);assert.equal(Core.attack(s,u,{ground:true,x:u.x+1,y:u.y,h:0}),false);assert.equal(Core.throwGrenade(s,u,{x:u.x+1,y:u.y}),false);assert.equal(Core.fireFlame(s,u,0),false);assert.equal(s.round,round);assert.equal(s.phase,'explore');
     const saved=readTourProgress(encodeSave(s));const restored=await loadTownTour({build:DEFAULT_BUILD,progress:saved,fetcher,projectURL});try{assert.equal(hero(restored).x,u.x);assert.equal(hero(restored).y,u.y);assert.equal(hero(restored).ammo.assault,4);assert.equal(hero(restored).stamina,u.stamina);for(const key of s.seen)assert(restored.seen.has(key),'Resume preserves explored cell '+key);}finally{getTourWorld(restored).dispose();}
   }finally{w.dispose();}

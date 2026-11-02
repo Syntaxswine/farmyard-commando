@@ -2,64 +2,12 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {Core,createSoloGame,hero,travel,tick,refresh,distance,encodeSave,decodeSave} from '../dist/solo-game.js';
 import {app} from './app-harness.mjs';
-
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-6,`${a} != ${b}`);
-function field(combat=false){
-  const state=createSoloGame(),unit=hero(state);unit.x=4;unit.y=25;
-  for(const guard of state.units.slice(1)){guard.x=36;guard.y=27;guard.alert=false;if(!combat)guard.hp=0;}
-  if(combat){state.engaged=true;state.phase='player';}refresh(state);unit.ap=12;
-  return {state,unit};
-}
-
-test('exhausted running falls back to walking while held input keeps moving at walking speed and AP cost',()=>{
-  for(const stance of ['standing','kneeling']){
-    const {state,unit}=field(true);unit.stance=stance;Core.setMovementMode(state,unit,'run');unit.stamina=.4;
-    tick(state,.05,{x:1,y:0});close(unit.x,4.1);close(unit.stamina,0);assert.equal(Core.movementModeOf(unit),'walk');assert.equal(unit.stance,stance);
-    const before={x:unit.x,ap:unit.ap,apDistance:state.solo.apDistance},step=Core.movementSpeed(unit)*.05;
-    tick(state,.05,{x:1,y:0});close(unit.x-before.x,step);close(before.ap-unit.ap,step*Core.movementRate(unit));close(state.solo.apDistance-before.apDistance,step*Core.movementRate(unit));
-    assert.equal(unit.isMoving,true);assert.equal(unit.stamina,0);
-  }
-});
-
-test('an already exhausted runner walks on the first frame without a running-speed or AP discount',()=>{
-  for(const stamina of [0,2e-7,4e-7]){
-    const {state,unit}=field(true);unit.running=true;unit.stamina=stamina;
-    tick(state,.05,{x:1,y:0});close(unit.x,4.18);close(unit.ap,12-.36);assert.equal(unit.running,false);assert.equal(unit.isMoving,true);
-  }
-});
-
-test('a planned route survives exhaustion and reaches its destination without renewed input',()=>{
-  const {state,unit}=field();Core.setMovementMode(state,unit,'run');unit.stamina=.08;
-  assert.equal(Core.move(state,unit,6,25),true);tick(state,.05);assert.ok(state.queue.length);assert.equal(unit.running,false);
-  for(let i=0;i<30&&state.queue.length;i++)tick(state,.05);
-  assert.ok(distance(unit,{x:6,y:25})<.025);assert.equal(state.queue.length,0);assert.equal(Core.movementModeOf(unit),'walk');
-});
-
-test('walking fallback still stops at the AP budget and cannot pass through walls',()=>{
-  const {state,unit}=field(true);unit.running=true;unit.stamina=0;unit.ap=.31;
-  close(travel(state,unit,1,0),.155);close(unit.x,4.155);close(unit.ap,0);assert.equal(travel(state,unit,1,0),0);
-  unit.x=20.18;unit.y=10;unit.ap=5;unit.running=true;const before={x:unit.x,y:unit.y,ap:unit.ap,stamina:unit.stamina};
-  assert.equal(travel(state,unit,1,0),0);assert.deepEqual({x:unit.x,y:unit.y,ap:unit.ap,stamina:unit.stamina},before);assert.equal(unit.running,false);
-});
-
-test('fallback persists through saving and stamina recovery until the player chooses to run again',()=>{
-  const {state,unit}=field();unit.running=true;unit.stamina=.4;tick(state,.05,{x:1,y:0});
-  const restored=decodeSave(encodeSave(state)),animal=hero(restored);assert.equal(animal.running,false);
-  assert.equal(Core.setMovementMode(restored,animal,'run'),true);assert.equal(Core.movementModeOf(animal),'walk');
-  tick(restored,.05);assert.ok(animal.stamina>0);assert.equal(Core.movementModeOf(animal),'walk');
-  assert.equal(Core.setMovementMode(restored,animal,'run'),true);assert.equal(Core.movementModeOf(animal),'run');
-});
-
-test('joystick input continues after exhaustion and the real movement control shows Off / walk',()=>{
-  const a=app();a.el('movement-cycle').click();assert.equal(a.u.running,true);a.u.stamina=.2;
-  a.drag(-40,0);a.advance(4);assert.equal(Core.movementModeOf(a.u),'walk');assert.equal(a.el('movement-label').textContent,'OFF');
-  const before={x:a.u.x,y:a.u.y};a.advance(4);assert.ok(distance(before,a.u)>.5);assert.equal(a.u.isMoving,true);
-  a.el('joystick').fire('pointerup');a.advance(2);assert.equal(a.u.isMoving,false);assert.equal(a.u.running,false);
-});
-
-test('keyboard input and tap-to-move routes also keep moving after running stamina is spent',()=>{
-  const keyboard=app();keyboard.u.running=true;keyboard.u.stamina=0;keyboard.key('s');const start={x:keyboard.u.x,y:keyboard.u.y};
-  keyboard.advance(5);keyboard.key('s','keyup');assert.ok(distance(start,keyboard.u)>.7);assert.equal(keyboard.el('movement-label').textContent,'OFF');
-  const route=app();route.el('movement-cycle').click();route.u.stamina=.2;route.view.options.onPick({x:3,y:25});route.advance(20);
-  assert.ok(distance(route.u,{x:3,y:25})<.025);assert.equal(route.s.queue.length,0);assert.equal(route.u.running,false);assert.equal(route.el('movement-label').textContent,'OFF');
-});
+function field(combat=false){const state=createSoloGame(),unit=hero(state);unit.x=4;unit.y=25;for(const guard of state.units.slice(1)){guard.x=36;guard.y=27;guard.alert=false;if(!combat)guard.hp=0;}if(combat){state.engaged=true;state.phase='player';}refresh(state);unit.ap=12;return {state,unit};}
+test('zero-stamina running retains its mode while accepted displacement pays the unchanged AP cost',()=>{for(const stance of ['standing','kneeling']){const {state,unit}=field(true);unit.stance=stance;unit.stamina=0;Core.setMovementMode(state,unit,'run');const step=Core.movementSpeed(unit)*.05;tick(state,.05,{x:1,y:0});close(unit.x,4+step);close(unit.ap,12-step*Core.movementRate(unit));close(state.solo.apDistance,step*Core.movementRate(unit));assert(unit.running&&unit.isMoving);close(unit.stamina,0);}});
+test('base pace is doubled exactly once across standing, kneeling and prone movement modes',()=>{const {unit}=field();for(const [stance,speed]of [['standing',7.2],['kneeling',3.6],['prone',1.8]])for(const [mode,factor]of [['walk',1],['run',2],['sneak',.5]]){unit.stance=stance;unit.running=mode==='run';unit.sneaking=mode==='sneak';close(Core.movementSpeed(unit),speed*factor);}});
+test('a planned Run route survives zero stamina and reaches its destination without renewed input',()=>{const {state,unit}=field();unit.stamina=0;Core.setMovementMode(state,unit,'run');assert(Core.move(state,unit,6,25));for(let i=0;i<30&&state.queue.length;i++)tick(state,.05);assert(distance(unit,{x:6,y:25})<.025);assert.equal(state.queue.length,0);assert.equal(Core.movementModeOf(unit),'run');close(unit.stamina,0);});
+test('stamina-free running still stops exactly at its AP budget and cannot pass walls',()=>{const {state,unit}=field(true);unit.running=true;unit.stamina=0;unit.ap=.31;close(travel(state,unit,1,0),.31);close(unit.x,4.31);close(unit.ap,0);assert.equal(travel(state,unit,1,0),0);unit.x=20.18;unit.y=10;unit.ap=5;const before={x:unit.x,y:unit.y,ap:unit.ap,stamina:unit.stamina};assert.equal(travel(state,unit,1,0),0);assert.deepEqual({x:unit.x,y:unit.y,ap:unit.ap,stamina:unit.stamina},before);assert(unit.running);});
+test('an exhausted ordinary operation save can resume Run immediately and recovers while idle',()=>{const {state,unit}=field();unit.stamina=0;const s=decodeSave(encodeSave(state)),u=hero(s);assert(Core.setMovementMode(s,u,'run'));assert(u.running);tick(s,.05,{x:1,y:0});assert(u.isMoving&&u.running);close(u.stamina,0);tick(s,.5);assert(u.stamina>0&&u.running);});
+test('held joystick movement remains Run at zero stamina and the real control stays lit',()=>{const a=app();a.el('movement-cycle').click();a.u.stamina=0;a.drag(-40,0);a.advance(4);assert.equal(Core.movementModeOf(a.u),'run');assert.equal(a.el('movement-label').textContent,'RUN');const before={x:a.u.x,y:a.u.y};a.advance(4);assert(distance(before,a.u)>1);assert(a.u.isMoving);a.el('joystick').fire('pointerup');a.advance(2);assert.equal(a.u.isMoving,false);assert(a.u.running);});
+test('held keys and tap-to-move Run routes remain available after stamina reached zero in an old save',()=>{const keyboard=app();keyboard.u.running=true;keyboard.u.stamina=0;keyboard.key('s');const start={x:keyboard.u.x,y:keyboard.u.y};keyboard.advance(5);keyboard.key('s','keyup');assert(distance(start,keyboard.u)>.7);assert.equal(keyboard.el('movement-label').textContent,'RUN');const route=app();route.u.stamina=0;route.view.options.onPick({x:3,y:25});route.el('movement-cycle').click();route.advance(20);assert(distance(route.u,{x:3,y:25})<.025);assert.equal(route.s.queue.length,0);assert(route.u.running);assert.equal(route.el('movement-label').textContent,'RUN');});

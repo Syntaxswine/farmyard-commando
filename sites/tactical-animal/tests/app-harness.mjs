@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import * as game from '../dist/solo-game.js';
+import {FrameClock} from '../dist/frame-timing.js';
+import {pointInWorldRect} from '../dist/world-grid.js';
 import * as tourActivity from '../dist/mount-dora-activity.js';
 import * as tourProgress from '../dist/mount-dora-progress.js';
 import * as controls from '../dist/mobile-controls.js';
@@ -14,8 +16,8 @@ import {createOperationStorage} from '../dist/operation-storage.js';
 import {STANCE_ICONS} from '../dist/aft/tactics/battle-control-icons.js';
 
 // Actual application handlers and simulation with a lightweight DOM/renderer.
-export function app({autoDeploy=true,initialStorage=[],storageFailure=null,search=''}={}){
-  const elements=new Map(),events=new Map(),saved=new Map(initialStorage),views=[];let animation,clock=0;
+export function app({autoDeploy=true,initialStorage=[],storageFailure=null,search='',initialState=null}={}){
+  const elements=new Map(),events=new Map(),documentEvents=new Map(),saved=new Map(initialStorage),views=[];let animation,clock=0;
   class Element {
     constructor(id=''){
       this.id=id;this.style={};this.dataset={};this.children=[];this.listeners=new Map();this.hidden=false;this.disabled=false;this.open=false;this.textContent='';this.captures=new Set();
@@ -39,10 +41,10 @@ export function app({autoDeploy=true,initialStorage=[],storageFailure=null,searc
     fire(type,extra={}){const event={type,pointerId:1,button:0,clientX:177.5,clientY:677.5,target:this,preventDefault(){},...extra};this['on'+type]?.(event);for(const fn of this.listeners.get(type)||[])fn(event);}
   }
   const el=id=>{if(!elements.has(id))elements.set(id,new Element(id));return elements.get(id);};
-  const doc={getElementById:el,querySelector:el,createElement:tag=>Object.assign(new Element(),{tagName:tag}),createElementNS:(_namespace,tag)=>Object.assign(new Element(),{tagName:tag}),body:new Element(),hidden:false,addEventListener(){}};
+  const doc={getElementById:el,querySelector:el,createElement:tag=>Object.assign(new Element(),{tagName:tag}),createElementNS:(_namespace,tag)=>Object.assign(new Element(),{tagName:tag}),body:new Element(),hidden:false,addEventListener:(name,fn)=>documentEvents.set(name,fn)};
   class FieldView {
     constructor(_container,options){this.options=options;this.follow=true;views.push(this);}
-    setGame(state){this.state=state;this.options.onLoading(false);}
+    setGame(state){this.state=state;this.art=state.solo.missionId===tourActivity.TOUR_ID?{readyForMovement:true}:null;this.options.onLoading(false);}
     interactionAnchor(){return {x:200,y:300,visible:true};}
     beginGrenadeAim(){this.preview=null;this.aiming=true;}
     endGrenadeAim(){this.aiming=false;}
@@ -54,7 +56,7 @@ export function app({autoDeploy=true,initialStorage=[],storageFailure=null,searc
     route(){} center(){} sync(){} dispose(){this.disposed=true;this.aiming=false;}
   }
   if(!saved.has('tactical-animal-build-v1'))saved.set('tactical-animal-build-v1',JSON.stringify({...game.DEFAULT_BUILD,utility:'grenade'}));
-  const context={...game,...tourActivity,...tourProgress,URL,URLSearchParams,AbortController,Image:class {complete=false;naturalWidth=0;},location:{search},__appModuleURL:new URL('../dist/app.js',import.meta.url).href,...controls,...grenadeControls,...flameControls,...shootingControls,...guardAlerts,createTargetMonitor:(...args)=>targetMonitor.createTargetMonitor(...args,doc),selectInteractionTarget,createOperationStorage,STANCE_ICONS,weaponArtwork:()=>new Element(),FieldView,drawMinimap(){},document:doc,localStorage:{getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)},setTimeout,clearTimeout,performance:{now:()=>0},requestAnimationFrame:fn=>animation=fn,innerHeight:844,addEventListener:(name,fn)=>events.set(name,fn),console};
+  const context={...game,FrameClock,pointInWorldRect,...tourActivity,...tourProgress,URL,URLSearchParams,AbortController,Image:class {complete=false;naturalWidth=0;},location:{search},__appModuleURL:new URL('../dist/app.js',import.meta.url).href,...controls,...grenadeControls,...flameControls,...shootingControls,...guardAlerts,createTargetMonitor:(...args)=>targetMonitor.createTargetMonitor(...args,doc),selectInteractionTarget,createOperationStorage,STANCE_ICONS,weaponArtwork:()=>new Element(),FieldView,drawMinimap(){},document:doc,localStorage:{getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)},setTimeout,clearTimeout,performance:{now:()=>clock},requestAnimationFrame:fn=>animation=fn,innerHeight:844,addEventListener:(name,fn)=>events.set(name,fn),console};
   context.window={get localStorage(){return context.localStorage;}};
   if(storageFailure){
     const blocked=()=>{throw Object.assign(new Error('Storage access is denied.'),{name:'SecurityError'});};
@@ -68,10 +70,11 @@ export function app({autoDeploy=true,initialStorage=[],storageFailure=null,searc
   const application=fs.readFileSync(new URL('../dist/app.js',import.meta.url),'utf8')
     .replace(/^import .*;\r?\n/gm,'').replaceAll('import.meta.url','__appModuleURL')
     .replace(/^export (?=(?:async )?function )/gm,'');
-  vm.runInNewContext(application,context);
-  if(autoDeploy)el('deploy').click();
+  vm.runInNewContext(application+'\n;globalThis.__startHarnessGame=start;',context);
+  if(initialState)context.__startHarnessGame(initialState);
+  else if(autoDeploy)el('deploy').click();
   const key=(name,type='keydown')=>events.get(type)({key:name,target:{tagName:'BODY',closest:()=>null},preventDefault(){},repeat:false});
-  const advance=(count=1)=>{for(let i=0;i<count;i++){clock=Math.max(clock,views.at(-1).state.elapsed*1000)+50;animation(clock);}};
+  const advance=(count=1,stepMs=50)=>{for(let i=0;i<count;i++){clock+=stepMs;animation(clock);}};
   const drag=(x,y)=>{el('joystick').fire('pointerdown');el('joystick').fire('pointermove',{clientX:177.5+x,clientY:677.5+y});};
-  return {el,get view(){return views.at(-1);},get s(){return views.at(-1)?.state;},get u(){return game.hero(views.at(-1).state);},views,key,advance,drag,events,saved,document:doc};
+  return {el,get view(){return views.at(-1);},get s(){return views.at(-1)?.state;},get u(){return game.hero(views.at(-1).state);},views,key,advance,drag,events,documentEvents,elapse:ms=>{clock+=ms;},visibility:hidden=>{doc.hidden=hidden;documentEvents.get('visibilitychange')?.();},saved,document:doc};
 }

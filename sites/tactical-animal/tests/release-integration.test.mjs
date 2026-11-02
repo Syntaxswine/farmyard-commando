@@ -22,14 +22,14 @@ test('the merged expanded map keeps the active operation labels and metal frame'
   assert.doesNotMatch(a.el('overlay-content').innerHTML,/MILL 04/);
 });
 
-test('exhaustion, mission-specific saves and remembered contacts survive the combined lifecycle',()=>{
+test('zero-stamina running, mission-specific saves and remembered contacts survive the combined lifecycle',()=>{
   const a=app({autoDeploy:false,initialStorage:selectedSave()});a.el('resume').click();
   assert.equal(a.s.solo.missionId,'short-measure');assert.deepEqual(a.s.solo.spottedGuardIds,[1]);
   a.u.running=true;a.u.stamina=0;const start=a.u.x;a.key('d');a.advance(5);a.key('d','keyup');
-  assert.ok(a.u.x>start);assert.equal(a.u.running,false);assert.equal(a.el('movement-label').textContent,'OFF');
+  assert.ok(a.u.x>start);assert.equal(a.u.running,true);assert.equal(a.el('movement-label').textContent,'RUN');
   a.el('menu').click();action(a,'Choose operation, animal & loadout');
   const restored=decodeSave(a.saved.get(OPERATION_SLOT+'short-measure'));
-  assert.equal(restored.solo.missionId,'short-measure');assert.equal(restored.units[0].running,false);assert.deepEqual(restored.solo.spottedGuardIds,[1]);
+  assert.equal(restored.solo.missionId,'short-measure');assert.equal(restored.units[0].running,true);assert.deepEqual(restored.solo.spottedGuardIds,[1]);
   const b=app({autoDeploy:false,initialStorage:[...a.saved]});b.el('resume').click();
   assert.equal(b.s.solo.missionId,'short-measure');assert.equal(b.u.x,restored.units[0].x);assert.deepEqual(b.s.solo.spottedGuardIds,[1]);
 });

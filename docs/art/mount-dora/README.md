@@ -52,7 +52,7 @@ node maps/mount-dora/art/tools/serve.mjs
 
 The art preview server prints its dynamic loopback URL, allows only this art subtree and its frozen render dependencies, honours `artifacts/mount-dora-art/STOP`, and stops automatically after 30 minutes. When launched for QA, enroll it in the user's helper lifecycle registry and stop it as soon as review finishes. It does not serve `.git`, app secrets, the active Nautilus checkout or other workers. No preview service is part of a delivered map.
 
-The normal Farmyard production build deliberately remains unchanged and does not publish this authoring project. Root owns the complete town integration and workshop bundle. This PR stays draft for architect review; there is no game/engine pin update or independent main/Pages promotion.
+This art handoff does not alter the production build. The integrated town release publishes the geographic atlas and native JSON downloads separately; these detached renderer studies remain repository authoring references. There is no game/engine pin update or automatic landmark placement in the final sectors.
 
 `source/geometry-compatibility.json` verifies all nine reused AFT geometry/factory modules against immutable objects in both released Farmyard and the fixed Nautilus target. They match exactly after CRLF/LF normalization. The gallery retains the exact original building/roof modules and painted image bytes.
 

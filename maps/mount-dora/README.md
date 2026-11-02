@@ -95,6 +95,12 @@ invalidating their provenance. The workshop README documents the additional
 exact-version API and browser checks, including editing, Undo/Redo and reopening
 exported JSON. The basic format check alone is not evidence of native rendering.
 
+Saved evidence includes the [complete terrain overview](../../docs/maps/mount-dora/overview.png)
+and actual native workshop views of [downtown C03](../../docs/maps/mount-dora/native-C03.png),
+[shoreline C05](../../docs/maps/mount-dora/native-C05.png) and [boundary A01](../../docs/maps/mount-dora/native-A01.png).
+The browser receipt in `workshop/review/native-town.json` records the exact project
+and sector hashes, supported editing, Undo/Redo, export/reopen and helper cleanup.
+
 ## Editor findings
 
 The [workshop feedback](../../docs/maps/mount-dora-editor-feedback.json) separates

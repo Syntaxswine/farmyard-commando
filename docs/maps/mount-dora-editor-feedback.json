@@ -130,10 +130,22 @@
   "proposals": "maps/mount-dora/workshop/project-proposal.md",
   "finalSource": {
     "projectId": "mount-dora-downtown",
-    "projectSha256": "b0be9d50d045f919b0187513c5c4dbee9643bcdb3f3ee89f6555cfafd6485680",
+    "projectSha256": "3f3ccfb3fe1f7e9c0ab02a2a5e46f340ff5d987aba6ac2a9170ff1e10fe6dd2a",
     "sourceDigest": "2b742d1768425de6a41a60818a0d2fd3a72b71f1969de94a50ff9041ce216193",
-    "architectBaseCommit": "bdaec47",
-    "sectorHashes": "maps/mount-dora/workshop/audit.json"
+    "architectBaseCommit": "8dc6f70",
+    "sectorHashes": "maps/mount-dora/workshop/audit.json",
+    "generationVersion": 2,
+    "sportsCorrection": {
+      "changedSectors": [
+        "B02",
+        "B04",
+        "C02",
+        "F02",
+        "F06"
+      ],
+      "props": 391,
+      "policy": "No seeded vegetation on mapped pitches; declared plain hard-court surface proxies, with original source tags retained."
+    }
   },
   "results": {
     "geographicFiles": 42,

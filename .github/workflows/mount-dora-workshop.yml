@@ -5,6 +5,9 @@ on:
     paths:
       - 'maps/mount-dora/**'
       - 'tools/*mount-dora-workshop.mjs'
+      - 'tools/maps/**'
+      - 'tests/maps/**'
+      - 'sites/tactical-animal/tools/build.mjs'
       - '.github/workflows/mount-dora-workshop.yml'
       - 'docs/maps/mount-dora*'
 permissions:
@@ -26,6 +29,12 @@ jobs:
           node-version: '24'
       - name: Check the atlas model
         run: node --test maps/mount-dora/workshop/model.test.mjs
+      - name: Reproduce and check the geographic base
+        if: ${{ hashFiles('maps/mount-dora/project.json') != '' }}
+        run: |
+          python3 -B tools/maps/build-mount-dora.py --check
+          python3 -B -m unittest discover -s tests/maps -p 'test_*.py' -v
+          node tests/maps/validate-native-baseline.mjs
       - name: Check out the public workshop at its reviewed immutable commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:

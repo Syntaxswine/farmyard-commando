@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import * as game from '../dist/solo-game.js';
+import * as tourActivity from '../dist/mount-dora-activity.js';
+import * as tourProgress from '../dist/mount-dora-progress.js';
 import * as controls from '../dist/mobile-controls.js';
 import * as grenadeControls from '../dist/grenade-controls.js';
 import * as shootingControls from '../dist/shooting-controls.js';
@@ -12,7 +14,7 @@ import {createOperationStorage} from '../dist/operation-storage.js';
 import {STANCE_ICONS} from '../dist/aft/tactics/battle-control-icons.js';
 
 // Actual application handlers and simulation with a lightweight DOM/renderer.
-export function app({autoDeploy=true,initialStorage=[],storageFailure=null}={}){
+export function app({autoDeploy=true,initialStorage=[],storageFailure=null,search=''}={}){
   const elements=new Map(),events=new Map(),saved=new Map(initialStorage),views=[];let animation,clock=0;
   class Element {
     constructor(id=''){
@@ -26,6 +28,7 @@ export function app({autoDeploy=true,initialStorage=[],storageFailure=null}={}){
     append(...children){this.children.push(...children);}
     prepend(...children){this.children.unshift(...children);}
     closest(){return null;}
+    getContext(){return {fillRect(){},drawImage(){}};}
     getBoundingClientRect(){return {left:100,top:600,width:155,height:155,bottom:755};}
     setPointerCapture(id){this.captures.add(id);}
     hasPointerCapture(id){return this.captures.has(id);}
@@ -51,7 +54,7 @@ export function app({autoDeploy=true,initialStorage=[],storageFailure=null}={}){
     route(){} center(){} sync(){} dispose(){this.disposed=true;this.aiming=false;}
   }
   if(!saved.has('tactical-animal-build-v1'))saved.set('tactical-animal-build-v1',JSON.stringify({...game.DEFAULT_BUILD,utility:'grenade'}));
-  const context={...game,...controls,...grenadeControls,...flameControls,...shootingControls,...guardAlerts,createTargetMonitor:(...args)=>targetMonitor.createTargetMonitor(...args,doc),selectInteractionTarget,createOperationStorage,STANCE_ICONS,weaponArtwork:()=>new Element(),FieldView,drawMinimap(){},document:doc,localStorage:{getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)},setTimeout,clearTimeout,performance:{now:()=>0},requestAnimationFrame:fn=>animation=fn,innerHeight:844,addEventListener:(name,fn)=>events.set(name,fn),console};
+  const context={...game,...tourActivity,...tourProgress,URL,URLSearchParams,AbortController,Image:class {complete=false;naturalWidth=0;},location:{search},__appModuleURL:new URL('../dist/app.js',import.meta.url).href,...controls,...grenadeControls,...flameControls,...shootingControls,...guardAlerts,createTargetMonitor:(...args)=>targetMonitor.createTargetMonitor(...args,doc),selectInteractionTarget,createOperationStorage,STANCE_ICONS,weaponArtwork:()=>new Element(),FieldView,drawMinimap(){},document:doc,localStorage:{getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)},setTimeout,clearTimeout,performance:{now:()=>0},requestAnimationFrame:fn=>animation=fn,innerHeight:844,addEventListener:(name,fn)=>events.set(name,fn),console};
   context.window={get localStorage(){return context.localStorage;}};
   if(storageFailure){
     const blocked=()=>{throw Object.assign(new Error('Storage access is denied.'),{name:'SecurityError'});};
@@ -60,7 +63,12 @@ export function app({autoDeploy=true,initialStorage=[],storageFailure=null}={}){
     // getItem or setItem is ever called. Exercise that exact startup boundary.
     Object.defineProperty(context,'localStorage',{get:storageFailure==='denied'?blocked:()=>backend});
   }
-  vm.runInNewContext(fs.readFileSync(new URL('../dist/app.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,''),context);
+  // Preserve the production module URL while executing actual handlers in this
+  // controlled VM. Read-only diagnostics remain ordinary local functions here.
+  const application=fs.readFileSync(new URL('../dist/app.js',import.meta.url),'utf8')
+    .replace(/^import .*;\r?\n/gm,'').replaceAll('import.meta.url','__appModuleURL')
+    .replace(/^export (?=(?:async )?function )/gm,'');
+  vm.runInNewContext(application,context);
   if(autoDeploy)el('deploy').click();
   const key=(name,type='keydown')=>events.get(type)({key:name,target:{tagName:'BODY',closest:()=>null},preventDefault(){},repeat:false});
   const advance=(count=1)=>{for(let i=0;i<count;i++){clock=Math.max(clock,views.at(-1).state.elapsed*1000)+50;animation(clock);}};

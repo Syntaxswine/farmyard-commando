@@ -1,5 +1,12 @@
 # Mount Dora landmark art
 
+## Production integration
+
+The [production kit contract](production.md) supplies exact-footprint town
+placements, bounded native meshes and matching movement-solid records. The
+original gallery below remains the preserved authoring reference. The architect
+owns the final playable-tour integration and route checks.
+
 This authoring sidecar targets Nautilus workshop **2502646482218524fd5129641da769bb82462e4d**. It is separate from Coldwell and guard work, uses released Farmyard **251bf8094b5f9ebe44208443084c1a6d6658512a**, and changes no game/engine pin. The architect owns projection, terrain, footprints, shoreline, sectors, integration and promotion.
 
 ## Early manifest contract

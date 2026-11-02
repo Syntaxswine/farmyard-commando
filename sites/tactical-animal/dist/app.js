@@ -1,3 +1,5 @@
+import {TOUR_ID,TOUR_ACTIVITY,isTour,getTourWorld} from './mount-dora-activity.js';
+import {TOUR_SAVE,readTourProgress} from './mount-dora-progress.js';
 import {ANIMALS,PRIMARY,SECONDARY,DEFAULT_BUILD,MISSIONS,DEFAULT_MISSION_ID,getMission,missionForState,missionMap,objectiveSecured,missionDestination,Core,normalizeBuild,buildStats,createSoloGame,hero,interaction,interact,dressing,tick,encodeSave,decodeSave,distance} from './solo-game.js';
 import {FieldView,drawMinimap} from './field-view.js';
 import {cycleStep,nextCameraFocus,bindPressHold} from './mobile-controls.js';
@@ -11,7 +13,60 @@ import {createTargetMonitor} from './targeting-monitor.js';
 import {createOperationStorage} from './operation-storage.js';
 import {GuardContactTracker,GuardAlertIndicator} from './guard-alert.js';
 const $=id=>document.getElementById(id);
+const ACTIVITIES=[...MISSIONS,TOUR_ACTIVITY];
 let selectedMissionId=DEFAULT_MISSION_ID;
+
+let tourMemorySave=null,tourLaunchAbort=null,tourLaunchGeneration=0,tourTransit=false,tourArtError=null,tourPreview=null;
+function drawTourPreparation(){
+  const canvas=$('mission-preview'),ctx=canvas.getContext('2d');ctx.fillStyle='#17241e';ctx.fillRect(0,0,canvas.width,canvas.height);
+  if(!tourPreview){tourPreview=new Image();tourPreview.onload=()=>{if(selectedMissionId===TOUR_ID)drawTourPreparation();};tourPreview.src=new URL('./maps/mount-dora/atlas.svg',import.meta.url).href;}
+  if(tourPreview.complete&&tourPreview.naturalWidth){const scale=Math.min(canvas.width/1440,canvas.height/1680),w=1440*scale,h=1680*scale;ctx.drawImage(tourPreview,(canvas.width-w)/2,(canvas.height-h)/2,w,h);}
+}
+async function launchTour({resume=false,progress=null}={}){
+  const generation=++tourLaunchGeneration;tourLaunchAbort?.abort();const controller=new AbortController();tourLaunchAbort=controller;
+  const selectedBuild=normalizeBuild(build);$('deploy').disabled=$('resume').disabled=true;$('tour-launch-status').hidden=false;$('tour-launch-status').textContent='Loading Mount Dora…';
+  try{
+    const saved=progress||(resume?readTourProgress(tourMemorySave||window.localStorage.getItem(TOUR_SAVE)):null);
+    if(state)storage.write();view?.dispose();view=null;getTourWorld(state)?.dispose();active=false;paused=false;
+    $('battle').hidden=true;$('prep').hidden=false;document.body.classList.remove('in-battle');
+    const {loadTownTour}=await import('./mount-dora-entry.js');
+    const next=await loadTownTour({build:selectedBuild,progress:saved,signal:controller.signal});
+    if(generation!==tourLaunchGeneration||controller.signal.aborted){getTourWorld(next)?.dispose();return;}
+    tourArtError=null;start(next,{resume:!!saved});$('tour-launch-status').hidden=true;
+  }catch(error){
+    if(error.name!=='AbortError'&&generation===tourLaunchGeneration){$('tour-launch-status').textContent='Could not enter the town. '+error.message+' Choose Start or Resume to retry.';toast('Could not enter Mount Dora. '+error.message);}
+  }finally{if(generation===tourLaunchGeneration){tourLaunchAbort=null;$('deploy').disabled=$('resume').disabled=false;}}
+}
+function renderTourStatus(){
+  const world=getTourWorld(state);if(!world){$('tour-stream-status').hidden=true;return;}
+  const status=world.status(),failed=status.failed.filter(s=>world.pinned.has(s.id)),loading=status.loading.filter(id=>world.pinned.has(id));
+  $('tour-stream-status').hidden=!tourArtError&&!failed.length&&!loading.length;
+  $('tour-stream-copy').textContent=tourArtError?'Town artwork could not load. Retry to continue.':failed.length?'Nearby streets could not load. Your animal stays on loaded ground.':'Loading nearby streets…';
+  $('tour-retry').hidden=!tourArtError&&!failed.length;$('tour-retry').disabled=tourTransit;
+}
+$('tour-retry').onclick=()=>{if(!isTour(state))return;if(tourArtError){const progress=readTourProgress(encodeSave(state));launchTour({progress});}else getTourWorld(state).retry();};
+function tourMenu(){
+  storage.write();const u=hero(state);
+  showDialog('<p class="eyebrow">MOUNT DORA / WALKING TOUR</p><h2>Explore the town.</h2><p>'+safe(u.name)+' · '+short(u.weapon)+'<br>'+Math.round(state.solo.distance)+' metres walked. No combat or extraction requirements.</p>',[
+    ['Continue walking',()=>{},'primary'],['Visit landmark',tourVisits],['Inventory & equipment',equipment],['Tour notes',tourNotes],['Controls',help],
+    ['Choose animal or operation',backToPrep],['Title screen',()=>{storage.write();location.assign('./');}],['Start a new walking tour',()=>launchTour()]
+  ]);
+}
+async function tourVisits(){
+  const {TOUR_VISITS}=await import('./mount-dora-entry.js');
+  showDialog('<p class="eyebrow">MOUNT DORA</p><h2>Visit a landmark.</h2><p>Move directly to a cleared approach. You can also walk there continuously along streets and supported paths.</p>',[
+    ...TOUR_VISITS.map(v=>[v.name,()=>travelToLandmark(v.id)]),['Back to tour menu',tourMenu]
+  ]);
+}
+async function travelToLandmark(id){
+  const current=state;if(!isTour(current)||tourTransit)return;
+  tourTransit=true;paused=true;resetStick();keys.clear();Core.stop(current);$('loading').hidden=false;$('loading').textContent='Loading the landmark approach…';
+  try{const {visitTownLandmark}=await import('./mount-dora-entry.js');await visitTownLandmark(current,id);if(state===current&&active){view.center();view.zoom(Math.max(1,24/view.requestedSpan));storage.write();}}
+  catch(error){if(state===current&&active)toast(error.message.includes('obstructed')?error.message:'Could not load that landmark approach. Your animal has stayed here. Choose the landmark again to retry.');}
+  finally{if(state===current){tourTransit=false;paused=false;$('loading').textContent='Preparing the town…';view?.reportLoading();lastTime=performance.now();renderBattle();}}
+}
+function tourNotes(){showDialog('<p class="eyebrow">MOUNT DORA</p><h2>Walking tour.</h2><p>Explore the streets, parks and lakefront. Water is impassable except for mapped supported routes. Closed buildings remain closed; the town is a source-based exterior approximation.</p><p>'+Math.round(state.solo.distance)+' metres walked. Your animal, equipment, resources and explored area have their own tour save.</p><p>Map data © OpenStreetMap contributors, ODbL 1.0.</p>',[['Back to tour menu',tourMenu],['Continue walking',()=>{},'primary']]);}
+
 let build={...DEFAULT_BUILD},state=null,view=null,active=false,paused=false,selected=null,aim='hip',zone='torso',burst=false,contextKey='',lastTime=0,lastUI=0,lastSave=0,lastPhase='',stick={x:0,y:0},stickPointer=null,resultShown=false,aimViewport=null;
 const grenadeAim=new GrenadeAim();
 const flameAim=new FlameAim(),aiming=()=>grenadeAim.active||flameAim.active;
@@ -29,21 +84,24 @@ const poseIcon=value=>STANCE_ICONS[value]?.replace('<svg ','<svg class="original
 let loadoutChoices=null;
 // Resolve the browser's storage getter only inside the handled read/write paths:
 // privacy settings can deny access to the property itself during startup.
-const operationStorage=createOperationStorage({getItem:key=>window.localStorage.getItem(key),setItem:(key,value)=>window.localStorage.setItem(key,value)},{normalizeBuild,encodeSave,decodeSave});
-const preparationBuilds=Object.fromEntries(MISSIONS.map(mission=>[mission.id,{...DEFAULT_BUILD}]));
+const operationStorage=createOperationStorage({getItem:key=>window.localStorage.getItem(key),setItem:(key,value)=>window.localStorage.setItem(key,value)},{normalizeBuild,encodeSave,decodeSave,missions:ACTIVITIES});
+const preparationBuilds=Object.fromEntries(ACTIVITIES.map(mission=>[mission.id,{...DEFAULT_BUILD}]));
 try{const preferences=operationStorage.preferences();selectedMissionId=preferences.selectedMissionId;Object.assign(preparationBuilds,preferences.builds);build=normalizeBuild(preparationBuilds[selectedMissionId]);}catch(error){toast('Could not read preparation. You can still choose an operation and play in this tab.');}
+// An explicit tour link selects preparation only; it never deploys/resumes or writes operation state.
+if(new URLSearchParams(location.search).get('activity')===TOUR_ID){selectedMissionId=TOUR_ID;build=normalizeBuild(preparationBuilds[TOUR_ID]);}
 function storageWriteFailure(subject,error){const reason=error?.name==='QuotaExceededError'?'Device storage is full.':error?.name==='SecurityError'?'Browser storage is blocked.':'Browser storage could not be written.';toast(`${reason} Could not save ${subject}. Keep this tab open to retain your changes.`);}
-const storage={read(){return operationStorage.read(selectedMissionId);},write(){if(!state)return;try{operationStorage.write(state);}catch(error){storageWriteFailure('operation progress',error);}}};
+const storage={read(){return selectedMissionId===TOUR_ID?tourMemorySave||window.localStorage.getItem(TOUR_SAVE):operationStorage.read(selectedMissionId);},write(){if(!state)return;try{if(isTour(state)){tourMemorySave=encodeSave(state);window.localStorage.setItem(TOUR_SAVE,tourMemorySave);}else operationStorage.write(state);}catch(error){storageWriteFailure(isTour(state)?'tour progress':'operation progress',error);}}};
 const speciesLabel=s=>s.replaceAll('-',' '),short=k=>Core.WEAPONS[k].short;
 function button(parent,label,cls,pressed,onClick){const b=document.createElement('button');b.type='button';b.className=cls;b.innerHTML=label;b.setAttribute('aria-pressed',String(pressed));b.onclick=onClick;parent.append(b);return b;}
 function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,4000);}
 function renderMissionPreparation(){
-  const mission=getMission(selectedMissionId),index=MISSIONS.indexOf(mission)+1;
-  $('operation-select').innerHTML=MISSIONS.map(m=>`<option value="${m.id}">${safe(m.title)}</option>`).join('');$('operation-select').value=mission.id;
-  $('operation-number').textContent='OP. '+String(index).padStart(3,'0');$('mission-location').textContent=mission.location;
+  const mission=getMission(selectedMissionId),index=ACTIVITIES.indexOf(mission)+1;
+  $('operation-select').innerHTML=ACTIVITIES.map(m=>`<option value="${m.id}">${safe(m.title)}</option>`).join('');$('operation-select').value=mission.id;
+  $('operation-number').textContent=mission.exploration?'WALKING TOUR':'OP. '+String(index).padStart(3,'0');$('mission-location').textContent=mission.location;
   $('mission-heading').textContent=mission.title;$('briefing-text').textContent=mission.briefing;
   $('mission-steps').innerHTML=mission.steps.map((step,i)=>`<li><b>${String(i+1).padStart(2,'0')}</b> ${safe(step)}</li>`).join('');
   $('deploy').setAttribute('aria-label','Deploy solo: '+mission.title);
+  if(mission.exploration){drawTourPreparation();$('mission-preview').setAttribute('aria-label','Mount Dora town overview. The walking tour starts near Donnelly Park.');return;}
   const map=missionMap(mission.id),seen=new Set(),bounds=mission.briefingBounds||map.worldBounds||{x:1,y:1,w:map.terrain[0].length-2,h:map.terrain.length-2};
   for(let y=bounds.y;y<bounds.y+bounds.h;y++)for(let x=bounds.x;x<bounds.x+bounds.w;x++)seen.add(Core.key(x,y));
   drawMinimap($('mission-preview'),{...map,worldBounds:bounds,map:map.terrain,seen,detected:new Set(),units:[{id:0,team:'squad',hp:1,...mission.spawn}],solo:{missionId:mission.id,layoutVersion:mission.layoutVersion??1,objectives:{}}});
@@ -59,14 +117,15 @@ function renderPrep(){renderMissionPreparation();const p=ANIMALS.find(a=>a.id===
   $('utility').replaceChildren();for(const [k,label,detail] of [['dressing','Field dressing','×2'],['grenade','Frag grenades','×3']])button($('utility'),`<span>${label}</span><small>${detail}</small>`,'small-choice',k===build.utility,()=>{build.utility=k;renderPrep();});
   const skill=['hmg','rpg','flamethrower'].includes(build.primary)?'heavyWeapons':'firearms';$('primary-summary').textContent=`${skill==='firearms'?'FIREARMS':'HEAVY WEAPONS'} ${p.stats[skill]}`;$('equipment-note').textContent=`${Core.WEAPONS[build.primary].name}. ${p.name}'s ${skill==='firearms'?'firearms':'heavy weapons'} skill: ${p.stats[skill]}/100. Movement spends AP by distance, with no tile snapping.`;$('build-summary').textContent=`${p.name} / ${speciesLabel(p.species)} · ${short(build.primary)} + ${short(build.secondary)}`;
   try{
-    const text=storage.read(),saved=text?JSON.parse(text):null,mission=getMission(selectedMissionId),previous=saved?.solo.status==='active'&&(saved.solo.layoutVersion??1)!==(mission.layoutVersion??1);
-    $('resume').hidden=!saved||saved.solo.status!=='active';$('resume').textContent=previous?'Resume previous checkpoint ↗':'Resume '+mission.title+' ↗';
+    const text=storage.read(),saved=text?JSON.parse(text):null,mission=getMission(selectedMissionId),previous=saved?.solo?.status==='active'&&(saved.solo.layoutVersion??1)!==(mission.layoutVersion??1);
+    $('resume').hidden=mission.exploration?!saved:!saved||saved.solo.status!=='active';$('resume').textContent=mission.exploration?'Resume walking tour ↗':previous?'Resume previous checkpoint ↗':'Resume '+mission.title+' ↗';
     if(previous)$('briefing-text').textContent+=' Your save uses the previous checkpoint. Deploy Solo starts the new approach map; Resume keeps your existing progress.';
   }catch(error){$('resume').hidden=true;toast('Could not read saved operations. You can still deploy and play in this tab.');}
   preparationBuilds[selectedMissionId]=normalizeBuild(build);
   try{operationStorage.savePreparation(selectedMissionId,build);}catch(error){storageWriteFailure('preparation changes',error);}
 }
 $('operation-select').onchange=()=>{
+  tourLaunchAbort?.abort();$('tour-launch-status').hidden=true;
   try{selectedMissionId=getMission($('operation-select').value).id;build=normalizeBuild(preparationBuilds[selectedMissionId]);renderPrep();}catch(error){toast(error.message);}
 };
 $('interaction-icon').append(weaponArtwork('hands',25));
@@ -104,14 +163,14 @@ function grenadeViewport(){
 function start(s,{resume=false}={}){try{
   if(state&&state!==s)storage.write();cancelAreaAim();resetStick();keys.clear();if(picker.open)closePicker();
   guardAlert.stop();guardContacts.reset([...(Array.isArray(s.solo.spottedGuardIds)?s.solo.spottedGuardIds:[]),...(resume?Core.visibleOpponents(s).map(guard=>guard.id):[])]);s.solo.spottedGuardIds=guardContacts.ids();
-  view?.dispose();$('loading').textContent='Preparing the field…';$('loading').hidden=false;state=s;selectedMissionId=s.solo.missionId;build=normalizeBuild(s.solo.build);Core.stop(s);delete s.effect;
+  view?.dispose();if(state!==s)getTourWorld(state)?.dispose();tourArtError=null;$('loading').textContent=isTour(s)?'Preparing the town…':'Preparing the field…';$('loading').hidden=false;state=s;selectedMissionId=s.solo.missionId;build=normalizeBuild(s.solo.build);Core.stop(s);delete s.effect;
   selected=null;interactionFocus=null;handTarget=null;grenadeAim.cancel();flameAim.cancel();lastHeldWeapon=hero(s).weapon;areaPress=false;aimViewport=null;contextKey='';resultShown=false;stanceDirection=1;movementDirection=-1;aim='hip';zone='torso';burst=false;
   $('prep').hidden=true;$('battle').hidden=false;document.body.classList.add('in-battle');active=true;paused=false;
-  view=new FieldView($('viewport'),{onPick:pick,getAimViewport:grenadeViewport,onLoading:busy=>{$('loading').hidden=!busy;},onError:message=>{$('loading').hidden=false;$('loading').textContent='Animal artwork could not load. '+message;}});
+  view=new FieldView($('viewport'),{onPick:pick,getAimViewport:grenadeViewport,onLoading:busy=>{$('loading').hidden=!busy;},onError:message=>{if(isTour(state))tourArtError=message;$('loading').hidden=false;$('loading').textContent='Animal artwork could not load. '+message;}});
   view.setGame(state);lastPhase=state.phase;lastTime=performance.now();lastUI=0;lastSave=lastTime;renderBattle();storage.write();
 }catch(error){active=false;view?.dispose();view=null;$('prep').hidden=false;$('battle').hidden=true;document.body.classList.remove('in-battle');toast('Cannot start 3D view: '+error.message);}}
-function backToPrep(){cancelAreaAim();resetStick();keys.clear();Core.stop(state);storage.write();guardAlert.stop();active=false;view?.dispose();view=null;$('battle').hidden=true;$('prep').hidden=false;document.body.classList.remove('in-battle');renderPrep();}
-$('deploy').onclick=()=>start(createSoloGame(build,1947,selectedMissionId));$('resume').onclick=()=>{try{const s=operationStorage.load(selectedMissionId);if(s.solo.status!=='active'){toast('That operation has ended. Deploy a new animal to begin again.');return;}start(s,{resume:true});}catch(error){toast('Could not resume: '+error.message);}};
+function backToPrep(){cancelAreaAim();resetStick();keys.clear();Core.stop(state);storage.write();guardAlert.stop();active=false;view?.dispose();view=null;getTourWorld(state)?.dispose();$('battle').hidden=true;$('prep').hidden=false;document.body.classList.remove('in-battle');renderPrep();}
+$('deploy').onclick=()=>selectedMissionId===TOUR_ID?launchTour():start(createSoloGame(build,1947,selectedMissionId));$('resume').onclick=()=>{if(selectedMissionId===TOUR_ID){launchTour({resume:true});return;}try{const s=operationStorage.load(selectedMissionId);if(s.solo.status!=='active'){toast('That operation has ended. Deploy a new animal to begin again.');return;}start(s,{resume:true});}catch(error){toast('Could not resume: '+error.message);}};
 function positionInteractionHand(){
   const button=$('interaction-hand');
   if(!handTarget||!active||paused||aiming()||!Core.canControl(state,hero(state))||!$('loading').hidden){button.hidden=true;return;}
@@ -194,7 +253,7 @@ function shootingMenu(focusControl='zone-'+zone){
   const u=hero(state),w=Core.WEAPONS[u.weapon];
   showDialog(`<p class="eyebrow">TARGET CONTROL / PAUSED</p><h2>${safe(w.short)}</h2><p class="shooting-resources">${u.ap.toFixed(1)} AP${w.mag?` · ${u.ammo[u.weapon]??0} ROUNDS`:''}</p>`,[],{context:true,mode:'shooting',focusControl});
 }
-function renderContext(focusControl){if(!state)return;const u=hero(state),near=interaction(state),target=selected?.targetId!==undefined?state.units.find(v=>v.id===selected.targetId):null;
+function renderContext(focusControl){if(!state)return;if(isTour(state)){$('context').replaceChildren();return;}const u=hero(state),near=interaction(state),target=selected?.targetId!==undefined?state.units.find(v=>v.id===selected.targetId):null;
   if(target&&(!Core.alive(target)||!state.detected.has(target.id)))selected=null;
   if(target&&selected)aim=availableAim(Core.WEAPONS[u.weapon],u.ap,burst,aim);
   const p=target&&selected&&u.weapon!=='flamethrower'?Core.previewAttack(state,u,target,burst,zone,null,aim):null;
@@ -279,6 +338,7 @@ function renderBattle(){if(!state)return;const u=hero(state),combat=state.phase=
   const nextAction=nextFocus?'View '+nextFocus.name:'Recenter on your animal';
   $('look').setAttribute('aria-label',`${contacts.length} visible opponent${contacts.length===1?'':'s'}. ${viewing}. Next: ${nextAction}.`);
   $('look').title=`${nextAction} · opponents, then your animal`;
+  renderTourStatus();if(isTour(state)){$('turn-label').innerHTML='WALK<br>TOUR';$('end-turn').setAttribute('aria-label','Walking tour. No combat turns.');$('viewport').setAttribute('aria-label','Mount Dora walking tour. Tap ground to walk, drag to look around, or use the movement controls.');}
   drawMinimap($('minimap'),state);renderContext();renderInteractionHand();
   if(state.solo.status!=='active'&&!resultShown){resultShown=true;storage.write();const win=state.solo.status==='extracted',mission=missionForState(state);showDialog(`<p class="eyebrow">${safe(mission.title)} / OPERATION ${win?'COMPLETE':'LOST'}</p><h2>${win?mission.result.title:'One worker down.'}</h2><p>${win?`${u.name} ${mission.result.summary} ${Math.round(state.solo.distance)} metres travelled; ${state.round} combat rounds.`:'The factory kept its secrets this time. Try another animal, another loadout, or a quieter route.'}</p>${win?`<p>${mission.result.epilogue}</p>`:''}`,[['Choose your next operation',backToPrep,'primary'],['Replay this loadout',()=>start(createSoloGame(state.solo.build,1947,state.solo.missionId))]]);}
 }
@@ -307,6 +367,7 @@ function cancelGrenade(){
   grenadeAim.cancel();resetStick();keys.clear();view?.endGrenadeAim();clearAreaReadiness();$('toast').hidden=true;
 }
 function armGrenade(){
+  if(isTour(state)){toast('Firing is unavailable during the walking tour.');return;}
   if(!state||paused||grenadeAim.active||!Core.canControl(state,hero(state)))return;
   const u=hero(state);if(!(u.ammo.grenade>0)||u.ap+1e-7<Core.grenadeCost(u))return;
   cancelFlame();
@@ -321,7 +382,7 @@ function commitGrenade(){
   grenadeAim.cancel();resetStick();keys.clear();view.endGrenadeAim({linger:800});contextKey='';renderBattle();storage.write();
 }
 $('cancel-grenade').onclick=()=>{cancelGrenade();renderBattle();};
-function renderFlameControls(){
+function renderFlameControls(){if(isTour(state)){$('flame-aim').hidden=true;renderAreaButton();return;}
   const u=hero(state),armed=flameAim.active,count=u.ammo.flamethrower||0,p=armed?Core.previewFlame(state,u,flameAim.heading):null;
   $('flame-aim').hidden=!armed;$('battle').classList.toggle('aiming-flame',armed);
   if(!armed){renderAreaButton();return;}
@@ -340,6 +401,7 @@ function cancelFlame(){
 }
 function cancelAreaAim(){cancelGrenade();cancelFlame();clearAreaReadiness();}
 function armFlame(heading){
+  if(isTour(state)){toast('Firing is unavailable during the walking tour.');return;}
   if(!state||paused||flameAim.active)return;
   const u=hero(state),direction=Number.isFinite(heading)?heading:u.heading;
   if(u.weapon==='flamethrower'&&triggerReloadStatus(u).empty&&Core.canControl(state,u)){cancelGrenade();state.solo.areaWeapon='flamethrower';lastHeldWeapon=u.weapon;renderBattle();return;}
@@ -362,7 +424,7 @@ function areaWeapon(){
 }
 function clearAreaReadiness(){const b=$('grenade');b.dataset.ready='false';b.dataset.lit='false';}
 function renderAreaButton(){
-  if(!state)return;
+  if(!state)return;if(isTour(state)){$('grenade').disabled=true;clearAreaReadiness();$('grenade-label').textContent='TOUR';$('grenade-cost').textContent='NO FIRING';$('grenade-count').textContent='';$('grenade').setAttribute('aria-label','Walking tour. Firing is unavailable.');return;}
   const u=hero(state),kind=areaWeapon(),flame=kind==='flamethrower',armed=flame?flameAim.active:grenadeAim.active;
   const count=u.ammo[kind]||0,cost=flame?6:Core.grenadeCost(u),can=Core.canControl(state,u),adjusting=stickPointer!==null||keys.size>0||areaPress;
   const p=flame?Core.previewFlame(state,u,armed?flameAim.heading:u.heading):armed&&grenadeAim.point?Core.previewGrenade(state,u,grenadeAim.point):null;
@@ -466,6 +528,7 @@ function equipment(){
   const u=hero(state),can=Core.canControl(state,u);
   showDialog(`<p class="eyebrow">${u.name.toUpperCase()} / INVENTORY</p><h2>Equipment.</h2><p>${Math.round(u.stamina)} / ${u.maxStamina} stamina · ${u.ap.toFixed(1)} AP remaining.</p>`,[
     ...u.pack.map(i=>{
+      if(i.kind==='grenade'&&isTour(state))return ['Grenades · unavailable in walking tour',()=>{},'',true];
       if(i.kind==='grenade')return [`Select grenades · ${u.ammo.grenade||0} remaining${areaWeapon()==='grenade'?' · active':''}`,()=>selectAreaWeapon('grenade'),'',!can];
       const cost=weaponSwapCost(u,i.kind);
       const label=`${Core.WEAPONS[i.kind].name}${Core.WEAPONS[i.kind].mag?' · '+(u.ammo[i.kind]??0)+' loaded / '+(u.ammoPouch[i.kind]||0)+' reserve':''}${u.weapon===i.kind?' · equipped':cost?' · '+cost+' AP':''}`;
@@ -476,7 +539,7 @@ function equipment(){
   ]);
 }
 function operationMenu(){
-  if(!state)return;
+  if(!state)return;if(isTour(state)){tourMenu();return;}
   storage.write();
   const u=hero(state),w=Core.WEAPONS[u.weapon],can=Core.canControl(state,u),costs=Core.combatCosts(state);
   const other=u.weapon===state.solo.build.primary?state.solo.build.secondary:state.solo.build.primary;
@@ -494,6 +557,7 @@ function operationMenu(){
   ],{context:true});
 }
 function mission(){
+  if(isTour(state)){tourNotes();return;}
   const u=hero(state),near=interaction(state),definition=missionForState(state),secured=objectiveSecured(state),dest=missionDestination(state);
   const safe=text=>String(text).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
   const objective=secured?definition.objective.after:definition.objective.instruction;
@@ -503,7 +567,7 @@ function mission(){
   ]);
 }
 $('menu').onclick=operationMenu;
-function help(){showDialog(`<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br>Your decisions.</h2><ul>
+function help(){if(isTour(state)){showDialog('<p class="eyebrow">WALKING TOUR</p><h2>Walk and inspect.</h2><p>Use the joystick, WASD or arrow keys to move. Tap movement to switch run, walk or sneak. Exhausted running returns to walking.</p><p>Drag the view to pan; use zoom or the eye button to return to your animal. Options → Visit landmark moves you directly to a cleared approach. You can walk across all town sectors continuously.</p><p>Firing is unavailable in this tour. Other operations retain combat.</p>',[['Back to tour menu',tourMenu],['Continue walking',()=>{},'primary']]);return;}showDialog(`<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br>Your decisions.</h2><ul>
   <li>Use the center thumbstick to move freely in any direction. W A S D and arrow keys also work.</li>
   <li>During combat, movement spends AP by the exact distance covered. Stop anywhere. The right buttons are End Turn, your area weapon, then Options.</li>
   <li>Grenade and flamethrower share one button. Hold it to choose which to use, or open Options → Area weapon / Inventory & weapons. Selecting grenades is free and keeps your held weapon. Equipping a flamethrower uses the usual weapon-change cost. The button slowly pulses yellow when a valid aim is held and ready to fire.</li>
@@ -521,7 +585,7 @@ function help(){showDialog(`<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br
   <li>Chests and fallen guards share a loot window with individual Take buttons and Take all. Transfers cost 1 AP in combat, including a bulk transfer. Doors open or close for 1 AP; opening a chest or searching a body costs 2 AP. Exploration interactions are free. A blocked doorway cannot close on an animal.</li>
   <li>Options holds inventory, weapon changes, reloads and treatment, including looted supplies. Find your objective and recent events under Mission & combat log. Use the hand to collect the mission evidence and extract.</li>
   </ul>`,[['Back to menu',operationMenu],['Return to operation',()=>{},'primary']]);}
-$('minimap-button').onclick=()=>{showDialog(`<p class="eyebrow">${safe(missionForState(state).location)} / TACTICAL MAP</p><h2>Find your way.</h2><div class="map-metal-frame map-expanded-frame"><canvas id="large-map" width="760" height="560" aria-label="Tactical map"></canvas></div><p>Cream: your animal. Orange: the objective and visible guards. Green: extraction. Dark areas remain unexplored.</p>`,[['Return to operation',()=>{},'primary']]);drawMinimap($('large-map'),state);};
+$('minimap-button').onclick=()=>{if(isTour(state)){showDialog('<p class="eyebrow">MOUNT DORA</p><h2>Town map.</h2><div class="map-metal-frame map-expanded-frame"><canvas id="large-map" width="760" height="560" aria-label="Mount Dora geographic overview"></canvas></div><p>Cream marks your animal. Water and closed buildings block walking; supported mapped paths remain open.</p>',[['Continue walking',()=>{},'primary']]);drawMinimap($('large-map'),state);return;}showDialog(`<p class="eyebrow">${safe(missionForState(state).location)} / TACTICAL MAP</p><h2>Find your way.</h2><div class="map-metal-frame map-expanded-frame"><canvas id="large-map" width="760" height="560" aria-label="Tactical map"></canvas></div><p>Cream: your animal. Orange: the objective and visible guards. Green: extraction. Dark areas remain unexplored.</p>`,[['Return to operation',()=>{},'primary']]);drawMinimap($('large-map'),state);};
 function resetStick(){const pointer=stickPointer;stickPointer=null;if(pointer!==null&&$('joystick').hasPointerCapture(pointer))$('joystick').releasePointerCapture(pointer);stick={x:0,y:0};$('stick-knob').style.transform='translate(-50%,-50%)';}
 function updateStick(e){
   const r=$('joystick').getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,limit=r.width*.3,n=Math.hypot(dx,dy),scale=Math.min(1,limit/Math.max(1,n));
@@ -547,7 +611,7 @@ addEventListener('keyup',e=>{keys.delete(e.key.toLowerCase());if(grenadeAim.acti
 addEventListener('blur',()=>{areaPress=false;resetStick();keys.clear();clearAreaReadiness();guardAlert.stop();});document.addEventListener('visibilitychange',()=>{areaPress=false;resetStick();keys.clear();if(document.hidden){clearAreaReadiness();guardAlert.stop();storage.write();}lastTime=performance.now();});addEventListener('pagehide',event=>{storage.write();guardAlert.stop();if(!event.persisted)void guardAlert.dispose();});
 function frame(now){
   requestAnimationFrame(frame);const dt=Math.min(.05,Math.max(0,(now-lastTime)/1000));lastTime=now;if(!active||!view)return;
-  if(!paused&&!document.hidden){
+  if(!paused&&!document.hidden&&(!isTour(state)||view.art?.readyForMovement)){
     let x=stick.x,y=stick.y;if(keys.size){x=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0);y=(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);}
     const n=Math.max(1,Math.hypot(x,y));x/=n;y/=n;
     if(aiming()){
@@ -565,3 +629,14 @@ function frame(now){
   view.sync(state,now);positionInteractionHand();if(now-lastUI>100){renderBattle();lastUI=now;}
 }
 renderPrep();requestAnimationFrame(frame);
+
+// Read-only production diagnostics used by native acceptance; no state mutation or test teleports.
+export function inspectMountDora(){
+  const world=getTourWorld(state);if(!world)return {active,missionId:state?.solo?.missionId||null,touring:false};
+  const u=hero(state),actor=view?.actors.get(u.id);let actorMeshes=0,actorVertices=0;actor?.root.traverse(o=>{if(o.isMesh){actorMeshes++;actorVertices+=o.geometry?.attributes?.position?.count||0;}});
+  return {active,paused,touring:true,ready:!!view?.art?.readyForMovement&&!view?.pending.size&&!view?.failed.size,phase:state.phase,sourceRevision:world.sourceRevision,artRevision:world.artRevision,
+    player:{x:u.x,y:u.y,ground:world.tile(Math.round(u.x),Math.round(u.y)),name:u.name,species:u.species,weapon:u.weapon,stance:u.stance,running:u.running,stamina:u.stamina,hp:u.hp,ammo:{...u.ammo}},distance:state.solo.distance,explored:state.seen.size,
+    source:{...world.status(),stats:{...world.stats}},render:view?.art?.metrics()||null,actor:{visible:!!actor?.root.visible,meshes:actorMeshes,vertices:actorVertices},
+    memory:view?{geometries:view.renderer.info.memory.geometries,textures:view.renderer.info.memory.textures,programs:view.renderer.info.programs.length,shaderFailures:view.renderer.info.programs.filter(p=>p.diagnostics?.runnable===false).length}:null,artError:tourArtError};
+}
+export function projectMountDoraTownPoint(point){if(!isTour(state)||!view)return null;return view.projectWorldPoint({x:point[0]-.5,y:point[1]-.5,h:point[2]||0});}

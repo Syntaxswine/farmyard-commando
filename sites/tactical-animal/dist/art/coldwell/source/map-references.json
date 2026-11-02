@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "authorship": "Original fictional surface arrangement; existing silo source and standard native assets retained.",
+  "engine": {
+    "tag": "v0.8.0",
+    "commit": "8c4670450cb2b38c1e1abd811d633c22de9e2b7c",
+    "url": "https://github.com/Syntaxswine/nautilus-engine/tree/v0.8.0"
+  },
+  "silo": {
+    "commit": "3b9d4004a7e51e5d345cded068fc46eab2f320a2",
+    "archive": "coldwell-silo-v1.zip",
+    "sha256": "b489bb7439a22746281eb2dcc052cd124cc77917a9c00aeaa4c02ee5f1db873f",
+    "sourceNotices": "art/silo/NOTICE.md inside unchanged archive",
+    "atlasSHA256": "b608de7d0a6312ca32739624aaea4ad201930d32d0bb73172d65b6a42d47cb61"
+  },
+  "nativeKit": {
+    "tileM": 1,
+    "wallHeightM": 2,
+    "slabM": 0.12,
+    "floorIntervalM": 2.12,
+    "metresPerUnit": 1
+  },
+  "surface": {
+    "seed": 841902,
+    "trees": 78,
+    "rooms": "Gatehouse 6×4 m, workshop 12×8 m, utilities 8×6 m, existing access kiosk 5×6 m; all preserve native scale.",
+    "landscape": "Fictional compound, not a measured historical exterior.",
+    "newRasterAssets": 0
+  },
+  "sourceClosure": "docs/reviews/coldwell-map/compatibility.json records released-validator hashes and immutable Farmyard audit-only closure; no donor working-tree imports.",
+  "receiver": {
+    "game": "Farmyard Commando",
+    "observedCommit": "3a557bf743e5c5bb9728a3bee835ce85765c721a",
+    "adoption": "Pending owner confirmation and required feature bindings; no consumer pin changes."
+  },
+  "notice": "art/coldwell-map/NOTICE.md"
+}

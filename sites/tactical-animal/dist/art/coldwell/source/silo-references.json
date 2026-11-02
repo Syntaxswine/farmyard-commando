@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "asset": "coldwell-complex",
+  "name": "Coldwell Silo",
+  "scope": "Original modular architecture and inert display art. Architectural massing and circulation reference, not an as-built reconstruction.",
+  "research": [
+    {
+      "id": "nps-titan-ii",
+      "title": "Titan II Missile Museum National Historic Landmark nomination",
+      "url": "https://npgallery.nps.gov/NRHP/GetAsset/NHLS/92001234_text",
+      "bytes": 663878,
+      "sha256": "dd7df5261a14c636a257b77dffbfe3e117ad84722588a323a5017d255bd7a0cb",
+      "pagesOneBased": [
+        5,
+        6,
+        25
+      ],
+      "figure": "Figure 3, side elevation and blast-lock plan, credited David K. Stumpf 1993; the long cableway is explicitly shortened.",
+      "inspection": "Text and rendered figure inspected. Use textual cableway dimensions; do not scale the shortened diagram.",
+      "rights": "Reference-only mixed-authorship PDF. Original PDF and page pixels are excluded from Git, runtime assets and delivery ZIP. No rights in those drawings are asserted."
+    }
+  ],
+  "dimensions": [
+    {
+      "quantity": "outer silo diameter",
+      "source": {
+        "value": 55,
+        "unit": "ft",
+        "metres": 16.764
+      },
+      "adaptedMetres": 17,
+      "method": "whole metre"
+    },
+    {
+      "quantity": "central silo void diameter",
+      "source": {
+        "value": 26.5,
+        "unit": "ft",
+        "metres": 8.0772
+      },
+      "adaptedMetres": 8,
+      "method": "whole metre"
+    },
+    {
+      "quantity": "control capsule outside diameter",
+      "source": {
+        "value": 41,
+        "unit": "ft",
+        "metres": 12.4968
+      },
+      "adaptedMetres": 12,
+      "method": "nearest whole metre; not 13"
+    },
+    {
+      "quantity": "cableway clear diameter",
+      "source": {
+        "value": 9.5,
+        "unit": "ft",
+        "metres": 2.8956
+      },
+      "adaptedMetres": 3,
+      "method": "whole metre"
+    },
+    {
+      "quantity": "long cableway",
+      "source": {
+        "value": 205,
+        "unit": "ft",
+        "metres": 62.484
+      },
+      "adaptedMetres": 62,
+      "method": "nominal between outer thresholds; native wall joining extensions separate"
+    },
+    {
+      "quantity": "short cableway",
+      "source": {
+        "value": 45,
+        "unit": "ft",
+        "metres": 13.716
+      },
+      "adaptedMetres": 14,
+      "method": "nominal between outer thresholds; native wall joining extensions separate"
+    },
+    {
+      "quantity": "silo depth",
+      "source": {
+        "value": 153.5,
+        "unit": "ft",
+        "metres": 46.7868
+      },
+      "adaptedMetres": 46.64,
+      "method": "22 intervals of 2.12 m"
+    },
+    {
+      "quantity": "access descent",
+      "source": {
+        "value": 35,
+        "unit": "ft",
+        "metres": 10.668
+      },
+      "adaptedMetres": 10.6,
+      "method": "5 intervals of 2.12 m"
+    }
+  ],
+  "originalChoices": [
+    "1 m structural annulus gives a 15 m clear silo interior and 10 m clear capsule interior.",
+    "Eight equipment decks at indices 0,2,5,8,11,14,17,20; exact heights adapted to grid.",
+    "Three main capsule decks at 15,17,19; 4.24 m double intervals.",
+    "4 by 3 m repeated switchback stairs, 12 risers per 2.12 m; portal has 60 instead of the documented 55 risers.",
+    "9 by 9 m dogleg lock and 5 by 6 m access portal; room partitions, circulation and prop layouts original.",
+    "Service bridges, sliding cover, furniture, facade details and surface stair well are original game interpretations.",
+    "Native signed Y preserved. Deepest plate translated to nonnegative world h=0 using separate metadata.",
+    "Annular walls and clipped cells are explicit custom geometry; no invented exact collision AABBs."
+  ],
+  "codeLineage": [
+    {
+      "commit": "65c06735396e14b8774ae1e7d5ad61969692963f",
+      "path": "packages/fort-variants/geometry.js",
+      "bytes": 7262,
+      "sha256": "4eb54fb6b0ad2da99e8ca406cd7873c61c1adef03c183155162abcddc8fc163e",
+      "use": "Prior original Nautilus art geometry patterns; current implementation is separately adapted, no donor import."
+    },
+    {
+      "commit": "65c06735396e14b8774ae1e7d5ad61969692963f",
+      "path": "packages/frontier-fort/geometry.js",
+      "bytes": 7190,
+      "sha256": "dbc03952ca16f1ccf77a01a5b6fc40243860d979615450ef5ec0af718c36f59b",
+      "use": "Prior original Nautilus art geometry patterns; current implementation is separately adapted, no donor import."
+    }
+  ],
+  "nativeKit": {
+    "path": "packages/map-core/wall-runs.js",
+    "baseCommit": "ddfd43cf4b156eeb82b5c27772fe977ec10b0633",
+    "sha256": "6d01eb4b49d6ba20ae71e4bb2cab095c80e63be5d14b6ff43f509a9cfc76633d",
+    "use": "Existing read-only headless WALL_KIT dimensions; no modifications."
+  },
+  "worldReference": {
+    "commit": "fbb57293805ecae34569ab3dd9f689ffea53beb0",
+    "use": "Architect-directed height schema audit only; no runtime/core/vendor import.",
+    "audit": "docs/reviews/silo/export-audit.json"
+  },
+  "artwork": {
+    "atlas": "assets/silo/painted-silo-materials-v1.png",
+    "prompt": "art/silo/material-prompt.json",
+    "generator": "built-in image_gen",
+    "copyrightedSourcePixelsInPaint": false
+  },
+  "dependencies": {
+    "runtime": "Host Three namespace and borrowed atlas; existing vendored r180 is used only by the review/test host, notices preserved.",
+    "audit": "Pinned Three 0.180.0 GLTFLoader (MIT) and Khronos gltf-validator 2.0.0-dev.3.10 (Apache-2.0), installed only under ignored artifacts; exact registry integrity and source hashes in export-audit.json."
+  }
+}

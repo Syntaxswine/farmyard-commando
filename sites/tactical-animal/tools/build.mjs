@@ -27,11 +27,12 @@ function ownedFiles(directory,prefix=''){
     return entry.isDirectory()?ownedFiles(path.join(directory,entry.name),name+'/'):[name];
   });
 }
-const missionFiles=[...ownedFiles(path.join(source,'mission-art'),'mission-art/'),...ownedFiles(path.join(source,'art/windows'),'art/windows/')];
+const missionFiles=[...ownedFiles(path.join(source,'mission-art'),'mission-art/'),...ownedFiles(path.join(source,'art/windows'),'art/windows/'),...ownedFiles(path.join(source,'art/coldwell'),'art/coldwell/')];
 modules.push(...missionFiles.filter(file=>file.endsWith('.js')));modules.sort();
 const moduleSet=new Set(modules);
 const moduleHash=createHash('sha256');
 for(const file of modules)moduleHash.update(file).update(fs.readFileSync(path.join(source,file)));
+for(const file of [...ownedFiles(path.join(source,'art/coldwell'),'art/coldwell/'),...ownedFiles(path.join(source,'coldwell'),'coldwell/')].filter(file=>!file.endsWith('.js')).sort())moduleHash.update(file).update(fs.readFileSync(path.join(source,file)));
 const moduleVersion=moduleHash.digest('hex').slice(0,12);
 function versionImports(code,file){
   return code.replace(/(\bfrom\s*|\bimport\s*\(\s*|\bimport\s*)(['"])(\.\.?\/[^'"]+\.js)\2/g,(match,prefix,quote,specifier)=>moduleSet.has(path.posix.normalize(path.posix.join(path.posix.dirname(file),specifier)))?`${prefix}${quote}${specifier}?v=${moduleVersion}${quote}`:match);
@@ -50,6 +51,7 @@ for(const file of [...fs.readdirSync(source).filter(file=>file.endsWith('.html')
     const version=createHash('sha256').update(fs.readFileSync(path.join(destination,asset))).digest('hex').slice(0,12);
     html=html.replace(`href="${asset}"`,`href="${asset}?v=${version}"`);
   }
+  for(const asset of ['coldwell-preview.css','coldwell-controls.css'])if(fs.existsSync(path.join(destination,asset))){const version=createHash('sha256').update(fs.readFileSync(path.join(destination,asset))).digest('hex').slice(0,12);html=html.replace(`href="${asset}"`,`href="${asset}?v=${version}"`);}
   // SVG symbol sheets can gain controls while keeping their filename. Version
   // before the fragment so returning phones receive the new button symbols.
   html=html.replace(/\bhref="(assets\/[^"#?]+)(#[^"]*)?"/g,(match,asset,fragment='')=>{

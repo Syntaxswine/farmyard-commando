@@ -7,6 +7,8 @@ import * as shootingControls from '../dist/shooting-controls.js';
 import * as targetMonitor from '../dist/targeting-monitor.js';
 import * as flameControls from '../dist/flame-controls.js';
 import * as guardAlerts from '../dist/guard-alert.js';
+import {OPERATIONS} from '../dist/missions.js';
+import {prepareColdwell} from '../dist/coldwell-runtime.js';
 import {selectInteractionTarget} from '../dist/interactions.js';
 import {createOperationStorage} from '../dist/operation-storage.js';
 import {STANCE_ICONS} from '../dist/aft/tactics/battle-control-icons.js';
@@ -60,6 +62,7 @@ export function app({autoDeploy=true,initialStorage=[],storageFailure=null}={}){
     // getItem or setItem is ever called. Exercise that exact startup boundary.
     Object.defineProperty(context,'localStorage',{get:storageFailure==='denied'?blocked:()=>backend});
   }
+  Object.assign(context,{URL,location:{href:'http://localhost/game.html'},OPERATIONS,prepareColdwell});
   vm.runInNewContext(fs.readFileSync(new URL('../dist/app.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,''),context);
   if(autoDeploy)el('deploy').click();
   const key=(name,type='keydown')=>events.get(type)({key:name,target:{tagName:'BODY',closest:()=>null},preventDefault(){},repeat:false});

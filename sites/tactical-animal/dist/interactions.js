@@ -24,7 +24,7 @@ export function selectInteractionTarget(candidates,currentId=null){
   return candidates.find(object=>object.id===currentId)||[...candidates].sort((a,b)=>a.distance-b.distance||a.id.localeCompare(b.id))[0]||null;
 }
 
-export function createInteractionSystem({hero,canControl,combatCosts,distance,geometry,blocksWalking=()=>true,pointBoxDistance,refresh,stop,log,clearGeometry,weapons,radius}){
+export function createInteractionSystem({hero,canControl,combatCosts,distance,geometry,spatial=()=>null,blocksWalking=()=>true,pointBoxDistance,refresh,stop,log,clearGeometry,weapons,radius}){
   const epsilon=1e-7;
   function registerBody(state,unit){
     if(unit.team!=='guard'||unit.hp>0||state.interactables.some(object=>object.id==='body:'+unit.id))return;
@@ -37,10 +37,10 @@ export function createInteractionSystem({hero,canControl,combatCosts,distance,ge
     const result=state.interactables.map(object=>{
       if(object.kind!=='body')return object;
       const unit=state.units.find(unit=>unit.id===object.unitId);
-      return unit&&unit.hp<=0?{...object,x:unit.x,y:unit.y}:null;
+      return unit&&unit.hp<=0?{...object,x:unit.x,y:unit.y,...(unit.h!==undefined?{h:unit.h,floorId:unit.floorId}:{})}:null;
     }).filter(Boolean);
     const mission=missionForState(state);
-    if(!objectiveSecured(state))result.push({...mission.objective,inventory:[]});
+    if(!objectiveSecured(state)&&!mission.objective.containerId)result.push({...mission.objective,inventory:[]});
     result.push({...mission.extraction,id:'extraction',kind:'extract',inventory:[]});
     return result;
   }
@@ -48,6 +48,7 @@ export function createInteractionSystem({hero,canControl,combatCosts,distance,ge
     const unit=hero(state);
     if(!canControl(state,unit)||distance(unit,object)>object.range+epsilon)return false;
     if(object.kind==='extract'&&!objectiveSecured(state))return false;
+    const provider=spatial(state);if(provider)return provider.canReach(state,unit,object);
     // Use the movement system's rounded clearance, including around corners.
     // The target's own footprint is the only solid object we may reach into.
     // Reach sweeps a body across the ground, so it asks what walking asks.
@@ -61,6 +62,7 @@ export function createInteractionSystem({hero,canControl,combatCosts,distance,ge
   function cost(state,base){return combatCosts(state)?base:0;}
   function actions(state,object){
     const action=(id,label,base)=>({id,label,cost:cost(state,base)});
+    if(object.kind==='rig'){const rig=spatial(state).geometry.rigs.get(object.rigId),label=rig.kind==='platform'?(object.open?'Extend':'Retract'):(object.open?'Close':'Open');return [action(object.open?'close':'open',label,object.combatCost??(rig.kind==='door'?1:2))];}
     if(object.kind==='door')return [action(object.open?'close':'open',object.open?'Close':'Open',1)];
     if(object.kind==='chest')return object.open?
       [action('loot','Loot',0),action('close','Close',1)]:[action('open','Open',2)];
@@ -78,7 +80,9 @@ export function createInteractionSystem({hero,canControl,combatCosts,distance,ge
     else if(object.kind==='extract'&&!objectiveSecured(state))reason='Secure the '+missionForState(state).objective.name.toLowerCase()+' first.';
     else if(!accessible(state,object))reason='Move within clear reach of the object.';
     else if(['take','take-all'].includes(actionId)&&(!object.inventory.length||actionId==='take'&&!object.inventory.some(item=>item.id===itemId)))reason='There is nothing to take.';
+    else if(['take','take-all'].includes(actionId)&&object.inventory.some(item=>item.type==='mission'&&(actionId==='take-all'||item.id===itemId))&&missionForState(state).objective.requiresClue&&!state.solo.inspected.includes(missionForState(state).objective.requiresClue))reason='Inspect the gatehouse duty sheet to identify the facility records.';
     else if(object.kind==='door'&&['open','close'].includes(actionId)&&state.units.some(other=>other.hp>0&&pointBoxDistance(other,doorFootprint(object,actionId==='open'))<radius+epsilon))reason='Someone is in the doorway.';
+    else if(object.kind==='rig'){const provider=spatial(state),rig=provider.geometry.rigs.get(object.rigId),check=provider.previewRig(state,rig.id,actionId==='open'?rig.maximum:0);if(!check.ok)reason=check.reason;else if(unit.ap+epsilon<action.cost)reason='Not enough AP.';}
     else if(unit.ap+epsilon<action.cost)reason='Not enough AP.';
     return {ok:!reason,reason,cost:action?.cost||0,action,object};
   }
@@ -87,7 +91,8 @@ export function createInteractionSystem({hero,canControl,combatCosts,distance,ge
   }
   function addItem(state,item){
     const unit=hero(state);
-    if(item.type==='ammo')unit.ammoPouch[item.kind]=(unit.ammoPouch[item.kind]||0)+item.quantity;
+    if(item.type==='mission'){const mission=missionForState(state);state.solo.objectives[mission.objective.id]=true;log(state,mission.objective.collected);log(state,mission.objective.after);}
+    else if(item.type==='ammo')unit.ammoPouch[item.kind]=(unit.ammoPouch[item.kind]||0)+item.quantity;
     else if(item.type==='dressing')state.solo.dressings+=item.quantity;
     else if(item.type==='grenade'){
       unit.ammo.grenade=(unit.ammo.grenade||0)+item.quantity;
@@ -102,9 +107,12 @@ export function createInteractionSystem({hero,canControl,combatCosts,distance,ge
     const check=preview(state,id,actionId,itemId);
     if(!check.ok)return {ok:false,reason:check.reason};
     const object=check.object,stored=state.interactables.find(entry=>entry.id===id),unit=hero(state);
+    if(object.kind==='rig'){const provider=spatial(state),rig=provider.geometry.rigs.get(object.rigId),result=provider.startRig(state,rig.id,actionId==='open'?rig.maximum:0);if(!result.ok)return result;}
     stop(state);unit.ap=Math.max(0,unit.ap-check.cost);
     let loot=false,message=null;
-    if(object.kind==='door'){
+    if(object.kind==='rig'){
+      stored.open=actionId==='open';log(state,`${stored.open?'Operating':'Returning'} ${object.name} (${check.cost} AP).`);
+    }else if(object.kind==='door'){
       stored.open=actionId==='open';state.edges[object.edge]=stored.open?'door':'closed-door';
       log(state,`${stored.open?'Opened':'Closed'} the ${object.name.toLowerCase()} (${check.cost} AP).`);
     }else if(actionId==='open'||actionId==='search'){
@@ -146,17 +154,19 @@ export function createInteractionSystem({hero,canControl,combatCosts,distance,ge
     if(!Array.isArray(state.interactables))throw Error('Unsupported interaction save.');
     const ids=new Set();
     for(const object of state.interactables){
-      if(!object||typeof object.id!=='string'||ids.has(object.id)||!['door','chest','body','clue'].includes(object.kind)||!Number.isFinite(object.range)||object.range<=0||!Array.isArray(object.inventory))throw Error('Unsupported interaction save.');
+      if(!object||typeof object.id!=='string'||ids.has(object.id)||!['door','chest','body','clue','rig'].includes(object.kind)||!Number.isFinite(object.range)||object.range<=0||!Array.isArray(object.inventory))throw Error('Unsupported interaction save.');
       ids.add(object.id);
       if(object.kind==='body'){
         if(!state.units.some(unit=>unit.id===object.unitId&&unit.team==='guard'&&unit.hp<=0))throw Error('Unsupported body save.');
       }else if(!Number.isFinite(object.x)||!Number.isFinite(object.y)||object.kind!=='clue'&&typeof object.open!=='boolean')throw Error('Unsupported object save.');
       if(object.kind==='door'&&(!/^[es]:\d+:\d+$/.test(object.edge)||!Object.hasOwn(state.edges,object.edge)||object.swing!==undefined&&![-1,1].includes(object.swing)))throw Error('Unsupported door save.');
+      if(object.kind==='rig'&&(!spatial(state)?.geometry.rigs.has(object.rigId)||!Number.isFinite(object.h)||!spatial(state).floorById.has(object.floorId)))throw Error('Unsupported native machinery save.');
       if(['chest','body'].includes(object.kind)&&typeof object.searched!=='boolean')throw Error('Unsupported container save.');
       if(object.kind==='clue'&&(typeof object.text!=='string'||!missionForState(state).clues.some(clue=>clue.id===object.id)))throw Error('Unsupported clue save.');
       const itemIds=new Set();
       for(const item of object.inventory){
-        if(!item||typeof item.id!=='string'||itemIds.has(item.id)||!['ammo','weapon','dressing','grenade'].includes(item.type))throw Error('Unsupported loot save.');
+        if(!item||typeof item.id!=='string'||itemIds.has(item.id)||!['ammo','weapon','dressing','grenade','mission'].includes(item.type))throw Error('Unsupported loot save.');
+        if(item.type==='mission'&&(object.id!==missionForState(state).objective.containerId||item.id!==missionForState(state).objective.id||item.quantity!==1))throw Error('Unsupported mission loot save.');
         itemIds.add(item.id);
         if(['weapon','ammo'].includes(item.type)&&!Object.hasOwn(weapons,item.kind))throw Error('Unknown loot weapon.');
         if(item.type==='weapon'? !Number.isInteger(item.rounds)||item.rounds<0||!Number.isFinite(item.condition):!Number.isInteger(item.quantity)||item.quantity<1)throw Error('Unsupported loot quantity.');

@@ -2,6 +2,7 @@
 // painted renderer consumes these as Three (x,h,y), without AFT floor scaling.
 export const FLAME_RAY_COUNT=37,FLAME_HALF_ANGLE=24*Math.PI/180;
 const cell=(x,y)=>`${Math.round(x)},${Math.round(y)}`;
+const cellAt=(shape,x,y)=>shape.floorId?`${Math.floor(x)},${Math.floor(y)}`:cell(x,y);
 const gap=(a,b)=>a.kind==='hidden'||a.kind!==b.kind||Math.abs(a.distance-b.distance)>1.05;
 
 function wallEntry(a,b,box){
@@ -15,19 +16,20 @@ function wallEntry(a,b,box){
   return high>1e-7?low:null;
 }
 
-export function recordFlame(source,range,geometry,visible){
-  const heading=source.heading*Math.PI/180,h=source.stance==='prone'?.3:source.stance==='kneeling'?.75:1.1;
-  const origin={x:source.x,y:source.y,h},walls=geometry.filter(box=>(box.kind==='wall'||box.kind==='glass')&&(!box.windowPart||h>=(box.z0??0)&&h<=box.height)),sourceVisible=visible.has(cell(source.x,source.y));
+export function recordFlame(source,range,geometry,visible,{trace}={}){
+  const heading=source.heading*Math.PI/180,h=(source.h??0)+(source.stance==='prone'?.3:source.stance==='kneeling'?.75:1.1),sourceCell=(x,y)=>cellAt(source,x,y);
+  const origin={x:source.x,y:source.y,h},walls=geometry.filter(box=>(box.kind==='wall'||box.kind==='glass')&&(!box.windowPart||h>=(box.z0??0)&&h<=box.height)),sourceVisible=visible.has(sourceCell(source.x,source.y));
   const rays=Array.from({length:FLAME_RAY_COUNT},(_,i)=>{
     const angle=heading-FLAME_HALF_ANGLE+2*FLAME_HALF_ANGLE*i/(FLAME_RAY_COUNT-1),dx=Math.cos(angle),dy=Math.sin(angle),end={x:source.x+dx*range,y:source.y+dy*range};
     let reach=range,kind=sourceVisible?'range':'hidden';
+    if(trace){const hit=trace(origin,{...end,h});if(hit){reach=Math.max(0,hit.fraction*range-.025);kind='wall';}}
     for(const box of walls){const entry=wallEntry(source,end,box);if(entry!==null&&entry*range<=reach){reach=Math.max(0,entry*range-.025);kind='wall';}}
     if(!sourceVisible){reach=0;kind='hidden';}
-    else for(let d=0;d<=reach+.08;d+=.08){const at=Math.min(reach,d);if(!visible.has(cell(source.x+dx*at,source.y+dy*at))){reach=Math.max(0,at-.08);kind='fog';break;}}
+    else for(let d=0;d<=reach+.08;d+=.08){const at=Math.min(reach,d);if(!visible.has(sourceCell(source.x+dx*at,source.y+dy*at))){reach=Math.max(0,at-.08);kind='fog';break;}}
     return {x:source.x+dx*reach,y:source.y+dy*reach,h,distance:reach,kind};
   });
   const visibleCells=[...visible].filter(key=>{const [x,y]=key.split(',').map(Number);return Math.hypot(x-source.x,y-source.y)<=range+1;});
-  return {origin,heading,range,halfAngle:FLAME_HALF_ANGLE,rays,visibleCells,sourceVisible,source:{id:source.id,species:source.species,stance:source.stance,heading:source.heading,x:source.x,y:source.y}};
+  return {origin,heading,range,halfAngle:FLAME_HALF_ANGLE,rays,visibleCells,sourceVisible,...(source.floorId?{floorId:source.floorId}:{}),source:{id:source.id,species:source.species,stance:source.stance,heading:source.heading,x:source.x,y:source.y,...(source.h!==undefined?{h:source.h,floorId:source.floorId}:{})}};
 }
 
 // Same conservative wedge contract as the inherited sheets, also enforced on
@@ -45,7 +47,7 @@ export function pointInFlame(shape,point){
 export function flameMuzzleInReach(shape,point){
   if(pointInFlame(shape,point))return true;
   const x=point.x-shape.origin.x,y=point.y-shape.origin.y,angle=Math.atan2(Math.sin(Math.atan2(y,x)-shape.heading),Math.cos(Math.atan2(y,x)-shape.heading));
-  if(!shape.sourceVisible||Math.abs(angle)>shape.halfAngle||!shape.visibleCells.includes(cell(point.x,point.y)))return false;
+  if(!shape.sourceVisible||Math.abs(angle)>shape.halfAngle||!shape.visibleCells.includes(cellAt(shape,point.x,point.y)))return false;
   const i=Math.max(0,Math.min(35,Math.floor((angle+shape.halfAngle)/(2*shape.halfAngle)*36))),a=shape.rays[i],b=shape.rays[i+1];
   return gap(a,b)&&a.kind!=='hidden'&&b.kind!=='hidden'&&Math.hypot(x,y)<Math.min(a.distance,b.distance)*Math.cos(shape.halfAngle/36);
 }
@@ -56,7 +58,7 @@ export function flameMuzzleInReach(shape,point){
 export function flameMaskRect(shape){
   let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
   for(const key of shape.visibleCells){const [x,y]=key.split(',').map(Number);if(!Number.isInteger(x)||!Number.isInteger(y))continue;x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}
-  if(x0===Infinity)return {origin:{x:Math.round(shape.origin.x),y:Math.round(shape.origin.y)},width:1,height:1};
+  if(x0===Infinity)return {origin:{x:shape.floorId?Math.floor(shape.origin.x):Math.round(shape.origin.x),y:shape.floorId?Math.floor(shape.origin.y):Math.round(shape.origin.y)},width:1,height:1};
   return {origin:{x:x0,y:y0},width:x1-x0+1,height:y1-y0+1};
 }
 
@@ -65,7 +67,7 @@ export function flameMaskRect(shape){
 export function flameFogMask(shape,visible,bytes,rect=flameMaskRect(shape)){
   const size=rect.width*rect.height*4;if(!(bytes instanceof Uint8Array)||bytes.length!==size)bytes=new Uint8Array(size);
   bytes.fill(0);
-  for(const key of shape.visibleCells){if(!visible.has(key))continue;const [wx,wy]=key.split(',').map(Number),x=wx-rect.origin.x,y=wy-rect.origin.y;if(Number.isInteger(x)&&Number.isInteger(y)&&x>=0&&x<rect.width&&y>=0&&y<rect.height){const at=(y*rect.width+x)*4;bytes[at]=bytes[at+1]=bytes[at+2]=bytes[at+3]=255;}}
+  for(const key of shape.visibleCells){if(!visible.has(shape.floorId?shape.floorId+'@'+key:key))continue;const [wx,wy]=key.split(',').map(Number),x=wx-rect.origin.x,y=wy-rect.origin.y;if(Number.isInteger(x)&&Number.isInteger(y)&&x>=0&&x<rect.width&&y>=0&&y<rect.height){const at=(y*rect.width+x)*4;bytes[at]=bytes[at+1]=bytes[at+2]=bytes[at+3]=255;}}
   return bytes;
 }
 

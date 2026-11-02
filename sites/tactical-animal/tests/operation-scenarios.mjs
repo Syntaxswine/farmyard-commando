@@ -9,6 +9,7 @@ export function playRoute(state,steps,{onStep=()=>{}}={}){
     if(++frames>14000)throw Error('Route timed out: '+JSON.stringify({step:steps[0],position:hero(state),phase:state.phase}));
     if(state.solo.status==='lost')throw Error('The animal fell on the route.');
     const unit=hero(state);
+    if(state.spatial&&Object.keys(state.spatial.transitions).length){tick(state,.05);return false;}
     if(state.phase==='enemy'){tick(state,.05);return false;}
     if(state.phase==='player'){
       if(unit.hp<unit.maxHp-30&&state.solo.dressings&&unit.ap>=3&&dressing(state))return false;
@@ -31,8 +32,8 @@ export function playRoute(state,steps,{onStep=()=>{}}={}){
         done=true;
       }else if(distance(unit,step)<.04){Core.stop(state);done=true;}
       else{
-        if(!state.queue.length&&!Core.move(state,unit,step.x,step.y))throw Error('No route: '+JSON.stringify(step));
-        const before={x:unit.x,y:unit.y};tick(state,.05);
+        if(!state.queue.length&&!Core.move(state,unit,step.x,step.y,step))throw Error('No route: '+JSON.stringify(step));
+        const before={x:unit.x,y:unit.y,...(unit.h!==undefined?{h:unit.h}:{})};tick(state,.05);
         if(distance(before,unit)<1e-8&&!state.queue.length){if(state.phase==='player')Core.endTurn(state);else throw Error('Route blocked: '+JSON.stringify(step));}
       }
     }

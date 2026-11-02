@@ -1,0 +1,37 @@
+{
+  "commit": "3b9d4004a7e51e5d345cded068fc46eab2f320a2",
+  "archiveSHA256": "b489bb7439a22746281eb2dcc052cd124cc77917a9c00aeaa4c02ee5f1db873f",
+  "root": "sites/tactical-animal/dist/vendor/coldwell-silo/3b9d4004a7e51e5d345cded068fc46eab2f320a2",
+  "files": [
+    {
+      "path": "NOTICE.md",
+      "bytes": 3204,
+      "sha256": "43a2cd083970e3388a1561b1ee6d4480c7ccf893ad9ae7ba08f2fb1960d3033c"
+    },
+    {
+      "path": "art/silo/NOTICE.md",
+      "bytes": 2072,
+      "sha256": "0197635cfaab674d76bd063973fcaf2f5f3481c21381a96f6385858b0964a83c"
+    },
+    {
+      "path": "packages/silo/mesh.js",
+      "bytes": 27536,
+      "sha256": "ce7fab33ad80decbfb797eb07d857c3b1ec5c6237f1a9cfc34d208f24b2f6e22"
+    },
+    {
+      "path": "packages/silo/geometry.js",
+      "bytes": 9357,
+      "sha256": "a81095ef57fa8c7c6aae94bca12dda244c349ad0b404c671c2e87693e7d9135e"
+    },
+    {
+      "path": "packages/silo/designs.js",
+      "bytes": 4723,
+      "sha256": "b7521fef22359d930033fe442e91aed6807c15c46c6faba00e0b1579cd5cf211"
+    },
+    {
+      "path": "packages/map-core/wall-runs.js",
+      "bytes": 8795,
+      "sha256": "6d01eb4b49d6ba20ae71e4bb2cab095c80e63be5d14b6ff43f509a9cfc76633d"
+    }
+  ]
+}

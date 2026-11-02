@@ -8,12 +8,15 @@ import {pathToFileURL,fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {installNativeProbe,inspectWebGL} from '../sites/tactical-animal/browser-tests/native-probe.mjs';
 const shelterReview=process.argv.includes('--shelter-review');
+// The two-core software-rendering runner uses a normal 800x600 desktop window.
+// Keep the complete route/assertions and 390x844 touch coverage; video is opt-in.
+const desktopViewport=process.env.CI?{width:800,height:600}:{width:1440,height:1000},recordVideo=process.env.WALKTHROUGH_VIDEO==='1';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),site=path.join(root,'dist'),out=path.join(root,'artifacts/mount-dora-walkthrough',shelterReview?'native-shelter':'native');
 fs.mkdirSync(out,{recursive:true});
 const {chromium}=await import(pathToFileURL(path.join(root,'sites/tactical-animal/browser-tests/node_modules/playwright/index.mjs')).href);
 const hash=data=>createHash('sha256').update(data).digest('hex');
 const project=JSON.parse(fs.readFileSync(path.join(site,'maps/mount-dora/project.json'))),features=JSON.parse(fs.readFileSync(path.join(site,'maps/mount-dora/features.json'))).features;
-const report={reviewMode:shelterReview?'shelter-review':'full',testedSha:process.env.TESTED_SHA||execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8',windowsHide:true}).trim(),workingTreeDirty:!!execFileSync('git',['status','--porcelain'],{cwd:root,encoding:'utf8',windowsHide:true}).trim(),productionRoute:'/game.html',builtAppSha256:hash(fs.readFileSync(path.join(site,'app.js'))),projectSha256:hash(fs.readFileSync(path.join(site,'maps/mount-dora/project.json'))),sourceDigest:project.generation.sourceDigest,physicalPhoneBenchmark:false,checks:[],pages:[]};
+const report={reviewMode:shelterReview?'shelter-review':'full',viewports:{desktop:shelterReview?null:desktopViewport,phone:{width:390,height:844}},videoRequested:recordVideo,testedSha:process.env.TESTED_SHA||execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8',windowsHide:true}).trim(),workingTreeDirty:!!execFileSync('git',['status','--porcelain'],{cwd:root,encoding:'utf8',windowsHide:true}).trim(),productionRoute:'/game.html',builtAppSha256:hash(fs.readFileSync(path.join(site,'app.js'))),projectSha256:hash(fs.readFileSync(path.join(site,'maps/mount-dora/project.json'))),sourceDigest:project.generation.sourceDigest,physicalPhoneBenchmark:false,checks:[],pages:[]};
 const write=()=>fs.writeFileSync(path.join(out,'summary.json'),JSON.stringify(report,null,2)+'\n');
 const mark=(name,data={})=>{report.checks.push({name,...data});write();console.log('PASS '+name);};
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.svg':'image/svg+xml','.ogg':'audio/ogg'};
@@ -45,8 +48,8 @@ function capture(page,name){
 }
 const snapshot=page=>page.evaluate(async()=>{const url=document.querySelector('script[src*="app.js"]').src;return (await import(url)).inspectMountDora();});
 const projectPoint=(page,town)=>page.evaluate(async town=>{const url=document.querySelector('script[src*="app.js"]').src;return (await import(url)).projectMountDoraTownPoint(town);},town);
-async function waitInfo(page,predicate,message,timeout=60000){
-  const end=Date.now()+timeout;let last;while(Date.now()<end){last=await snapshot(page);if(predicate(last))return last;if(!last.touring){const failure=await page.locator('#tour-launch-status').textContent();if(failure?.startsWith('Could not enter'))throw Error(failure);}await page.waitForTimeout(120);}throw Error(message+': '+JSON.stringify(last));
+async function waitInfo(page,predicate,message,timeout=60000,progress=null){
+  const end=Date.now()+timeout;let last,progressValue,progressAt=Date.now();while(Date.now()<end){last=await snapshot(page);if(predicate(last))return last;if(progress){const value=progress(last);if(progressValue===undefined||Math.abs(value-progressValue)>.03){progressValue=value;progressAt=Date.now();}else if(Date.now()-progressAt>30000)throw Error(message+' (no observed movement for 30s): '+JSON.stringify(last));}if(!last.touring){const failure=await page.locator('#tour-launch-status').textContent();if(failure?.startsWith('Could not enter'))throw Error(failure);}await page.waitForTimeout(120);}throw Error(message+': '+JSON.stringify(last));
 }
 async function shot(page,name){await page.screenshot({path:path.join(out,name+'.png'),fullPage:true});}
 async function menu(page,label){await page.locator('#menu').click();await page.getByRole('button',{name:label,exact:true}).click();}
@@ -60,9 +63,9 @@ async function panTo(page,town){
     await page.mouse.move(cx,cy);await page.mouse.down();await page.mouse.move(cx+dx,cy+dy,{steps:7});await page.mouse.up();await page.waitForTimeout(120);
   }throw Error('Could not bring actual ground point into the viewport: '+town);
 }
-async function walkTo(page,town,{timeout=60000,tolerance=.14}={}){
+async function walkTo(page,town,{timeout=process.env.CI?180000:60000,tolerance=.14}={}){
   const p=await panTo(page,town);await page.mouse.click(p.x,p.y);
-  return waitInfo(page,s=>Math.hypot(s.player.x+.5-town[0],s.player.y+.5-town[1])<tolerance,'Walk did not arrive at '+town,timeout);
+  return waitInfo(page,s=>Math.hypot(s.player.x+.5-town[0],s.player.y+.5-town[1])<tolerance,'Walk did not arrive at '+town,timeout,s=>s.distance);
 }
 async function ready(page){return waitInfo(page,s=>s.active&&s.touring&&s.ready&&!s.paused,'Production tour did not become ready',90000);}
 async function keyboardWalk(page,before){await page.keyboard.down('d');try{await waitInfo(page,s=>s.distance>before.distance+.45,'Actual keyboard movement was not observed',20000);}finally{await page.keyboard.up('d');}return snapshot(page);}
@@ -82,14 +85,14 @@ try{
   await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});port=server.address().port;
   browserServer=await chromium.launchServer({host:'127.0.0.1',headless:true,...(process.env.WALKTHROUGH_BROWSER_CHANNEL?{channel:process.env.WALKTHROUGH_BROWSER_CHANNEL}:{}),args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   browser=await chromium.connect(browserServer.wsEndpoint());wsPort=Number(new URL(browserServer.wsEndpoint()).port);report.browser=browser.version();
-  const child=browserServer.process(),record={owner:process.env.CODEX_THREAD_ID||'farmyard/mount-dora-walkthrough',purpose:'Actual production tour browser acceptance',project:root,runner:identity(process.pid,process.execPath),browser:identity(child.pid,child.spawnfile),ports:[port,wsPort],startedAt:new Date().toISOString(),expiresAt:new Date(Date.now()+15*60*1000).toISOString(),stopMethod:'Owning browser/server APIs in finally; fifteen-minute automatic retirement',restart:{executable:process.execPath,args:['tools/test-mount-dora-walkthrough.mjs',...process.argv.slice(2)],script:'tools/test-mount-dora-walkthrough.mjs',cwd:root,runtime:'Node >=24; locked Playwright1.64.1; Chromium or WALKTHROUGH_BROWSER_CHANNEL',inputs:['dist/','locked sites/tactical-animal/browser-tests package'],outputs:out}};
+  const child=browserServer.process(),record={owner:process.env.CODEX_THREAD_ID||'farmyard/mount-dora-walkthrough',purpose:'Actual production tour browser acceptance',project:root,runner:identity(process.pid,process.execPath),browser:identity(child.pid,child.spawnfile),ports:[port,wsPort],startedAt:new Date().toISOString(),expiresAt:new Date(Date.now()+15*60*1000).toISOString(),stopMethod:'Owning browser/server APIs in finally; fifteen-minute automatic retirement',restart:{executable:process.execPath,args:['tools/test-mount-dora-walkthrough.mjs',...process.argv.slice(2)],script:'tools/test-mount-dora-walkthrough.mjs',cwd:root,environment:{CI:process.env.CI?'true':undefined,WALKTHROUGH_BROWSER_CHANNEL:process.env.WALKTHROUGH_BROWSER_CHANNEL||undefined,WALKTHROUGH_VIDEO:recordVideo?'1':'0'},runtime:'Node >=24; locked Playwright1.64.1; Chromium or WALKTHROUGH_BROWSER_CHANNEL',inputs:['dist/','locked sites/tactical-animal/browser-tests package'],outputs:out}};
   fs.writeFileSync(path.join(out,'helper.json'),JSON.stringify(record,null,2)+'\n');
   deadline=setTimeout(()=>{report.timeout=true;process.exitCode=1;void close();},15*60*1000);deadline.unref();
   const origin='http://127.0.0.1:'+port;
   fs.writeFileSync(path.join(out,'server-url.json'),JSON.stringify({origin,expiresAt:record.expiresAt,owner:record.owner,route:'/game.html?activity=mount-dora'})+'\n');
   console.log('NATIVE_REVIEW_URL '+origin+'/game.html?activity=mount-dora');
   if(!shelterReview){
-  context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true,...(process.env.CI?{recordVideo:{dir:path.join(out,'video')}}:{})});
+  context=await browser.newContext({viewport:desktopViewport,acceptDownloads:true,...(recordVideo?{recordVideo:{dir:path.join(out,'video')}}:{})});
   await context.addInitScript(installNativeProbe);
   const page=await context.newPage(),log=capture(page,'desktop');
   await page.goto(origin+'/');await page.locator('#play-game').click();await page.waitForFunction(()=>typeof document.getElementById('deploy')?.onclick==='function'&&document.getElementById('animals').children.length>0);await page.locator('#deploy').click();
@@ -105,7 +108,7 @@ try{
   assert(await page.locator('#grenade').isDisabled());const ammo=JSON.stringify(moved.player.ammo);await page.keyboard.press('g');assert.equal(JSON.stringify((await snapshot(page)).player.ammo),ammo);mark('real keyboard movement and explicitly unavailable tour firing');
   for(let i=0;i<4;i++)await page.locator('#zoom-out').click();
   await walkTo(page,[478.5,478.5]);
-  const cornerBefore=await snapshot(page);for(const p of [[481.5,478.5],[481.5,481.5],[478.5,481.5],[478.5,478.5]])await walkTo(page,p,{timeout:15000});
+  const cornerBefore=await snapshot(page);for(const p of [[481.5,478.5],[481.5,481.5],[478.5,481.5],[478.5,478.5]])await walkTo(page,p,{timeout:process.env.CI?60000:15000});
   info=await snapshot(page);assert(info.distance>=cornerBefore.distance+11.5);assert.equal(info.phase,'explore');await shot(page,'desktop-four-sector-corner');mark('continuous production navigation crosses both axes and four-sector corner',{snapshot:info});
   await walkTo(page,[480.5,508.5]);const beforeWall=await snapshot(page),blocked=await panTo(page,[480.5,500.5]);await page.mouse.click(blocked.x,blocked.y);
   await page.waitForTimeout(1200);const wall=await snapshot(page);assert(Math.hypot(wall.player.x-beforeWall.player.x,wall.player.y-beforeWall.player.y)<.15);mark('boundary-spanning building wall does not admit the animal');
@@ -119,9 +122,9 @@ try{
   await visit(page,'Palm Island entrance');await waitInfo(page,s=>s.ready&&!s.paused&&Math.hypot(s.player.x-665.469,s.player.y-1296.0786)<.15,'Boardwalk entrance not ready');
   const entrance=features.find(f=>f.id==='osm-way-548471563').geometry.coordinates,bridge=features.find(f=>f.id==='osm-way-688219167').geometry.coordinates;
   const points=[...routeTo(entrance,Infinity),...routeTo(bridge,120).slice(1)],boardwalkBefore=await snapshot(page);
-  for(let i=1;i<points.length;i++){await walkTo(page,points[i],{timeout:25000,tolerance:.16});if(i%8===0)console.log('Walking actual boardwalk '+i+'/'+points.length);}
+  for(let i=1;i<points.length;i++){await walkTo(page,points[i],{timeout:process.env.CI?60000:25000,tolerance:.16});if(i%8===0)console.log('Walking actual boardwalk '+i+'/'+points.length);}
   const overWater=await snapshot(page);assert.equal(overWater.player.ground,'bridge');await shot(page,'desktop-palm-boardwalk');
-  for(let i=points.length-2;i>=0;i--){await walkTo(page,points[i],{timeout:25000,tolerance:.16});if(i%8===0)console.log('Returning actual boardwalk '+i+'/'+points.length);}
+  for(let i=points.length-2;i>=0;i--){await walkTo(page,points[i],{timeout:process.env.CI?60000:25000,tolerance:.16});if(i%8===0)console.log('Returning actual boardwalk '+i+'/'+points.length);}
   const returned=await snapshot(page);assert(returned.distance>boardwalkBefore.distance+300);mark('actual entrance, mapped join, supported over-water walk and continuous return',{snapshot:returned});
   await page.waitForTimeout(2700);const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('farmyard-mount-dora-tour-v1')));assert(saved);assert(!Object.hasOwn(saved,'map'));assert(JSON.stringify(saved).length<600000);
   assert.equal(await page.evaluate(()=>localStorage.getItem('tactical-animal-operation-v2')),operationBefore);
@@ -131,7 +134,7 @@ try{
   report.desktopWebGL=await assertGL(page);await menu(page,'Choose animal or operation');info=await snapshot(page);assert.equal(info.source.decoded,0);assert.equal(info.source.inFlight,0);assert.equal(info.source.queued,0);mark('tour exit releases decoded sources and renderer residency');
   }
   // A new, actual touch context uses its own regular preparation and production route.
-  phone=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1,...(process.env.CI?{recordVideo:{dir:path.join(out,'video')}}:{})});
+  phone=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:1,...(recordVideo?{recordVideo:{dir:path.join(out,'video')}}:{})});
   await phone.addInitScript(installNativeProbe);const mobile=await phone.newPage(),mobileLog=capture(mobile,'phone');
   await mobile.goto(origin+'/game.html?activity=mount-dora');await mobile.waitForFunction(()=>typeof document.getElementById('deploy')?.onclick==='function');assert.equal(await mobile.locator('#operation-select').inputValue(),'mount-dora');assert(await mobile.locator('#prep').isVisible());assert(await mobile.locator('#battle').isHidden());assert.equal(await mobile.evaluate(()=>localStorage.getItem('tactical-animal-operation-v2')),null);await mobile.locator('#deploy').click();const mobileBefore=await ready(mobile);
   const stick=await mobile.locator('#joystick').boundingBox(),cdp=await phone.newCDPSession(mobile),x=stick.x+stick.width/2,y=stick.y+stick.height/2;

@@ -2,6 +2,8 @@
 
 **[Play Farmyard Commando](https://syntaxswine.github.io/farmyard-commando/)** in your browser. No installation or sign-in required. Designed for portrait mobile play; desktop controls are included.
 
+The separate [Mount Dora authoring atlas](https://syntaxswine.github.io/farmyard-commando/maps/mount-dora/workshop/) covers downtown and the lakefront in 42 connected geographic sectors. Browse the overview and download native map JSON for the Nautilus workshop. This geographic blockout has flat terrain and unsurveyed exterior proxies; it is not a playable operation. [Map details and editor checks](maps/mount-dora/README.md).
+
 A portrait mobile browser prototype of the single-character Animal Factory Tactics idea. Choose The Night Ledger or Short Measure, pick one of the six original quickplay animals, and choose an independent primary weapon, sidearm and utility. Recover the wage ledger from Mill 04 or carry the feed mill's shipping manifest to the east loading gate.
 
 The title screen offers **Play Game** and **Map Designer**. Play opens the existing animal/loadout screen; the battlefield Options menu can save the operation and return to the title screen. The map designer is the standalone Animal Factory Tactics 3D editor, with its original tools, floor controls, undo/redo, named browser saves, reusable blocks, sector presets, JSON import/export, and editor playtesting. Its Farmyard Commando link returns to the title screen, with the original unsaved-edit prompt still active.

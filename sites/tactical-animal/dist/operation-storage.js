@@ -7,14 +7,14 @@ const LEGACY_BUILD='tactical-animal-build-v1';
 
 // Preparation preferences and completion records never replace an active save.
 // Each operation also owns a slot, so starting the other one preserves a resume.
-export function createOperationStorage(backend,{normalizeBuild,encodeSave,decodeSave}){
+export function createOperationStorage(backend,{normalizeBuild,encodeSave,decodeSave,missions=MISSIONS}){
   function preferences(){
     const text=backend.getItem(PREPARATION_SAVE),saved=text?JSON.parse(text):null;
     if(saved&&(saved.version!==1||saved.campaignId!=='first-shift'))throw Error('Unsupported operation preferences.');
     const selectedMissionId=getMission(saved?.selectedMissionId??DEFAULT_MISSION_ID).id;
-    const builds=Object.fromEntries(MISSIONS.map(mission=>[mission.id,normalizeBuild(saved?.builds?.[mission.id])]));
+    const builds=Object.fromEntries(missions.map(mission=>[mission.id,normalizeBuild(saved?.builds?.[mission.id])]));
     if(!saved){try{builds[DEFAULT_MISSION_ID]=normalizeBuild(JSON.parse(backend.getItem(LEGACY_BUILD)||'null'));}catch{}}
-    return {version:1,campaignId:'first-shift',selectedMissionId,builds,completed:(saved?.completed||[]).filter(id=>MISSIONS.some(mission=>mission.id===id))};
+    return {version:1,campaignId:'first-shift',selectedMissionId,builds,completed:(saved?.completed||[]).filter(id=>missions.some(mission=>mission.id===id))};
   }
   function savePreparation(id,build){
     getMission(id);const data=preferences();data.selectedMissionId=id;data.builds[id]=normalizeBuild(build);
@@ -34,7 +34,8 @@ export function createOperationStorage(backend,{normalizeBuild,encodeSave,decode
     return state;
   }
   function write(state){
-    const id=getMission(state.solo.missionId).id,text=encodeSave(state);
+    const definition=getMission(state.solo.missionId);if(definition.exploration)throw Error('Walking tour progress uses its separate storage slot.');
+    const id=definition.id,text=encodeSave(state);
     // A player may select the new operation before ever resuming an old
     // single-slot save. Preserve that save before updating the legacy slot.
     const previous=backend.getItem(OPERATION_SAVE);let previousId=null;

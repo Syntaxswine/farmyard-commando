@@ -1,0 +1,70 @@
+import {TownWorld,sha256} from './mount-dora-world.js';
+import {blockWindow} from './world-grid.js';
+import {TOUR_ID,TOUR_ACTIVITY,getTourWorld} from './mount-dora-activity.js';
+import {createSoloGame,validBuild,hero,Core,log} from './solo-game.js';
+import {TownExplored} from './mount-dora-progress.js';
+import {TownEnvironment,drawTownMinimap} from './mount-dora-view.js';
+// Source-reviewed approaches from architect route fixtures c0c0968, in canonical town metres.
+export const TOUR_VISITS=Object.freeze([
+  {id:'donnelly-park',name:'Donnelly Park',town:[459.5,500.5]},
+  {id:'lakeside-inn',name:'Lakeside Inn',town:[336.5,810.5]},
+  {id:'elizabeth-evans',name:'Elizabeth Evans Park',town:[430.5,1015.5]},
+  {id:'grantham-lighthouse',name:'Grantham Point lighthouse',town:[504.5,1168.5]},
+  {id:'gilbert-park',name:'Gilbert Park',town:[710.5,1207.5]},
+  {id:'palm-island',name:'Palm Island boardwalk',town:[529.5,1402.5]},
+  {id:'palm-entrance',name:'Palm Island entrance',town:[665.969,1296.5786]},
+  {id:'historic-shopfronts',name:'Donnelly / Fourth shopfronts',town:[433.5,635.5]},
+  {id:'donnelly-house',name:'Donnelly House',town:[414.5,480.5]},
+  {id:'history-museum',name:'History Museum',town:[481.5,598.5]},
+  {id:'former-depot',name:'Former depot',town:[328.5,687.5]}
+]);
+async function readBytes(fetcher,url,signal,limit){
+  const response=await fetcher(url,{signal,cache:'no-cache'});if(!response.ok)throw Error('Could not load town data (HTTP '+response.status+').');
+  const bytes=await response.arrayBuffer();if(bytes.byteLength>limit)throw Error('Town document exceeds its supported size.');return bytes;
+}
+export async function loadTownTour({build,progress=null,signal,fetcher=globalThis.fetch,projectURL=new URL('./maps/mount-dora/project.json',import.meta.url),artModule,kitModule}={}){
+  if(!validBuild(progress?.build||build))throw Error('Choose a valid animal and loadout.');
+  const [projectBytes,art,kit]=await Promise.all([readBytes(fetcher,projectURL,signal,1_000_000),
+    artModule||import('./mission-art/mount-dora/manifest.js'),kitModule||import('./mission-art/mount-dora/kit.js')]);
+  if(signal?.aborted)throw new DOMException('Canceled','AbortError');
+  const project=JSON.parse(new TextDecoder().decode(projectBytes)),baseURL=new URL('./',projectURL);
+  const features=await readBytes(fetcher,new URL(project.featuresFile,baseURL),signal,8_000_000);
+  if(await sha256(features)!==art.SOURCE_FEATURES_SHA256)throw Error('Town map and artwork revisions differ. Reload the page before starting.');
+  const world=await new TownWorld(project,{baseURL,fetcher,art}).identify();
+  world.artModule=art;world.visits=TOUR_VISITS;world.sourceSignal=new AbortController();
+  const abort=()=>world.dispose();signal?.addEventListener('abort',abort,{once:true});
+  const dispose=world.dispose.bind(world);world.dispose=()=>{world.sourceSignal.abort();signal?.removeEventListener('abort',abort);world.overviewImage=null;dispose();};
+  world.createEnvironment=(renderer,state,options)=>new TownEnvironment(renderer,state,{...options,artModule:art,createArt:kit.createMountDoraArt,
+    loadAtlas:THREE=>kit.loadMountDoraAtlas({THREE,signal:world.sourceSignal.signal,url:new URL(art.ATLAS_URL,new URL('./mission-art/mount-dora/manifest.js',import.meta.url)).href})});
+  world.drawMinimap=drawTownMinimap;
+  if(typeof Image!=='undefined'){const image=new Image();image.onload=()=>{if(!world.disposed){world.overviewImage=image;world.emit();}};image.onerror=()=>{world.overviewUnavailable=true;};image.src=new URL(project.atlasFile,baseURL).href;}
+  world.startPoint=progress?{x:progress.player.x,y:progress.player.y,heading:progress.player.heading}:{...TOUR_ACTIVITY.spawn};
+  try{
+    await world.readyAt(world.startPoint);
+    if(!world.pointClear(world.startPoint))throw Error(progress?'Your saved approach is blocked in the current town. Start a new tour or choose a cleared landmark from the previous tour.':'The Donnelly Park approach is obstructed. Try loading the current tour artwork again.');
+    if(signal?.aborted)throw new DOMException('Canceled','AbortError');
+    const state=createSoloGame(progress?.build||build,1947,TOUR_ID,{tourWorld:world});
+    if(progress){
+      const initial=hero(state),u=progress.player;if(u.species!==initial.species||u.slots.some(kind=>!Core.WEAPONS[kind])||!Core.WEAPONS[u.weapon])throw Error('Unsupported saved tour animal or equipment.');
+      Object.assign(initial,structuredClone(u),{id:0,team:'squad',isMoving:false});state.seen=progress.seen instanceof TownExplored?progress.seen:TownExplored.restore(progress.explored);
+      state.solo.dressings=progress.dressings;state.solo.distance=progress.distance;state.elapsed=progress.elapsed;state.log=(progress.log||[]).filter(x=>typeof x==='string').slice(0,20);
+      if(progress.sourceRevision!==world.sourceRevision||progress.artRevision!==world.artRevision)log(state,'The town has been updated. Your saved position is clear and your progress is retained.');
+      Core.refresh(state,{forceFog:true});
+    }
+    return state;
+  }catch(error){world.dispose();throw error;}
+}
+export async function visitTownLandmark(state,id){
+  const world=getTourWorld(state),visit=TOUR_VISITS.find(v=>v.id===id);if(!world||!visit)throw Error('Choose a town landmark.');
+  const u=hero(state),old={x:u.x,y:u.y},target={x:visit.town[0]-.5,y:visit.town[1]-.5};
+  world.coverageTarget=target;world.ensureCoverage(blockWindow(state,target),target);world.retry();
+  try{
+    await world.readyAt(target);if(world.disposed)throw Error('The tour has ended.');
+    if(!world.pointClear(target))throw Error('That landmark approach is obstructed. Your animal has stayed at its previous location.');
+    Core.stop(state);Object.assign(u,target,{isMoving:false});delete state.fogAt;Core.refresh(state,{forceFog:true});log(state,'Visited '+visit.name+'.');
+  }finally{
+    world.coverageTarget=null;
+    if(!world.disposed)world.ensureCoverage(blockWindow(state,u),u);
+  }
+  return {visit,from:old,to:{x:u.x,y:u.y}};
+}

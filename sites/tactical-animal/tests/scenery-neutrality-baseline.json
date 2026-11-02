@@ -1,41 +1,46 @@
 {
-  "source": "claude/guard-multigoal (the guard approach search changed seeded play on purpose); replaces PR #21's recording from origin/main fb386a5; replayed by tests/scenery-neutrality.test.mjs",
+  "source": "Global movement revision: base pace2x, stamina off, elapsed catch-up and continuous movement controls; same seeds and full-state per-command hashes.",
   "rows": [
     {
       "missionId": "night-ledger",
       "seed": 3,
       "steps": 150,
-      "hash": "20c8a8c94c8f19834ffe6764460ce2c39cadb7adb67240351747f349daff82a7"
+      "hash": "aedaeb389397630819110ad183163543043ea945f28d792f689bb56e6eed35a5"
     },
     {
       "missionId": "night-ledger",
       "seed": 4,
       "steps": 150,
-      "hash": "66f5a342607ceb07027432a86e8b5078ce7e8e6c60f0527c522a2e6506fa655d"
+      "hash": "d9694f946eec4d6d05ff59909fa3c733634429143f5a99e97dc307b53e30384f"
     },
     {
       "missionId": "night-ledger",
       "seed": 6,
       "steps": 150,
-      "hash": "b7a1b19cd13908d30a99e6644fceadf23595a0422f0663bd2a64b2df67713e2c"
+      "hash": "768cb611271cee93d841e44f1ef479be32064f7afc8638f4f9e106c1c4e02eeb"
     },
     {
       "missionId": "night-ledger",
       "seed": 8,
       "steps": 200,
-      "hash": "80691eebc6b3311b30c3cbdcb3941eb15a724286f01da7f4efdddc83a35c383b"
+      "hash": "e4a4ce059c60fbd5db6aa78457330b5b89c4705b6dc6410196ff207996eef5a0"
     },
     {
       "missionId": "road-checkpoint",
       "seed": 1,
       "steps": 40,
-      "hash": "8515e17c10b47759885e424d05a49eb8e609939cbc407a4e7a36b265692f274d"
+      "hash": "cc1d4eff5999710619c8c65a0fb9da4712cfa2e828c89616babffad3aef88144"
     },
     {
       "missionId": "road-checkpoint",
       "seed": 2,
       "steps": 40,
-      "hash": "01c0910232b318a1b75690b3ade8ee8cbe221842ab99119fc0098db4d680473f"
+      "hash": "ce36da07c88dd26603ee26cce8a09f1732a837608b39c3535cec325c713cc433"
     }
-  ]
+  ],
+  "movementPolicy": {
+    "standingWalk": 7.2,
+    "standingRun": 14.4,
+    "staminaEnabled": false
+  }
 }

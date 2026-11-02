@@ -1,11 +1,12 @@
 name: Mount Dora walking-tour acceptance
 on:
   pull_request:
-    branches: [main, codex/mount-dora-playable]
+    branches: [main, codex/mount-dora-playable, codex/mount-dora-movement]
     paths:
       - 'sites/tactical-animal/**'
       - 'maps/mount-dora/**'
       - 'tools/test-mount-dora-walkthrough.mjs'
+      - 'tools/test-movement-runtime.mjs'
       - '.github/workflows/mount-dora-walkthrough.yml'
   workflow_dispatch:
 permissions:
@@ -38,14 +39,20 @@ jobs:
         env:
           TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node tools/test-mount-dora-walkthrough.mjs
+      - name: Measure real movement, held Run, lifecycle and zoom
+        env:
+          TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node tools/test-movement-runtime.mjs
       - name: Verify temporary browser and server cleanup
-        if: ${{ always() && hashFiles('artifacts/mount-dora-walkthrough/native/helper.json') != '' }}
+        if: always()
         run: |
-          node --input-type=module -e "import fs from 'node:fs'; const c=JSON.parse(fs.readFileSync('artifacts/mount-dora-walkthrough/native/helper-cleanup.json')); if(!c.httpReleased||!c.wsReleased||!c.browserProcessExited||!Array.isArray(c.errors)||c.errors.length) throw Error('Native helper cleanup was not verified: '+JSON.stringify(c));"
+          node --input-type=module -e "import fs from 'node:fs'; for(const dir of ['artifacts/mount-dora-walkthrough/native','artifacts/mount-dora-travel-speed/native']){if(!fs.existsSync(dir+'/helper.json'))continue; const c=JSON.parse(fs.readFileSync(dir+'/helper-cleanup.json')); if(!c.httpReleased||!c.wsReleased||!c.browserProcessExited||!Array.isArray(c.errors)||c.errors.length) throw Error('Native helper cleanup was not verified: '+JSON.stringify(c));}"
       - name: Retain actual route, visual and cleanup evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: mount-dora-walkthrough-${{ github.event.pull_request.head.sha || github.sha }}
-          path: artifacts/mount-dora-walkthrough/native
+          path: |
+            artifacts/mount-dora-walkthrough/native
+            artifacts/mount-dora-travel-speed/native
           retention-days: 14

@@ -3,9 +3,10 @@ import {Core,hero,distance,dressing,tick,objectiveSecured} from '../dist/solo-ga
 // Only public simulation commands advance this controller: no coordinate,
 // health, AP, inventory, door, or objective edits. Also used to prepare browser
 // checkpoints reached by playing, rather than manufacturing completed saves.
-export function playRoute(state,steps,{onStep=()=>{}}={}){
+export function playRoute(state,steps,{onStep=()=>{},onFrame=()=>{}}={}){
   let frames=0;
   const advance=()=>{
+    onFrame(state);
     if(++frames>14000)throw Error('Route timed out: '+JSON.stringify({step:steps[0],position:hero(state),phase:state.phase}));
     if(state.solo.status==='lost')throw Error('The animal fell on the route.');
     const unit=hero(state);

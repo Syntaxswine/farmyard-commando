@@ -55,9 +55,9 @@ test('the southern freight route reaches supplies and offers a different working
 });
 
 test('the road remains a viable combat approach while distant posts stay quiet at first contact',()=>{
-  const s=operation();playRoute(s,[{x:62,y:120}]);
-  const alerted=s.units.filter(g=>g.team==='guard'&&g.alert);assert.equal(s.phase,'player');assert.ok(alerted.length>0&&alerted.length<=2);
-  for(const name of ['North picket','Freight sentry','Orders courier','East road sentry'])assert.equal(s.units.find(g=>g.name===name).alert,false,name);
+  const s=operation();let firstContact=null;playRoute(s,[{x:62.25,y:120}],{onFrame:state=>{if(state.phase==='player'&&!firstContact)firstContact=state.units.filter(g=>g.team==='guard'&&g.alert).map(g=>g.name);}});
+  assert(firstContact,'The road makes real contact before its controller clears the approach');assert.ok(firstContact.length>0&&firstContact.length<=2);
+  for(const name of ['North picket','Freight sentry','Orders courier','East road sentry'])assert(!firstContact.includes(name),name);
   playRoute(s,CHECKPOINT_ROAD_ENTRY.slice(3));assert.ok(s.round>0);assert.equal(s.solo.objectives['travel-orders'],true);
   playRoute(s,[{x:117,y:109.8},{id:'checkpoint-service-door',action:'open'},...CHECKPOINT_NORTH_EXIT]);assert.equal(s.solo.status,'extracted');
 });

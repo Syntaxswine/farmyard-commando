@@ -26,10 +26,11 @@ export function blockRect(column,row,source){
 
 // The rendering window is a residency policy, never a simulation boundary.
 // Shift inward at sector edges so a large world still retains nine blocks.
-export function blockWindow(source,focus){
+export function blockWindow(source,focus,side=3){
+  if(![3,5].includes(side))throw Error('Render residency is bounded to 3x3 or 5x5 blocks.');
   const {width,height}=gridDimensions(source),columns=Math.ceil(width/WORLD_BLOCK_SIZE),rows=Math.ceil(height/WORLD_BLOCK_SIZE);
-  const centre=blockForPoint(focus),nx=Math.min(3,columns),ny=Math.min(3,rows);
-  const firstX=Math.max(0,Math.min(columns-nx,centre.x-1)),firstY=Math.max(0,Math.min(rows-ny,centre.y-1));
+  const centre=blockForPoint(focus),nx=Math.min(side,columns),ny=Math.min(side,rows);
+  const firstX=Math.max(0,Math.min(columns-nx,centre.x-Math.floor(nx/2))),firstY=Math.max(0,Math.min(rows-ny,centre.y-Math.floor(ny/2)));
   const blocks=[];
   for(let row=firstY;row<firstY+ny;row++)for(let column=firstX;column<firstX+nx;column++)blocks.push(blockRect(column,row,source));
   const x=firstX*WORLD_BLOCK_SIZE,y=firstY*WORLD_BLOCK_SIZE,w=Math.min(width-x,nx*WORLD_BLOCK_SIZE),h=Math.min(height-y,ny*WORLD_BLOCK_SIZE);

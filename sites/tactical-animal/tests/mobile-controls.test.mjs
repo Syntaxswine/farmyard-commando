@@ -45,3 +45,7 @@ test('keyboard activation remains available after a cancelled pointer and opens 
   fire(b,'pointerdown');fire(b,'pointercancel');fire(b,'click',{detail:0});fire(b,'keydown',{key:'ArrowDown'});
   assert.equal(taps,1);assert.equal(holds,1);
 });
+
+test('a secondary touch tap works without a browser click and suppresses any later duplicate',()=>{
+  const b=new Control();let taps=0;bindPressHold(b,{tap:()=>taps++,hold:()=>{},canUse:()=>true});fire(b,'pointerdown',{pointerId:2,pointerType:'touch',isPrimary:false});fire(b,'pointerup',{pointerId:2,pointerType:'touch',isPrimary:false});assert.equal(taps,1);fire(b,'click');assert.equal(taps,1);fire(b,'click',{detail:0});assert.equal(taps,2);
+});

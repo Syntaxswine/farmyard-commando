@@ -56,13 +56,15 @@ changing collision. Pooled opaque materials remain available on exit from focus.
 
 ## Bounded residency and movement
 
-The render window contains at most nine 24 metre blocks. Crossing one block
-retains six blocks and replaces three. A 72 metre window intersects at most four
+Close views use nine 24 metre blocks (72m square); wider zoom uses at most 25
+blocks (120m square). A one-block crossing retains 6/replaces 3 in a close view
+and retains 20/replaces 5 in a wide view. Either window intersects at most four
 240 metre source sectors. Camera-window sources and nearby actor collision
 sources are pinned; neighboring sectors are prefetched subject to these caps:
 
 | Resource | Cap |
 | --- | --- |
+| Render blocks | 9 near / 25 wide |
 | Decoded sectors | 9 |
 | Concurrent fetches | 2 |
 | Pending fetches | 9 |
@@ -109,3 +111,6 @@ process identities and released ports. Evidence is written to ignored
 Branch `codex/mount-dora-walkthrough` starts from published release `75a6b61` and
 includes reviewed combined map/art base `5218ffc`. The Architect owns combined
 release integration and promotion; this branch does not publish main or Pages.
+
+Global pace, disabled stamina, elapsed stepping and visual cadence are described
+in [movement-runtime.md](movement-runtime.md).

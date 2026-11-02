@@ -11,7 +11,8 @@ test('real orthographic ground corners remain inside residency at maximum landsc
   const ray=new T.Raycaster(),plane=new T.Plane(new T.Vector3(0,1,0),0);
   for(const [width,height]of [[844,390],[390,844],[320,640]])for(const x of [0,23.49,23.5,47.49,47.5,71.49,71.5,120,215.5,239])for(const y of [0,47.49,47.5,120,239]){
     view.container.clientWidth=width;view.container.clientHeight=height;view.target.set(x,0,y);view.updateCamera();
-    const window=blockWindow(state,{x,y}),extent=groundCameraExtents({width,height});
+    const window=view.residentWindow,extent=groundCameraExtents({width,height});
+    assert.ok(window.blocks.length<=25);
     assert.ok(Math.max(-.5,x-extent.x*view.span)>=window.x-.5-1e-5);assert.ok(Math.min(239.5,x+extent.x*view.span)<=window.x+window.w-.5+1e-5);
     assert.ok(Math.max(-.5,y-extent.y*view.span)>=window.y-.5-1e-5);assert.ok(Math.min(239.5,y+extent.y*view.span)<=window.y+window.h-.5+1e-5);
     for(const a of [-1,1])for(const b of [-1,1]){

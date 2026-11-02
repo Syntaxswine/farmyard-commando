@@ -4,13 +4,14 @@ import {TOUR_ID,TOUR_ACTIVITY,getTourWorld} from './mount-dora-activity.js';
 import {createSoloGame,validBuild,hero,Core,log} from './solo-game.js';
 import {TownExplored} from './mount-dora-progress.js';
 import {TownEnvironment,drawTownMinimap} from './mount-dora-view.js';
-// Source-reviewed approaches from architect route fixtures c0c0968, in canonical town metres.
+// Source-reviewed approaches in canonical town metres; open-shelter visits use
+// Architect-verified centres so the artwork and roof focus are immediately visible.
 export const TOUR_VISITS=Object.freeze([
-  {id:'donnelly-park',name:'Donnelly Park',town:[459.5,500.5]},
+  {id:'donnelly-park',name:'Donnelly Park',town:[478,484.75]},
   {id:'lakeside-inn',name:'Lakeside Inn',town:[336.5,810.5]},
-  {id:'elizabeth-evans',name:'Elizabeth Evans Park',town:[430.5,1015.5]},
+  {id:'elizabeth-evans',name:'Elizabeth Evans Park',town:[470,1005]},
   {id:'grantham-lighthouse',name:'Grantham Point lighthouse',town:[504.5,1168.5]},
-  {id:'gilbert-park',name:'Gilbert Park',town:[710.5,1207.5]},
+  {id:'gilbert-park',name:'Gilbert Park',town:[737.2963,1181.367]},
   {id:'palm-island',name:'Palm Island boardwalk',town:[529.5,1402.5]},
   {id:'palm-entrance',name:'Palm Island entrance',town:[665.969,1296.5786]},
   {id:'historic-shopfronts',name:'Donnelly / Fourth shopfronts',town:[433.5,635.5]},

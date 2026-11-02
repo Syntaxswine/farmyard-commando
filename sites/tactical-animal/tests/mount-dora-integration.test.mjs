@@ -12,10 +12,11 @@ import {createOperationStorage,OPERATION_SAVE} from '../dist/operation-storage.j
 import {normalizeBuild,decodeSave,MISSIONS} from '../dist/solo-game.js';
 const base=new URL('../../../maps/mount-dora/',import.meta.url),projectURL=new URL('project.json',base),project=JSON.parse(fs.readFileSync(projectURL));
 const fetcher=async url=>new Response(fs.readFileSync(url));
+const shelterVisits={'donnelly-park':'md:donnelly-stage','elizabeth-evans':'md:evans-pavilion','gilbert-park':'md:shelter:557154684'};
 async function idle(w){while(w.inFlight.size||w.queue.length)await new Promise(r=>setTimeout(r,1));}
 test('committed production art leaves every source-reviewed visit approach clear and obeys all native ownership replacements',async()=>{
   const w=await new TownWorld(project,{baseURL:base,fetcher,art:ART}).identify();
-  try{for(const visit of TOUR_VISITS){const p={x:visit.town[0]-.5,y:visit.town[1]-.5};await w.readyAt(p);assert(w.pointClear(p),visit.id);assert(w.cache.size<=9);}assert.equal(w.visualReplacement.size,953);assert(w.physicalReplacement.size>0);}finally{w.dispose();}
+  try{for(const visit of TOUR_VISITS){const p={x:visit.town[0]-.5,y:visit.town[1]-.5};await w.readyAt(p);assert(w.pointClear(p),visit.id);assert(w.cache.size<=9);if(shelterVisits[visit.id]){const artwork=ART.PLACEMENTS.find(p=>p.id===shelterVisits[visit.id]);assert(artwork);assert(Math.hypot(artwork.anchor[0]-visit.town[0],artwork.anchor[1]-visit.town[1])<2,'Open-shelter visit immediately exposes its real artwork');}}assert.equal(w.visualReplacement.size,953);assert(w.physicalReplacement.size>0);}finally{w.dispose();}
 });
 test('actual Core travel follows both mapped boardwalk centre lines, joins and returns with production rails intact',async()=>{
   const f=JSON.parse(fs.readFileSync(new URL('features.json',base))).features,first=f.find(x=>x.id==='osm-way-548471563').geometry.coordinates,second=f.find(x=>x.id==='osm-way-688219167').geometry.coordinates;

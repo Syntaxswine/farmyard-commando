@@ -4,7 +4,9 @@ This is a consumer of the existing Nautilus map workshop at commit
 `2502646482218524fd5129641da769bb82462e4d`. It does not change the game,
 engine pins, native map format, renderer, geographic generator or final sector files.
 
-The overview places project sectors by column and row, north up. Selection shows
+The overview places project sectors over the geographic SVG by column and row,
+north up. This lightweight underlay shows the whole town without loading its 3D
+geometry. Selection shows
 town bounds, geometric neighbors and recorded landmarks. Selection never opens a
 map. Direct opening uses the existing `window.nautilus.open(input)` bridge in a
 same-origin iframe. The workshop keeps its own tools, folders, browser saves,

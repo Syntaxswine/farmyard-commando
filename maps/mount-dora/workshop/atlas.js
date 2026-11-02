@@ -38,7 +38,7 @@ async function start(){
   state.projectURL=new URL(state.host?.project||'../project.json',location.href);state.project=await json(state.projectURL);
   const sectors=grid(state.project);state.features=[];
   if(state.project.featuresFile){try{state.features=(await json(new URL(sectorFile(state.project.featuresFile),state.projectURL))).features||[];}catch(e){say('Landmark source unavailable: '+e.message);}}
-  if(state.project.atlasFile&&/^[a-z0-9_-]+\.svg$/i.test(state.project.atlasFile)){const a=document.createElement('a');a.href=new URL(state.project.atlasFile,state.projectURL);a.target='_blank';a.rel='noopener';a.textContent='Open geographic overview ↗';$('grid').after(a);}
+  if(state.project.atlasFile&&/^[a-z0-9_-]+\.svg$/i.test(state.project.atlasFile)){const a=document.createElement('a');a.href=new URL(state.project.atlasFile,state.projectURL);a.target='_blank';a.rel='noopener';a.textContent='Open geographic overview ↗';$('grid').after(a);$('grid').classList.add('geographic');$('grid').style.backgroundImage='url("'+a.href+'")';}
   $('grid').style.aspectRatio=state.project.columns+'/'+state.project.rows;
   try{state.report=await json(new URL(state.host?.audit||'./audit.json',location.href));}catch{}
   $('summary').textContent=(state.project.name||'Mount Dora')+' · '+state.project.columns+' × '+state.project.rows+' sectors · '+state.project.columns*240+' × '+state.project.rows*240+' m. '+(state.host?.sourceMode==='fixtures'?'SYNTHETIC FIXTURES — not the town map.':'North up; one metre per tile.');

@@ -23,3 +23,25 @@ test('Mount Dora reference renderer and painted source bytes match immutable pro
  for(const file of provenance.files.filter(f=>f.local)){const bytes=fs.readFileSync(new URL(file.local,base));assert.equal(bytes.length,file.bytes,file.path);assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),file.sha256,file.path);}
  assert.equal(provenance.geodataInputs['osm-downtown-snapshot.json'].bytes,3385887);assert.equal(geography.attribution,'© OpenStreetMap contributors, ODbL 1.0');
 });
+import {createLandmarkStudy} from '../../../maps/mount-dora/art/three.js';
+import {roofErrors} from '../../../maps/mount-dora/art/source/nautilus/packages/roof-core/index.js';
+import * as T from '../dist/aft/tactics/vendor/three.module.js';
+const prototypes=read('source/prototypes.json');
+test('Mount Dora actual source geometry preserves native scale and disposes owned resources only',()=>{
+ const atlas=new T.Texture(),plantTextures=Object.fromEntries(Object.keys(prototypes.textures).map(k=>[k,new T.Texture()]));let borrowedDisposals=0;for(const t of [atlas,...Object.values(plantTextures)])t.addEventListener('dispose',()=>borrowedDisposals++);
+ const rows=[];for(const landmark of manifest.landmarks){let created=0,disposed=0;const host={...T,MeshStandardMaterial:class extends T.MeshStandardMaterial{constructor(options){super(options);created++;this.addEventListener('dispose',()=>disposed++);}}};const study=createLandmarkStudy({THREE:host,id:landmark.id,atlas,prototypes,plantTextures,geography}),metrics=study.metrics();rows.push({id:landmark.id,...metrics});assert.ok(metrics.triangles>0);assert.ok(metrics.triangles<50000);assert.ok(metrics.bounds.min.every(Number.isFinite));assert.ok(metrics.bounds.max.every(Number.isFinite));assert.equal(metrics.geographicallyPlaced,false);
+  const gs=new Set();study.root.traverse(o=>{if(o.isMesh){gs.add(o.geometry);for(const a of Object.values(o.geometry.attributes))assert.ok(Array.from(a.array).every(Number.isFinite));}});let released=0;for(const g of gs)g.addEventListener('dispose',()=>released++);study.dispose();assert.equal(released,gs.size);assert.equal(disposed,created,'No unused native source materials leak');study.dispose();assert.equal(disposed,created);assert.equal(study.root.children.length,0);
+ }
+ const lighthouse=rows.find(r=>r.id==='md:grantham-lighthouse');assert.ok(Math.abs(lighthouse.bounds.max[1]-10.6)<1e-6);assert.equal(borrowedDisposals,0);assert.throws(()=>createLandmarkStudy({THREE:T,id:'objects:invented-lighthouse',atlas,prototypes,plantTextures,geography}));
+});
+test('Mount Dora source prototypes keep supported IDs and never silently lose a model',()=>{
+ const known=new Set(assets.assets.map(a=>a.id));for(const model of Object.values(prototypes.models)){assert.ok(known.has(model.publicAssetId));assert.ok(model.batches.length);for(const b of model.batches){assert.equal(b.positions.length,b.normals.length);assert.equal(b.positions.length/3*2,b.uvs.length);}}
+ for(const texture of Object.values(prototypes.textures)){const bytes=fs.readFileSync(new URL(texture.url,base));assert.equal(bytes.length,texture.bytes);assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),texture.sha256);}
+});
+test('Mount Dora confirms the real native roof boundary gap rather than inventing one',()=>{
+ const common={id:'cross-boundary-study',x:236,y:10,width:8,depth:6,z:1,style:'hip',axis:'x',pitch:28,overhang:.3,material:'metal',seed:19};
+ const source=fs.readFileSync(new URL('source/nautilus/packages/roof-core/index.js',base),'utf8');assert.match(source,/including its overhang/);
+ // Invoke the actual public source geometry entry at a valid local point, then outside the footprint.
+ const okay=roofErrors({slopedRoofs:{version:1,roofs:[{...common,x:24}]}},240);assert.deepEqual(okay,[]);
+ const bad=roofErrors({slopedRoofs:{version:1,roofs:[common]}},240);assert.ok(bad.some(e=>e.includes('fit inside')));
+});

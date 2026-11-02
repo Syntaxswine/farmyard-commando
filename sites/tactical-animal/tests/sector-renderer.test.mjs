@@ -82,7 +82,7 @@ test('actor graphics reuse a bounded warm pool and release older rigs without de
 
 test('the full-sector minimap fits far remembered cells and plots only currently detected opponents',()=>{
   const state=checkpoint(),rects=[],dots=[],arrows=[];state.seen=new Set(['0,0','239,239']);state.detected=new Set([state.units[1].id]);state.units[1].x=220;state.units[1].y=200;
-  const context={fillRect(x,y,w,h){rects.push({x,y,w,h});},beginPath(){},moveTo(){},lineTo(){},stroke(){},save(){},translate(x,y){arrows.push({x,y});},rotate(){},closePath(){},restore(){},fill(){},arc(x,y,r){dots.push({x,y,r,color:this.fillStyle});}};
+  const context={fillRect(x,y,w,h){rects.push({x,y,w,h});},beginPath(){},moveTo(){},lineTo(){},stroke(){},save(){},scale(){},translate(x,y){arrows.push({x,y});},rotate(){},closePath(){},restore(){},fill(){},arc(x,y,r){dots.push({x,y,r,color:this.fillStyle});}};
   drawMinimap({width:240,height:240,getContext:()=>context},state);
   assert.equal(rects.length,3);assert.equal(rects[1].x,6);assert.equal(rects[2].x,6+239*.95);assert.equal(rects[2].y,6+239*.95);
   assert.deepEqual(dots.filter(dot=>dot.color==='#e16a47').map(({x,y})=>({x,y})),[{x:6+220*.95,y:6+200*.95}]);assert.equal(arrows.length,1);

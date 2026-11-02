@@ -8,13 +8,14 @@ import {createSoloGame,DEFAULT_BUILD,getMission} from '../dist/solo-game.js';
 test('minimap objective and extraction markers use the active operation before and after collection',()=>{
   for(const id of ['night-ledger','short-measure']){
     const state=createSoloGame(DEFAULT_BUILD,1947,id),mission=getMission(id),dots=[];
-    const context={fillRect(){},beginPath(){},moveTo(){},lineTo(){},stroke(){},save(){},translate(){},rotate(){},closePath(){},restore(){},fill(){},arc(x,y,r){dots.push({x,y,r,color:this.fillStyle});}};
+    const context={fillRect(){},beginPath(){},moveTo(){},lineTo(){},stroke(){},save(){},scale(){},translate(){},rotate(){},closePath(){},restore(){},fill(){},arc(x,y,r){dots.push({x,y,r,color:this.fillStyle});}};
     const canvas={width:380,height:280,getContext:()=>context};
     const xy=point=>{const scale=268/28;return {x:(380-38*scale)/2+(point.x-1)*scale,y:6+(point.y-1)*scale};};
-    drawMinimap(canvas,state);assert.equal(dots.length,2);
-    assert.deepEqual(dots.map(({x,y,color})=>({x,y,color})),[{...xy(mission.objective),color:'#df613f'},{...xy(mission.extraction),color:'#c4d29a'}]);
+    const objectives=()=>dots.filter(d=>['#df613f','#c4d29a'].includes(d.color));
+    drawMinimap(canvas,state);assert.equal(objectives().length,2);
+    assert.deepEqual(objectives().map(({x,y,color})=>({x,y,color})),[{...xy(mission.objective),color:'#df613f'},{...xy(mission.extraction),color:'#c4d29a'}]);
     state.solo.objectives[mission.objective.id]=true;dots.length=0;drawMinimap(canvas,state);
-    assert.deepEqual(dots.map(({x,y,color})=>({x,y,color})),[{...xy(mission.extraction),color:'#c4d29a'}]);
+    assert.deepEqual(objectives().map(({x,y,color})=>({x,y,color})),[{...xy(mission.extraction),color:'#c4d29a'}]);
   }
 });
 

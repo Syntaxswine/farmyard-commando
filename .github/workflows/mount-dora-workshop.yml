@@ -8,6 +8,9 @@ on:
       - 'tools/maps/**'
       - 'tests/maps/**'
       - 'sites/tactical-animal/tools/build.mjs'
+      - 'sites/tactical-animal/dist/mount-dora*'
+      - 'sites/tactical-animal/dist/mount-dora-source/**'
+      - 'sites/tactical-animal/dist/mission-art/mount-dora/**'
       - '.github/workflows/mount-dora-workshop.yml'
       - 'docs/maps/mount-dora*'
 permissions:
@@ -35,6 +38,12 @@ jobs:
           python3 -B tools/maps/build-mount-dora.py --check
           python3 -B -m unittest discover -s tests/maps -p 'test_*.py' -v
           node tests/maps/validate-native-baseline.mjs
+      - name: Verify continuous travel with production landmark solids
+        if: ${{ hashFiles('sites/tactical-animal/dist/mount-dora-world.js') != '' }}
+        run: |
+          node tools/maps/review-mount-dora-routes.mjs
+          git diff --exit-code -- maps/mount-dora/playable/route-fixtures.json
+          node tools/maps/review-mount-dora-travel.mjs
       - name: Check out the public workshop at its reviewed immutable commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:

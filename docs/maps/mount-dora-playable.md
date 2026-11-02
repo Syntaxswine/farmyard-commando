@@ -85,6 +85,21 @@ node tools/maps/review-mount-dora-routes.mjs --wall-module PATH_TO_EXACT_WALL_RU
 The helper is `packages/map-core/wall-runs.js` at the revision above; the
 artifact snapshot used during review is byte-identical to that Git object.
 
+The production collision audit runs those outdoor approaches and their return
+journeys through the game's actual `Core.travel`, including the native wall
+slabs, terrain, vegetation and production landmark solids. It follows both
+complete original boardwalk centre lines in both directions, rather than
+following the old grid route through a side rail. It asserts source/cache caps,
+equipment preservation and teardown. Run:
+
+```powershell
+node tools/maps/review-mount-dora-travel.mjs
+```
+
+The report is written to `artifacts/mount-dora-playable/integrated-travel.json`.
+This is continuous physical travel evidence; actual controls, rendering, visits,
+loading failures and save/resume have a separate native browser acceptance run.
+
 ## Building references
 
 Street View extraction is not part of the asset pipeline. Google's published

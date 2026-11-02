@@ -4,6 +4,22 @@ The playable integration starts from released Farmyard `75a6b61` and the
 reviewed Nautilus `2502646482218524fd5129641da769bb82462e4d`. The runtime and
 production artwork are implemented on separate branches and reviewed together.
 
+## Enter the town
+
+Open [the Mount Dora walking tour](https://syntaxswine.github.io/farmyard-commando/game.html?activity=mount-dora),
+choose an animal and loadout, and select **Deploy Solo**. The operation selector
+also contains **Mount Dora walking tour**. Walk with the joystick, WASD or arrow
+keys; tap nearby ground to route there. **Options → Visit landmark** moves to a
+cleared approach for a quicker look, while ordinary travel remains continuous.
+
+The tour has no guards, combat or extraction requirements. Buildings retain
+their closed exterior collision, and water is passable only on the mapped
+supported routes. **Resume walking tour** restores the tour's own position,
+animal, equipment and explored area without replacing an operation checkpoint.
+The renderer keeps a moving 3 × 3 window of 24 m blocks; the underlying town
+spans 6 × 7 sectors of 240 m each. This is an exterior approximation on flat
+terrain, rather than surveyed interiors or elevation.
+
 ## Coordinate and physical contract
 
 Geographic/art records remain in town east/south metres. Farmyard preserves its

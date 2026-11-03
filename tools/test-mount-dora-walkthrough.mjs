@@ -7,6 +7,7 @@ import {execFileSync} from 'node:child_process';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {installNativeProbe,inspectWebGL} from '../sites/tactical-animal/browser-tests/native-probe.mjs';
+import {assertMapLocation} from '../sites/tactical-animal/browser-tests/map-location.mjs';
 const shelterReview=process.argv.includes('--shelter-review');
 // The two-core software-rendering runner uses a normal 800x600 desktop window.
 // Keep the complete route/assertions and 390x844 touch coverage; video is opt-in.
@@ -103,6 +104,7 @@ try{
   mark('existing mission deploys through the production title/game route');
   await page.locator('#operation-select').selectOption('mount-dora');await page.locator('#animals button').filter({hasText:'goat'}).first().click();await page.getByRole('button',{name:'Mosin-Nagant',exact:true}).click();await page.locator('#deploy').click();
   let info=await ready(page);assert.equal(info.player.species,'goat');assert.equal(info.player.weapon,'rifle');assert.equal(info.phase,'explore');assert(info.actor.visible&&info.actor.meshes>0&&info.actor.vertices>0);assert.equal(info.render.blocks,9);assert(info.memory.programs>0);assert.equal(info.memory.shaderFailures,0);
+  report.desktopHudLocation=await assertMapLocation(page,info.player);await page.locator('#minimap-button').click();report.desktopExpandedLocation=await assertMapLocation(page,info.player,{expanded:true});await shot(page,'desktop-town-map');await page.getByRole('button',{name:'Continue walking',exact:true}).click();
   await shot(page,'desktop-donnelly');mark('regular animal/loadout starts a free, physically clear Donnelly tour',{snapshot:info});
   const moved=await keyboardWalk(page,info);assert(moved.distance>info.distance+.2);
   assert(await page.locator('#grenade').isDisabled());const ammo=JSON.stringify(moved.player.ammo);await page.keyboard.press('g');assert.equal(JSON.stringify((await snapshot(page)).player.ammo),ammo);mark('real keyboard movement and explicitly unavailable tour firing');
@@ -129,7 +131,7 @@ try{
   await page.waitForTimeout(2700);const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('farmyard-mount-dora-tour-v1')));assert(saved);assert(!Object.hasOwn(saved,'map'));assert(JSON.stringify(saved).length<600000);
   assert.equal(await page.evaluate(()=>localStorage.getItem('tactical-animal-operation-v2')),operationBefore);
   await page.reload();await page.locator('#resume').click();info=await ready(page);
-  assert(Math.hypot(info.player.x-saved.player.x,info.player.y-saved.player.y)<1e-6);assert.deepEqual(info.player.ammo,saved.player.ammo);assert.equal(info.player.species,saved.player.species);mark('tour reload restores global position/resources and preserves the operation save',{snapshot:info,saveBytes:JSON.stringify(saved).length});
+  assert(Math.hypot(info.player.x-saved.player.x,info.player.y-saved.player.y)<1e-6);assert.deepEqual(info.player.ammo,saved.player.ammo);assert.equal(info.player.species,saved.player.species);report.restoredHudLocation=await assertMapLocation(page,info.player);mark('tour reload restores global position/resources and preserves the operation save',{snapshot:info,saveBytes:JSON.stringify(saved).length});
   assert(info.source.stats.peakDecoded<=9&&info.source.stats.peakFetches<=2&&info.render.blocks<=9);
   report.desktopWebGL=await assertGL(page);await menu(page,'Choose animal or operation');info=await snapshot(page);assert.equal(info.source.decoded,0);assert.equal(info.source.inFlight,0);assert.equal(info.source.queued,0);mark('tour exit releases decoded sources and renderer residency');
   }
@@ -140,7 +142,7 @@ try{
   const stick=await mobile.locator('#joystick').boundingBox(),cdp=await phone.newCDPSession(mobile),x=stick.x+stick.width/2,y=stick.y+stick.height/2;
   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{id:1,x,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{id:1,x:x+stick.width*.24,y:y+stick.height*.12}]});try{await waitInfo(mobile,s=>s.distance>mobileBefore.distance+.45,'Actual touch joystick movement was not observed',20000);}finally{await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
   const mobileMoved=await snapshot(mobile);assert(mobileMoved.distance>mobileBefore.distance+.2);assert(mobileMoved.actor.visible);const mobileKeyboard=await keyboardWalk(mobile,mobileMoved);assert(mobileKeyboard.distance>mobileMoved.distance+.2);await shot(mobile,'phone-donnelly');
-  await visit(mobile,'Grantham Point lighthouse');await waitInfo(mobile,s=>s.ready&&!s.paused&&Math.hypot(s.player.x-504,s.player.y-1168)<.1&&s.render?.landmarks?.residentIds.includes('md:lighthouse'),'Phone landmark visit failed');await shot(mobile,'phone-lighthouse');
+  await visit(mobile,'Grantham Point lighthouse');await waitInfo(mobile,s=>s.ready&&!s.paused&&Math.hypot(s.player.x-504,s.player.y-1168)<.1&&s.render?.landmarks?.residentIds.includes('md:lighthouse'),'Phone landmark visit failed');report.phoneHudLocation=await assertMapLocation(mobile,(await snapshot(mobile)).player);await mobile.locator('#minimap-button').click();report.phoneExpandedLocation=await assertMapLocation(mobile,(await snapshot(mobile)).player,{expanded:true});await shot(mobile,'phone-town-map');await mobile.getByRole('button',{name:'Continue walking',exact:true}).click();await shot(mobile,'phone-lighthouse');
   await visit(mobile,'Gilbert Park');const shelter=await waitInfo(mobile,s=>s.ready&&!s.paused&&Math.hypot(s.player.x+.5-737.2963,s.player.y+.5-1181.367)<.1&&s.render?.landmarks?.fadedPlacements.includes('md:shelter:557154684'),'Open-shelter visit did not expose actor and roof focus');assert(shelter.actor.visible&&shelter.actor.meshes>0);assert(shelter.render.landmarks.occlusionMaterials>0);assert(shelter.source.stats.peakDecoded<=9&&shelter.source.stats.peakFetches<=2);await shot(mobile,'phone-gilbert-open-shelter');mark('open-shelter visit immediately shows the actor with roof focus',{snapshot:shelter});
   assert(await mobile.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));report.phoneWebGL=await assertGL(mobile);mark('390x844 production touch joystick, character, landmark and layout');
   for(const l of report.pages){assert.deepEqual(l.errors,[],'Page errors in '+l.name);const unexpected=l.requests.filter(r=>!l.expectedFailures.some(e=>e.url===r.url&&e.status===r.status));assert.deepEqual(unexpected,[],'Unexpected failed assets in '+l.name);const severe=l.console.filter(x=>x.type==='error'&&!/503/.test(x.text));assert.deepEqual(severe,[],'Console errors in '+l.name);}

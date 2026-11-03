@@ -1,4 +1,5 @@
 import * as T from './aft/tactics/vendor/three.module.js';
+import {drawPlayerMapMarker} from './map-player-marker.js';
 import {createBiomePlantFactory} from './aft/tactics/biome-foliage-models.js';
 import {configureBiomeTexture,createBiomeMaterials} from './aft/tactics/biome-foliage-paint.js';
 import {BIOME_TEXTURES} from './aft/tactics/biome-foliage-data.js';
@@ -73,7 +74,7 @@ export class TownEnvironment{
   dispose(){if(this.disposed)return;this.disposed=true;this.readyForMovement=false;this.root.removeFromParent();for(const c of this.chunks.values())this.release(c);this.chunks.clear();for(const child of this.wallGroup.children)child.dispose();this.wallGroup.clear();this.plantGroup.clear();this.plants.clear();this.landmarks?.dispose();this.atlasOwner?.dispose();this.plantFactory?.dispose();for(const m of Object.values(this.plantMaterials||{}))m.dispose();for(const t of Object.values(this.plantTextures||{}))t.dispose();for(const material of this.materials.values())material.dispose();for(const promise of this.textures.values())promise.then(t=>t?.dispose()).catch(()=>{});this.materials.clear();this.textures.clear();this.cube.dispose();this.plane.dispose();this.root.clear();}
 }
 const miniCache=new WeakMap();
-export function drawTownMinimap(canvas,state){
+export function drawTownMinimap(canvas,state,options={}){
   const world=getTourWorld(state),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;ctx.fillStyle=miniColors[0];ctx.fillRect(0,0,w,h);
   let cached=miniCache.get(world);
   if(!cached){const c=document.createElement('canvas');c.width=180;c.height=210;cached={canvas:c,revision:-1};miniCache.set(world,cached);}
@@ -81,5 +82,5 @@ export function drawTownMinimap(canvas,state){
   if(!world.overviewImage&&cached.revision!==world.overviewRevision){const c=cached.canvas.getContext('2d');for(let y=0;y<210;y++)for(let x=0;x<180;x++){c.fillStyle=miniColors[world.overview[y*180+x]];c.fillRect(x,y,1,1);}cached.revision=world.overviewRevision;}
   const scale=Math.min((w-12)/1440,(h-12)/1680),ox=(w-1440*scale)/2,oy=(h-1680*scale)/2;ctx.imageSmoothingEnabled=false;ctx.drawImage(cached.canvas,ox,oy,1440*scale,1680*scale);
   ctx.strokeStyle='#85907d';ctx.lineWidth=.5;for(let x=240;x<1440;x+=240){ctx.beginPath();ctx.moveTo(ox+x*scale,oy);ctx.lineTo(ox+x*scale,oy+1680*scale);ctx.stroke();}for(let y=240;y<1680;y+=240){ctx.beginPath();ctx.moveTo(ox,oy+y*scale);ctx.lineTo(ox+1440*scale,oy+y*scale);ctx.stroke();}
-  const unit=state.units[0],r=Math.max(3,scale*.5);ctx.save();ctx.translate(ox+(unit.x+.5)*scale,oy+(unit.y+.5)*scale);ctx.rotate((unit.heading+90)*Math.PI/180);ctx.fillStyle='#fff3d1';ctx.beginPath();ctx.moveTo(0,-r*1.5);ctx.lineTo(r,r);ctx.lineTo(-r,r);ctx.closePath();ctx.fill();ctx.restore();
+  const unit=state.units[0];drawPlayerMapMarker(canvas,ctx,{x:ox+(unit.x+.5)*scale,y:oy+(unit.y+.5)*scale,heading:unit.heading},options);
 }

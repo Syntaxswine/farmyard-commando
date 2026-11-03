@@ -122,11 +122,37 @@ It runs street by street. For each building:
    nearest panorama, facing the building. Pan if it is off-centre. **A** opens
    the satellite view, where the roof shape is easiest to read.
 2. Tap what you see. Buttons marked *county* show what the record says.
-3. Press **Enter** for the next building. Answers save in the browser as you go.
+3. If you can see a door, click the dashed game outline on the mini-map where it
+   is. That marks one 1 m wall edge; click it again to remove it.
+4. Type the panorama's "Image capture" month (`2024-03`) and pick a confidence.
+5. Press **Enter** for the next building. Answers save in the browser as you go.
 
 Export whenever you stop, and commit the file as
 `maps/mount-dora/reference/house-survey.json`. Import merges by the newest answer
 per building, so two people can split the town by sector.
+
+### Evidence rules
+
+The repository's `AGENTS.md` (from PR #39) says geographic details, doors above
+all, go "only where source data or reviewed observations establish them", and
+keep "the source, coordinates, observation date and uncertainty". A survey
+answer is such a reviewed observation, and its export (version 2) says so in an
+`evidence` block:
+
+| Rule | Where it lives in `house-survey.json` |
+| --- | --- |
+| Source | `evidence.source`: a person viewing Google Maps; no imagery stored |
+| Coordinates | the building id; each entrance is a 1 m edge of the game's grid outline, in town metres |
+| Observation date | `imageryDate` (Google's capture month) and `at` (when the answer was recorded) |
+| Uncertainty | `confidence`: sure, likely or unsure. An unanswered field is unknown, not absent |
+
+Entrances are only doors a person saw. None are inferred from an address, an
+outline or a facade, so a building with no marked entrance keeps none. All 950
+authored outlines lie on the 1 m grid (a test checks this), so any wall can take
+an entrance. Editor doors are grid edges too (`e:x:y` / `s:x:y` in a sector), so
+converting a marked edge to a door record is a sector offset away. That
+conversion, and a playtest through the real game path, belong to the wiring
+step.
 
 ## Proposed use in the generator (not applied)
 

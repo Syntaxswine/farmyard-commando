@@ -3,7 +3,7 @@ export const TOUR_ID='mount-dora';
 export const TOUR_ACTIVITY=Object.freeze({
   id:TOUR_ID,layoutVersion:1,exploration:true,title:'Mount Dora walking tour',name:'Mount Dora',
   location:'MOUNT DORA / DOWNTOWN & LAKEFRONT',bounds:{x:0,y:0,w:1440,h:1680},spawn:{x:459,y:500,heading:0},
-  briefing:'Walk around downtown Mount Dora and the lakefront. Explore freely with your chosen animal and equipment. There are no guards, objectives or extraction requirements.',
+  briefing:'Walk around downtown Mount Dora and the lakefront. Explore freely with your chosen animal and equipment. Your equipment uses the normal gameplay rules. There are no guards, objectives or extraction requirements.',
   steps:['Walk or run with the joystick, WASD or arrow keys.','Follow the streets and supported boardwalk; buildings and water remain solid.','Use Options to visit a landmark or return to your loadout. Your tour has its own save.'],
   objective:null,extraction:null,rooms:[],cover:[],guards:[],containers:[],clues:[]
 });

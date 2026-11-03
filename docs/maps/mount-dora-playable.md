@@ -12,7 +12,9 @@ also contains **Mount Dora walking tour**. Walk with the joystick, WASD or arrow
 keys; tap nearby ground to route there. **Options → Visit landmark** moves to a
 cleared approach for a quicker look, while ordinary travel remains continuous.
 
-The tour has no guards, combat or extraction requirements. Buildings retain
+The town has no guards or extraction requirements. Weapons, grenades, reloads,
+health/fire and AP turns use the same production gameplay as other operations.
+Use **Options → Aim firearm at a point** to fire without an opponent. Buildings retain
 their closed exterior collision, and water is passable only on the mapped
 supported routes. **Resume walking tour** restores the tour's own position,
 animal, equipment and explored area without replacing an operation checkpoint.
@@ -131,3 +133,5 @@ and ordinary house typology. Original footprints remain geographic references;
 the playable version uses the declared grid generalization and preserves holes.
 Historical photographs are not a survey of current buildings or
 interiors. Reference photographs are not embedded as game textures.
+
+Every placed door must be an operational production interaction, including collision, normal costs and persistence. The current geographic dataset contains no authored verified entrances, so this change adds no guessed doors to Mount Dora. Editor-placed doors in supported imported maps now reach the same production door system. See the project authoring rules in `AGENTS.md`.

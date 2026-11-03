@@ -67,7 +67,7 @@ export function createSoloGame(build=DEFAULT_BUILD,seed=1947,missionId=DEFAULT_M
   const units=[u,...posts.map((g,i)=>makeUnit(i+1,'guard',g.name||g.character?.displayName||'Guard '+(i+1),g.species,g.weapon,g.x,g.y,g.heading??0,stats))];
   if(mission.fallen){const f=mission.fallen,fallen=makeUnit(units.length,'guard',f.name,f.species,f.weapon,f.x,f.y,f.heading,stats);fallen.hp=0;fallen.casualty='dead';units.push(fallen);}
   const s={map:m.terrain,edges:m.edges,units,interactables:missionInteractables({missionId:mission.id,layoutVersion:mission.layoutVersion??1}),phase:'explore',round:0,selected:0,visible:new Set(),seen:new Set(),detected:new Set(),log:[],seed,revision:0,queue:[],enemyIndex:1,enemyDelay:0,elapsed:0,solo:{version:2,missionId:mission.id,layoutVersion:mission.layoutVersion??1,build:{...build},objectives:{},inspected:[],ledger:false,status:'active',dressings:build.utility==='dressing'?2:0,distance:0,apDistance:0}};
-  if(authoredMap)s.solo.authoredMap=structuredClone(authoredMap);
+  if(authoredMap){s.solo.authoredMap=structuredClone(authoredMap);s.interactables=(m.doors||[]).map(({interactive,...door})=>({...door}));}
   mapMetadata(s,m);if(walkingWorld){s.tour={version:1,sourceRevision:walkingWorld.sourceRevision,artRevision:walkingWorld.artRevision};bindTourWorld(s,walkingWorld);}
   windowSystem.restore(s);interactionRules.restore(s);refresh(s);log(s,mission.briefing);return s;
 }
@@ -219,7 +219,24 @@ function visibility(s){
   for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(distance(u,{x,y})<range&&lineClear(s,u,{x,y})){const k=key(x,y);s.visible.add(k);s.seen.add(k);}
   s.fogAt={x:u.x,y:u.y};
 }
-export function refresh(s,{forceFog=false}={}){const u=hero(s),town=getTourWorld(s);if(town){if(forceFog)delete s.fogAt;town.reveal(s,u);s.phase='explore';s.revision++;return;}s.detected=new Set(s.units.filter(g=>g.team==='guard'&&alive(g)&&canSee(s,u,g)).map(g=>g.id));for(const g of s.units.filter(g=>g.team==='guard'&&alive(g)))if(canSee(s,g,u)){g.alert=true;g.lastKnown={x:u.x,y:u.y};g.alertAge=0;}if(!s.fogAt||distance(u,s.fogAt)>.25||forceFog)visibility(s);if(!alive(u)){s.phase='lost';s.solo.status='lost';s.queue=[];u.isMoving=false;s.revision++;return;}const guards=s.units.filter(g=>g.team==='guard'&&alive(g));if(!guards.length&&!firePending(s)){if(s.phase!=='won')s.queue=[];s.phase='won';}else if(s.phase!=='enemy'){const contact=s.engaged||firePending(s)||guards.some(g=>g.alert&&distance(g,u)<=WEAPONS[g.weapon].range+g.maxAp);if(contact&&s.phase!=='player'){s.phase='player';s.round++;u.ap=u.burningTurns?0:u.maxAp;s.queue=[];u.isMoving=false;log(s,'Contact. Movement now spends AP by distance.');}else if(!contact&&s.phase==='player'){s.phase='explore';s.queue=[];u.isMoving=false;log(s,'Contact broken. Real-time exploration resumed.');}}s.revision++;}
+export function refresh(s,{forceFog=false}={}){
+  const u=hero(s),town=getTourWorld(s);
+  s.detected=new Set(s.units.filter(g=>g.team==='guard'&&alive(g)&&canSee(s,u,g)).map(g=>g.id));
+  for(const g of s.units.filter(g=>g.team==='guard'&&alive(g)))if(canSee(s,g,u)){g.alert=true;g.lastKnown={x:u.x,y:u.y};g.alertAge=0;}
+  if(town){if(forceFog)delete s.fogAt;town.reveal(s,u);}
+  else if(!s.fogAt||distance(u,s.fogAt)>.25||forceFog)visibility(s);
+  if(!alive(u)){s.phase='lost';s.solo.status='lost';s.queue=[];u.isMoving=false;s.revision++;return;}
+  const guards=s.units.filter(g=>g.team==='guard'&&alive(g));
+  // An open-ended activity has no victory objective; actions still enter the
+  // same AP, enemy-turn, injury and fire lifecycle as every other operation.
+  if(!guards.length&&!firePending(s)&&!missionForState(s).exploration){if(s.phase!=='won')s.queue=[];s.phase='won';}
+  else if(s.phase!=='enemy'){
+    const contact=s.engaged||firePending(s)||guards.some(g=>g.alert&&distance(g,u)<=WEAPONS[g.weapon].range+g.maxAp);
+    if(contact&&s.phase!=='player'){s.phase='player';s.round++;u.ap=u.burningTurns?0:u.maxAp;s.queue=[];u.isMoving=false;log(s,'Contact. Movement now spends AP by distance.');}
+    else if(!contact&&s.phase==='player'){s.phase='explore';s.queue=[];u.isMoving=false;log(s,'Contact broken. Real-time exploration resumed.');}
+  }
+  s.revision++;
+}
 export function stop(s){s.queue=[];hero(s).isMoving=false;s.revision++;}
 // Stamina is temporarily disabled game-wide. Re-enabling requires the documented
 // minimum 300s continuous-run budget and recovery while stationary.
@@ -313,7 +330,7 @@ export function grenadeBlastFootprint(s,point){
     return {x:point.x+dx*reach,y:point.y+dy*reach};
   });
 }
-export function previewGrenade(s,u,point){if(isTour(s))return {ok:false,reason:'Firing is unavailable during the walking tour.',cost:0};
+export function previewGrenade(s,u,point){
   const w=WEAPONS.grenade,cost=grenadeCost(u),valid=point&&Number.isFinite(point.x)&&Number.isFinite(point.y),d=valid?distance(u,point):Infinity;
   let reason='';
   if(!canControl(s,u))reason='Wait for your turn';
@@ -326,7 +343,7 @@ export function previewGrenade(s,u,point){if(isTour(s))return {ok:false,reason:'
   else if(u.ap+EPS<cost)reason='Not enough AP';
   return {ok:!reason,reason,cost,distance:d,blast:w.blast,discounted:cost<w.cost,selfDanger:!!valid&&grenadeAffects(s,point,u)};
 }
-export function throwGrenade(s,u,point){if(isTour(s))return false;
+export function throwGrenade(s,u,point){
   const p=previewGrenade(s,u,point);if(!p.ok)return false;
   stop(s);if(s.phase!=='player'){s.engaged=true;refresh(s);}
   u.ap=Math.max(0,u.ap-p.cost);u.ammo.grenade--;syncAmmo(u,'grenade');u.heading=headingTo(u,point);
@@ -340,7 +357,7 @@ export function throwGrenade(s,u,point){if(isTour(s))return false;
   s.effect={sequence:[{shooter:u.id,ax:u.x,ay:u.y,bx:point.x,by:point.y,hit:hits>0,weapon:'grenade',blast:p.blast,...impactEvent,windowSequences:windowReceipts(s,windowBefore),fireSequences:(s.fireAnimations||[]).filter(e=>e.sequence>fireBefore).map(e=>e.sequence)}]};
   refresh(s);return true;
 }
-export function previewAttack(s,a,b,burst=false,zone='torso',token=null,aimLevel='hip'){if(isTour(s))return {ok:false,reason:'Firing is unavailable during the walking tour.',cost:0};if(b?.ground)return previewPointAttack(s,a,b,burst,aimLevel);if(!alive(a)||!alive(b)||a.team===b.team)return {ok:false,reason:'Choose a living opponent'};if(a.weapon==='grenade'){if(!s.detected.has(b.id))return {ok:false,reason:'Target is not visible'};return {...previewGrenade(s,a,b),chance:100,rounds:1,cover:0};}const w=WEAPONS[a.weapon],aim=shotAim(w,aimLevel,burst),cost=aim.cost,d=distance(a,b),rounds=burst&&w.burstRounds?w.burstRounds:1;let reason='';if(a.team==='squad'&&!s.detected.has(b.id))reason='Target is not visible';else if(a.burningTurns)reason='On fire: running in panic';else if(!lineClear(s,a,b)&&!w.arc)reason='Blocked by a wall';else if(d>w.range+EPS)reason='Out of range';else if(w.mag&&(a.ammo[a.weapon]??0)<rounds)reason='Reload first';else if((combatCosts(s)||a.team==='guard')&&a.ap+EPS<cost)reason='Not enough AP';const cover=geometryNear(s,b,b,.9,'walk').some(box=>(box.kind==='crate'||box.cover)&&pointBoxDistance(b,box)<.9&&intersectsBox(a,b,{x0:box.x0-.3,x1:box.x1+.3,y0:box.y0-.3,y1:box.y1+.3}))?20:0;const chance=Math.max(5,Math.min(95,weaponAccuracy(a)+(w.accuracy||0)-(w.rangeLoss||0)*d/w.range+(aim.accuracy||0)+(AIM_ZONES[zone]?.accuracy||0)-cover+(a.stance==='kneeling'?5:a.stance==='prone'?10:0)));return {ok:!reason,reason,cost,chance:Math.round(chance),rounds,distance:d,cover};}
+export function previewAttack(s,a,b,burst=false,zone='torso',token=null,aimLevel='hip'){if(b?.ground)return previewPointAttack(s,a,b,burst,aimLevel);if(!alive(a)||!alive(b)||a.team===b.team)return {ok:false,reason:'Choose a living opponent'};if(a.weapon==='grenade'){if(!s.detected.has(b.id))return {ok:false,reason:'Target is not visible'};return {...previewGrenade(s,a,b),chance:100,rounds:1,cover:0};}const w=WEAPONS[a.weapon],aim=shotAim(w,aimLevel,burst),cost=aim.cost,d=distance(a,b),rounds=burst&&w.burstRounds?w.burstRounds:1;let reason='';if(a.team==='squad'&&!s.detected.has(b.id))reason='Target is not visible';else if(a.burningTurns)reason='On fire: running in panic';else if(!lineClear(s,a,b)&&!w.arc)reason='Blocked by a wall';else if(d>w.range+EPS)reason='Out of range';else if(w.mag&&(a.ammo[a.weapon]??0)<rounds)reason='Reload first';else if((combatCosts(s)||a.team==='guard')&&a.ap+EPS<cost)reason='Not enough AP';const cover=geometryNear(s,b,b,.9,'walk').some(box=>(box.kind==='crate'||box.cover)&&pointBoxDistance(b,box)<.9&&intersectsBox(a,b,{x0:box.x0-.3,x1:box.x1+.3,y0:box.y0-.3,y1:box.y1+.3}))?20:0;const chance=Math.max(5,Math.min(95,weaponAccuracy(a)+(w.accuracy||0)-(w.rangeLoss||0)*d/w.range+(aim.accuracy||0)+(AIM_ZONES[zone]?.accuracy||0)-cover+(a.stance==='kneeling'?5:a.stance==='prone'?10:0)));return {ok:!reason,reason,cost,chance:Math.round(chance),rounds,distance:d,cover};}
 function kill(s,u){const living=alive(u);u.hp=0;u.ap=0;u.casualty='dead';u.burningTurns=0;u.isMoving=false;interactionRules.registerBody(s,u);if(living)log(s,u.name+' is down.');}
 function hurt(s,u,damage){if(!alive(u))return;u.hp=Math.max(0,u.hp-damageAfterResistance(u,damage));if(!u.hp)kill(s,u);}
 function flameAffects(s,a,u,heading){
@@ -362,7 +379,7 @@ function resolveFlame(s,a,event={explosions:[]}){
   }
   return impacts;
 }
-export function previewFlame(s,a,heading){if(isTour(s))return {ok:false,reason:'Firing is unavailable during the walking tour.',cost:0};
+export function previewFlame(s,a,heading){
   const w=WEAPONS.flamethrower,valid=Number.isFinite(heading);let reason='';
   if(!canControl(s,a))reason='Wait for your turn';
   else if(a.weapon!=='flamethrower')reason='Equip the flamethrower';
@@ -374,7 +391,7 @@ export function previewFlame(s,a,heading){if(isTour(s))return {ok:false,reason:'
   const contacts=s.units.filter(u=>(u.team==='squad'||s.detected.has(u.id))&&s.visible.has(key(u.x,u.y))&&flameAffects(s,a,u,direction)).map(u=>({id:u.id,name:u.name,team:u.team}));
   return {ok:!reason,reason,cost:w.cost,range:w.range,spread:48,heading:direction,shape,contacts};
 }
-export function fireFlame(s,a,heading){if(isTour(s))return false;
+export function fireFlame(s,a,heading){
   const p=previewFlame(s,a,heading);if(!p.ok)return false;
   stop(s);if(s.phase!=='player'){s.engaged=true;refresh(s);}
   a.ap=Math.max(0,a.ap-p.cost);a.ammo.flamethrower--;syncAmmo(a,'flamethrower');a.heading=p.heading;
@@ -395,12 +412,12 @@ function windowBlast(s,origin,radius,options={}){
   const events=windowSystem.blast(s,origin,radius,{occluded:(a,b)=>!lineClear(s,{...a,h:1.1},b),...options});
   if(events.length)geometryCache.delete(s);return events;
 }
-export function previewPointAttack(s,a,point,burst=false,aimLevel='hip'){if(isTour(s))return {ok:false,reason:'Firing is unavailable during the walking tour.',cost:0};
+export function previewPointAttack(s,a,point,burst=false,aimLevel='hip'){
   const w=WEAPONS[a?.weapon],aim=w&&shotAim(w,aimLevel,burst),rounds=burst&&w?.burstRounds?w.burstRounds:1,d=point?distance(a,point):Infinity;
   const placed=point?.windowId!==undefined?windowSystem.compile(s).find(r=>r.placement.id===point.windowId):null,ceiling=placed?.spec.height??2;
   let reason='';
   if(!canControl(s,a))reason='Wait for your turn';
-  else if(!point?.ground||point.windowId!==undefined&&!placed||![point.x,point.y,point.h].every(Number.isFinite)||point.h<0||point.h>ceiling||!insideWorld(s,point)||!s.seen.has(key(point.x,point.y)))reason='Choose a visible window';
+  else if(!point?.ground||point.windowId!==undefined&&!placed||![point.x,point.y,point.h].every(Number.isFinite)||point.h<0||point.h>ceiling||!insideWorld(s,point)||!s.seen.has(key(point.x,point.y)))reason='Choose an explored point';
   else if(!w||w.incendiary||a.weapon==='grenade')reason='Use the area weapon controls';
   else if(d>w.range+EPS)reason='Out of range';
   else if(w.mag&&(a.ammo[a.weapon]??0)<rounds)reason='Reload first';
@@ -420,7 +437,7 @@ export function confirmedImpact(s,a,b,zone='torso'){
     return {unit,t,zone:unit.id===b.id?zone:h>height(unit)*.8?'head':h<height(unit)*.32?'legs':'torso'};
   }).filter(Boolean).sort((a,b)=>a.t-b.t||a.unit.id-b.unit.id)[0]||obstacle;
 }
-export function attack(s,a,b,burst=false,byAI=false,zone='torso',reaction=false,aimLevel='hip'){if(isTour(s))return false;
+export function attack(s,a,b,burst=false,byAI=false,zone='torso',reaction=false,aimLevel='hip'){
   if(byAI?s.phase!=='enemy'||!alive(a)||a.burningTurns:!canControl(s,a))return false;
   const p=previewAttack(s,a,b,burst,zone,null,aimLevel);if(!p.ok)return false;if(a.weapon==='grenade')return throwGrenade(s,a,b);
   stop(s);const weapon=a.weapon,w=WEAPONS[weapon];if(!byAI&&s.phase!=='player'){s.engaged=true;refresh(s);}
@@ -453,7 +470,7 @@ export function attack(s,a,b,burst=false,byAI=false,zone='torso',reaction=false,
 }
 export function equip(s,u,id){if(!canControl(s,u)||!u.pack.some(i=>i.kind===id)||u.weapon===id)return false;const cost=combatCosts(s)?u.slots.includes(id)?2:3:0;if(u.ap+EPS<cost)return false;stop(s);u.ap-=cost;u.weapon=id;log(s,'Equipped '+WEAPONS[id].name+'.');return true;}
 export function reload(s,u){if(!canControl(s,u))return false;const w=WEAPONS[u.weapon],count=Math.min(w.mag-(u.ammo[u.weapon]??0),u.ammoPouch[u.weapon]||0),cost=combatCosts(s)?3:0;if(!count||u.ap+EPS<cost)return false;stop(s);u.ap-=cost;u.ammo[u.weapon]+=count;u.ammoPouch[u.weapon]-=count;syncAmmo(u,u.weapon);log(s,'Reloaded '+count+' rounds.');return true;}
-export function endTurn(s){if(isTour(s))return false;if(s.phase!=='player'||s.solo.status!=='active')return false;stop(s);for(const unit of s.units)fireRules.panicRun(s,unit);s.phase='enemy';s.enemyIndex=1;s.enemyDelay=.35;s.engaged=false;for(const g of s.units.filter(g=>g.team==='guard')){g.ap=g.burningTurns?0:g.maxAp;g.alertAge++;if(g.alertAge>3&&!canSee(s,g,hero(s)))g.alert=false;}s.revision++;return true;}
+export function endTurn(s){if(s.phase!=='player'||s.solo.status!=='active')return false;stop(s);for(const unit of s.units)fireRules.panicRun(s,unit);s.phase='enemy';s.enemyIndex=1;s.enemyDelay=.35;s.engaged=false;for(const g of s.units.filter(g=>g.team==='guard')){g.ap=g.burningTurns?0:g.maxAp;g.alertAge++;if(g.alertAge>3&&!canSee(s,g,hero(s)))g.alert=false;}s.revision++;return true;}
 // A guard within ARRIVED of its last waypoint has arrived. A route can also open at
 // its own grid node, inside that distance; it walks on to the next waypoint
 // instead of ending its turn there.
@@ -479,7 +496,7 @@ export const previewInteraction=(s,id,action,itemId)=>interactionRules.preview(s
 export const performInteraction=(s,id,action,itemId)=>interactionRules.perform(s,id,action,itemId);
 // Existing mission/menu callers use the same validated actions as the hand.
 export function interaction(s){const mission=missionForState(s),object=nearbyInteractions(s).find(object=>['ledger','objective','extract'].includes(object.kind));if(!object)return null;return {...object.actions[0],kind:object.kind,label:object.kind==='extract'?mission.extraction.label:'Take the '+mission.objective.name.toLowerCase()};}
-export function interact(s){if(isTour(s))return false;const secured=objectiveSecured(s);return performInteraction(s,secured?'extraction':missionForState(s).objective.id,secured?'extract':'collect').ok;}
+export function interact(s){if(missionForState(s).exploration){const object=nearbyInteractions(s)[0];return !!object&&performInteraction(s,object.id,object.actions[0].id).ok;}const secured=objectiveSecured(s);return performInteraction(s,secured?'extraction':missionForState(s).objective.id,secured?'extract':'collect').ok;}
 export function dressing(s){const u=hero(s),cost=combatCosts(s)?3:0;if(!canControl(s,u)||s.solo.dressings<1||u.hp>=u.maxHp||u.ap+EPS<cost)return false;stop(s);u.ap-=cost;u.hp=Math.min(u.maxHp,u.hp+35);s.solo.dressings--;log(s,u.name+' used a field dressing (+35 HP).');return true;}
 export function encodeSave(s){if(isTour(s))return encodeTourProgress(s,getTourWorld(s));return JSON.stringify(s,(k,v)=>['effect','fireAnimations','windowEvents'].includes(k)?undefined:v instanceof Set?{$set:[...v]}:v);}
 export function decodeSave(text){
@@ -505,8 +522,11 @@ export function decodeSave(text){
   if(mission.id===DEFAULT_MISSION_ID&&s.solo.ledger)s.solo.objectives.ledger=true;
   if(s.solo.inspected===undefined)s.solo.inspected=[];
   if(!Array.isArray(s.solo.inspected)||s.solo.inspected.some(id=>!mission.clues.some(clue=>clue.id===id)))throw Error('Unsupported inspection save.');
-  fireRules.restore(s,p=>insideWorld(canonical,p));fuelRules.restore(s);
-  return releaseFromScenery(interactionRules.restore(s));
+  return releaseFromScenery(restoreRuntimeSystems(s));
+}
+export function restoreRuntimeSystems(s){
+  fireRules.restore(s,p=>insideWorld(s,p));fuelRules.restore(s);
+  return interactionRules.restore(s);
 }
 // The nearest spot around p (never p itself) where a unit could stand, scanned
 // outward in 5 cm rings of 32 bearings; null beyond maxRadius metres.
@@ -626,4 +646,4 @@ function releaseFromScenery(s){
   }
   return s;
 }
-export const Core={tankExplosionChance,ignite,enterFire,WEAPONS,AIM_ZONES,key,alive,movementModeOf,movementRate,movementSpeed,combatCosts,canControl,canSee,visibleOpponents,refresh,log,stop,travel,navigationPath,move,turnTo,setMovementMode,setStance,grenadeCost,grenadeTrajectory,grenadeAffects,grenadeBlastFootprint,previewGrenade,throwGrenade,previewFlame,fireFlame,previewPointAttack,previewAttack,attack,equip,reload,endTurn,headingTo,interactionObjects,nearbyInteractions,previewInteraction,performInteraction};
+export const Core={tankExplosionChance,ignite,enterFire,WEAPONS,AIM_ZONES,key,alive,movementModeOf,movementRate,movementSpeed,combatCosts,canControl,canSee,visibleOpponents,refresh,log,stop,travel,navigationPath,move,turnTo,setMovementMode,setStance,grenadeCost,grenadeTrajectory,grenadeAffects,grenadeBlastFootprint,previewGrenade,throwGrenade,previewFlame,fireFlame,previewPointAttack,previewAttack,attack,equip,reload,endTurn,headingTo,interactionObjects,nearbyInteractions,previewInteraction,performInteraction,restoreRuntimeSystems};

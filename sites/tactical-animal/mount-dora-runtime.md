@@ -3,8 +3,9 @@
 The regular game can load the full 1440 × 1680 metre town as a free walking tour.
 Open `game.html?activity=mount-dora`, choose an animal and equipment, then deploy.
 The link selects preparation only. Walking, joystick, keyboard, stance and camera
-controls use the existing game. Combat actions are explicitly unavailable in this
-activity. Other operations retain their existing rules and save slots.
+controls and gameplay use the existing game. Firearms, grenades, flamethrowers,
+AP turns, injuries and fire are enabled. The activity has no objective or guards
+unless supplied by authored data; this does not disable the production actions.
 
 ## Coordinate and source contract
 
@@ -123,3 +124,5 @@ release integration and promotion; this branch does not publish main or Pages.
 
 Global pace, disabled stamina, elapsed stepping and visual cadence are described
 in [movement-runtime.md](movement-runtime.md).
+
+Playtests use production wiring by default (see `AGENTS.md`). The town save also retains active AP phase/round, RNG seed, fire state and authored object changes; transient effects are not replayed. Existing saves without this optional runtime section remain supported. No doors are inferred from an address, facade texture or building outline. Supported editor door records create real open/close interactions before scene construction.

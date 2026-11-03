@@ -65,7 +65,19 @@ async function panTo(page,town){
   }throw Error('Could not bring actual ground point into the viewport: '+town);
 }
 async function walkTo(page,town,{timeout=process.env.CI?180000:60000,tolerance=.14}={}){
-  const p=await panTo(page,town);await page.mouse.click(p.x,p.y);
+  await panTo(page,town);
+  // Follow-camera easing continues after the previous route arrives. Project
+  // against settled native frames so a stale screen point cannot miss a narrow
+  // boardwalk target. This observes the real camera; it never sets its state.
+  const p=await page.evaluate(async town=>{
+    const app=await import(document.querySelector('script[src*="app.js"]').src);let previous,stable=0;const start=performance.now();
+    while(performance.now()-start<10000){
+      await new Promise(requestAnimationFrame);const p=app.projectMountDoraTownPoint(town);
+      stable=previous&&Math.hypot(p.x-previous.x,p.y-previous.y)<.12?stable+1:0;
+      if(stable>=2)return p;previous=p;
+    }
+    throw Error('Native camera did not settle before a world-point tap.');
+  },town);await page.mouse.click(p.x,p.y);
   return waitInfo(page,s=>Math.hypot(s.player.x+.5-town[0],s.player.y+.5-town[1])<tolerance,'Walk did not arrive at '+town,timeout,s=>s.distance);
 }
 async function ready(page){return waitInfo(page,s=>s.active&&s.touring&&s.ready&&!s.paused,'Production tour did not become ready',90000);}
@@ -102,12 +114,19 @@ try{
   await menu(page,'Choose operation, animal & loadout');
   const operationBefore=await page.evaluate(()=>localStorage.getItem('tactical-animal-operation-v2'));assert(operationBefore);
   mark('existing mission deploys through the production title/game route');
-  await page.locator('#operation-select').selectOption('mount-dora');await page.locator('#animals button').filter({hasText:'goat'}).first().click();await page.getByRole('button',{name:'Mosin-Nagant',exact:true}).click();await page.locator('#deploy').click();
+  await page.locator('#operation-select').selectOption('mount-dora');await page.locator('#animals button').filter({hasText:'goat'}).first().click();await page.getByRole('button',{name:'Mosin-Nagant',exact:true}).click();await page.getByRole('button',{name:/Frag grenades/}).click();await page.locator('#deploy').click();
   let info=await ready(page);assert.equal(info.player.species,'goat');assert.equal(info.player.weapon,'rifle');assert.equal(info.phase,'explore');assert(info.actor.visible&&info.actor.meshes>0&&info.actor.vertices>0);assert.equal(info.render.blocks,9);assert(info.memory.programs>0);assert.equal(info.memory.shaderFailures,0);
   report.desktopHudLocation=await assertMapLocation(page,info.player);await page.locator('#minimap-button').click();report.desktopExpandedLocation=await assertMapLocation(page,info.player,{expanded:true});await shot(page,'desktop-town-map');await page.getByRole('button',{name:'Continue walking',exact:true}).click();
   await shot(page,'desktop-donnelly');mark('regular animal/loadout starts a free, physically clear Donnelly tour',{snapshot:info});
   const moved=await keyboardWalk(page,info);assert(moved.distance>info.distance+.2);
-  assert(await page.locator('#grenade').isDisabled());const ammo=JSON.stringify(moved.player.ammo);await page.keyboard.press('g');assert.equal(JSON.stringify((await snapshot(page)).player.ammo),ammo);mark('real keyboard movement and explicitly unavailable tour firing');
+  assert(await page.locator('#grenade').isEnabled());
+  await menu(page,'Aim firearm at a point');const aimPoint=await projectPoint(page,[moved.player.x+.5-5,moved.player.y+.5]);await page.mouse.click(aimPoint.x,aimPoint.y);await page.getByRole('button',{name:/^Fire ·/}).click();
+  const fired=await waitInfo(page,s=>s.phase==='player'&&s.player.ammo.rifle===moved.player.ammo.rifle-1,'Production firearm did not fire');
+  await page.locator('#end-turn').click();await waitInfo(page,s=>s.phase==='explore','Production turn did not return to exploration');
+  await page.keyboard.press('g');await page.locator('#grenade-aim').waitFor({state:'visible'});await page.keyboard.down('a');await page.waitForTimeout(1000);await page.keyboard.up('a');
+  await page.waitForFunction(()=>document.getElementById('grenade').dataset.ready==='true');await page.locator('#grenade').click();
+  const thrown=await waitInfo(page,s=>s.phase==='player'&&s.player.ammo.grenade===fired.player.ammo.grenade-1,'Production grenade did not throw');assert(thrown.player.hp>0);
+  await page.locator('#end-turn').click();await waitInfo(page,s=>s.phase==='explore','Grenade turn did not return to exploration');mark('real firearm, grenade, ammunition and End Turn controls operate through production gameplay');
   for(let i=0;i<4;i++)await page.locator('#zoom-out').click();
   await walkTo(page,[478.5,478.5]);
   const cornerBefore=await snapshot(page);for(const p of [[481.5,478.5],[481.5,481.5],[478.5,481.5],[478.5,478.5]])await walkTo(page,p,{timeout:process.env.CI?60000:15000});

@@ -60,6 +60,13 @@ export async function loadTownTour({build,progress=null,signal,fetcher=globalThi
       const initial=hero(state),u=progress.player;if(u.species!==initial.species||u.slots.some(kind=>!Core.WEAPONS[kind])||!Core.WEAPONS[u.weapon])throw Error('Unsupported saved tour animal or equipment.');
       Object.assign(initial,structuredClone(u),{id:0,team:'squad',x:world.startPoint.x,y:world.startPoint.y,isMoving:false});state.seen=progress.seen instanceof TownExplored?progress.seen:TownExplored.restore(progress.explored);
       state.solo.dressings=progress.dressings;state.solo.distance=progress.distance;state.elapsed=progress.elapsed;state.log=(progress.log||[]).filter(x=>typeof x==='string').slice(0,20);
+      if(progress.runtime){
+        const r=progress.runtime;Object.assign(state,{phase:r.phase,round:r.round,seed:r.seed,engaged:r.engaged,enemyIndex:r.enemyIndex,enemyDelay:r.enemyDelay,fires:structuredClone(r.fires)});
+        if(r.panicDelay!==undefined)state.panicDelay=r.panicDelay;
+        state.solo.status=r.status;if(r.areaWeapon)state.solo.areaWeapon=r.areaWeapon;
+        for(const saved of r.objects){const object=state.interactables.find(o=>o.id===saved?.id);if(!object)continue;for(const key of ['open','searched','inventory'])if(saved[key]!==undefined)object[key]=structuredClone(saved[key]);}
+      }
+      Core.restoreRuntimeSystems(state);
       if(relocated)log(state,'The town layout has changed. Moved to a clear outdoor approach; your equipment and tour progress are retained.');
       else if(progress.sourceRevision!==world.sourceRevision||progress.artRevision!==world.artRevision)log(state,'The town has been updated. Your saved position is clear and your progress is retained.');
       Core.refresh(state,{forceFog:true});

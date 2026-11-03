@@ -253,4 +253,7 @@ decoder, roof rules, raster helpers and statistics.
 - Take storeys in this order: survey, then county, then `storeysFromLidar`.
 
 As with the county reference, adopting this regenerates the owned outputs, so
-the map's owner should make that change.
+the map's owner should make that change. AGENTS.md applies to it: verify the
+result through the real game path (import and editor playtest), and keep each
+value's source, observation date (6 December 2018) and uncertainty
+(`confidence`, `coverage`) alongside it.

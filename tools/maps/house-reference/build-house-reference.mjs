@@ -14,6 +14,7 @@ import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {createProjection, headingDegrees} from './projection.mjs';
 import {area, bounds, centroid, contains, gridIndex, nearestOnPolyline, overlapArea} from './geometry.mjs';
+import {featuresPin} from './features-digest.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const town = path.join(root, 'maps/mount-dora');
@@ -286,7 +287,7 @@ export function build() {
   };
   const reference = {
     kind: 'mount-dora-house-reference', version: 1,
-    inputs: {features: {file: 'maps/mount-dora/features.json', sha256: hash(featuresBytes)},
+    inputs: {features: featuresPin(featuresBytes),
       county: {file: 'maps/mount-dora/reference/county/source.json', sha256: hash(sourceBytes), release: source.release}},
     policy: 'County facts and planned viewpoints only. Street View is opened in Google Maps by URL for a person to look at; no imagery is requested, stored or traced by this tool.',
     thresholds: {...MATCH, viewRadiusM: VIEW_RADIUS_M, addressNearM: ADDRESS_NEAR_M, addressSlackM: ADDRESS_SLACK_M}, vocabulary: {walls: WALLS, roofs: ROOFS, subAreas: SUBAREAS},

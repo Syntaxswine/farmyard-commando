@@ -4,7 +4,7 @@
  "inputs": {
   "features": {
    "file": "maps/mount-dora/features.json",
-   "sha256": "b9329b4ea7055b3f9bb43262cfcc06075d95429fd3e74273a905b65c8d5de895"
+   "sha256OmittingNativeProxy": "ebf9d2241771a993cfbbd5c881a5e30456bcab251f2ed96bf0fd093e025b85d9"
   },
   "county": {
    "file": "maps/mount-dora/reference/county/source.json",

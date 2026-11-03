@@ -78,10 +78,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 29,
         "wallRunCount": 168,
-        "nativePanelCount": 1828,
+        "nativePanelCount": 2396,
         "propCount": 0,
-        "bytes": 981967,
-        "sha256": "adb5c7edc19ec767c8df5ba6a20f0f53b260760d627b0b489d1007d5c341dbd9"
+        "bytes": 1035662,
+        "sha256": "10c7993bdfd71ba7b765565b00777fbe12b59510342eb755a363a0ec180e9638"
       },
       "buildingIds": [
         "osm-way-1240419908",
@@ -150,10 +150,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 45,
         "wallRunCount": 237,
-        "nativePanelCount": 2549,
+        "nativePanelCount": 3189,
         "propCount": 0,
-        "bytes": 1016323,
-        "sha256": "785ef28a092f5cf9e2fc25deb8a32c4953f3247cfb528bb109bf9d8d95318b6f"
+        "bytes": 1049529,
+        "sha256": "8d488929a6ebc3f154be91f727aff6224a69fffe9fd26f6ccec6096edc9cb311"
       },
       "buildingIds": [
         "osm-way-1240419869",
@@ -239,10 +239,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 57,
         "wallRunCount": 267,
-        "nativePanelCount": 2888,
+        "nativePanelCount": 3220,
         "propCount": 1,
-        "bytes": 1025514,
-        "sha256": "489358c13caa9bb57b7b2d8b767295991241f455fcfa61b7c2d784ec5ec94fa3"
+        "bytes": 1049709,
+        "sha256": "ebf1773da71159b77b59ca6b89ce8a2fdfe8206852c130c5470d8e5dbb6ccb2c"
       },
       "buildingIds": [
         "osm-way-1240419747",
@@ -339,10 +339,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 58,
         "wallRunCount": 278,
-        "nativePanelCount": 2764,
+        "nativePanelCount": 2960,
         "propCount": 0,
-        "bytes": 1012476,
-        "sha256": "51fc47653a75d5f7c4e44e68f4a3d29c8bd235ad6cfb2f2d2934083b8ca8046d"
+        "bytes": 1021473,
+        "sha256": "c93a280d60b5e8339d9dc50486aa1a2384b36fe00e68daa995a38baf6598c0e6"
       },
       "buildingIds": [
         "osm-way-1240419733",
@@ -441,10 +441,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 49,
         "wallRunCount": 230,
-        "nativePanelCount": 2299,
+        "nativePanelCount": 2367,
         "propCount": 0,
-        "bytes": 992336,
-        "sha256": "47cd7a8de84014d8029c056c1775ff0def59f22991b8302431771728e3af0fd7"
+        "bytes": 995245,
+        "sha256": "26cf0f8a3a4ec728982daf73f836b7ad1c876dc9e3f77e496e4f54c7e9536e6d"
       },
       "buildingIds": [
         "osm-way-1240419735",
@@ -535,8 +535,8 @@
         "wallRunCount": 207,
         "nativePanelCount": 2080,
         "propCount": 0,
-        "bytes": 983480,
-        "sha256": "d0a48a795bcbad108b3633749ebe9e0be872d4414f31facc7ba0c71c889af96a"
+        "bytes": 983773,
+        "sha256": "59748c323b6499d8bedcd11263876ef48070e186948049cf32ff207e17cb13cb"
       },
       "buildingIds": [
         "osm-way-1240419782",
@@ -620,10 +620,10 @@
         "sourceWaterCells": 6034,
         "buildingCount": 7,
         "wallRunCount": 88,
-        "nativePanelCount": 747,
+        "nativePanelCount": 1963,
         "propCount": 0,
-        "bytes": 903933,
-        "sha256": "3d73d48835e7424545177ea609591c042a0cc8f140fe920e770f86f1a799fd0e"
+        "bytes": 1039060,
+        "sha256": "e87536a0fae58266979aeb424a69489d6d355d065c0bca0328531a74c9e609c8"
       },
       "buildingIds": [
         "osm-way-1240419916",
@@ -671,10 +671,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 25,
         "wallRunCount": 166,
-        "nativePanelCount": 1979,
+        "nativePanelCount": 2304,
         "propCount": 0,
-        "bytes": 1012923,
-        "sha256": "33be20a65015aeedea249fd51ca3a3488be87c06b724e8d362ef1d561a0778e5"
+        "bytes": 1042224,
+        "sha256": "24f87416a925e28912f03d67cc339d0b8ba6d84cd74100646fe218a4ce19476c"
       },
       "buildingIds": [
         "osm-relation-7980769",
@@ -740,10 +740,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 41,
         "wallRunCount": 229,
-        "nativePanelCount": 2436,
+        "nativePanelCount": 2759,
         "propCount": 3,
-        "bytes": 1016837,
-        "sha256": "fb6dbc1d757d3aee1947af42f6f8f01cea0b6faff9ab4d6e95dbe65b0687d044"
+        "bytes": 1033014,
+        "sha256": "aa1bd7774023a881b717047a0249e2761a71923d533d22d343a60104fa62bde2"
       },
       "buildingIds": [
         "osm-way-1240419662",
@@ -826,10 +826,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 42,
         "wallRunCount": 229,
-        "nativePanelCount": 2254,
+        "nativePanelCount": 2352,
         "propCount": 0,
-        "bytes": 987949,
-        "sha256": "a113d035831fc17685e75b1039254d60be58e84030e488172467aaf39d009af9"
+        "bytes": 992686,
+        "sha256": "b07a563eea6c3d8ffb0af77a354ad9a800fdfd0eebb978044f10aa7471b5eb26"
       },
       "buildingIds": [
         "osm-way-1240419676",
@@ -913,10 +913,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 32,
         "wallRunCount": 160,
-        "nativePanelCount": 2945,
+        "nativePanelCount": 3361,
         "propCount": 0,
-        "bytes": 1141114,
-        "sha256": "5fb7cfd5012696ce90b0a8b354833d3133c2920a8947c571953044054cec6962"
+        "bytes": 1210187,
+        "sha256": "53952d97dbeef1986f99d8ceca52061e9009f61e13ae9cc6d6457b049130f919"
       },
       "buildingIds": [
         "osm-way-1240417435",
@@ -990,10 +990,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 17,
         "wallRunCount": 98,
-        "nativePanelCount": 1402,
+        "nativePanelCount": 2208,
         "propCount": 2,
-        "bytes": 978984,
-        "sha256": "a85702e3eec9ea1ceb74c2f6be300b7c80bccfd4508a214147f37bacdc704ae7"
+        "bytes": 1100203,
+        "sha256": "d171fd1df79c7b6a3e33837d3bf31209d635e51523f64fcb5ebc10b94dd89028"
       },
       "buildingIds": [
         "osm-relation-7995943",
@@ -1054,10 +1054,10 @@
         "sourceWaterCells": 33328,
         "buildingCount": 7,
         "wallRunCount": 41,
-        "nativePanelCount": 483,
+        "nativePanelCount": 972,
         "propCount": 0,
-        "bytes": 672718,
-        "sha256": "620f2ac15be2829a735325c4cff99e237757c987b70a8f00316f26a0b93ef636"
+        "bytes": 703841,
+        "sha256": "b944941836cecac82755c9efb4020dcad2c746afba3d81c3463c4d63f47a7bc6"
       },
       "buildingIds": [
         "osm-way-1240419644",
@@ -1108,10 +1108,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 60,
         "wallRunCount": 317,
-        "nativePanelCount": 3835,
+        "nativePanelCount": 5290,
         "propCount": 2,
-        "bytes": 1133689,
-        "sha256": "fabc255e636d9967f21df0e1c23f683648f8979968721ee18117ec7c29480d61"
+        "bytes": 1236390,
+        "sha256": "177ab32c908d0f7a7df1e9cb43d0f8b8c6e72d09defa52c3ee02d07e0364a374"
       },
       "buildingIds": [
         "osm-relation-7980769",
@@ -1213,10 +1213,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 42,
         "wallRunCount": 223,
-        "nativePanelCount": 2529,
+        "nativePanelCount": 3654,
         "propCount": 4,
-        "bytes": 1046490,
-        "sha256": "8cb31ca2940e774848b756b1ce9e353dca75c93c48ba67cd83785be318f88ed0"
+        "bytes": 1137242,
+        "sha256": "baf7f9e56995b450948bcd9c46f0f83cf14c0ed28e796d8049f03f3ea37679bb"
       },
       "buildingIds": [
         "osm-way-1240419460",
@@ -1300,10 +1300,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 28,
         "wallRunCount": 189,
-        "nativePanelCount": 1940,
+        "nativePanelCount": 2004,
         "propCount": 0,
-        "bytes": 1002420,
-        "sha256": "e4795c70383909b2ea411bcc39f33c127fcb7e98503bbfb63207450f90852ff8"
+        "bytes": 1005155,
+        "sha256": "0aa35cacfafc5c75781dfd4e509947ed66de6dac0e260ce94850d4cd44bcdaa4"
       },
       "buildingIds": [
         "osm-way-1240419468",
@@ -1372,10 +1372,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 34,
         "wallRunCount": 167,
-        "nativePanelCount": 2023,
+        "nativePanelCount": 2244,
         "propCount": 0,
-        "bytes": 999439,
-        "sha256": "a6607be7f3f5d60f6e3f97bf1179b6f0a6817a15d5841a6ad8db1c37b9aca607"
+        "bytes": 1010645,
+        "sha256": "b55e30780e02e72bc6af12f815757bdef85d62408da33a4dbb26ca899dad8acb"
       },
       "buildingIds": [
         "osm-way-1240417442",
@@ -1450,10 +1450,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 37,
         "wallRunCount": 183,
-        "nativePanelCount": 1955,
+        "nativePanelCount": 2096,
         "propCount": 0,
-        "bytes": 982080,
-        "sha256": "71e0ab784843cd4130bd1a7eeb94711e4d21bac500acd004aa26ceb43a9ecb68"
+        "bytes": 990123,
+        "sha256": "754a972dccfae5b5814a89004a7f8bcc2e08683cc4f94331967df9e76d432fcc"
       },
       "buildingIds": [
         "osm-relation-7995943",
@@ -1533,10 +1533,10 @@
         "sourceWaterCells": 54000,
         "buildingCount": 1,
         "wallRunCount": 3,
-        "nativePanelCount": 31,
+        "nativePanelCount": 62,
         "propCount": 0,
-        "bytes": 489311,
-        "sha256": "bb27880c1dbcdd7722eff39dc4ee65092a4c913dda7b81019e77f479bbddc64f"
+        "bytes": 491230,
+        "sha256": "27e7a8d4e9e8a087ff393eb8962da1879216367ba40e01925a9d49595c7f44dd"
       },
       "buildingIds": [
         "osm-way-1240419649"
@@ -1581,10 +1581,10 @@
         "sourceWaterCells": 4168,
         "buildingCount": 23,
         "wallRunCount": 186,
-        "nativePanelCount": 1338,
+        "nativePanelCount": 2082,
         "propCount": 63,
-        "bytes": 907890,
-        "sha256": "0c5467bc8b843b96008c7aab18af6a8a6a61b9957745b6c5315c9b92d9b2741d"
+        "bytes": 958298,
+        "sha256": "58c82abdb554cd0bcf4bca5a9b69348ab130bcc93d473adc03d31652e6037934"
       },
       "buildingIds": [
         "osm-way-556562385",
@@ -1648,10 +1648,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 24,
         "wallRunCount": 147,
-        "nativePanelCount": 2142,
+        "nativePanelCount": 2244,
         "propCount": 8,
-        "bytes": 1016063,
-        "sha256": "3f996eeddf3556b5846f5c74dd5cd3d1a80bbba578b1a33fa918dcfe701725a4"
+        "bytes": 1020777,
+        "sha256": "0dbd18d5b6cd9d8a8ed9ad6370f7e86861c639aa9659de8f518936d2a7027719"
       },
       "buildingIds": [
         "osm-way-1240419486",
@@ -1716,10 +1716,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 27,
         "wallRunCount": 160,
-        "nativePanelCount": 1658,
+        "nativePanelCount": 1794,
         "propCount": 0,
-        "bytes": 970443,
-        "sha256": "045899d13939e0b345c93d80b4415d1e905b73fc41da15a9564c5ca69d5b8b3b"
+        "bytes": 977140,
+        "sha256": "244ea987470eaef82943bb2881e50c8670564a5c8e7192847f9cc6af377453bb"
       },
       "buildingIds": [
         "osm-way-1240419526",
@@ -1786,10 +1786,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 29,
         "wallRunCount": 152,
-        "nativePanelCount": 1619,
+        "nativePanelCount": 1736,
         "propCount": 0,
-        "bytes": 960166,
-        "sha256": "595f4862663632225050702ceeaa940d85e0febe655d64cc28a2df7cd1a7cf3e"
+        "bytes": 967717,
+        "sha256": "5ac3451ad8c905842f161f2cfe9802344d0ea2602cc66d34d7b3753d1a754cc0"
       },
       "buildingIds": [
         "osm-way-1240419520",
@@ -1859,10 +1859,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 27,
         "wallRunCount": 136,
-        "nativePanelCount": 1547,
+        "nativePanelCount": 1672,
         "propCount": 0,
-        "bytes": 972495,
-        "sha256": "739e1b4e197fd5a209112581a74d84d656ddce53c011fc7f183b27ccfc7a8cb8"
+        "bytes": 979907,
+        "sha256": "35d427ce65290f794405c65d4bb0f9b8927dab858c6f3adc0f84d004b38d945b"
       },
       "buildingIds": [
         "osm-way-1240417332",
@@ -2018,10 +2018,10 @@
         "sourceWaterCells": 23054,
         "buildingCount": 5,
         "wallRunCount": 28,
-        "nativePanelCount": 515,
+        "nativePanelCount": 569,
         "propCount": 28,
-        "bytes": 763185,
-        "sha256": "8f0ca0f586800a3c4720daa734cf4aa69b498b2433b1ed8809ab61bb0173def9"
+        "bytes": 767468,
+        "sha256": "f870779d94ca311190fce1f956ee01872b391332b804123d49a5ab9ad334f3eb"
       },
       "buildingIds": [
         "osm-way-557349882",
@@ -2068,10 +2068,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 16,
         "wallRunCount": 101,
-        "nativePanelCount": 1406,
+        "nativePanelCount": 1622,
         "propCount": 10,
-        "bytes": 982364,
-        "sha256": "f9399abda52c5b63e0c1555bf74745c1820fd343bdfb2d174a159947f0461a42"
+        "bytes": 1010237,
+        "sha256": "125820ada4e7e55ce7b23ae317156ebde838952345271e5490389a63610ea7b1"
       },
       "buildingIds": [
         "osm-way-1240419560",
@@ -2127,10 +2127,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 43,
         "wallRunCount": 220,
-        "nativePanelCount": 2254,
+        "nativePanelCount": 2300,
         "propCount": 0,
-        "bytes": 990195,
-        "sha256": "458841b07c02866b0e45209963162f4e5d58451457ef8fb530f5a8ff9218afb9"
+        "bytes": 992822,
+        "sha256": "25f97d91455b13b15de2e861cc5b36f11a802e13e6fbb2aa161c1d24a0e8ff8e"
       },
       "buildingIds": [
         "osm-way-1240415861",
@@ -2214,10 +2214,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 27,
         "wallRunCount": 194,
-        "nativePanelCount": 2163,
+        "nativePanelCount": 2293,
         "propCount": 0,
-        "bytes": 1037886,
-        "sha256": "4a4b80676caaa592d73fc1595f0a1bfd8a2e8bbc1d471f4488ac7f60ee49918f"
+        "bytes": 1045249,
+        "sha256": "5442737f3384cd5a94350b7e0f4a1a7d0382fb9f163d75c63e110b1ba52d51f6"
       },
       "buildingIds": [
         "osm-way-1240415876",
@@ -2376,8 +2376,8 @@
         "wallRunCount": 10,
         "nativePanelCount": 110,
         "propCount": 34,
-        "bytes": 698324,
-        "sha256": "a8879b21828a44208aa49b7934665f6eed473e32d24ef99e1da2f18234b86b0e"
+        "bytes": 698354,
+        "sha256": "e592c11d302e587554f04b602ec519c3995600707423d2a0262b2b5113fee9ad"
       },
       "buildingIds": [
         "osm-way-1241962354",
@@ -2421,10 +2421,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 28,
         "wallRunCount": 135,
-        "nativePanelCount": 1686,
+        "nativePanelCount": 1898,
         "propCount": 9,
-        "bytes": 971032,
-        "sha256": "bd234034c62af54df72043da24190b5bd43399ecc736f7691d58b5d831049f6c"
+        "bytes": 982727,
+        "sha256": "fa4293031e5d9375b50700d1819ca6a8ab76d976ba15bfac417019cf12fd8b2b"
       },
       "buildingIds": [
         "osm-way-1240419607",
@@ -2492,10 +2492,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 30,
         "wallRunCount": 140,
-        "nativePanelCount": 1659,
+        "nativePanelCount": 1967,
         "propCount": 0,
-        "bytes": 961091,
-        "sha256": "c29a79d528613534471dedfa7b2e347a99cb39ef4f74b9c4c58b86675eb9c880"
+        "bytes": 981973,
+        "sha256": "6ac7a79118fe44c5d110df9c3a6b1c726d6b44bfa8040804eacc87a756cd150b"
       },
       "buildingIds": [
         "osm-way-1240416235",
@@ -2566,10 +2566,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 30,
         "wallRunCount": 159,
-        "nativePanelCount": 1694,
+        "nativePanelCount": 1742,
         "propCount": 0,
-        "bytes": 966445,
-        "sha256": "4ed2b6b19bfc8d076b3e1105ef336a3664db636200022ebf2d0769b93dd93136"
+        "bytes": 968848,
+        "sha256": "d346a88c6907371e23f5b98b993785349013fb5cb687b6cbfb6b26b080f07aad"
       },
       "buildingIds": [
         "osm-way-1240415887",
@@ -2728,8 +2728,8 @@
         "wallRunCount": 78,
         "nativePanelCount": 894,
         "propCount": 67,
-        "bytes": 795885,
-        "sha256": "612986300b26d324d0a5eb346e0db304d7e110c38cb7473bd440f53fe3a5f739"
+        "bytes": 796095,
+        "sha256": "55abb930863157dbbb0e686dc6e37c0712ccc55f29430264c04066b502095f30"
       },
       "buildingIds": [
         "osm-way-1241962331",
@@ -2784,8 +2784,8 @@
         "wallRunCount": 188,
         "nativePanelCount": 2179,
         "propCount": 27,
-        "bytes": 988786,
-        "sha256": "31374f35d3cfc2132c7a6db77f21cdcaf842d9d3f05fd62ba551012ca86fdce8"
+        "bytes": 989266,
+        "sha256": "878ef69489b4d30bc969a1e5af237e9fdd33fa66c3a66753473e9c4a2953e0c7"
       },
       "buildingIds": [
         "osm-way-1240416331",
@@ -2864,8 +2864,8 @@
         "wallRunCount": 88,
         "nativePanelCount": 1065,
         "propCount": 0,
-        "bytes": 927617,
-        "sha256": "203e3fa2c04a039c100ee98503dd7b8ad1c4c101a435cdc0b64792beb8782a8b"
+        "bytes": 927825,
+        "sha256": "7c9110eb7b8930fe169dd6cd910e3f1421f163f1dd1da9a59469738d7750f795"
       },
       "buildingIds": [
         "osm-way-1240416235",
@@ -2929,10 +2929,10 @@
         "sourceWaterCells": 0,
         "buildingCount": 4,
         "wallRunCount": 15,
-        "nativePanelCount": 205,
+        "nativePanelCount": 253,
         "propCount": 21,
-        "bytes": 867761,
-        "sha256": "8279762f6d37ca2ec56830cca34ea0efbb99e4ada2ee08cbab8a000875ffc638"
+        "bytes": 870026,
+        "sha256": "3581d6da8d062f0d60ef1a01a9b8c7e4e5045effc39a1a8e09379d87e91a3194"
       },
       "buildingIds": [
         "osm-way-1240416232",
@@ -2964,10 +2964,30 @@
   ],
   "generation": {
     "tool": "tools/maps/build-mount-dora.py",
-    "version": 3,
+    "version": 4,
     "configFile": "source/authoring-config.json",
     "configSHA256": "d03961b0094b6cfb2fb9e5e386e50df62ef810fdc5506f0fb66432bebf4c9f35",
     "authoredLayoutSHA256": "cc8243e1f612ee8e2c04fd58c20b253b9122d7cde92cc4a37863e386917ab1ca",
+    "evidenceInputs": [
+      {
+        "file": "reference/house-reference.json",
+        "kind": "county",
+        "source": "Lake County Property Appraiser tax roll and building sketches",
+        "sha256": "571c87fd146056f50614ffe88d4550c0ce5de6f496f15c08ca8870a51f8bffb6",
+        "bytes": 2415372,
+        "release": "100626"
+      },
+      {
+        "file": "reference/lidar-roofs.json",
+        "kind": "lidar",
+        "source": "USGS 3DEP lidar FL_Peninsular_Lake_2018",
+        "sha256": "d635d20ed8342efa0dc9225b9416366274a4074962a01144d19e9aa146a76acf",
+        "bytes": 1099997,
+        "acquired": [
+          "2018-12-06"
+        ]
+      }
+    ],
     "sourceDigest": "2b742d1768425de6a41a60818a0d2fd3a72b71f1969de94a50ff9041ce216193",
     "terrainCodebook": [
       "ground-grass",
@@ -3017,7 +3037,8 @@
       "heightM": 2,
       "slabM": 0.12,
       "pitchM": 2.12,
-      "policy": "Native-kit closed exterior proxies on one-metre integer-edge plans; geographic outlines retained separately; courtyard holes and shared party wall relationships retained; no invented entrances/interiors."
+      "policy": "Native-kit closed exterior proxies on one-metre integer-edge plans; geographic outlines retained separately; courtyard holes and shared party wall relationships retained; no invented entrances/interiors.",
+      "evidence": "Storeys: survey > building:levels tag > county STORIES > lidar eave > default. Material: survey > building:material tag > county wall code > default. Each building records its sources in nativeProxy; county/lidar storey disagreements are kept for a survey."
     }
   },
   "landmarks": [
@@ -3107,7 +3128,7 @@
   },
   "limitations": [
     "Geographic map-authoring source, not a deployed Farmyard mission or a property survey.",
-    "Flat terrain; no elevation survey, true building heights, real interiors or mapped entrance survey is inferred.",
+    "Flat terrain. Storeys and wall materials follow recorded evidence (nativeProxy sources) as whole native-kit storeys, not measured wall heights; no interiors or entrances are inferred.",
     "Building outlines are deliberately generalized to cardinal integer tile edges; original geographic outlines remain in geographicGeometry and raw source snapshots.",
     "The former depot is relocated approximately6.2m to preserve its proportions while clearing the original streets; other fitting changes are recorded in authored-buildings.json.",
     "Native wall butt joints and per-run texture phases retain the workshop's existing limits; curved decorative parts and the lighthouse remain curved.",

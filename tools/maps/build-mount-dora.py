@@ -321,21 +321,108 @@ def road_style(feature):
             "verticalPolicy": "Mapped steps/bridges are flat native authoring proxies; no surveyed elevation inferred."}
 
 
-def building_style(feature):
+EVIDENCE = (("house-reference.json", "county", "Lake County Property Appraiser tax roll and building sketches"),
+            ("lidar-roofs.json", "lidar", "USGS 3DEP lidar FL_Peninsular_Lake_2018"),
+            ("house-survey.json", "survey", "A person viewing Google Maps Street View; no imagery stored"))
+# Survey wall finishes the native kit can draw; storefront glass keeps the record's material.
+SURVEY_WALLS = {"wood-siding": "wood", "other-siding": "wood", "brick": "brick", "stucco": "concrete", "block": "concrete", "stone": "concrete"}
+SURVEY_STORIES = {"1": (1, False), "1.5": (1, True), "2": (2, False), "2.5": (2, True), "3": (3, False), "4": (4, False)}
+
+
+def load_evidence(project=PROJECT):
+    """Per-building county, lidar and survey facts from maps/mount-dora/reference.
+
+    The survey export is optional; the other two are required. Each file is
+    pinned by SHA-256 in project.json, and those files pin features.json without
+    nativeProxy, so writing nativeProxy here never invalidates them.
+    """
+    found, inputs = defaultdict(dict), []
+    for name, key, source in EVIDENCE:
+        path = project / "reference" / name
+        if not path.exists():
+            if key == "survey":
+                continue
+            raise ValueError("Missing building evidence: reference/" + name)
+        raw = path.read_bytes()
+        doc = json.loads(raw)
+        record = {"file": "reference/" + name, "kind": key, "source": source, "sha256": sha(raw), "bytes": len(raw)}
+        if key == "county":
+            record["release"] = doc["inputs"]["county"]["release"]
+            for item in doc["buildings"]:
+                found[item["id"]]["county"] = item
+        elif key == "lidar":
+            record["acquired"] = doc["collection"]["acquired"]["days"]
+            for item in doc["buildings"]:
+                found[item["id"]]["lidar"] = item
+        else:
+            record["exportedAt"] = doc["exportedAt"]
+            for item_id, answer in doc["answers"].items():
+                found[item_id]["survey"] = answer
+        inputs.append(record)
+    return found, inputs
+
+
+def building_style(feature, evidence=None):
+    """Storeys and wall material, from the best evidence available.
+
+    Storeys: a survey answer, then the mapper's building:levels tag, then the
+    county record, then lidar, then the one-storey kit default. County STORIES
+    is unreliable for some commercial records (the three-storey Shamrock
+    Building is recorded as 1), so a mapped tag outranks it. Where county and
+    lidar disagree the disagreement is kept for a survey to settle.
+    """
     tags = feature["tags"]
+    found = (evidence or {}).get(feature["id"], {})
+    county, lidar, survey = found.get("county"), found.get("lidar"), found.get("survey") or {}
     raw = tags.get("building:levels", "")
-    stories = int(raw) if re.fullmatch(r"[1-5]", raw) else 1
-    material = tags.get("building:material")
-    if material in ("wood", "timber"):
-        material = "wood"
-    elif material in ("concrete", "cement"):
-        material = "concrete"
+    suggested = county["suggested"] if county else {}
+    half = False
+    if survey.get("stories") in SURVEY_STORIES:
+        (stories, half), stories_source = SURVEY_STORIES[survey["stories"]], "survey:stories " + survey["stories"]
+    elif re.fullmatch(r"[1-5]", raw):
+        stories, stories_source = int(raw), "tag:building:levels"
+    elif suggested.get("stories"):
+        stories, half, stories_source = suggested["stories"], suggested["halfStory"], suggested["storiesSource"]
+    elif lidar and lidar.get("storeysFromLidar"):
+        stories, stories_source = min(5, lidar["storeysFromLidar"]), "lidar:eave %.2f m" % lidar["eaveM"]
     else:
-        material = "brick"
-    return {"stories": stories, "storiesSource": "tag:building:levels" if re.fullmatch(r"[1-5]", raw) else "unsurveyed-one-story-kit-proxy",
-            "material": material, "materialSource": "tag:building:material" if tags.get("building:material") in ("wood", "timber", "concrete", "cement", "brick") else "unsurveyed-native-kit-proxy",
-            "wallHeightM": 2, "slabM": .12, "floorPitchM": 2.12,
-            "interiors": "not-surveyed; closed exterior proxy; no invented doors, stairs or room partitions"}
+        stories, stories_source = 1, "unsurveyed-one-story-kit-proxy"
+    material = tags.get("building:material")
+    tagged_material = material in ("wood", "timber", "concrete", "cement", "brick")
+    if survey.get("wall") in SURVEY_WALLS:
+        material, material_source = SURVEY_WALLS[survey["wall"]], "survey:wall " + survey["wall"]
+    elif tagged_material:
+        material = "wood" if material in ("wood", "timber") else "concrete" if material in ("concrete", "cement") else "brick"
+        material_source = "tag:building:material"
+    elif suggested.get("material"):
+        material, material_source = suggested["material"], suggested["materialSource"]
+    else:
+        material, material_source = "brick", "unsurveyed-native-kit-proxy"
+    style = {"stories": stories, "storiesSource": stories_source, "material": material, "materialSource": material_source,
+             "wallHeightM": 2, "slabM": .12, "floorPitchM": 2.12,
+             "interiors": "not-surveyed; closed exterior proxy; no invented doors, stairs or room partitions"}
+    if half:
+        style["halfStory"] = True
+    record = {}
+    if county:
+        first = county["county"]["records"][0] if county["county"]["records"] else {}
+        record["county"] = {"match": county["match"]["method"], "iou": county["match"].get("iou"),
+                            "altKey": first.get("altKey"), "bldgNum": first.get("bldgNum"), "wall": first.get("wall"),
+                            "roofCover": suggested.get("roofCover"), "roofPitch": suggested.get("roofPitch"), "yearBuilt": suggested.get("yearBuilt"),
+                            "porchM2": suggested.get("porchM2"), "garage": suggested.get("garage")}
+    if lidar:
+        roof = lidar.get("roof") or {}
+        record["lidar"] = {"storeys": lidar.get("storeysFromLidar"), "eaveM": lidar.get("eaveM"), "ridgeM": lidar.get("ridgeM"),
+                           "roofForm": roof.get("form"), "roofConfidence": roof.get("confidence"), "pitchDeg": roof.get("pitchDeg"),
+                           "ridgeBearingDeg": roof.get("ridgeBearingDeg")}
+    if survey:
+        record["survey"] = dict(sorted(survey.items()))
+    county_stories, lidar_stories = suggested.get("stories"), lidar and lidar.get("storeysFromLidar")
+    if county_stories and lidar_stories and county_stories != lidar_stories:
+        record["storiesDisagreement"] = {"county": county_stories, "lidar": lidar_stories}
+    if record:
+        style["evidence"] = record
+    return style
 
 
 def clip_segment(a, b, width, depth):
@@ -526,6 +613,7 @@ def render_atlas(features, config):
 
 def build_project(project=PROJECT):
     config, projection, source_records, features, diagnostics = load_source(project)
+    evidence, evidence_inputs = load_evidence(project)
     extent = config["extent"]
     width, depth, size = extent["widthM"], extent["depthM"], extent["sectorSizeM"]
     if width != 1440 or depth != 1680 or size != 240 or extent["columns"] != 6 or extent["rows"] != 7:
@@ -543,7 +631,7 @@ def build_project(project=PROJECT):
             else:
                 feature["nativeOmission"] = "Proposed/construction road; retained as source, not painted."
         elif feature["category"] == "building" and feature["geometry"]["type"] == "MultiPolygon":
-            feature["nativeProxy"] = building_style(feature)
+            feature["nativeProxy"] = building_style(feature, evidence)
             buildings.append(feature)
     for feature in features:
         if feature["category"] == "water" and feature["geometry"]["type"] == "MultiPolygon":
@@ -738,8 +826,8 @@ def build_project(project=PROJECT):
     manifest = {"kind": "mount-dora-native-project", "version": 1, "id": config["id"], "name": config["name"], "target": config["target"],
                 "projection": config["projection"], "extent": {"widthM": width, "depthM": depth}, "sectorSize": size, "columns": extent["columns"], "rows": extent["rows"],
                 "featuresFile": "features.json", "atlasFile": "atlas.svg", "authoredBuildingsFile": "authored-buildings.json", "sectors": sectors, "sources": source_records,
-                "generation": {"tool": "tools/maps/build-mount-dora.py", "version": 3, "configFile": "source/authoring-config.json", "configSHA256": config_digest,
-                               "authoredLayoutSHA256": layout_digest,
+                "generation": {"tool": "tools/maps/build-mount-dora.py", "version": 4, "configFile": "source/authoring-config.json", "configSHA256": config_digest,
+                               "authoredLayoutSHA256": layout_digest, "evidenceInputs": evidence_inputs,
                                "sourceDigest": digest, "terrainCodebook": list(KINDS), "globalTerrainSHA256": sha(terrain),
                                "sampleRule": "Global cell centre (column*240+x+0.5, row*240+y+0.5); one global raster sliced without seam repaint.",
                                "nativeCoordinates": "Wall metre endpoints = global east/south - sectorOrigin - 0.5; tile indices remain integer cells.",
@@ -749,7 +837,8 @@ def build_project(project=PROJECT):
                                               "policy": "Mapped tree cell proxies plus declared seeded broadleaf/reed scatter on mapped land vegetation, excluding all mapped sports pitches; not surveyed species or individual tree positions."},
                                "sportsSurfaces": "Mapped pitch polygons exclude procedural greenery; tennis/pickleball use a declared existing asphalt proxy unless a supported source surface tag is present. No invented court lines or current inventory claim.",
                                "buildingDefaults": {"stories": 1, "material": "brick", "heightM": 2, "slabM": .12, "pitchM": 2.12,
-                                                    "policy": "Native-kit closed exterior proxies on one-metre integer-edge plans; geographic outlines retained separately; courtyard holes and shared party wall relationships retained; no invented entrances/interiors."}},
+                                                    "policy": "Native-kit closed exterior proxies on one-metre integer-edge plans; geographic outlines retained separately; courtyard holes and shared party wall relationships retained; no invented entrances/interiors.",
+                                                    "evidence": "Storeys: survey > building:levels tag > county STORIES > lidar eave > default. Material: survey > building:material tag > county wall code > default. Each building records its sources in nativeProxy; county/lidar storey disagreements are kept for a survey."}},
                 "landmarks": config.get("landmarkOverrides", []),
                 "calibration": config.get("calibration", {}), "coverageNotes": config.get("coverageNotes", []),
                 "metrics": {"sectors": len(sectors), "nativeImportReady": sum(s["nativeImport"]["ready"] for s in sectors),
@@ -760,7 +849,7 @@ def build_project(project=PROJECT):
                             "props": sum(len(p) for p in props_by_sector.values()), "terrainCounts": {KINDS[k]: v for k, v in sorted(Counter(terrain).items())},
                             "unrepresentedWallSlivers": sum(d["kind"] == "wall-sliver-below-native-minimum" for d in diagnostics)},
                 "limitations": ["Geographic map-authoring source, not a deployed Farmyard mission or a property survey.",
-                                "Flat terrain; no elevation survey, true building heights, real interiors or mapped entrance survey is inferred.",
+                                "Flat terrain. Storeys and wall materials follow recorded evidence (nativeProxy sources) as whole native-kit storeys, not measured wall heights; no interiors or entrances are inferred.",
                                 "Building outlines are deliberately generalized to cardinal integer tile edges; original geographic outlines remain in geographicGeometry and raw source snapshots.",
                                 "The former depot is relocated approximately6.2m to preserve its proportions while clearing the original streets; other fitting changes are recorded in authored-buildings.json.",
                                 "Native wall butt joints and per-run texture phases retain the workshop's existing limits; curved decorative parts and the lighthouse remain curved.",

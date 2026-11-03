@@ -63,6 +63,16 @@ outline in town metres and `coveredByGame`, so the generator can add them.
 - `basement: true` (75 game buildings) usually marks a sloping lot. The town is
   still flat in the game; this is a lead for terrain, not used yet.
 
+## Lidar: roof shape, heights and terrain
+
+USGS 3DEP lidar (flown 6 December 2018, 29.6 returns per m²) adds what county
+records lack: a roof form for every building (569 gable, 118 hip, 104 flat,
+155 other, 4 too sparse to tell), eave and ridge heights, ground elevation,
+and a 1 m bare-earth grid with 36 m of relief. It agrees with the county's
+storeys (AUC 0.88, κ 0.54), and the same pipeline on footprints shifted 30 m
+fails. It also puts the Grantham Point lighthouse at 7.0 m, not 35 ft. Method,
+validation and files are in [lidar/README.md](lidar/README.md).
+
 ## Why Street View is a link and not a download
 
 Automating Street View captures would break Google's terms. The Google Maps
@@ -93,6 +103,8 @@ Openly licensed street photos exist on Mapillary (CC BY-SA), but in November
 | `house-reference.json` | `build-house-reference.mjs` | One record per game building, plus `countyOnly` |
 | `survey/` | hand-written | The survey page |
 | `house-survey.json` | the survey's Export | A person's answers, keyed by building id (not created yet) |
+| `lidar-roofs.json` | `tools/maps/lidar/build-lidar.mjs` | Lidar roof form, eave and ridge heights and ground per game building |
+| `lidar/` | `tools/maps/lidar/` | Lidar provenance and the 1 m bare-earth grid ([details](lidar/README.md)) |
 
 Owner names and mailing addresses, sale prices, appraised values, exemptions,
 bedrooms and bathrooms are never requested or written. A test enforces this.

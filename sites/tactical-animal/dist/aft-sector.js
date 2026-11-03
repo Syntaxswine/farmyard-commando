@@ -31,7 +31,7 @@ export function adaptAftSector(source,{provenance=null}={}){
     if(kind==='doorway-concrete-open')continue;
     if(kind.startsWith('door-')){
       const axis=match[1],x=+match[2]+(axis==='e'?.5:0),y=+match[3]+(axis==='s'?.5:0);
-      edges[edge]='wall';doors.push({id:'aft-door-'+edge.replaceAll(':','-'),kind:'door',name:'Checkpoint office door',x,y,edge,swing:1,range:1.65,open:false,inventory:[],interactive:true});
+      edges[edge]='wall';doors.push({id:'aft-door-'+edge.replaceAll(':','-'),kind:'door',name:kind==='door-steel-closed'?'Steel door':'Wooden door',x,y,edge,swing:1,range:1.65,open:false,inventory:[],interactive:true});
     }else edges[edge]='wall';
   }
   const props=structuredClone(source.props??[]),obstacles=[];

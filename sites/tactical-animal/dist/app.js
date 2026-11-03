@@ -20,6 +20,7 @@ const ACTIVITIES=[...MISSIONS,TOUR_ACTIVITY];
 let selectedMissionId=DEFAULT_MISSION_ID;
 
 let tourMemorySave=null,tourLaunchAbort=null,tourLaunchGeneration=0,tourTransit=false,tourArtError=null,tourPreview=null;
+let pointTargeting=false;
 function drawTourPreparation(){
   const canvas=$('mission-preview'),ctx=canvas.getContext('2d');ctx.fillStyle='#17241e';ctx.fillRect(0,0,canvas.width,canvas.height);
   if(!tourPreview){tourPreview=new Image();tourPreview.onload=()=>{if(selectedMissionId===TOUR_ID)drawTourPreparation();};tourPreview.src=new URL('./maps/mount-dora/atlas.svg',import.meta.url).href;}
@@ -50,8 +51,8 @@ function renderTourStatus(){
 $('tour-retry').onclick=()=>{if(!isTour(state))return;if(tourArtError){const progress=readTourProgress(encodeSave(state));launchTour({progress});}else getTourWorld(state).retry();};
 function tourMenu(){
   storage.write();const u=hero(state);
-  showDialog('<p class="eyebrow">MOUNT DORA / WALKING TOUR</p><h2>Explore the town.</h2><p>'+safe(u.name)+' · '+short(u.weapon)+'<br>'+Math.round(state.solo.distance)+' metres walked. No combat or extraction requirements.</p>',[
-    ['Continue walking',()=>{},'primary'],['Visit landmark',tourVisits],['Inventory & equipment',equipment],['Tour notes',tourNotes],['Controls',help],
+  showDialog('<p class="eyebrow">MOUNT DORA / WALKING TOUR</p><h2>Explore the town.</h2><p>'+safe(u.name)+' · '+short(u.weapon)+'<br>'+Math.round(state.solo.distance)+' metres walked. No extraction requirement. Standard weapons, turns and interactions are enabled.</p>',[
+    ['Continue walking',()=>{},'primary'],['Visit landmark',tourVisits],...weaponActions('Inventory & equipment'),['Tour notes',tourNotes],['Controls',help],
     ['Choose animal or operation',backToPrep],['Title screen',()=>{storage.write();location.assign('./');}],['Start a new walking tour',()=>launchTour()]
   ]);
 }
@@ -121,7 +122,7 @@ function renderPrep(){renderMissionPreparation();const p=ANIMALS.find(a=>a.id===
   const skill=['hmg','rpg','flamethrower'].includes(build.primary)?'heavyWeapons':'firearms';$('primary-summary').textContent=`${skill==='firearms'?'FIREARMS':'HEAVY WEAPONS'} ${p.stats[skill]}`;$('equipment-note').textContent=`${Core.WEAPONS[build.primary].name}. ${p.name}'s ${skill==='firearms'?'firearms':'heavy weapons'} skill: ${p.stats[skill]}/100. Movement spends AP by distance, with no tile snapping.`;$('build-summary').textContent=`${p.name} / ${speciesLabel(p.species)} · ${short(build.primary)} + ${short(build.secondary)}`;
   try{
     const text=storage.read(),saved=text?JSON.parse(text):null,mission=getMission(selectedMissionId),previous=saved?.solo?.status==='active'&&(saved.solo.layoutVersion??1)!==(mission.layoutVersion??1);
-    $('resume').hidden=mission.exploration?!saved:!saved||saved.solo.status!=='active';$('resume').textContent=mission.exploration?'Resume walking tour ↗':previous?'Resume previous checkpoint ↗':'Resume '+mission.title+' ↗';
+    $('resume').hidden=mission.exploration?!saved||saved.status==='lost':!saved||saved.solo.status!=='active';$('resume').textContent=mission.exploration?'Resume walking tour ↗':previous?'Resume previous checkpoint ↗':'Resume '+mission.title+' ↗';
     if(previous)$('briefing-text').textContent+=' Your save uses the previous checkpoint. Deploy Solo starts the new approach map; Resume keeps your existing progress.';
   }catch(error){$('resume').hidden=true;toast('Could not read saved operations. You can still deploy and play in this tab.');}
   preparationBuilds[selectedMissionId]=normalizeBuild(build);
@@ -167,7 +168,7 @@ function start(s,{resume=false}={}){try{
   if(state&&state!==s)storage.write();cancelAreaAim();resetStick();keys.clear();if(picker.open)closePicker();
   guardAlert.stop();guardContacts.reset([...(Array.isArray(s.solo.spottedGuardIds)?s.solo.spottedGuardIds:[]),...(resume?Core.visibleOpponents(s).map(guard=>guard.id):[])]);s.solo.spottedGuardIds=guardContacts.ids();
   view?.dispose();if(state!==s)getTourWorld(state)?.dispose();tourArtError=null;$('loading').textContent=isTour(s)?'Preparing the town…':'Preparing the field…';$('loading').hidden=false;state=s;selectedMissionId=s.solo.missionId;build=normalizeBuild(s.solo.build);Core.stop(s);delete s.effect;
-  selected=null;interactionFocus=null;handTarget=null;grenadeAim.cancel();flameAim.cancel();lastHeldWeapon=hero(s).weapon;areaPress=false;aimViewport=null;contextKey='';resultShown=false;stanceDirection=1;movementDirection=-1;aim='hip';zone='torso';burst=false;
+  pointTargeting=false;selected=null;interactionFocus=null;handTarget=null;grenadeAim.cancel();flameAim.cancel();lastHeldWeapon=hero(s).weapon;areaPress=false;aimViewport=null;contextKey='';resultShown=false;stanceDirection=1;movementDirection=-1;aim='hip';zone='torso';burst=false;
   $('prep').hidden=true;$('battle').hidden=false;document.body.classList.add('in-battle');active=true;paused=false;
   view=new FieldView($('viewport'),{onPick:pick,getAimViewport:grenadeViewport,onLoading:busy=>{$('loading').hidden=!busy;frameClock.reset(busy?null:performance.now());},onError:message=>{if(isTour(state))tourArtError=message;$('loading').hidden=false;$('loading').textContent='Animal artwork could not load. '+message;}});
   view.setGame(state);lastPhase=state.phase;frameClock.reset(performance.now());lastUI=0;lastSave=performance.now();renderBattle();storage.write();
@@ -247,16 +248,30 @@ function reloadFromTrigger({targeting=false}={}){
   if(targeting)shootingMenu('fire');
   renderBattle();storage.write();return true;
 }
-function pick(p){if(!state||paused||aiming()||state.phase==='enemy'||state.solo.status!=='active')return;resetStick();if(p.interactionId){focusInteraction(p.interactionId);return;}if(p.unitId!==undefined){if(p.unitId===0){operationMenu();return;}const target=state.units.find(u=>u.id===p.unitId);if(target?.hp<=0){focusInteraction('body:'+target.id);return;}if(!state.detected.has(target?.id))return;if(hero(state).weapon==='flamethrower'){armFlame(Core.headingTo(hero(state),target));return;}Core.stop(state);Core.turnTo(state,hero(state),Core.headingTo(hero(state),target));selected={targetId:target.id};burst=false;aim=availableAim(Core.WEAPONS[hero(state).weapon],hero(state).ap);zone='torso';}
-  else if(p.windowId){const u=hero(state);Core.stop(state);if(u.weapon==='flamethrower'){armFlame(Core.headingTo(u,p));return;}const target={...p,name:p.paneId?'Glass pane':'Window frame'},single=Core.previewPointAttack(state,u,target),burst=Core.previewPointAttack(state,u,target,true);showDialog(`<p class="eyebrow">WINDOW</p><h2>${safe(target.name)}</h2><p>Glass stops the first shot. Later shots pass through the opening. Frames and lower walls remain solid.</p>`,[[`Fire · ${single.cost} AP`,()=>act(()=>Core.attack(state,u,target)),'primary',!single.ok],...(Core.WEAPONS[u.weapon].burstRounds?[[`Burst · ${burst.cost} AP`,()=>act(()=>Core.attack(state,u,target,true)),'',!burst.ok]]:[]),['Return to operation',()=>{}]]);return;}
+function pick(p){if(!state||paused||aiming()||state.phase==='enemy'||state.solo.status!=='active')return;resetStick();if(pointTargeting){pointTargeting=false;if(p.interactionId){const object=Core.interactionObjects(state).find(o=>o.id===p.interactionId);if(object)shootPoint({...object,ground:true,h:1,targetName:object.name});return;}if(p.unitId===undefined){shootPoint({...p,ground:true,h:p.h??1.1});return;}}if(p.interactionId){focusInteraction(p.interactionId);return;}if(p.unitId!==undefined){if(p.unitId===0){operationMenu();return;}const target=state.units.find(u=>u.id===p.unitId);if(target?.hp<=0){focusInteraction('body:'+target.id);return;}if(!state.detected.has(target?.id))return;if(hero(state).weapon==='flamethrower'){armFlame(Core.headingTo(hero(state),target));return;}Core.stop(state);Core.turnTo(state,hero(state),Core.headingTo(hero(state),target));selected={targetId:target.id};burst=false;aim=availableAim(Core.WEAPONS[hero(state).weapon],hero(state).ap);zone='torso';}
+  else if(p.windowId){shootPoint(p);return;}
   else{const path=Core.navigationPath(state,hero(state),p.x,p.y);if(!path){toast('No clear route to that point.');return;}view.route([hero(state),...path]);if(state.phase==='player')selected={point:p,path};else{Core.move(state,hero(state),p.x,p.y);selected=null;view.center();}}
   contextKey='';renderBattle();if(selected)selected.targetId!==undefined?shootingMenu():operationMenu();
+}
+function selectPointTarget(){
+  if(!state||!Core.canControl(state,hero(state)))return;
+  cancelAreaAim();resetStick();keys.clear();Core.stop(state);selected=null;pointTargeting=true;
+  toast('Tap a point to target with your firearm. Options or Escape cancels.');
+}
+function shootPoint(point){
+  const u=hero(state);Core.stop(state);if(u.weapon==='flamethrower'){armFlame(Core.headingTo(u,point));return;}
+  const target={...point,name:point.targetName||(point.windowId?(point.paneId?'Glass pane':'Window frame'):'Aimed point')};
+  const single=Core.previewPointAttack(state,u,target),burstShot=Core.previewPointAttack(state,u,target,true),reload=triggerReloadStatus(u),empty=reload.empty;
+  showDialog(`<p class="eyebrow">${point.windowId?'WINDOW':'TARGET POINT'}</p><h2>${safe(target.name)}</h2><p>${point.windowId?'Glass stops the first shot. Later shots pass through the opening. Frames and lower walls remain solid.':'Uses your equipped firearm, ammunition and normal AP rules.'}</p><p>${safe(single.reason||'Ready to fire.')}</p>`,[
+    [empty?`Reload · ${reload.cost} AP`:`Fire · ${single.cost} AP`,()=>act(()=>empty?Core.reload(state,u):Core.attack(state,u,target)),'primary',empty?!reload.ok:!single.ok],
+    ...(Core.WEAPONS[u.weapon].burstRounds?[[`Burst · ${burstShot.cost} AP`,()=>act(()=>Core.attack(state,u,target,true)),'',!burstShot.ok]]:[]),['Return to operation',()=>{}]
+  ]);
 }
 function shootingMenu(focusControl='zone-'+zone){
   const u=hero(state),w=Core.WEAPONS[u.weapon];
   showDialog(`<p class="eyebrow">TARGET CONTROL / PAUSED</p><h2>${safe(w.short)}</h2><p class="shooting-resources">${u.ap.toFixed(1)} AP${w.mag?` · ${u.ammo[u.weapon]??0} ROUNDS`:''}</p>`,[],{context:true,mode:'shooting',focusControl});
 }
-function renderContext(focusControl){if(!state)return;if(isTour(state)){$('context').replaceChildren();return;}const u=hero(state),near=interaction(state),target=selected?.targetId!==undefined?state.units.find(v=>v.id===selected.targetId):null;
+function renderContext(focusControl){if(!state)return;const u=hero(state),near=interaction(state),target=selected?.targetId!==undefined?state.units.find(v=>v.id===selected.targetId):null;
   if(target&&(!Core.alive(target)||!state.detected.has(target.id)))selected=null;
   if(target&&selected)aim=availableAim(Core.WEAPONS[u.weapon],u.ap,burst,aim);
   const p=target&&selected&&u.weapon!=='flamethrower'?Core.previewAttack(state,u,target,burst,zone,null,aim):null;
@@ -322,6 +337,7 @@ function renderBattle(){if(!state)return;const u=hero(state),combat=state.phase=
   $('zoom-out').disabled=view?.canZoom?.(1.2)===false;$('zoom-in').disabled=view?.canZoom?.(.83)===false;
   $('battle-name').textContent=u.name;$('battle-species').textContent=speciesLabel(u.species);
   $('hp-label').textContent=`${Math.ceil(u.hp)} / ${u.maxHp} HP`;$('hp-bar').style.width=`${u.hp/u.maxHp*100}%`;
+  $('turn-label').innerHTML='END<br>TURN';$('end-turn').setAttribute('aria-label','End turn');
   $('ap').textContent=combat?Math.max(0,u.ap).toFixed(1):'∞';$('ap-label').textContent=combat?'AP':'FREE MOVE';
   $('end-turn').disabled=state.phase!=='player'||aiming();
   $('end-turn').dataset.lit=String(combat);
@@ -342,9 +358,9 @@ function renderBattle(){if(!state)return;const u=hero(state),combat=state.phase=
   const nextAction=nextFocus?'View '+nextFocus.name:'Recenter on your animal';
   $('look').setAttribute('aria-label',`${contacts.length} visible opponent${contacts.length===1?'':'s'}. ${viewing}. Next: ${nextAction}.`);
   $('look').title=`${nextAction} · opponents, then your animal`;
-  renderTourStatus();if(isTour(state)){$('turn-label').innerHTML='WALK<br>TOUR';$('end-turn').setAttribute('aria-label','Walking tour. No combat turns.');$('viewport').setAttribute('aria-label','Mount Dora walking tour. Tap ground to walk, drag to look around, or use the movement controls.');}
+  renderTourStatus();if(isTour(state)){$('viewport').setAttribute('aria-label','Mount Dora walking tour. Tap ground to walk, drag to look around, or use the movement controls.');}
   drawMinimap($('minimap'),state);renderContext();renderInteractionHand();
-  if(state.solo.status!=='active'&&!resultShown){resultShown=true;storage.write();const win=state.solo.status==='extracted',mission=missionForState(state);showDialog(`<p class="eyebrow">${safe(mission.title)} / OPERATION ${win?'COMPLETE':'LOST'}</p><h2>${win?mission.result.title:'One worker down.'}</h2><p>${win?`${u.name} ${mission.result.summary} ${Math.round(state.solo.distance)} metres travelled; ${state.round} combat rounds.`:'The factory kept its secrets this time. Try another animal, another loadout, or a quieter route.'}</p>${win?`<p>${mission.result.epilogue}</p>`:''}`,[['Choose your next operation',backToPrep,'primary'],['Replay this loadout',()=>start(createSoloGame(state.solo.build,1947,state.solo.missionId))]]);}
+  if(state.solo.status!=='active'&&!resultShown){resultShown=true;storage.write();const win=state.solo.status==='extracted',mission=missionForState(state);showDialog(`<p class="eyebrow">${safe(mission.title)} / OPERATION ${win?'COMPLETE':'LOST'}</p><h2>${win?mission.result.title:'One worker down.'}</h2><p>${win?`${u.name} ${mission.result.summary} ${Math.round(state.solo.distance)} metres travelled; ${state.round} combat rounds.`:'The factory kept its secrets this time. Try another animal, another loadout, or a quieter route.'}</p>${win?`<p>${mission.result.epilogue}</p>`:''}`,[['Choose your next operation',backToPrep,'primary'],['Replay this loadout',()=>isTour(state)?launchTour():start(createSoloGame(state.solo.build,1947,state.solo.missionId))]]);}
 }
 $('end-turn').onclick=()=>act(()=>{selected=null;cancelAreaAim();Core.endTurn(state);});
 function renderGrenadeControls(){
@@ -371,7 +387,8 @@ function cancelGrenade(){
   grenadeAim.cancel();resetStick();keys.clear();view?.endGrenadeAim();clearAreaReadiness();$('toast').hidden=true;
 }
 function armGrenade(){
-  if(isTour(state)){toast('Firing is unavailable during the walking tour.');return;}
+  pointTargeting=false;
+
   if(!state||paused||grenadeAim.active||!Core.canControl(state,hero(state)))return;
   const u=hero(state);if(!(u.ammo.grenade>0)||u.ap+1e-7<Core.grenadeCost(u))return;
   cancelFlame();
@@ -386,7 +403,7 @@ function commitGrenade(){
   grenadeAim.cancel();resetStick();keys.clear();view.endGrenadeAim({linger:800});contextKey='';renderBattle();storage.write();
 }
 $('cancel-grenade').onclick=()=>{cancelGrenade();renderBattle();};
-function renderFlameControls(){if(isTour(state)){$('flame-aim').hidden=true;renderAreaButton();return;}
+function renderFlameControls(){
   const u=hero(state),armed=flameAim.active,count=u.ammo.flamethrower||0,p=armed?Core.previewFlame(state,u,flameAim.heading):null;
   $('flame-aim').hidden=!armed;$('battle').classList.toggle('aiming-flame',armed);
   if(!armed){renderAreaButton();return;}
@@ -403,9 +420,11 @@ function cancelFlame(){
   if(!flameAim.active)return;
   flameAim.cancel();resetStick();keys.clear();view?.endFlameAim();clearAreaReadiness();$('toast').hidden=true;
 }
-function cancelAreaAim(){cancelGrenade();cancelFlame();clearAreaReadiness();}
+function cancelAreaAim(){pointTargeting=false;cancelGrenade();cancelFlame();clearAreaReadiness();}
 function armFlame(heading){
-  if(isTour(state)){toast('Firing is unavailable during the walking tour.');return;}
+  pointTargeting=false;
+  pointTargeting=false;
+
   if(!state||paused||flameAim.active)return;
   const u=hero(state),direction=Number.isFinite(heading)?heading:u.heading;
   if(u.weapon==='flamethrower'&&triggerReloadStatus(u).empty&&Core.canControl(state,u)){cancelGrenade();state.solo.areaWeapon='flamethrower';lastHeldWeapon=u.weapon;renderBattle();return;}
@@ -428,7 +447,7 @@ function areaWeapon(){
 }
 function clearAreaReadiness(){const b=$('grenade');b.dataset.ready='false';b.dataset.lit='false';}
 function renderAreaButton(){
-  if(!state)return;if(isTour(state)){$('grenade').disabled=true;clearAreaReadiness();$('grenade-label').textContent='TOUR';$('grenade-cost').textContent='NO FIRING';$('grenade-count').textContent='';$('grenade').setAttribute('aria-label','Walking tour. Firing is unavailable.');return;}
+  if(!state)return;
   const u=hero(state),kind=areaWeapon(),flame=kind==='flamethrower',armed=flame?flameAim.active:grenadeAim.active;
   const count=u.ammo[kind]||0,cost=flame?6:Core.grenadeCost(u),can=Core.canControl(state,u),adjusting=stickPointer!==null||keys.size>0||areaPress;
   const p=flame?Core.previewFlame(state,u,armed?flameAim.heading:u.heading):armed&&grenadeAim.point?Core.previewGrenade(state,u,grenadeAim.point):null;
@@ -541,7 +560,18 @@ function equipment(){
     ['Back to menu',operationMenu],['Return to operation',()=>{},'primary']
   ]);
 }
+function weaponActions(inventoryLabel='Inventory & weapons'){
+  const u=hero(state),w=Core.WEAPONS[u.weapon],can=Core.canControl(state,u),costs=Core.combatCosts(state),other=u.weapon===state.solo.build.primary?state.solo.build.secondary:state.solo.build.primary,swapCost=weaponSwapCost(u,other),actionCost=costs?' · 3 AP':'';
+  return [[inventoryLabel,equipment],
+    ['Aim firearm at a point',selectPointTarget,'',!can||!w.mag||w.incendiary||w.thrown],
+    [`Area weapon: ${areaNames[areaWeapon()]} · Change`,openAreaPicker,'',!can],
+    [`Switch to ${short(other)}${swapCost?' · '+swapCost+' AP':''}`,()=>act(()=>Core.equip(state,u,other)),'',!can||u.ap<swapCost],
+    [`Reload ${short(u.weapon)} · ${u.ammo[u.weapon]??0}/${w.mag}${actionCost}`,()=>act(()=>Core.reload(state,u)),'',!can||!w.mag||u.ammo[u.weapon]>=w.mag||!(u.ammoPouch[u.weapon]>0)||costs&&u.ap<3],
+    [`Use field dressing ×${state.solo.dressings}${actionCost}`,()=>act(()=>dressing(state)),'',!can||!state.solo.dressings||u.hp===u.maxHp||costs&&u.ap<3],
+    [`Throw grenade ×${u.ammo.grenade||0} · ${Core.grenadeCost(u)} AP`,armGrenade,'',!can||!(u.ammo.grenade>0)||u.ap<Core.grenadeCost(u)]];
+}
 function operationMenu(){
+  pointTargeting=false;
   if(!state)return;if(isTour(state)){tourMenu();return;}
   storage.write();
   const u=hero(state),w=Core.WEAPONS[u.weapon],can=Core.canControl(state,u),costs=Core.combatCosts(state);
@@ -550,12 +580,7 @@ function operationMenu(){
   const phase=state.phase==='enemy'?'Guard turn':state.phase==='player'?`Your turn · round ${state.round}`:'Real-time exploration';
   showDialog(`<p class="eyebrow">${safe(missionForState(state).title)} / OPERATION PAUSED</p><h2>Field menu.</h2><p class="menu-summary">${phase}<br>${u.name} · ${short(u.weapon)} · ${u.ap.toFixed(1)} AP</p>`,[
     ['Continue operation',()=>{},'primary'],
-    ['Inventory & weapons',equipment],
-    [`Area weapon: ${areaNames[areaWeapon()]} · Change`,openAreaPicker,'',!can],
-    [`Switch to ${short(other)}${swapCost?' · '+swapCost+' AP':''}`,()=>act(()=>Core.equip(state,u,other)),'',!can||u.ap<swapCost],
-    [`Reload ${short(u.weapon)} · ${u.ammo[u.weapon]??0}/${w.mag}${actionCost}`,()=>act(()=>Core.reload(state,u)),'',!can||!w.mag||u.ammo[u.weapon]>=w.mag||!(u.ammoPouch[u.weapon]>0)||costs&&u.ap<3],
-    [`Use field dressing ×${state.solo.dressings}${actionCost}`,()=>act(()=>dressing(state)),'',!can||!state.solo.dressings||u.hp===u.maxHp||costs&&u.ap<3],
-    [`Throw grenade ×${u.ammo.grenade||0} · ${Core.grenadeCost(u)} AP`,armGrenade,'',!can||!(u.ammo.grenade>0)||u.ap<Core.grenadeCost(u)],
+    ...weaponActions(),
     ['Mission & combat log',mission],['Controls',help],['Choose operation, animal & loadout',backToPrep],['Title screen',()=>{storage.write();location.assign('./');}],['Restart this operation',()=>start(createSoloGame(state.solo.build,1947,state.solo.missionId))]
   ],{context:true});
 }
@@ -570,7 +595,7 @@ function mission(){
   ]);
 }
 $('menu').onclick=operationMenu;
-function help(){if(isTour(state)){showDialog('<p class="eyebrow">WALKING TOUR</p><h2>Walk and inspect.</h2><p>Use the joystick, WASD or arrow keys to move. Tap movement to switch run, walk or sneak. Quick taps change pace without stopping; hold for choices.</p><p>Drag the view to pan; use zoom or the eye button to return to your animal. Options → Visit landmark moves you directly to a cleared approach. You can walk across all town sectors continuously.</p><p>Movement has no stamina limit. Firing is unavailable in this tour. Other operations retain combat.</p>',[['Back to tour menu',tourMenu],['Continue walking',()=>{},'primary']]);return;}showDialog(`<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br>Your decisions.</h2><ul>
+function help(){if(isTour(state)){showDialog('<p class="eyebrow">WALKING TOUR</p><h2>Walk and inspect.</h2><p>Use the joystick, WASD or arrow keys to move. Tap movement to switch run, walk or sneak. Quick taps change pace without stopping; hold for choices.</p><p>Drag the view to pan; use zoom or the eye button to return to your animal. Options → Visit landmark moves you directly to a cleared approach. You can walk across all town sectors continuously.</p><p>Movement has no stamina limit. Weapons, grenades, reloads, injuries and turns use the normal game rules. Firearms can target a point from Options. Doors and other interactions appear where authored data exists.</p>',[['Back to tour menu',tourMenu],['Continue walking',()=>{},'primary']]);return;}showDialog(`<p class="eyebrow">FIELD NOTES</p><h2>One animal.<br>Your decisions.</h2><ul>
   <li>Use the center thumbstick to move freely in any direction. W A S D and arrow keys also work.</li>
   <li>During combat, movement spends AP by the exact distance covered. Stop anywhere. The right buttons are End Turn, your area weapon, then Options.</li>
   <li>Grenade and flamethrower share one button. Hold it to choose which to use, or open Options → Area weapon / Inventory & weapons. Selecting grenades is free and keeps your held weapon. Equipping a flamethrower uses the usual weapon-change cost. The button slowly pulses yellow when a valid aim is held and ready to fire.</li>
@@ -602,6 +627,7 @@ for(const name of ['pointerup','pointercancel','lostpointercapture'])$('joystick
 addEventListener('keydown',e=>{
   if(!active||paused||e.defaultPrevented||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;
   const k=e.key.toLowerCase(),button=e.target.closest('button');
+  if(k==='escape'&&pointTargeting){pointTargeting=false;toast('Target selection cancelled.');return;}
   if(k==='g'){e.preventDefault();if(!e.repeat)armGrenade();return;}
   if(k==='f'){e.preventDefault();if(!e.repeat)armFlame();return;}
   if(k==='enter'&&aiming()&&!button){e.preventDefault();if(!e.repeat){if(flameAim.active)commitFlame();else commitGrenade();}return;}

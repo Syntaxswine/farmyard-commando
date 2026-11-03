@@ -95,24 +95,27 @@ export class FieldView {
   // Mission art owns its geometry; detach it before the generic traversal below.
   clearEnvironment(){this.windowArt?.dispose();this.windowArt=null;this.windowEffects?.dispose();this.windowEffects=null;this.searchHalo?.dispose();this.searchHalo=null;this.missionArt?.dispose();this.missionArt=null;this.missionArtBusy=this.missionPaperBusy=false;this.interactionArt?.dispose();this.interactionArt=null;this.art?.dispose();this.art=null;this.environment.traverse(o=>{o.geometry?.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});this.environment.clear();for(const t of this.disposables)t.dispose();this.disposables=[];}
   buildEnvironment(s){
+    this.windowArt=new WindowScenery(s);this.environment.add(this.windowArt.root);this.windowEffects=new WindowEffects(this.scene,s);
     const tour=getTourWorld(s);if(tour){
       const generation=this.generation;this.artBusy=true;this.propBusy=this.missionArtBusy=this.missionPaperBusy=false;this.searchHalo=null;this.objectivePin=this.extractionPin=null;
-      this.art=tour.createEnvironment(this.renderer,s,{onLoading:busy=>{if(generation===this.generation){this.artBusy=busy;this.reportLoading();}},onError:message=>{if(generation===this.generation){this.failed.add('town-art');this.onError(message);}}});this.environment.add(this.art.root);this.missionArtReady=Promise.resolve(null);return;
+      this.art=tour.createEnvironment(this.renderer,s,{onLoading:busy=>{if(generation===this.generation){this.artBusy=busy;this.reportLoading();}},onError:message=>{if(generation===this.generation){this.failed.add('town-art');this.onError(message);}}});this.environment.add(this.art.root);this.buildInteractionScenery(s,generation);this.missionArtReady=Promise.resolve(null);return;
     }
-    this.windowArt=new WindowScenery(s);this.environment.add(this.windowArt.root);this.windowEffects=new WindowEffects(this.scene,s);
     const generation=this.generation,mission=missionForState(s);this.artBusy=true;this.missionArtBusy=this.missionPaperBusy=false;this.searchHalo=new SearchHalo();
     this.art=new OriginalEnvironment(this.renderer,s,{
       onLoading:busy=>{if(generation===this.generation){this.artBusy=busy;this.reportLoading();}},
       onError:message=>{if(generation===this.generation){this.failed.add('environment');this.onError(message);}},
     });this.environment.add(this.art.root);
     this.missionArtReady=missionHasArt(mission)?this.loadMissionArt(s,generation):Promise.resolve(null);
+    this.buildInteractionScenery(s,generation);
+    this.objectivePin=this.makePin(mission.objective,0xe16b3d);this.extractionPin=this.makePin(mission.extraction,0xc4d29a);
+    // Rail lines and loading-yard markings are scenery; the engine owns all collision.
+    if(!s.groundPalette)for(let x=3;x<37;x+=3){const mark=new T.Mesh(new T.PlaneGeometry(1.2,.06),new T.MeshBasicMaterial({color:0xb0a475,transparent:true,opacity:.16}));mark.rotation.x=-Math.PI/2;mark.position.set(x,.003,26.8);this.environment.add(mark);}
+  }
+  buildInteractionScenery(s,generation){
     this.propBusy=true;this.interactionArt=new InteractionScenery(s,{
       onLoading:busy=>{if(generation===this.generation){this.propBusy=busy;this.reportLoading();}},
       onError:message=>{if(generation===this.generation){this.failed.add('interaction-art');this.onError(message);}},
     });this.environment.add(this.interactionArt.root);
-    this.objectivePin=this.makePin(mission.objective,0xe16b3d);this.extractionPin=this.makePin(mission.extraction,0xc4d29a);
-    // Rail lines and loading-yard markings are scenery; the engine owns all collision.
-    if(!s.groundPalette)for(let x=3;x<37;x+=3){const mark=new T.Mesh(new T.PlaneGeometry(1.2,.06),new T.MeshBasicMaterial({color:0xb0a475,transparent:true,opacity:.16}));mark.rotation.x=-Math.PI/2;mark.position.set(x,.003,26.8);this.environment.add(mark);}
   }
   // The art kit and its inherited model modules load only for a mission with art.
   // Inherited cargo keeps drawing a replaced crate until the kit's model is in the

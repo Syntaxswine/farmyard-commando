@@ -1,4 +1,4 @@
-export {PLACEMENTS,ART_REVISION,SOURCE_FEATURES_SHA256} from './placements.js';
+export {PLACEMENTS,ART_REVISION,SOURCE_FEATURES_SHA256,AUTHORED_LAYOUT_SHA256} from './placements.js';
 import {PLACEMENTS} from './placements.js';
 export const TOWN_BOUNDS=Object.freeze([0,0,1440,1680]);
 export const ATLAS_URL=new URL('./painted-materials-bbe33709.png',import.meta.url).href;

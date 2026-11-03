@@ -29,6 +29,7 @@ export async function loadTownTour({build,progress=null,signal,fetcher=globalThi
     artModule||import('./mission-art/mount-dora/manifest.js'),kitModule||import('./mission-art/mount-dora/kit.js')]);
   if(signal?.aborted)throw new DOMException('Canceled','AbortError');
   const project=JSON.parse(new TextDecoder().decode(projectBytes)),baseURL=new URL('./',projectURL);
+  if(project.generation.authoredLayoutSHA256!==art.AUTHORED_LAYOUT_SHA256)throw Error('Town map and artwork layouts differ. Reload the page before starting.');
   const features=await readBytes(fetcher,new URL(project.featuresFile,baseURL),signal,8_000_000);
   if(await sha256(features)!==art.SOURCE_FEATURES_SHA256)throw Error('Town map and artwork revisions differ. Reload the page before starting.');
   const world=await new TownWorld(project,{baseURL,fetcher,art}).identify();
@@ -42,14 +43,25 @@ export async function loadTownTour({build,progress=null,signal,fetcher=globalThi
   world.startPoint=progress?{x:progress.player.x,y:progress.player.y,heading:progress.player.heading}:{...TOUR_ACTIVITY.spawn};
   try{
     await world.readyAt(world.startPoint);
-    if(!world.pointClear(world.startPoint))throw Error(progress?'Your saved approach is blocked in the current town. Start a new tour or choose a cleared landmark from the previous tour.':'The Donnelly Park approach is obstructed. Try loading the current tour artwork again.');
+    let relocated=false;
+    if(progress&&!world.resumeClear(world.startPoint)){
+      const old=world.startPoint,candidates=[];
+      for(let y=-24;y<=24;y++)for(let x=-24;x<=24;x++)candidates.push({x:Math.round(old.x)+x,y:Math.round(old.y)+y});
+      candidates.sort((a,b)=>Math.hypot(a.x-old.x,a.y-old.y)-Math.hypot(b.x-old.x,b.y-old.y)||a.y-b.y||a.x-b.x);
+      const target=candidates.find(p=>world.resumeClear(p))||{...TOUR_ACTIVITY.spawn};
+      await world.readyAt(target);
+      if(!world.resumeClear(target))throw Error('No clear outdoor approach is available for this saved tour. Your checkpoint has been preserved.');
+      world.startPoint={...target,heading:old.heading};relocated=true;
+    }
+    if(!world.resumeClear(world.startPoint))throw Error('The Donnelly Park approach is obstructed. Try loading the current tour artwork again.');
     if(signal?.aborted)throw new DOMException('Canceled','AbortError');
     const state=createSoloGame(progress?.build||build,1947,TOUR_ID,{tourWorld:world});
     if(progress){
       const initial=hero(state),u=progress.player;if(u.species!==initial.species||u.slots.some(kind=>!Core.WEAPONS[kind])||!Core.WEAPONS[u.weapon])throw Error('Unsupported saved tour animal or equipment.');
-      Object.assign(initial,structuredClone(u),{id:0,team:'squad',isMoving:false});state.seen=progress.seen instanceof TownExplored?progress.seen:TownExplored.restore(progress.explored);
+      Object.assign(initial,structuredClone(u),{id:0,team:'squad',x:world.startPoint.x,y:world.startPoint.y,isMoving:false});state.seen=progress.seen instanceof TownExplored?progress.seen:TownExplored.restore(progress.explored);
       state.solo.dressings=progress.dressings;state.solo.distance=progress.distance;state.elapsed=progress.elapsed;state.log=(progress.log||[]).filter(x=>typeof x==='string').slice(0,20);
-      if(progress.sourceRevision!==world.sourceRevision||progress.artRevision!==world.artRevision)log(state,'The town has been updated. Your saved position is clear and your progress is retained.');
+      if(relocated)log(state,'The town layout has changed. Moved to a clear outdoor approach; your equipment and tour progress are retained.');
+      else if(progress.sourceRevision!==world.sourceRevision||progress.artRevision!==world.artRevision)log(state,'The town has been updated. Your saved position is clear and your progress is retained.');
       Core.refresh(state,{forceFog:true});
     }
     return state;
@@ -61,7 +73,7 @@ export async function visitTownLandmark(state,id){
   world.coverageTarget=target;world.ensureCoverage(blockWindow(state,target),target);world.retry();
   try{
     await world.readyAt(target);if(world.disposed)throw Error('The tour has ended.');
-    if(!world.pointClear(target))throw Error('That landmark approach is obstructed. Your animal has stayed at its previous location.');
+    if(!world.resumeClear(target))throw Error('That landmark approach is obstructed. Your animal has stayed at its previous location.');
     Core.stop(state);Object.assign(u,target,{isMoving:false});delete state.fogAt;Core.refresh(state,{forceFog:true});log(state,'Visited '+visit.name+'.');
   }finally{
     world.coverageTarget=null;

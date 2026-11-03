@@ -41,6 +41,7 @@
   "rows": 7,
   "featuresFile": "features.json",
   "atlasFile": "atlas.svg",
+  "authoredBuildingsFile": "authored-buildings.json",
   "sectors": [
     {
       "id": "A01",
@@ -69,18 +70,18 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 44134,
+          "ground-grass": 44012,
           "ground-asphalt": 6472,
-          "floor": 6994
+          "floor": 7116
         },
-        "terrainSHA256": "8c31f262cfe84bfbc43f68835c7ae679f5d57ca0c7d7b762d44e2c70a21c2c25",
+        "terrainSHA256": "68d264937d13a5be3ff160da0b4a92810312ed6ab4197a51a29d70a6faecd986",
         "sourceWaterCells": 0,
         "buildingCount": 29,
-        "wallRunCount": 170,
-        "nativePanelCount": 1903,
+        "wallRunCount": 168,
+        "nativePanelCount": 1828,
         "propCount": 0,
-        "bytes": 982997,
-        "sha256": "94903db92563bde96b6826603dad12ac01aea5d710b9a52265173026732860b2"
+        "bytes": 981967,
+        "sha256": "adb5c7edc19ec767c8df5ba6a20f0f53b260760d627b0b489d1007d5c341dbd9"
       },
       "buildingIds": [
         "osm-way-1240419908",
@@ -141,18 +142,18 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 41001,
+          "ground-grass": 40981,
           "ground-asphalt": 7828,
-          "floor": 8771
+          "floor": 8791
         },
-        "terrainSHA256": "2e8007eaa60c81f304dd1245738dbd1d4f1be4437238944e8b60cf0221f3566f",
+        "terrainSHA256": "5e120abd7a3c3537cc52a8f3ac665895e3d0fa76ea1bd7c0b41874da0aa85de1",
         "sourceWaterCells": 0,
         "buildingCount": 45,
-        "wallRunCount": 241,
-        "nativePanelCount": 2654,
+        "wallRunCount": 237,
+        "nativePanelCount": 2549,
         "propCount": 0,
-        "bytes": 1019590,
-        "sha256": "029dc6a59938ab27fdd0eedb8c2b5086b2e0e0270fb7e14ec7d96e58c5cdac5c"
+        "bytes": 1016323,
+        "sha256": "785ef28a092f5cf9e2fc25deb8a32c4953f3247cfb528bb109bf9d8d95318b6f"
       },
       "buildingIds": [
         "osm-way-1240419869",
@@ -229,19 +230,19 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 40855,
+          "ground-grass": 40812,
           "ground-asphalt": 6789,
           "ground-concrete": 806,
-          "floor": 9150
+          "floor": 9193
         },
-        "terrainSHA256": "8b747fad6c93e58f6121767e5e3602277068c4fb07b10ddd49c4469ab98a3604",
+        "terrainSHA256": "b745bf4b4357fd9d4511e66b5eec6161390814262bf6f50a49d09602325b1997",
         "sourceWaterCells": 0,
         "buildingCount": 57,
-        "wallRunCount": 270,
-        "nativePanelCount": 2992,
+        "wallRunCount": 267,
+        "nativePanelCount": 2888,
         "propCount": 1,
-        "bytes": 1028676,
-        "sha256": "63d5df7dd75d6f7efcb4062ed380e359f367f916bd3ad47245e7d25f659afe78"
+        "bytes": 1025514,
+        "sha256": "489358c13caa9bb57b7b2d8b767295991241f455fcfa61b7c2d784ec5ec94fa3"
       },
       "buildingIds": [
         "osm-way-1240419747",
@@ -330,18 +331,18 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 43982,
+          "ground-grass": 43999,
           "ground-asphalt": 5402,
-          "floor": 8216
+          "floor": 8199
         },
-        "terrainSHA256": "290d7e22c9180cd38a9c9610657d4a2e65cce8c473c025ef0a2e571936eb0f36",
+        "terrainSHA256": "460b4693677eb30ba2d3fea024ffb8fa37800677d0ce190cbeea6152ef0690be",
         "sourceWaterCells": 0,
         "buildingCount": 58,
-        "wallRunCount": 277,
-        "nativePanelCount": 2865,
+        "wallRunCount": 278,
+        "nativePanelCount": 2764,
         "propCount": 0,
-        "bytes": 1015508,
-        "sha256": "afdb5b7ee639d7d6946ffcac134fb550300de5dd30528ebf5a674e7b46e1421a"
+        "bytes": 1012476,
+        "sha256": "51fc47653a75d5f7c4e44e68f4a3d29c8bd235ad6cfb2f2d2934083b8ca8046d"
       },
       "buildingIds": [
         "osm-way-1240419733",
@@ -431,19 +432,19 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 45407,
+          "ground-grass": 45423,
           "ground-asphalt": 4625,
           "ground-concrete": 684,
-          "floor": 6884
+          "floor": 6868
         },
-        "terrainSHA256": "8c5d007631c9f37bafb16f9ce82293479fc0953eabc4d5aa1f5754ecbd4142e5",
+        "terrainSHA256": "d55b5ab49baa2fc94f1c9263fcd0e0b05ca96f8df8520646caa897c5bda06e86",
         "sourceWaterCells": 0,
-        "buildingCount": 50,
-        "wallRunCount": 235,
-        "nativePanelCount": 2435,
+        "buildingCount": 49,
+        "wallRunCount": 230,
+        "nativePanelCount": 2299,
         "propCount": 0,
-        "bytes": 996080,
-        "sha256": "7214c49682bee9275ec314555346b1e5a8a77dc8a76ae2903a311198d94b738b"
+        "bytes": 992336,
+        "sha256": "47cd7a8de84014d8029c056c1775ff0def59f22991b8302431771728e3af0fd7"
       },
       "buildingIds": [
         "osm-way-1240419735",
@@ -494,8 +495,7 @@
         "osm-way-1240419816",
         "osm-way-1241962502",
         "osm-way-1241962512",
-        "osm-way-1241962513",
-        "osm-way-1241962514"
+        "osm-way-1241962513"
       ]
     },
     {
@@ -525,18 +525,18 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 44830,
+          "ground-grass": 44842,
           "ground-asphalt": 6333,
-          "floor": 6437
+          "floor": 6425
         },
-        "terrainSHA256": "df1789b17b790fcb2e39c468f113db9924c88304940ef6a58cf4294a819a3fa8",
+        "terrainSHA256": "5e4a11434316f8a6c6b4b2dc3bbed551391efe71819273e3382bdc7cb74d0b2a",
         "sourceWaterCells": 0,
         "buildingCount": 42,
-        "wallRunCount": 206,
-        "nativePanelCount": 2166,
+        "wallRunCount": 207,
+        "nativePanelCount": 2080,
         "propCount": 0,
-        "bytes": 985694,
-        "sha256": "aa7aae8f0a65d0b22a93c062f84fc23e28251bda43e98c9bc97b70c4599be425"
+        "bytes": 983480,
+        "sha256": "d0a48a795bcbad108b3633749ebe9e0be872d4414f31facc7ba0c71c889af96a"
       },
       "buildingIds": [
         "osm-way-1240419782",
@@ -610,20 +610,20 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 39380,
+          "ground-grass": 39342,
           "water": 6034,
-          "ground-asphalt": 7696,
+          "ground-asphalt": 7711,
           "ground-concrete": 85,
-          "floor": 4405
+          "floor": 4428
         },
-        "terrainSHA256": "ae69f4bcdf51ca01b621ce1bb34af090bb7aa3add270a0a2c44bc0a5e4288071",
+        "terrainSHA256": "b966c02eb14b5aa5b4d21273ff763490d1a10fe9042c0dcc371fdd0f89c3932a",
         "sourceWaterCells": 6034,
         "buildingCount": 7,
-        "wallRunCount": 112,
-        "nativePanelCount": 828,
+        "wallRunCount": 88,
+        "nativePanelCount": 747,
         "propCount": 0,
-        "bytes": 909320,
-        "sha256": "7a8adb0a658d66707ba612f6d4eb49fe6b6564a96e3ca2fcd3263c0311681ea3"
+        "bytes": 903933,
+        "sha256": "3d73d48835e7424545177ea609591c042a0cc8f140fe920e770f86f1a799fd0e"
       },
       "buildingIds": [
         "osm-way-1240419916",
@@ -662,19 +662,19 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 40128,
+          "ground-grass": 40152,
           "ground-asphalt": 7850,
           "ground-concrete": 355,
-          "floor": 9267
+          "floor": 9243
         },
-        "terrainSHA256": "dfd79df3c8b181dc24a4218aaf7460e9a0b07b58aa926f753333f35d4724e91f",
+        "terrainSHA256": "4a724ce02a1855deae8831613be49db29de0c97a7d833819817d5aae0ba877bf",
         "sourceWaterCells": 0,
         "buildingCount": 25,
-        "wallRunCount": 187,
-        "nativePanelCount": 2086,
+        "wallRunCount": 166,
+        "nativePanelCount": 1979,
         "propCount": 0,
-        "bytes": 1019562,
-        "sha256": "bc5f9b1c4d0eedb2357f5597e351fb735216160f448498e881e455c7ac94c50d"
+        "bytes": 1012923,
+        "sha256": "33be20a65015aeedea249fd51ca3a3488be87c06b724e8d362ef1d561a0778e5"
       },
       "buildingIds": [
         "osm-relation-7980769",
@@ -731,19 +731,19 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 41848,
+          "ground-grass": 41871,
           "ground-asphalt": 7029,
           "ground-concrete": 590,
-          "floor": 8133
+          "floor": 8110
         },
-        "terrainSHA256": "b86fe411372c53fbb8d7f94a5bb51712a7a71941ba55ada45da9c5262b30fb6f",
+        "terrainSHA256": "f6a4795aa6fcc1527533ff09a8abc603a444e5979ef2ae2cebf6d63b033ffca1",
         "sourceWaterCells": 0,
         "buildingCount": 41,
-        "wallRunCount": 234,
-        "nativePanelCount": 2565,
+        "wallRunCount": 229,
+        "nativePanelCount": 2436,
         "propCount": 3,
-        "bytes": 1020662,
-        "sha256": "d8c8b486e5bf1c1f71b23b2c717fd428c48bc62c311f142feb0aa9bc94503246"
+        "bytes": 1016837,
+        "sha256": "fb6dbc1d757d3aee1947af42f6f8f01cea0b6faff9ab4d6e95dbe65b0687d044"
       },
       "buildingIds": [
         "osm-way-1240419662",
@@ -764,12 +764,12 @@
         "osm-way-1240419688",
         "osm-way-1240419689",
         "osm-way-1240419690",
-        "osm-way-1240419691",
         "osm-way-1240419692",
         "osm-way-1240419746",
         "osm-way-1240419862",
         "osm-way-1240419863",
         "osm-way-1240419864",
+        "osm-way-1240419866",
         "osm-way-1240419867",
         "osm-way-1240419868",
         "osm-way-1240419878",
@@ -816,20 +816,20 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 46435,
+          "ground-grass": 46482,
           "ground-gravel": 235,
           "ground-asphalt": 3731,
           "ground-concrete": 263,
-          "floor": 6936
+          "floor": 6889
         },
-        "terrainSHA256": "b4c591398c89890eff4ad5edf58c09dc655a902c2f7d40579f868ee370d66ab3",
+        "terrainSHA256": "c10e2939287e8e19950da0f898f62acace14060adbeed306ab05ed8aac63c33b",
         "sourceWaterCells": 0,
         "buildingCount": 42,
-        "wallRunCount": 231,
-        "nativePanelCount": 2370,
+        "wallRunCount": 229,
+        "nativePanelCount": 2254,
         "propCount": 0,
-        "bytes": 991305,
-        "sha256": "7af3112c7b5a2d58a708c3c00521ccc4d3a3a5d3699baceeb59b699753895ad6"
+        "bytes": 987949,
+        "sha256": "a113d035831fc17685e75b1039254d60be58e84030e488172467aaf39d009af9"
       },
       "buildingIds": [
         "osm-way-1240419676",
@@ -903,20 +903,20 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 38112,
+          "ground-grass": 37990,
           "ground-gravel": 6,
           "ground-asphalt": 4480,
           "ground-concrete": 809,
-          "floor": 14193
+          "floor": 14315
         },
-        "terrainSHA256": "f90f7b26cf25a6290da81b7da4985cb3a3f91ecca4e16ce098536e2091603cdd",
+        "terrainSHA256": "82f7cdbbfaff14607cd7997c4da0042e9e991c96be98b201f13eacffe498f641",
         "sourceWaterCells": 0,
         "buildingCount": 32,
-        "wallRunCount": 161,
-        "nativePanelCount": 3027,
+        "wallRunCount": 160,
+        "nativePanelCount": 2945,
         "propCount": 0,
-        "bytes": 1139882,
-        "sha256": "fbcf8494d9c88361be022c36f69ee8195f0beab56b9f0789337d7827757ce2cf"
+        "bytes": 1141114,
+        "sha256": "5fb7cfd5012696ce90b0a8b354833d3133c2920a8947c571953044054cec6962"
       },
       "buildingIds": [
         "osm-way-1240417435",
@@ -980,20 +980,20 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 40071,
+          "ground-grass": 40183,
           "ground-asphalt": 9208,
           "ground-concrete": 1115,
           "bridge": 102,
-          "floor": 7104
+          "floor": 6992
         },
-        "terrainSHA256": "10de79c0232dc1f14de848a76e0e1ff4a27c174ba82cc9ee84ad69620bd739e5",
+        "terrainSHA256": "7ca93add210b7eaa1f14f27ed0d3e26f863caa9b4e213af2cfa9a78498996b9b",
         "sourceWaterCells": 0,
         "buildingCount": 17,
-        "wallRunCount": 106,
-        "nativePanelCount": 1466,
+        "wallRunCount": 98,
+        "nativePanelCount": 1402,
         "propCount": 2,
-        "bytes": 983131,
-        "sha256": "10b8cd7e3da707396ad5e683312a4fa03151d740a22c99153a5f92336dad94a1"
+        "bytes": 978984,
+        "sha256": "a85702e3eec9ea1ceb74c2f6be300b7c80bccfd4508a214147f37bacdc704ae7"
       },
       "buildingIds": [
         "osm-relation-7995943",
@@ -1042,22 +1042,22 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 17149,
+          "ground-grass": 17163,
           "water": 33328,
           "ground-dirt": 127,
           "ground-gravel": 30,
           "ground-asphalt": 4382,
           "ground-concrete": 553,
-          "floor": 2031
+          "floor": 2017
         },
-        "terrainSHA256": "bfbc888a0a1c9a1028eca23cc5dd992f1592ea54afbd7730fbed81b23cf72705",
+        "terrainSHA256": "44a1131f5e56a31a43f16db1a0b0afcbba79bf06c16b846a61b8383310780752",
         "sourceWaterCells": 33328,
-        "buildingCount": 8,
-        "wallRunCount": 46,
-        "nativePanelCount": 527,
+        "buildingCount": 7,
+        "wallRunCount": 41,
+        "nativePanelCount": 483,
         "propCount": 0,
-        "bytes": 674282,
-        "sha256": "a437879e170a10beaed7084db047a6e803384667900b94dee4640ad1bd7c1a0f"
+        "bytes": 672718,
+        "sha256": "620f2ac15be2829a735325c4cff99e237757c987b70a8f00316f26a0b93ef636"
       },
       "buildingIds": [
         "osm-way-1240419644",
@@ -1066,8 +1066,7 @@
         "osm-way-1240419647",
         "osm-way-1240419648",
         "osm-way-1240419649",
-        "osm-way-556100367",
-        "osm-way-556562407"
+        "osm-way-556100367"
       ]
     },
     {
@@ -1097,21 +1096,22 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 28532,
+          "ground-grass": 28597,
           "ground-dirt": 194,
           "ground-gravel": 321,
           "ground-asphalt": 10036,
-          "ground-concrete": 2016,
-          "floor": 16501
+          "ground-concrete": 2000,
+          "ground-wood-planks": 40,
+          "floor": 16412
         },
-        "terrainSHA256": "aecfed4f00fe176f2471736ed1d848f6306781b96be119cd75b4e66dfb4b26fa",
+        "terrainSHA256": "819dcc5f75b2a989eda126ba22846997fc2f2d32ff4e4143a9cab9e7961f19c8",
         "sourceWaterCells": 0,
         "buildingCount": 60,
-        "wallRunCount": 334,
-        "nativePanelCount": 4024,
+        "wallRunCount": 317,
+        "nativePanelCount": 3835,
         "propCount": 2,
-        "bytes": 1141311,
-        "sha256": "e8f214b89da6b84ab45a790918960ed0f69140f6c3fedb9441d78e22a323d09c"
+        "bytes": 1133689,
+        "sha256": "fabc255e636d9967f21df0e1c23f683648f8979968721ee18117ec7c29480d61"
       },
       "buildingIds": [
         "osm-relation-7980769",
@@ -1203,19 +1203,20 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 35074,
+          "ground-grass": 35078,
           "ground-asphalt": 10446,
-          "ground-concrete": 902,
-          "floor": 11178
+          "ground-concrete": 892,
+          "ground-wood-planks": 25,
+          "floor": 11159
         },
-        "terrainSHA256": "e51ce83da56f7e40bf7c12d4516a9171f3db35f1a90e0d0483ea929b585edcd6",
+        "terrainSHA256": "a60a58507069c73ea32cd9b8b63f2b15b9e9a3ae25990f0792e5d75207079672",
         "sourceWaterCells": 0,
         "buildingCount": 42,
-        "wallRunCount": 234,
-        "nativePanelCount": 2664,
+        "wallRunCount": 223,
+        "nativePanelCount": 2529,
         "propCount": 4,
-        "bytes": 1051264,
-        "sha256": "79d6e248e1b13fc8b17e4a750a4655cf1973a8dbd22efe95474d82f2e6e45f67"
+        "bytes": 1046490,
+        "sha256": "8cb31ca2940e774848b756b1ce9e353dca75c93c48ba67cd83785be318f88ed0"
       },
       "buildingIds": [
         "osm-way-1240419460",
@@ -1289,20 +1290,20 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 38834,
+          "ground-grass": 38836,
           "ground-gravel": 181,
           "ground-asphalt": 9966,
           "ground-concrete": 791,
-          "floor": 7828
+          "floor": 7826
         },
-        "terrainSHA256": "d8a89997e561aa2bfd23528e8b3c4638936a1fbec72d524b6c5ccb7da387b8bf",
+        "terrainSHA256": "b8be73106c309860a726ea0d8cd1eae4d9a54c6038d1accd3ea394e5cf2891e2",
         "sourceWaterCells": 0,
         "buildingCount": 28,
-        "wallRunCount": 188,
-        "nativePanelCount": 2040,
+        "wallRunCount": 189,
+        "nativePanelCount": 1940,
         "propCount": 0,
-        "bytes": 1004317,
-        "sha256": "94b9cee73b8e46bc064d5b7df9d7946264a148f1cc48a8e00dc89e57a527fca5"
+        "bytes": 1002420,
+        "sha256": "e4795c70383909b2ea411bcc39f33c127fcb7e98503bbfb63207450f90852ff8"
       },
       "buildingIds": [
         "osm-way-1240419468",
@@ -1362,19 +1363,19 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 42327,
+          "ground-grass": 42371,
           "ground-asphalt": 5507,
           "ground-concrete": 1020,
-          "floor": 8746
+          "floor": 8702
         },
-        "terrainSHA256": "6b7a467fa2561ab5e43d7dc25d0a9aa66e3638302b987ef02057734e45cb4316",
+        "terrainSHA256": "a737911c2fa560e3e948341e0e3789bb4cd48d751c48fa78e0253f5239e16c43",
         "sourceWaterCells": 0,
         "buildingCount": 34,
-        "wallRunCount": 175,
-        "nativePanelCount": 2126,
+        "wallRunCount": 167,
+        "nativePanelCount": 2023,
         "propCount": 0,
-        "bytes": 1003278,
-        "sha256": "9cbf9d4c66b78b81ea978f983dad44f8034dc56424bf0e458f2ff254e7da4fef"
+        "bytes": 999439,
+        "sha256": "a6607be7f3f5d60f6e3f97bf1179b6f0a6817a15d5841a6ad8db1c37b9aca607"
       },
       "buildingIds": [
         "osm-way-1240417442",
@@ -1440,19 +1441,19 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 43313,
-          "ground-asphalt": 6830,
+          "ground-grass": 43312,
+          "ground-asphalt": 6832,
           "ground-concrete": 988,
-          "floor": 6469
+          "floor": 6468
         },
-        "terrainSHA256": "271916a77ad0cc16a28fc93bde22336f249aaa08eb3417c376d7d7ec583f2181",
+        "terrainSHA256": "47d289f8bfde1de23fafccc1b0bd9b0b8600ccc9325d3ae98f33e09afc5b1342",
         "sourceWaterCells": 0,
         "buildingCount": 37,
-        "wallRunCount": 193,
-        "nativePanelCount": 2067,
+        "wallRunCount": 183,
+        "nativePanelCount": 1955,
         "propCount": 0,
-        "bytes": 986091,
-        "sha256": "f3010185122fa5b806f3044745c2c9b684d39ce0588335e2f5f5c7b4a23775e9"
+        "bytes": 982080,
+        "sha256": "71e0ab784843cd4130bd1a7eeb94711e4d21bac500acd004aa26ceb43a9ecb68"
       },
       "buildingIds": [
         "osm-relation-7995943",
@@ -1532,10 +1533,10 @@
         "sourceWaterCells": 54000,
         "buildingCount": 1,
         "wallRunCount": 3,
-        "nativePanelCount": 34,
+        "nativePanelCount": 31,
         "propCount": 0,
-        "bytes": 489243,
-        "sha256": "96f7d94e0ae4d276822f2d01b5a865c35c64a4de31380bb94a2d597893b6d0d1"
+        "bytes": 489311,
+        "sha256": "bb27880c1dbcdd7722eff39dc4ee65092a4c913dda7b81019e77f479bbddc64f"
       },
       "buildingIds": [
         "osm-way-1240419649"
@@ -1568,22 +1569,22 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 28625,
+          "ground-grass": 28558,
           "water": 4168,
           "woodland": 10540,
           "ground-dirt": 381,
           "ground-asphalt": 7121,
           "ground-concrete": 1545,
-          "floor": 5220
+          "floor": 5287
         },
-        "terrainSHA256": "fe8dd21a9ca9c6f0a1ced34507e2e95f142b6927e8fa1fac0c81a2b63cecfb29",
+        "terrainSHA256": "acfce7c798478dc7114b81e83ae9a51eac5480a6ef2f9e0347774ddb5fb6f395",
         "sourceWaterCells": 4168,
         "buildingCount": 23,
-        "wallRunCount": 212,
-        "nativePanelCount": 1441,
+        "wallRunCount": 186,
+        "nativePanelCount": 1338,
         "propCount": 63,
-        "bytes": 914666,
-        "sha256": "00d7c6440a2b11f6ef1f67bf51c79f47f69e26aa460f930424a54bb0b113492e"
+        "bytes": 907890,
+        "sha256": "0c5467bc8b843b96008c7aab18af6a8a6a61b9957745b6c5315c9b92d9b2741d"
       },
       "buildingIds": [
         "osm-way-556562385",
@@ -1638,19 +1639,19 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 44357,
+          "ground-grass": 44345,
           "ground-asphalt": 8041,
           "ground-concrete": 382,
-          "floor": 4820
+          "floor": 4832
         },
-        "terrainSHA256": "0d0e6df096b7481ecde2abd10b1f5bec933fda6021c47be5842f1b2b451ac154",
+        "terrainSHA256": "4a563b7eb2934757518134115cc53b800b57ebc5c65b05c7cdc81ec6f72182db",
         "sourceWaterCells": 0,
         "buildingCount": 24,
-        "wallRunCount": 153,
-        "nativePanelCount": 2249,
+        "wallRunCount": 147,
+        "nativePanelCount": 2142,
         "propCount": 8,
-        "bytes": 1017619,
-        "sha256": "55fce15483aa29830e347807655516c3d9cff57f706693dffd295b88d766476a"
+        "bytes": 1016063,
+        "sha256": "3f996eeddf3556b5846f5c74dd5cd3d1a80bbba578b1a33fa918dcfe701725a4"
       },
       "buildingIds": [
         "osm-way-1240419486",
@@ -1706,19 +1707,19 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 46040,
+          "ground-grass": 46037,
           "ground-asphalt": 5373,
           "ground-concrete": 84,
-          "floor": 6103
+          "floor": 6106
         },
-        "terrainSHA256": "b3da2765a257d6260aa4ef2a8c2a4d6885f8ef2be9da1e941f74d5ee099060bf",
+        "terrainSHA256": "91c02e3d6beb09cfc6660b50ac086e45beaf818535a1da7fef21d58f58214a5f",
         "sourceWaterCells": 0,
         "buildingCount": 27,
-        "wallRunCount": 167,
-        "nativePanelCount": 1740,
+        "wallRunCount": 160,
+        "nativePanelCount": 1658,
         "propCount": 0,
-        "bytes": 973575,
-        "sha256": "f7e2ab694ed6493af887d3f9edf8554dba6c62fc3dd3c35fd58b465b0628ce68"
+        "bytes": 970443,
+        "sha256": "045899d13939e0b345c93d80b4415d1e905b73fc41da15a9564c5ca69d5b8b3b"
       },
       "buildingIds": [
         "osm-way-1240419526",
@@ -1777,18 +1778,18 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 47435,
+          "ground-grass": 47443,
           "ground-asphalt": 4611,
-          "floor": 5554
+          "floor": 5546
         },
-        "terrainSHA256": "6f5fec508463dfbdc316aa89a83336665f1e14ee20a3ef91b8a39696edf92afb",
+        "terrainSHA256": "996bd7f7be631ccea551d3ef1de91f145d684d0a49ecfab81baedca124173793",
         "sourceWaterCells": 0,
-        "buildingCount": 30,
-        "wallRunCount": 159,
-        "nativePanelCount": 1709,
+        "buildingCount": 29,
+        "wallRunCount": 152,
+        "nativePanelCount": 1619,
         "propCount": 0,
-        "bytes": 963349,
-        "sha256": "98d28431db193ddc7997b9b373863d7ac5da0feb8ec7b1dd529bd52964e65c6f"
+        "bytes": 960166,
+        "sha256": "595f4862663632225050702ceeaa940d85e0febe655d64cc28a2df7cd1a7cf3e"
       },
       "buildingIds": [
         "osm-way-1240419520",
@@ -1808,7 +1809,6 @@
         "osm-way-1240419567",
         "osm-way-1240419568",
         "osm-way-1240419569",
-        "osm-way-1240419575",
         "osm-way-1240419576",
         "osm-way-1240419577",
         "osm-way-1240419584",
@@ -1850,19 +1850,19 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 41242,
+          "ground-grass": 41262,
           "ground-asphalt": 9411,
           "ground-concrete": 1190,
-          "floor": 5757
+          "floor": 5737
         },
-        "terrainSHA256": "6123448b30ee42a6fbd1ee6294e8399e9b8aed00c7f04aa3125d3f509c901921",
+        "terrainSHA256": "af58fc2126789bf5a813e82072b7cb3b2a486692384827e354b2254a90615e8a",
         "sourceWaterCells": 0,
         "buildingCount": 27,
-        "wallRunCount": 137,
-        "nativePanelCount": 1605,
+        "wallRunCount": 136,
+        "nativePanelCount": 1547,
         "propCount": 0,
-        "bytes": 974376,
-        "sha256": "c4575d26728cdbf9530f76ceeb1ccd48a31024bb04bd58720bc09b369e4fa544"
+        "bytes": 972495,
+        "sha256": "739e1b4e197fd5a209112581a74d84d656ddce53c011fc7f183b27ccfc7a8cb8"
       },
       "buildingIds": [
         "osm-way-1240417332",
@@ -1931,8 +1931,8 @@
         "wallRunCount": 0,
         "nativePanelCount": 0,
         "propCount": 0,
-        "bytes": 461927,
-        "sha256": "f5e56b6f1d74b3b80915e4a16a4ce63a2676974fb4b9e3a760b7a17f9c5623f7"
+        "bytes": 462029,
+        "sha256": "a1e2c279380e0ac42f64356143114023d750ac7011df5d85cb7193c3b7590911"
       },
       "buildingIds": []
     },
@@ -1963,20 +1963,21 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 6294,
+          "ground-grass": 6246,
           "water": 47981,
           "woodland": 2605,
           "ground-asphalt": 455,
-          "ground-concrete": 265
+          "ground-concrete": 265,
+          "ground-wood-planks": 48
         },
-        "terrainSHA256": "3e563eb693c42f5464b5359461b32ac4f89287d096a4765084adf71914a0b887",
+        "terrainSHA256": "b12af7ba164557e2c6259f5198f312e4b7e8065b36020b3090e31bb7f381c832",
         "sourceWaterCells": 47981,
         "buildingCount": 0,
         "wallRunCount": 0,
         "nativePanelCount": 0,
         "propCount": 27,
-        "bytes": 523706,
-        "sha256": "6ca07ce5e9ea07677b5115b7b06e94bedc68e824bf521c33e55ac249a62f3c37"
+        "bytes": 524096,
+        "sha256": "6b6b2306800c7b85302c0433d5940e4435de4e9ce16e00e5252d78f53721c0a4"
       },
       "buildingIds": []
     },
@@ -2007,20 +2008,20 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 26501,
+          "ground-grass": 26534,
           "water": 23054,
           "ground-asphalt": 2688,
           "ground-concrete": 1337,
-          "floor": 4020
+          "floor": 3987
         },
-        "terrainSHA256": "ed353cbee549917cf71edbc6043b0bc20b4cee930f6de3bfd4d84029d3a522b7",
+        "terrainSHA256": "afab16d83ad7bf387129f3ef58f6a8659d0f64a85eff0feb7a462ffd1843307b",
         "sourceWaterCells": 23054,
         "buildingCount": 5,
-        "wallRunCount": 27,
-        "nativePanelCount": 531,
+        "wallRunCount": 28,
+        "nativePanelCount": 515,
         "propCount": 28,
-        "bytes": 763561,
-        "sha256": "7da6aa61e949a5cd56c31bf30e61d1b612e2f39b9a1c5aa8374a0b0c781ccf1f"
+        "bytes": 763185,
+        "sha256": "8f0ca0f586800a3c4720daa734cf4aa69b498b2433b1ed8809ab61bb0173def9"
       },
       "buildingIds": [
         "osm-way-557349882",
@@ -2057,19 +2058,20 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 44708,
+          "ground-grass": 44473,
           "ground-asphalt": 4331,
           "ground-concrete": 292,
-          "floor": 8269
+          "ground-wood-planks": 250,
+          "floor": 8254
         },
-        "terrainSHA256": "bb59284302193c63941334bd2bc928a4c9f8e7d28002954df811acf5f80e5335",
+        "terrainSHA256": "6993001767f8c0bdd82704c321d71752ad3eb3c2ba07a4eb5c935bf47ae50096",
         "sourceWaterCells": 0,
         "buildingCount": 16,
-        "wallRunCount": 107,
-        "nativePanelCount": 1468,
+        "wallRunCount": 101,
+        "nativePanelCount": 1406,
         "propCount": 10,
-        "bytes": 983363,
-        "sha256": "9de8005053ff638a8975478f77fc836b2fe3ea03d1bbadd725a78b60b7ccb61f"
+        "bytes": 982364,
+        "sha256": "f9399abda52c5b63e0c1555bf74745c1820fd343bdfb2d174a159947f0461a42"
       },
       "buildingIds": [
         "osm-way-1240419560",
@@ -2117,18 +2119,18 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 46310,
+          "ground-grass": 46281,
           "ground-asphalt": 4116,
-          "floor": 7174
+          "floor": 7203
         },
-        "terrainSHA256": "562d6e7b86db89f3c738e617cf7ce39dd9eb7c4d0cd8e227fade3132a2a83e6b",
+        "terrainSHA256": "d8cb359f9c02169f752f518b77dec9e5f4a89f275c0ec774d682de459a15e63b",
         "sourceWaterCells": 0,
         "buildingCount": 43,
         "wallRunCount": 220,
-        "nativePanelCount": 2338,
+        "nativePanelCount": 2254,
         "propCount": 0,
-        "bytes": 992295,
-        "sha256": "04381dba4cbbbf8e92f54fee46dabf3a845775782f9515d8d736df79e4bc7b3b"
+        "bytes": 990195,
+        "sha256": "458841b07c02866b0e45209963162f4e5d58451457ef8fb530f5a8ff9218afb9"
       },
       "buildingIds": [
         "osm-way-1240415861",
@@ -2203,19 +2205,19 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 37690,
+          "ground-grass": 37706,
           "ground-asphalt": 7685,
           "ground-concrete": 686,
-          "floor": 11539
+          "floor": 11523
         },
-        "terrainSHA256": "8fe2553f4370b62f11ea6a53aba96272066ab92900d88299f5b6ef140cdb49f2",
+        "terrainSHA256": "0f96bdb9cdbce04315c966b085006623cef6ca21570ac48715a6a0b2c57e5965",
         "sourceWaterCells": 0,
         "buildingCount": 27,
-        "wallRunCount": 204,
-        "nativePanelCount": 2268,
+        "wallRunCount": 194,
+        "nativePanelCount": 2163,
         "propCount": 0,
-        "bytes": 1042200,
-        "sha256": "147d260f0c376b0ea0692e9a3c3009ae876397fc0f55814ded4bdc87e1ec4676"
+        "bytes": 1037886,
+        "sha256": "4a4b80676caaa592d73fc1595f0a1bfd8a2e8bbc1d471f4488ac7f60ee49918f"
       },
       "buildingIds": [
         "osm-way-1240415876",
@@ -2284,8 +2286,8 @@
         "wallRunCount": 0,
         "nativePanelCount": 0,
         "propCount": 0,
-        "bytes": 461928,
-        "sha256": "f7b7c600c6c93b1296848af15208e2dc10ccd251b0deea2120d4a8fce42f8044"
+        "bytes": 462030,
+        "sha256": "c86eef112035ed175b4ea781c51ffb5a575bb888c06c14bffba72c30cc6d43c7"
       },
       "buildingIds": []
     },
@@ -2327,8 +2329,8 @@
         "wallRunCount": 0,
         "nativePanelCount": 0,
         "propCount": 21,
-        "bytes": 514053,
-        "sha256": "3a03bad678bf142f6369d00853b89de1f25aa4760379cd68f4af105f2b8ee69f"
+        "bytes": 514155,
+        "sha256": "7e15ac95c46882bb07031908c21f0137fdfafd2b69ed48f0cf1fd58bd34bef4e"
       },
       "buildingIds": []
     },
@@ -2359,23 +2361,23 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 26391,
-          "water": 26123,
+          "ground-grass": 26408,
+          "water": 26084,
           "ground-dirt": 369,
           "ground-asphalt": 3455,
           "ground-concrete": 443,
           "ground-wood-planks": 108,
-          "bridge": 360,
-          "floor": 351
+          "bridge": 399,
+          "floor": 334
         },
-        "terrainSHA256": "b9f9b700b9e085a5c2422e91a8afece170bff7ed2f4eab6495677865ccaa92f3",
+        "terrainSHA256": "c9109cece5219026518d46c6c5bfa1f2c816ccea276bbb9f3e295ec497ed0153",
         "sourceWaterCells": 26392,
         "buildingCount": 2,
         "wallRunCount": 10,
-        "nativePanelCount": 120,
+        "nativePanelCount": 110,
         "propCount": 34,
-        "bytes": 698486,
-        "sha256": "ab66241e21522cace142a9ff58d9b11879debad22500c23770e076bf53919002"
+        "bytes": 698324,
+        "sha256": "a8879b21828a44208aa49b7934665f6eed473e32d24ef99e1da2f18234b86b0e"
       },
       "buildingIds": [
         "osm-way-1241962354",
@@ -2409,19 +2411,20 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 44610,
+          "ground-grass": 44548,
           "ground-asphalt": 6143,
           "ground-concrete": 655,
-          "floor": 6192
+          "ground-wood-planks": 60,
+          "floor": 6194
         },
-        "terrainSHA256": "1e57868cba5e909153813c527257e944c51314da2711d984dae2996cd641be08",
+        "terrainSHA256": "1f814fcd6a5524669bc8ddd49f2bcf847cccdab3553fa2e7ae63cf76a8e31818",
         "sourceWaterCells": 0,
         "buildingCount": 28,
-        "wallRunCount": 139,
-        "nativePanelCount": 1766,
+        "wallRunCount": 135,
+        "nativePanelCount": 1686,
         "propCount": 9,
-        "bytes": 972909,
-        "sha256": "c51d4e2884962285c0b23fd2d53d81d2b0748f7924065d29d4ea3b419fb7ce48"
+        "bytes": 971032,
+        "sha256": "bd234034c62af54df72043da24190b5bd43399ecc736f7691d58b5d831049f6c"
       },
       "buildingIds": [
         "osm-way-1240419607",
@@ -2481,18 +2484,18 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 46488,
+          "ground-grass": 46462,
           "ground-asphalt": 5551,
-          "floor": 5561
+          "floor": 5587
         },
-        "terrainSHA256": "ab6903a5e08c97193388fad9a87b0dfa7924eeabb2f01290d7ac931be2b5105a",
+        "terrainSHA256": "dcdfd4943ded7f8551bfce3dcff5215182abb3e2e3db2b34698462677727960d",
         "sourceWaterCells": 0,
-        "buildingCount": 31,
-        "wallRunCount": 146,
-        "nativePanelCount": 1733,
+        "buildingCount": 30,
+        "wallRunCount": 140,
+        "nativePanelCount": 1659,
         "propCount": 0,
-        "bytes": 963555,
-        "sha256": "87eccd51478ae1044927b1e3763d7bb36efcdec5779ff68d6a8d9d176e3e4f5e"
+        "bytes": 961091,
+        "sha256": "c29a79d528613534471dedfa7b2e347a99cb39ef4f74b9c4c58b86675eb9c880"
       },
       "buildingIds": [
         "osm-way-1240416235",
@@ -2523,7 +2526,6 @@
         "osm-way-1240419628",
         "osm-way-1240419629",
         "osm-way-1240419630",
-        "osm-way-1240419631",
         "osm-way-1240419632",
         "osm-way-1241962378"
       ]
@@ -2555,19 +2557,19 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 45212,
+          "ground-grass": 45226,
           "ground-asphalt": 6311,
           "ground-concrete": 675,
-          "floor": 5402
+          "floor": 5388
         },
-        "terrainSHA256": "2c98275bef8bdccd718c830e1b8f3f962e2aeae68eae24fc97aa1b0c56ac2ba0",
+        "terrainSHA256": "f8f1f6c54e2acae9b51480b2807ed7245466d4b2ebf82d22853932719b77fc9b",
         "sourceWaterCells": 0,
         "buildingCount": 30,
-        "wallRunCount": 160,
-        "nativePanelCount": 1785,
+        "wallRunCount": 159,
+        "nativePanelCount": 1694,
         "propCount": 0,
-        "bytes": 968552,
-        "sha256": "42ad37e1d0c900af614f4e5aae0635e3109d1516894d62e6039542fca179216d"
+        "bytes": 966445,
+        "sha256": "4ed2b6b19bfc8d076b3e1105ef336a3664db636200022ebf2d0769b93dd93136"
       },
       "buildingIds": [
         "osm-way-1240415887",
@@ -2639,8 +2641,8 @@
         "wallRunCount": 0,
         "nativePanelCount": 0,
         "propCount": 0,
-        "bytes": 461928,
-        "sha256": "e9f10df83a9842ddc0bbbe6b88dab598b2d3f6b662b21a74644e889f951e3935"
+        "bytes": 462030,
+        "sha256": "0fc0d453eab49b99ca238147385606878d5dc31f63dbcb00b25d23617c2e4de0"
       },
       "buildingIds": []
     },
@@ -2682,8 +2684,8 @@
         "wallRunCount": 0,
         "nativePanelCount": 0,
         "propCount": 64,
-        "bytes": 624360,
-        "sha256": "1fe3fea108bad87d26c42127fbd173271f7d5bef5a7b0790d1e2cdc93944f30d"
+        "bytes": 624462,
+        "sha256": "8539ab0cf3e24d21283ee70c9dc4d91d61bad9cba23d26bb174f59fd61cc1b5b"
       },
       "buildingIds": []
     },
@@ -2714,20 +2716,20 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 34488,
+          "ground-grass": 34506,
           "water": 18060,
           "ground-asphalt": 1312,
           "bridge": 285,
-          "floor": 3455
+          "floor": 3437
         },
-        "terrainSHA256": "ca9cb987b3e4ee70abc06aa02048634df6bf2ea3c2152fb4071cd3b5d1bc4eec",
+        "terrainSHA256": "e928a23e36eaffdcc663ed1c0567c45a9eafb9e8a8db10185569c64d506a963b",
         "sourceWaterCells": 18118,
         "buildingCount": 12,
         "wallRunCount": 78,
-        "nativePanelCount": 943,
+        "nativePanelCount": 894,
         "propCount": 67,
-        "bytes": 796856,
-        "sha256": "20562bc155189786a9f646dd0d3692283882a95b958f7f236c1fe71228f134f1"
+        "bytes": 795885,
+        "sha256": "612986300b26d324d0a5eb346e0db304d7e110c38cb7473bd440f53fe3a5f739"
       },
       "buildingIds": [
         "osm-way-1241962331",
@@ -2771,19 +2773,19 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 45727,
+          "ground-grass": 45708,
           "water": 428,
           "ground-asphalt": 3207,
-          "floor": 8238
+          "floor": 8257
         },
-        "terrainSHA256": "bdfd141ace6dc03a7f7917401f5a3490b6897b4b4a2d9cc0395d6eb120840cfb",
+        "terrainSHA256": "2701a2c11ba68015358bc8bfc1025db13b8d0db38501aa9a1bd249015c593fbe",
         "sourceWaterCells": 428,
         "buildingCount": 37,
-        "wallRunCount": 191,
-        "nativePanelCount": 2265,
+        "wallRunCount": 188,
+        "nativePanelCount": 2179,
         "propCount": 27,
-        "bytes": 991213,
-        "sha256": "b64edbf7bc01d7531cfb409bf5b2d70c957bd5f84384359ada8acaf52868110d"
+        "bytes": 988786,
+        "sha256": "31374f35d3cfc2132c7a6db77f21cdcaf842d9d3f05fd62ba551012ca86fdce8"
       },
       "buildingIds": [
         "osm-way-1240416331",
@@ -2852,20 +2854,21 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 49220,
+          "ground-grass": 49218,
           "ground-asphalt": 4644,
-          "floor": 3736
+          "floor": 3738
         },
-        "terrainSHA256": "9f07f2af10ed0d0c81b82cd32fe794e4afa12f4d23b89d729b3ce7201722054d",
+        "terrainSHA256": "d361425f5e5ad9a72f1d04231373a042520aee3ecaac46e31c41ac6d2bddd308",
         "sourceWaterCells": 0,
-        "buildingCount": 20,
-        "wallRunCount": 86,
-        "nativePanelCount": 1109,
+        "buildingCount": 21,
+        "wallRunCount": 88,
+        "nativePanelCount": 1065,
         "propCount": 0,
-        "bytes": 928092,
-        "sha256": "9a50c2621f2394a8af06832f8253702dc488d885ec610bf67cdd5baf558785c8"
+        "bytes": 927617,
+        "sha256": "203e3fa2c04a039c100ee98503dd7b8ad1c4c101a435cdc0b64792beb8782a8b"
       },
       "buildingIds": [
+        "osm-way-1240416235",
         "osm-way-1240416240",
         "osm-way-1240416241",
         "osm-way-1240416243",
@@ -2915,21 +2918,21 @@
       "metrics": {
         "terrainCells": 57600,
         "terrainCounts": {
-          "ground-grass": 49093,
+          "ground-grass": 49116,
           "woodland": 3691,
           "ground-asphalt": 3158,
           "ground-concrete": 435,
           "bridge": 444,
-          "floor": 779
+          "floor": 756
         },
-        "terrainSHA256": "f60dfc5b9c036ba96728809900527b1efdd9d0deb8f9ba533d30f7d198a15bf3",
+        "terrainSHA256": "15658685681203affa9ba71ee6537a6f030435ac983463702bd762ed8ff548da",
         "sourceWaterCells": 0,
         "buildingCount": 4,
         "wallRunCount": 15,
-        "nativePanelCount": 203,
+        "nativePanelCount": 205,
         "propCount": 21,
-        "bytes": 868039,
-        "sha256": "58267e89ad9671624f0ed1342f0631a56305f3d50bb3e505543d371d96972d34"
+        "bytes": 867761,
+        "sha256": "8279762f6d37ca2ec56830cca34ea0efbb99e4ada2ee08cbab8a000875ffc638"
       },
       "buildingIds": [
         "osm-way-1240416232",
@@ -2961,9 +2964,10 @@
   ],
   "generation": {
     "tool": "tools/maps/build-mount-dora.py",
-    "version": 2,
+    "version": 3,
     "configFile": "source/authoring-config.json",
-    "configSHA256": "4cc975da476f51560b11892d3c8a2597b41875419f30bef134b2dccad5d1694a",
+    "configSHA256": "d03961b0094b6cfb2fb9e5e386e50df62ef810fdc5506f0fb66432bebf4c9f35",
+    "authoredLayoutSHA256": "cc8243e1f612ee8e2c04fd58c20b253b9122d7cde92cc4a37863e386917ab1ca",
     "sourceDigest": "2b742d1768425de6a41a60818a0d2fd3a72b71f1969de94a50ff9041ce216193",
     "terrainCodebook": [
       "ground-grass",
@@ -2977,7 +2981,7 @@
       "bridge",
       "floor"
     ],
-    "globalTerrainSHA256": "0615886b4b38db1486406e7784d3ed8da7643200f619dd4264890d7ed7c06bfd",
+    "globalTerrainSHA256": "119573a919b59c0f2c12a037123891ac56f150406155b259946e0837012b92ba",
     "sampleRule": "Global cell centre (column*240+x+0.5, row*240+y+0.5); one global raster sliced without seam repaint.",
     "nativeCoordinates": "Wall metre endpoints = global east/south - sectorOrigin - 0.5; tile indices remain integer cells.",
     "defaultRoadWidthsM": {
@@ -3013,7 +3017,7 @@
       "heightM": 2,
       "slabM": 0.12,
       "pitchM": 2.12,
-      "policy": "Native-kit closed exterior proxies; integer tagged levels1..5 honored. Source outlines/holes retained; no invented entrances/interiors; shared party wall ownership retained."
+      "policy": "Native-kit closed exterior proxies on one-metre integer-edge plans; geographic outlines retained separately; courtyard holes and shared party wall relationships retained; no invented entrances/interiors."
     }
   },
   "landmarks": [
@@ -3082,31 +3086,31 @@
       "wood": 2
     },
     "buildingCount": 950,
-    "crossSectorBuildings": 88,
+    "crossSectorBuildings": 84,
     "roadCount": 350,
     "excludedProposedRoads": 1,
-    "wallRuns": 5814,
+    "wallRuns": 5617,
     "props": 391,
     "terrainCounts": {
-      "ground-grass": 1454009,
-      "water": 471348,
+      "ground-grass": 1453689,
+      "water": 471309,
       "woodland": 16836,
       "ground-dirt": 1549,
       "ground-gravel": 773,
-      "ground-asphalt": 212244,
-      "ground-concrete": 19073,
-      "ground-wood-planks": 108,
-      "bridge": 1727,
-      "floor": 241533
+      "ground-asphalt": 212261,
+      "ground-concrete": 19047,
+      "ground-wood-planks": 531,
+      "bridge": 1766,
+      "floor": 241439
     },
-    "unrepresentedWallSlivers": 7
+    "unrepresentedWallSlivers": 0
   },
   "limitations": [
     "Geographic map-authoring source, not a deployed Farmyard mission or a property survey.",
     "Flat terrain; no elevation survey, true building heights, real interiors or mapped entrance survey is inferred.",
-    "One-metre cell-centre floor/terrain masks approximate exact source polygons, whose vector geometry remains in features.json.",
-    "Native wall runs retain angled exterior/courtyard boundaries; sub0.1m run slivers cannot be represented and are listed in features.json diagnostics.",
-    "Native wall butt joints, per-run texture phases and one-metre floor stair-step boundaries retain the workshop's existing limits.",
+    "Building outlines are deliberately generalized to cardinal integer tile edges; original geographic outlines remain in geographicGeometry and raw source snapshots.",
+    "The former depot is relocated approximately6.2m to preserve its proportions while clearing the original streets; other fitting changes are recorded in authored-buildings.json.",
+    "Native wall butt joints and per-run texture phases retain the workshop's existing limits; curved decorative parts and the lighthouse remain curved.",
     "Water-only sectors remain complete in the atlas/source but the existing four-start/one-exit native validator refuses them.",
     "Road widths, sidewalk widths, bridge/steps heights and seeded vegetation are declared authoring approximations, not measurements.",
     "No suggested future roads are painted; no enemies or gameplay objectives are authored."

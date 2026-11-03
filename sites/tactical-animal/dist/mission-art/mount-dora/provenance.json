@@ -2,8 +2,8 @@
   "schema": "mount-dora-production-art/1",
   "engineRevision": "2502646482218524fd5129641da769bb82462e4d",
   "farmyardBase": "75a6b61a547a96edebdc456e9a42edb4f28185e4",
-  "featuresSHA256": "969287b61a7769625593d25cde44bd28907cc76e619f7bec10102f316d0a4331",
-  "artRevision": "8e595fcde85e57e14046154356fcbe92d3acd8bc9322c7c87c060dcc8b73fff9",
+  "featuresSHA256": "b9329b4ea7055b3f9bb43262cfcc06075d95429fd3e74273a905b65c8d5de895",
+  "artRevision": "67a2a578b47e8adaf4fb4c65e196dcccae1d0dc6d553ab1bc4230fe27c1ce119",
   "files": [
     {
       "path": "source/packages/building-catalog/three.js",
@@ -35,5 +35,5 @@
   "placements": 1030,
   "buildingCount": 950,
   "coordinates": "town east/south metres; no half-cell transform",
-  "sourceNotice": "Geometry and painted materials copied unchanged from the retained fixed source; map data © OpenStreetMap contributors, ODbL 1.0. Details and heights are explicit approximations."
+  "sourceNotice": "Geometry and painted materials copied unchanged from the retained fixed source; map data Ã‚Â© OpenStreetMap contributors, ODbL 1.0. Details and heights are explicit approximations."
 }

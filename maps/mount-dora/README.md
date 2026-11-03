@@ -20,7 +20,7 @@ embedded in the game is not evidence that Nautilus wall-run extensions render.
 
 - Roads and paths, the complete Lake Dora shoreline polygon, park and wetland
   areas, and 950 source building footprints, including courtyard holes.
-- Native angled exterior walls, floors and upper masks. Eighty-eight buildings
+- Grid-aligned exterior walls, floors and upper masks. Eighty-four buildings
   cross sector boundaries; their source identities and wall geometry continue
   across the cuts without invented closing walls.
 - Source-backed bridge and wooden boardwalk routes. Water is retained beneath
@@ -44,6 +44,13 @@ extraction points. No guards or objectives have been added.
 
 ## Scale, coverage and precision
 
+Buildings are deliberately generalized to cardinal, integer-metre tile edges.
+`authored-buildings.json` records the shared plans and fitting decisions; original
+projected footprints remain in each building's `geographicGeometry`. Courtyard
+holes and shared-wall groups are retained. The depot's recorded 6.2 m shift
+keeps its proportions while clearing the unchanged streets. Five open decks are
+aligned too; the round lighthouse remains a point-feature exception.
+
 The user's ruler measured approximately 1,480.5 m from the northern downtown
 streets toward Palm Island. Seven 240 m rows leave room around those landmarks.
 The screenshot's endpoints are not surveyed control points, so the source
@@ -62,9 +69,8 @@ offset once.
 This is a geographic blockout, with **flat terrain and unsurveyed buildings**.
 Native kit story heights, material defaults and source-tagged level counts are
 declared in `project.json`. Closed exterior proxies do not imply known doors,
-rooms, roofs or accessible interiors. Seven wall fragments below the native
-0.1 m minimum are recorded in `features.json` diagnostics rather than silently
-changing the source. Incomplete residential land-use relations are also
+rooms, roofs or accessible interiors. The grid layout has no unsupported wall
+slivers. Incomplete residential land-use relations are
 recorded and left unfilled. Proposed roads are retained as source references
 and excluded from the terrain.
 
@@ -74,6 +80,7 @@ and excluded from the terrain.
 | --- | --- |
 | `project.json` | Sector positions, neighbors, import status, hashes and assumptions |
 | `features.json` | Source identities and projected vectors in local metres |
+| `authored-buildings.json` | Canonical grid plans, open decks and fitting provenance |
 | `sectors/*.map.json` | Native AFT v2 maps with bounded `mountDora` metadata |
 | `source/authoring-config.json` | Projection, source selection and generation settings |
 | `source/*-source.json` | Request URLs, retrieval times, licence and exact input hashes |
@@ -89,7 +96,7 @@ python -B -m unittest discover -s tests/maps -p 'test_*.py' -v
 node tests/maps/validate-native-baseline.mjs
 ```
 
-Omit `--check` to regenerate the 45 owned base outputs. Source snapshots are
+Omit `--check` to regenerate the 46 owned base outputs. Source snapshots are
 retained byte for byte; `.gitattributes` prevents newline conversion from
 invalidating their provenance. The workshop README documents the additional
 exact-version API and browser checks, including editing, Undo/Redo and reopening

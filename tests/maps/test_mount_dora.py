@@ -33,7 +33,7 @@ class MountDoraGeneration(unittest.TestCase):
         # build_project regenerated in memory; committed bytes are the baseline.
         for filename, data in self.outputs.items():
             self.assertEqual((BUILDER.PROJECT / filename).read_bytes(), data, filename)
-        self.assertEqual(len(self.outputs), 45)
+        self.assertEqual(len(self.outputs), 46)
 
     def test_wgs84_reference_and_named_source_lighthouse_have_agreed_metres(self):
         projection = BUILDER.Projection(self.project["projection"])
@@ -43,6 +43,32 @@ class MountDoraGeneration(unittest.TestCase):
         lighthouse = self.features["osm-node-2704687214"]
         self.assertEqual(lighthouse["tags"]["name"], "Mount Dora Lighthouse")
         self.assertEqual(lighthouse["geometry"]["coordinates"], [500.2877, 1169.7989])
+
+    def test_authored_buildings_share_tile_edges_without_losing_source_holes_or_neighbours(self):
+        authored = json.loads(self.outputs['authored-buildings.json'])
+        self.assertEqual(len(authored['records']), 950)
+        self.assertEqual(authored['metrics']['authoredHoles'], 2)
+        self.assertEqual(authored['metrics']['sharedOwnerPairsRetained'], 30)
+        digest = hashlib.sha256(self.outputs['authored-buildings.json']).hexdigest()
+        self.assertEqual(digest, self.project['generation']['authoredLayoutSHA256'])
+        self.assertEqual(digest, self.database['authoredLayoutSHA256'])
+        originals = {f['id']: f for f in BUILDER.load_source()[3]}
+        occupied = set()
+        for record in authored['records']:
+            feature = self.features[record['id']]
+            self.assertEqual(feature['geometry'], record['geometry'])
+            self.assertEqual(feature['geographicGeometry'], originals[feature['id']]['geometry'])
+            for polygon in record['geometry']['coordinates']:
+                for ring in polygon:
+                    self.assertEqual(ring[0], ring[-1])
+                    self.assertTrue(all(isinstance(v, int) for p in ring for v in p))
+                    self.assertTrue(all((a[0] == b[0]) != (a[1] == b[1]) for a,b in zip(ring,ring[1:])))
+            cells = {(x,y) for y,a,b in BUILDER.polygon_spans(record['geometry']['coordinates'],1440,1680) for x in range(a,b)}
+            self.assertFalse(occupied & cells, record['id'])
+            occupied.update(cells)
+            self.assertTrue(all(self.grid[y*1440+x] == BUILDER.CODE['floor'] for x,y in cells))
+        self.assertEqual(len(occupied), self.project['metrics']['terrainCounts']['floor'])
+        self.assertEqual(len(authored['structures']), 5)
 
     def test_42_sector_origins_neighbor_reciprocity_and_exact_global_slices(self):
         sectors = {s["id"]: s for s in self.project["sectors"]}

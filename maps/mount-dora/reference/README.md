@@ -166,19 +166,39 @@ converting a marked edge to a door record is a sector offset away. That
 conversion, and a playtest through the real game path, belong to the wiring
 step.
 
-## Proposed use in the generator (not applied)
+## Use in the generator and the art kit
 
-`building_style(feature)` could take, in this order:
+`building_style(feature)` in `tools/maps/build-mount-dora.py` takes storeys, in
+this order:
 
 1. the survey answer (`house-survey.json`);
-2. the county suggestion (`house-reference.json` → `suggested`);
-3. the OSM tag;
-4. the kit default.
+2. the mapped `building:levels` tag;
+3. the county suggestion (`house-reference.json` → `suggested`);
+4. lidar (`lidar-roofs.json` → `storeysFromLidar`, from the eave height);
+5. the one-storey kit default.
 
-It would record which one it used in `storiesSource` and `materialSource`, as it
-does now. Survey `wall` maps to the kit as follows: `wood-siding` and
-`other-siding` → `wood`, `brick` → `brick`, and `stucco`, `block` and `stone` →
-`concrete`. Roof shape, colours and porches belong to the art kit's renderer.
+The tag outranks the county because county `STORIES` is wrong for some
+commercial records. The three-storey Shamrock Building is recorded as 1, while
+OSM says 3 and lidar measures a 10.5 m eave. Materials follow the survey, then
+the `building:material` tag, then the county wall code, then the brick default.
+Survey `wall` maps to the kit as follows: `wood-siding` and `other-siding` →
+`wood`, `brick` → `brick`, and `stucco`, `block` and `stone` → `concrete`.
 
-Adopting this regenerates all 46 owned outputs, so the map's owner should make
-that change, not this folder.
+Each building records its sources in `nativeProxy` (`storiesSource`,
+`materialSource`, `evidence`). Where county and lidar give different storeys
+(114 buildings), `evidence.storiesDisagreement` keeps both for a survey to settle.
+The three evidence files are pinned in `project.json`. They pin `features.json`
+without `nativeProxy` (`tools/maps/house-reference/features-digest.mjs`), so a
+regeneration never invalidates its own inputs.
+
+The art kit (`maps/mount-dora/art/tools/build-playable.mjs`) then sets the
+following from the same evidence:
+
+- the wall class: frame → one of the siding textures, masonry → plaster, brick → brick;
+- the roof cover: metal → silver metal, tile → terracotta, tar-and-gravel → flat;
+- the roof form, pitch and ridge axis, from lidar at confidence ≥ 0.7, or from a survey answer.
+
+Colours stay seeded placeholders until a survey records them. Hand-authored
+landmarks (Donnelly House, museum, depot, Shamrock, Lakeside Inn) keep their
+curated treatments. Each placement's `provenance.evidence` names the source of
+every evidence-driven field.

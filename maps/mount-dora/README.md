@@ -66,9 +66,14 @@ sectors, so adjacent maps use the same raster and origin. Legacy integer tile
 centres are at sector origin plus `(x+0.5,y+0.5)`; wall endpoints account for that
 offset once.
 
-This is a geographic blockout, with **flat terrain and unsurveyed buildings**.
-Native kit story heights, material defaults and source-tagged level counts are
-declared in `project.json`. Closed exterior proxies do not imply known doors,
+This is a geographic blockout, with **flat terrain and evidence-based building
+heights**. Each building's storeys and wall material come from the best recorded
+evidence in [reference/](reference/README.md): a survey answer, then the mapped
+`building:levels` tag, then the Lake County record, then lidar, then the kit
+default. `nativeProxy.storiesSource` and `materialSource` name the source, and
+`nativeProxy.evidence` keeps the county, lidar and survey values. Storeys are whole
+native-kit storeys, not measured wall heights; the evidence files are pinned in
+`project.json` (`generation.evidenceInputs`). Closed exterior proxies do not imply known doors,
 rooms, roofs or accessible interiors. The grid layout has no unsupported wall
 slivers. Incomplete residential land-use relations are
 recorded and left unfilled. Proposed roads are retained as source references

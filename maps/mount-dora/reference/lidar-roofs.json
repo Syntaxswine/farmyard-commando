@@ -4,7 +4,7 @@
  "inputs": {
   "features": {
    "file": "maps/mount-dora/features.json",
-   "sha256": "b9329b4ea7055b3f9bb43262cfcc06075d95429fd3e74273a905b65c8d5de895"
+   "sha256OmittingNativeProxy": "ebf9d2241771a993cfbbd5c881a5e30456bcab251f2ed96bf0fd093e025b85d9"
   },
   "lidar": {
    "file": "maps/mount-dora/reference/lidar/source.json",
@@ -12,7 +12,7 @@
   },
   "county": {
    "file": "maps/mount-dora/reference/house-reference.json",
-   "sha256": "df65d1fa36a16370f8694b8432f30ad61af8d00e69e262fb03e17ac7a5f7788f",
+   "sha256": "571c87fd146056f50614ffe88d4550c0ce5de6f496f15c08ca8870a51f8bffb6",
    "usedFor": "validation only"
   }
  },

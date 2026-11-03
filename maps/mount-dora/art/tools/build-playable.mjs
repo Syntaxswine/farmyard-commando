@@ -19,6 +19,26 @@ function insetCorner(f,radius,target=[f.bounds[2],f.bounds[3]]){const ring=f.geo
  for(let y=b[1];y<b[3];y+=.25)for(let x=b[0];x<b[2];x+=.25){const p=[r(x),r(y)];if(!pointInside(p,ring)||ring.slice(1).some((q,i)=>distance(p,ring[i],q)<radius))continue;const score=Math.hypot(p[0]-target[0],p[1]-target[1]);if(!best||score<best.score)best={p,score};}if(!best)throw Error('No bounded inferred turret position '+f.id);return best.p;}
 const inn=new Set(Array.from({length:10},(_,i)=>560095890+i).map(n=>'osm-way-'+n));
 const palettes=[['cream-siding','slate',[1,.98,.9]],['sage-siding','brown-shingle',[.94,1,.94]],['plaster','terracotta',[1,.94,.84]],['yellow-siding','green-metal',[1,.97,.85]],['brick','slate',[1,.95,.9]],['cream-siding','blue-metal',[.94,.98,1]]];
+// Recorded evidence (nativeProxy: county record, lidar, survey) chooses the wall class,
+// roof cover, roof form, ridge axis and pitch. Colours stay seeded placeholders until a
+// survey records them; `why` names the source of every evidence-driven field.
+const SIDINGS=['cream-siding','sage-siding','yellow-siding'],SHAPES=['gable','hip','flat'];
+const COVERS={metal:{roof:'blue-metal',roofFinish:'silver'},tile:{roof:'terracotta'},'tar-and-gravel':{roof:'slate',roofStyle:'flat'},'rolled-asphalt':{roof:'slate',roofStyle:'flat'}};
+function evidenceTreatment(f,seed){
+ const np=f.nativeProxy,ev=np.evidence||{},lidar=ev.lidar||{},survey=ev.survey||{},cover=ev.county?.roofCover,out={},why={};
+ if(!/^unsurveyed/.test(np.materialSource)){out.wall=np.material==='wood'?SIDINGS[seed%SIDINGS.length]:np.material==='brick'?'brick':'plaster';why.wall=np.materialSource;}
+ if(cover==='asphalt-shingle'){out.roof=seed%2?'slate':'brown-shingle';why.roof='county:'+cover;}
+ else if(COVERS[cover]){Object.assign(out,COVERS[cover]);why.roof='county:'+cover;if(out.roofStyle)why.roofStyle='county:'+cover;}
+ const shape=SHAPES.includes(survey.roofShape)?['survey',survey.roofShape]:SHAPES.includes(lidar.roofForm)&&lidar.roofConfidence>=.7?['lidar',lidar.roofForm]:null;
+ if(shape){out.roofStyle=shape[1];why.roofStyle=shape.join(':')+(shape[0]==='lidar'?' confidence '+lidar.roofConfidence:'');}
+ if(out.roofStyle==='flat')out.pitch=0;
+ else if(shape?.[0]==='lidar'&&lidar.pitchDeg){
+  out.pitch=Math.max(12,Math.min(40,Math.round(lidar.pitchDeg)));why.pitch='lidar:'+lidar.pitchDeg+' deg';
+  // The kit's axis 'x' runs the ridge east-west; lidar bearings are compass degrees.
+  if(Number.isFinite(lidar.ridgeBearingDeg)){const b=(lidar.ridgeBearingDeg%180+180)%180;out.roofAxis=b>=45&&b<135?'x':'y';why.roofAxis='lidar:ridge '+lidar.ridgeBearingDeg+' deg';}
+ }
+ return {out,why};
+}
 for(const f of source.features.filter(f=>f.category==='building')){
  const seed=hash(f.id),a=centre(f.bounds),isInn=inn.has(f.id),shop=f.tags.building==='commercial'||f.tags.shop||f.tags.amenity&&['restaurant','cafe','bar','pub','bank'].includes(f.tags.amenity)||(a[0]>345&&a[0]<590&&a[1]>520&&a[1]<690),p=palettes[seed%palettes.length];
  const type=isInn?'lakeside-inn':shop?'commercial':f.id==='osm-way-557051202'?'donnelly-civic':'vernacular';
@@ -30,9 +50,13 @@ for(const f of source.features.filter(f=>f.category==='building')){
  if(hero==='former-depot')Object.assign(treatment,{roof:'blue-metal',roofFinish:'silver',pitch:10});
  if(hero==='shamrock-building')Object.assign(treatment,{baseWall:'plaster',archedLowerWindows:true,cornice:true});
  if(isInn&&['osm-way-560095892','osm-way-560095898'].includes(f.id))Object.assign(treatment,{wall:'plaster',roofStyle:'flat',tint:[1,.96,.8],annex:true});
+ // Hand-authored heroes and the Inn keep their curated treatments.
+ const evidence=isInn||hero?null:evidenceTreatment(f,seed);
+ if(evidence)Object.assign(treatment,evidence.out);
  // Keep all rings, including inner courtyards. Local anchors do not quantize them.
  const polygons=f.geometry.coordinates;
  output.push({id:f.id,kind:'building',sourceIds:[f.id],anchor:a,bounds:expand(f.bounds,.5),polygons,treatment,seed,collisionPolicy:'retain-source-walls',solids:[{kind:'polygon',polygons}],replacesSourceIds:[f.id],provenance:{footprint:'grid-generalized-osm; original geographicGeometry retained',treatment:isInn?'observed-group-palette-inferred-details':['donnelly-house','former-depot'].includes(hero)?'observed-typology-inferred-details':'inferred-local-typology',height:isInn?'two-native-storey-approximation-city-documents-2-to-3-storey-complex':hero==='donnelly-house'?'native-two-storey-queen-anne-approximation':f.nativeProxy.storiesSource,details:'Repeated windows, roof form and facade divisions are approximations; no surveyed doors or interiors.',sourceRefs:isInn?['city-historic-sites','lakeside-owner','lakeside-history']:['city-preservation','city-historic-sites']}});
+ if(evidence)output.at(-1).provenance.evidence={...evidence.why,colour:'seeded placeholder until surveyed'};
  if(hero||isInn){const p=output.at(-1);p.provenance.sourceRefs.push('city-design-standards-2025');p.provenance.observedFeatures=hero==='donnelly-house'?'PDF76: yellow siding, white decorative veranda, silver stamped-tin roof, polygonal tower and multiple gables':hero==='shamrock-building'?'PDF84 historical image: brick upper facade, pale pilasters, arched lower windows, cornice; current three floors derive from OSM':hero==='former-depot'?'PDF82: white siding and low gray hipped roof':isInn?'PDF84 historical veranda/arched supports; current owner yellow/white group':'Facade remains inferred; no individual photo matched.';}
 }
 const feature=n=>{const f=byId.get('osm-way-'+n);if(!f)throw Error('Missing source '+n);return f;};

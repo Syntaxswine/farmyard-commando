@@ -19,6 +19,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {area, bounds, centroid, contains} from '../house-reference/geometry.mjs';
+import {featuresPin} from '../house-reference/features-digest.mjs';
 import {cacheDir, MARGIN_M} from './fetch-lidar.mjs';
 import {loadPoints, pointsIn} from './points.mjs';
 import {classifyRoof, median, percentile, ROOF} from './roofs.mjs';
@@ -362,7 +363,7 @@ export async function build() {
     groundRangeM: [r2(Math.min(...buildings.map(b => b.groundM))), r2(Math.max(...buildings.map(b => b.groundM)))]};
 
   const roofs = {kind: 'mount-dora-lidar-roofs', version: 1,
-    inputs: {features: {file: 'maps/mount-dora/features.json', sha256: hash(featuresBytes)},
+    inputs: {features: featuresPin(featuresBytes),
       lidar: {file: 'maps/mount-dora/reference/lidar/source.json', sha256: hash(sourceBytes)},
       county: {file: 'maps/mount-dora/reference/house-reference.json', sha256: hash(countyBytes), usedFor: 'validation only'}},
     policy: 'Public-domain USGS 3DEP lidar. Heights are metres above the ground ring around each outline; elevations are NAVD88 metres. Nothing here edits the generator, sectors or art kit.',

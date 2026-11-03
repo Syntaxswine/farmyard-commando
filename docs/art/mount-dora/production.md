@@ -107,8 +107,13 @@ This does not manufacture connecting ground or an elevated multi-floor route.
 [Source records](production-sources.json) distinguish facts read from primary
 city/property sources and unavailable leads. The city documents local frame and
 masonry vernacular, the Donnelly House and former depot; the Inn owner describes
-the yellow/white group and veranda. Individual repeated windows, roof forms,
-colors and dimensions remain approximate. The Gables/Terrace treatments suggest
+the yellow/white group and veranda. Individual repeated windows, colors and
+dimensions remain approximate. For ordinary buildings, the wall class (siding,
+plaster or brick), roof cover, roof form, pitch and ridge axis follow the county
+record and 2018 lidar where those are recorded
+([maps/mount-dora/reference](../../../maps/mount-dora/reference/README.md)). Each
+placement's `provenance.evidence` names the source, and colors stay seeded
+placeholders until surveyed. The Gables/Terrace treatments suggest
 the documented stucco annex typology. Source names, tags and all ten footprints
 remain separate, without claiming ten historically independent hotels.
 

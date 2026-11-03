@@ -45,8 +45,14 @@
     "userMeasuredM": 1480.495896,
     "description": "User screenshot ruler from10th Avenue toward southern Palm Island. Use as a scale check, not a coordinate rescaling instruction.",
     "mappedComparisonEndpoints": [
-      {"source": "osm-way-688219167", "description": "Named Palm Island Parkway reaches town y1544.733; approximately1515m south of mapped10th Avenue."},
-      {"source": "osm-way-508450238", "description": "Separate wooden boardwalk reaches farther south to town y1612.463; do not conflate it with the named Parkway endpoint."}
+      {
+        "source": "osm-way-688219167",
+        "description": "Named Palm Island Parkway reaches town y1544.733; approximately1515m south of mapped10th Avenue."
+      },
+      {
+        "source": "osm-way-508450238",
+        "description": "Separate wooden boardwalk reaches farther south to town y1612.463; do not conflate it with the named Parkway endpoint."
+      }
     ]
   },
   "coverageNotes": [
@@ -57,17 +63,26 @@
   "landmarkOverrides": [
     {
       "id": "mount-dora-lighthouse",
-      "source": {"type": "node", "id": 2704687214},
+      "source": {
+        "type": "node",
+        "id": 2704687214
+      },
       "label": "Mount Dora Lighthouse",
       "role": "lighthouse",
       "latitude": 28.7948053,
       "longitude": -81.6440151,
-      "townMetres": {"x": 500.2877, "y": 1169.7989},
+      "townMetres": {
+        "x": 500.2877,
+        "y": 1169.7989
+      },
       "note": "Named public landmark node in the retained OSM snapshot; it is not tagged man_made=lighthouse. Placement is a geographic reference, not a surveyed footprint."
     },
     {
       "id": "elizabeth-evans-park",
-      "source": {"type": "way", "id": 486656245},
+      "source": {
+        "type": "way",
+        "id": 486656245
+      },
       "label": "Elizabeth Evans Park",
       "role": "park",
       "note": "The retained OSM polygon is named Evans Park; official City of Mount Dora references use Elizabeth Evans Park."
@@ -81,7 +96,7 @@
     "waterOnlySectors": "Preserve complete water source; mark native import refused if existing workshop requires unsupported walkable anchors.",
     "heights": "Native kit authoring proxies; source vertical tags retained, not surveyed heights or interiors.",
     "roads": "Use mapped centreline geometry with recorded tag/class width assumptions.",
-    "buildings": "Preserve global source footprints and cross-sector identity; no synthetic cut-face walls.",
+    "buildings": "Derive cardinal integer-edge building plans while retaining original geographic footprints and cross-sector identity; no synthetic cut-face walls.",
     "nature": "Mapped source vegetation plus declared seeded visual scatter; not surveyed individual trees."
   },
   "sources": [
@@ -97,5 +112,124 @@
       "file": "osm-east-margin.json",
       "metadata": "osm-east-source.json"
     }
-  ]
+  ],
+  "buildingGrid": {
+    "version": 1,
+    "gridMetres": 1,
+    "phaseOffsets": [
+      0,
+      -0.2,
+      0.2,
+      -0.4,
+      0.4
+    ],
+    "maxTranslationSquaredMetres": 20,
+    "maxAreaChangeFraction": 0.2,
+    "overrides": {
+      "osm-way-557494933": {
+        "geometry": {
+          "type": "MultiPolygon",
+          "coordinates": [
+            [
+              [
+                [
+                  309,
+                  664
+                ],
+                [
+                  322,
+                  664
+                ],
+                [
+                  322,
+                  694
+                ],
+                [
+                  309,
+                  694
+                ],
+                [
+                  309,
+                  664
+                ]
+              ]
+            ]
+          ]
+        },
+        "reason": "Grid-generalized former depot retains13x30m proportions,397.815→390m². Authored centre315.5,679 is6.195m from geographic centre; bounded relocation clears the original streets and neighbours while retaining the existing landmark approach. Architect reviewed proportional relocation before regeneration."
+      },
+      "osm-way-1240419485": {
+        "geometry": {
+          "type": "MultiPolygon",
+          "coordinates": [
+            [
+              [
+                [
+                  662,
+                  696
+                ],
+                [
+                  650,
+                  696
+                ],
+                [
+                  650,
+                  706
+                ],
+                [
+                  662,
+                  706
+                ],
+                [
+                  662,
+                  696
+                ]
+              ]
+            ]
+          ]
+        },
+        "reason": "Shift the grid plan one metre north to retain the original narrow outdoor passage to its southern neighbour."
+      },
+      "osm-way-1240419511": {
+        "geometry": {
+          "type": "MultiPolygon",
+          "coordinates": [
+            [
+              [
+                [
+                  1022,
+                  601
+                ],
+                [
+                  1012,
+                  601
+                ],
+                [
+                  1012,
+                  597
+                ],
+                [
+                  1004,
+                  597
+                ],
+                [
+                  1004,
+                  608
+                ],
+                [
+                  1022,
+                  608
+                ],
+                [
+                  1022,
+                  601
+                ]
+              ]
+            ]
+          ]
+        },
+        "reason": "Shift the grid plan one metre north to retain the original narrow outdoor passage to its southern neighbour."
+      }
+    }
+  }
 }

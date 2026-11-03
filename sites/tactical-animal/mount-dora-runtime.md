@@ -8,6 +8,11 @@ activity. Other operations retain their existing rules and save slots.
 
 ## Coordinate and source contract
 
+The grid-generalized building plans have integer town edges. Native walls,
+floor masks, artwork and collision share `authored-buildings.json`; original
+geographic geometry is retained separately in features. The loader rejects
+different authored-layout digests before opening a mixed map/art generation.
+
 The adapter preserves Farmyard's integer-centred gameplay coordinates. Town/art
 coordinates are metres east/south; game x/y equal town east/south minus 0.5 exactly
 once. Three coordinates are `(game x, height, game y)`, without scaling.
@@ -93,6 +98,10 @@ It contains source/art revisions, global position, animal/equipment/resources,
 distance, elapsed time and compact explored bits. Static map cells are never
 serialized. A full explored-town bitset occupies 302,400 raw bytes. Resume validates
 resources, equipment and position against the current loaded town before starting.
+Recovery excludes the enclosed areas of closed buildings as well as their walls.
+An enclosed old checkpoint moves to a clear nearby outdoor point or the validated
+Donnelly Park spawn. Heading, equipment, resources, distance, elapsed time and
+exploration are preserved, and the activity log explains the relocation.
 Preparation preferences may remember the chosen activity; the operation writer
 refuses tour state explicitly.
 

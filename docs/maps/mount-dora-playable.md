@@ -22,6 +22,23 @@ terrain, rather than surveyed interiors or elevation.
 
 ## Coordinate and physical contract
 
+Buildings now follow **one-metre tile edges**. Shared building groups are fitted
+together, retaining both courtyard holes and all 30 shared-owner relationships.
+`authored-buildings.json` supplies the native walls, floor/upper masks, artwork
+and collision. Each building retains its original `geographicGeometry` alongside
+its authored geometry in `features.json`. The depot has a recorded 6.2 m
+relocation to keep its proportions while clearing the unchanged streets.
+
+Five open stage/shelter decks also use integer-edge plans. The mapped Palm
+Island pavilion has bridge support under its deck and a clear connection to the
+original boardwalk. The round lighthouse and curved architectural ornament
+remain curved. Native engine geometry and painted source assets are unchanged.
+
+Map and artwork share an authored-layout digest; mixed versions request a reload.
+If a changed shell encloses an old checkpoint, resume selects a clear outdoor
+approach nearby (or the validated Donnelly Park spawn) and reports the relocation,
+preserving heading, equipment, resources, exploration, distance and elapsed time.
+
 Geographic/art records remain in town east/south metres. Farmyard preserves its
 existing integer-centred gameplay tiles: **game = town − (0.5,0.5)**. Apply that
 conversion once to art, art solids, visit positions and markers. Native wall-run
@@ -110,6 +127,7 @@ the [Mount Dora Archives](https://www.mountdoraarchives.com/), and official
 property references such as [Lakeside Inn](https://lakeside-inn.com/about-us/).
 
 The artist records observation separately from inferred dimensions, roof forms
-and ordinary house typology. All source footprints and courtyard holes remain
-authoritative; historical photographs are not a survey of current buildings or
+and ordinary house typology. Original footprints remain geographic references;
+the playable version uses the declared grid generalization and preserves holes.
+Historical photographs are not a survey of current buildings or
 interiors. Reference photographs are not embedded as game textures.

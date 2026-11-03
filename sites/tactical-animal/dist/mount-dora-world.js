@@ -74,10 +74,13 @@ export class TownWorld{
     this.project=validateTownProject(project);this.baseURL=new URL(baseURL||'./maps/mount-dora/',import.meta.url);this.fetcher=(...args)=>fetcher(...args);
     this.width=1440;this.height=1680;this.cache=new Map();this.inFlight=new Map();this.errors=new Map();this.queue=[];this.wanted=new Set();this.pinned=new Set();this.clock=0;this.revision=0;this.listeners=new Set();this.disposed=false;
     this.byId=new Map(project.sectors.map(s=>[s.id,s]));this.byCell=new Map(project.sectors.map(s=>[s.column+','+s.row,s]));
-    this.visualReplacement=new Set(art.REPLACEMENT_SOURCE_IDS||[]);this.physicalReplacement=new Set();this.artIndex=new SpatialIndex();this.artRevision=art.ART_REVISION||'0'.repeat(64);this.placements=art.PLACEMENTS||[];
+    this.visualReplacement=new Set(art.REPLACEMENT_SOURCE_IDS||[]);this.physicalReplacement=new Set();this.artIndex=new SpatialIndex();this.closedBuildings=new SpatialIndex();this.artRevision=art.ART_REVISION||'0'.repeat(64);this.placements=art.PLACEMENTS||[];
     for(const placement of this.placements){
       if(placement.collisionPolicy==='replace-source-walls')for(const id of placement.replacesSourceIds||[])this.physicalReplacement.add(id);
-      if(placement.collisionPolicy==='retain-source-walls')continue;
+      if(placement.collisionPolicy==='retain-source-walls'){
+        for(const solid of placement.solids||[])if(solid.kind==='polygon'){const item=moveShape(solid);this.closedBuildings.add(item,item.bounds);}
+        continue;
+      }
       for(const solid of placement.solids||[]){const item=moveShape({...solid,placementId:placement.id});if(!item.bounds.every(Number.isFinite))throw Error('Invalid landmark solid');this.artIndex.add(item,item.bounds);}
     }
     this.stats={fetches:0,decoded:0,evicted:0,discarded:0,peakDecoded:0,peakFetches:0,peakQueued:0};
@@ -151,6 +154,11 @@ export class TownWorld{
     const segments=this.wallsFor(bounds,{walk:true}).map(w=>w.run);
     return !wallRunsIntersect({wallRuns:{version:1,segments}},{...p,h:.8},{...p,h:.8},{radius});
   }
+  resumeClear(p){
+    // Closed tour buildings have no entrances. An old save can be enclosed by
+    // a moved shell even when it does not touch a wall (including a courtyard).
+    return this.pointClear(p)&&!this.closedBuildings.query([p.x,p.y,p.x,p.y]).some(s=>s.polygons.some(poly=>ringContains(p,poly[0])));
+  }
   walkSegment(a,b,radius=.23){const steps=Math.max(1,Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)/.07));for(let i=1;i<=steps;i++)if(!this.pointClear({x:a.x+(b.x-a.x)*i/steps,y:a.y+(b.y-a.y)*i/steps},radius))return false;return true;}
   lineClear(a,b){const bounds=[Math.min(a.x,b.x),Math.min(a.y,b.y),Math.max(a.x,b.x),Math.max(a.y,b.y)],segments=this.wallsFor(bounds,{walk:true}).map(w=>w.run);return !wallRunsIntersect({wallRuns:{version:1,segments}},{...a,h:a.h??1.1},{...b,h:b.h??1.1});}
   geometryBoxes(bounds=[-.5,-.5,1439.5,1679.5]){return [...this.wallsFor(bounds,{walk:true}).map(w=>({x0:w.bounds[0],y0:w.bounds[1],x1:w.bounds[2],y1:w.bounds[3],height:WALL_KIT.height,kind:'wall'})),...this.solidsFor(bounds).map(s=>{const b=s.bounds||shapeBounds(s);return {x0:b[0],y0:b[1],x1:b[2],y1:b[3],height:2,kind:'prop'};})];}
@@ -163,5 +171,5 @@ export class TownWorld{
   wallPanelsFor(window){const bounds=[window.x-.5,window.y-.5,window.x+window.w-.5,window.y+window.h-.5],panels=[];for(const {run,key}of this.wallsFor(bounds,{draw:true}))for(const p of wallPanels(run)){const hx=(Math.abs(Math.cos(p.yaw))*p.size[0]+Math.abs(Math.sin(p.yaw))*p.size[2])/2,hy=(Math.abs(Math.sin(p.yaw))*p.size[0]+Math.abs(Math.cos(p.yaw))*p.size[2])/2;if(intersect(bounds,[p.center[0]-hx,p.center[2]-hy,p.center[0]+hx,p.center[2]+hy]))panels.push({...p,id:key+':'+p.id});}return panels;}
   roofsFor(block){const result=[];for(const packet of this.cache.values())result.push(...packet.roofs.get(block.id)||[]);return result;}
   plantsFor(bounds){const result=[];for(const packet of this.cache.values())for(const p of packet.plants)if(intersect(bounds,[p.x-2,p.y-2,p.x+2,p.y+2]))result.push(p);return result;}
-  dispose(){if(this.disposed)return;this.disposed=true;for(const controller of this.inFlight.values())controller.abort();this.inFlight.clear();this.cache.clear();this.queue=[];for(const fn of this.listeners)fn();this.listeners.clear();this.navigation=null;this.artIndex=new SpatialIndex();this.state=null;}
+  dispose(){if(this.disposed)return;this.disposed=true;for(const controller of this.inFlight.values())controller.abort();this.inFlight.clear();this.cache.clear();this.queue=[];for(const fn of this.listeners)fn();this.listeners.clear();this.navigation=null;this.artIndex=new SpatialIndex();this.closedBuildings=new SpatialIndex();this.state=null;}
 }

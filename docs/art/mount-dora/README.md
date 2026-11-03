@@ -13,7 +13,7 @@ This authoring sidecar targets Nautilus workshop **2502646482218524fd5129641da76
 
 [maps/mount-dora/art/manifest.json](../../../maps/mount-dora/art/manifest.json) defines seven treatment groups. [geography.json](../../../maps/mount-dora/art/geography.json) preserves 68 original OSM feature identities and projected points. `source/selected-assets.json` contains 24 actual public catalogue entries copied from the fixed source, not invented preset IDs.
 
-Town coordinates are east/south metres, tangent origin Donnelly Park at 28.8010291, -81.6442229 plus `(480,480)`. North is up. The 1440 × 1680 m extent contains 6 × 7 sectors of 240 m. A town anchor already has the common shift: **do not add .5 m**. Only legacy integer tile centres convert with sector origin + local integer + .5.
+Town coordinates are east/south metres, tangent origin Donnelly Park at 28.8010291, -81.6442229 plus `(480,480)`. North is up. The 1440 Ã— 1680 m extent contains 6 Ã— 7 sectors of 240 m. A town anchor already has the common shift: **do not add .5 m**. Only legacy integer tile centres convert with sector origin + local integer + .5.
 
 Each landmark keeps a geographic source anchor separate from its visual treatment. Catalogue buildings demonstrate typology; their dimensions, footprints, heights and rooms do not become surveyed Mount Dora buildings. Source geography wins. Do not stretch a prefab, move a road/shoreline, replace the entire hotel with its one named small building, or cap a building at a sector cut. `referencesForSector` returns conservative source references only; the architect owns actual clipped pieces and town topology.
 
@@ -65,12 +65,14 @@ This art handoff does not alter the production build. The integrated town releas
 
 ## Reviewed result
 
-At art runtime commit **2b3755d3dcc427e7007e6c58f6ddf29772a8bbb2**, all seven studies rendered through **native WebGL 2** in the current in-app browser. The original 768 × 500 frames and contact sheet are saved alongside this document. Native rendering is now available; the older Coldwell browser limitation does not apply to this review.
+At art runtime commit **2b3755d3dcc427e7007e6c58f6ddf29772a8bbb2**, all seven studies rendered through **native WebGL 2** in the current in-app browser. The original 768 Ã— 500 frames and contact sheet are saved alongside this document. Native rendering is now available; the older Coldwell browser limitation does not apply to this review.
 
-All **397** repository tests pass, including **seven** focused art checks; the production build passes. The 390 × 844 gallery has no horizontal overflow and preserves image proportions. All seven temporary study instances, their owned materials/geometry and the temporary renderer were disposed. The gallery tab and HTTP helper are closed; its port was released and restart source preserved.
+All **397** repository tests pass, including **seven** focused art checks; the production build passes. The 390 Ã— 844 gallery has no horizontal overflow and preserves image proportions. All seven temporary study instances, their owned materials/geometry and the temporary renderer were disposed. The gallery tab and HTTP helper are closed; its port was released and restart source preserved.
 
-[Exact-commit QA and hashes](review.json) · [DOM-visible browser/resource observations](browser-review.json) · [Workshop shortcomings](shortcomings.md).
+[Exact-commit QA and hashes](review.json) Â· [DOM-visible browser/resource observations](browser-review.json) Â· [Workshop shortcomings](shortcomings.md).
 
 ![Native shape and material studies](native-studies.png)
 
 These are local reference studies. Precise site geometry remains the architect's map; the hotel, pavilion, boardwalk and lighthouse do not acquire surveyed interiors/heights or unsupported native placement bindings from these images.
+
+The production walking tour uses the authored grid plans in `maps/mount-dora/authored-buildings.json`. These deliberately generalize the original geographic footprints retained by the reference gallery above. Walls, floor masks, roofs and solids share those plans; shared-wall groups and courtyard holes are preserved. The source engine geometry and painted assets remain unchanged.

@@ -14,8 +14,13 @@ import json
 import math
 from pathlib import Path
 import re
+import importlib.util
 
 ROOT = Path(__file__).resolve().parents[2]
+_grid_spec = importlib.util.spec_from_file_location('mount_dora_grid', Path(__file__).with_name('mount_dora_grid.py'))
+_grid = importlib.util.module_from_spec(_grid_spec)
+_grid_spec.loader.exec_module(_grid)
+author_buildings, rectify = _grid.author_buildings, _grid.rectify
 PROJECT = ROOT / "maps" / "mount-dora"
 KINDS = ("ground-grass", "water", "woodland", "ground-dirt", "ground-gravel",
          "ground-asphalt", "ground-concrete", "ground-wood-planks", "bridge", "floor")
@@ -425,6 +430,8 @@ def split_walls(walls, extent, diagnostics):
                 row = min(extent["rows"] - 1, max(0, int((start[1] + end[1]) / 2 // size)))
                 sid, part = sector_id(col, row), part + 1
                 actual = math.dist(start, end)
+                if actual < 1e-6:
+                    continue  # An outline tangent to the outer crop has no wall inside it.
                 if actual < .1 - 1e-6:
                     diagnostics.append({"kind": "wall-sliver-below-native-minimum", "sourceWallId": wall["id"], "sourceBuildingIds": wall["owners"], "sectorId": sid, "a": start, "b": end, "lengthM": actual})
                     continue
@@ -590,6 +597,31 @@ def build_project(project=PROJECT):
             bridge, wooden = style["bridge"], style["woodSurface"]
             paint_line(terrain, geometry["coordinates"], style["widthM"], CODE["bridge"] if bridge else CODE[style["terrain"]], width, depth,
                        land_only=not (bridge or wooden), water_code=CODE["bridge"] if wooden else None)
+    authored = author_buildings(buildings, deduplicated_walls(buildings), terrain, CODE, config['buildingGrid'])
+    # A mapped shelter deck supplies support over water, never invented land.
+    structures = []
+    for source_id in ('osm-way-557051211', 'osm-way-557154683', 'osm-way-557154684'):
+        source = next(f for f in features if f['id'] == source_id)
+        polygons, _ = rectify([[source['geometry']['coordinates']]])
+        if source_id == 'osm-way-557051211':
+            polygons = [[[[562,1383],[569,1383],[569,1389],[562,1389],[562,1383]]]]
+        structures.append({'id':'md:shelter:'+source_id.removeprefix('osm-way-'), 'sourceIds':[source_id],
+                           'geometry':{'type':'MultiPolygon','coordinates':polygons}})
+    for ident, source_id, box in (('md:donnelly-stage','osm-way-468920884',[472,482,485,487]),
+                                  ('md:evans-pavilion','osm-way-486656245',[466,1002,474,1008])):
+        x0,y0,x1,y1 = box
+        structures.append({'id':ident,'sourceIds':[source_id],'geometry':{'type':'MultiPolygon',
+                           'coordinates':[[[[x0,y0],[x1,y0],[x1,y1],[x0,y1],[x0,y0]]]]}})
+    authored['structures'] = structures
+    layout_digest = sha(encoded(authored))
+    authored_by_id = {record['id']: record for record in authored['records']}
+    for feature in buildings:
+        record = authored_by_id[feature['id']]
+        feature['geographicGeometry'] = feature['geometry']
+        feature['geographicBounds'] = feature['bounds']
+        feature['geometry'] = record['geometry']
+        feature['bounds'] = record['bounds']
+        feature['authoredLayoutSHA256'] = layout_digest
     upper = defaultdict(dict)
     building_cells = defaultdict(int)
     sector_buildings = defaultdict(set)
@@ -609,6 +641,14 @@ def build_project(project=PROJECT):
         feature["nativeFloorCells"] = building_cells[feature["id"]]
         if not sectors:
             diagnostics.append({"kind": "building-below-raster-resolution-or-outside", "sourceId": feature["id"], "policy": "Footprint/walls retained; no raster cell centre lies inside."})
+    for structure in structures:
+        for y, left, right in polygon_spans(structure['geometry']['coordinates'], width, depth):
+            for x in range(left, right):
+                index = y * width + x
+                if terrain[index] == CODE['floor']:
+                    raise ValueError('Grid shelter overlaps a closed building: ' + structure['id'])
+                terrain[index] = CODE['bridge'] if source_water[index] else CODE['ground-wood-planks']
+                green[index] = 0
     walls = deduplicated_walls(buildings)
     wall_pieces = split_walls(walls, extent, diagnostics)
     # A source boundary can enter a neighbouring sector by less than one cell.
@@ -646,7 +686,7 @@ def build_project(project=PROJECT):
             chance = {0: 0, 1: 25, 2: 80, 3: 50}[value]
             if (seed >> 12) % 100 < chance:
                 add_prop(x, y, "reeds" if value == 3 else "tree-broadleaf")
-    outputs, sectors = {}, []
+    outputs, sectors = {'authored-buildings.json': encoded(authored)}, []
     config_digest = sha((project / "source" / "authoring-config.json").read_bytes())
     digest = sha(encoded(source_records))
     for row in range(extent["rows"]):
@@ -664,9 +704,9 @@ def build_project(project=PROJECT):
                        "upper": [upper.get((sid, z), {}) for z in range(1, levels)], "edges": {}, "stairs": [], "climbs": [], "props": props,
                        "starts": anchors[:4], "guards": [], "exits": anchors[4:],
                        "mountDora": {"version": 1, "projectId": config["id"], "sectorId": sid, "originM": {"x": ox, "y": oy},
-                                     "sourceDigest": digest, "buildingIds": sorted(sector_buildings[sid]),
+                                     "sourceDigest": digest, "authoredLayoutSHA256": layout_digest, "buildingIds": sorted(sector_buildings[sid]),
                                      "previewAnchors": "Authoring-validator markers on existing connected land; not real spawn/extraction locations.",
-                                     "buildingPolicy": "Source footprints, closed native-kit exteriors; unsurveyed heights/interiors; no cut-boundary cap walls."}}
+                                     "buildingPolicy": "Grid-generalized footprints from retained geographic source; closed native-kit exteriors; no cut-boundary cap walls."}}
             if runs:
                 mapping["wallRuns"] = {"version": 1, "segments": runs}
             filename = f"sectors/{sid}.map.json"
@@ -689,14 +729,17 @@ def build_project(project=PROJECT):
                             "bounds": {"x": ox, "y": oy, "widthM": size, "depthM": size}, "nativeImport": native_import, "metrics": metrics,
                             "buildingIds": sorted(sector_buildings[sid])})
     feature_database = {"kind": "mount-dora-source-features", "version": 1, "id": config["id"], "projection": config["projection"],
-                        "coordinates": "Local east/south metres, 0.0001m precision; original WGS84/node refs are preserved in source snapshots.",
+                        "coordinates": "Local east/south metres; buildings use authored integer-edge geometry with geographicGeometry retained. Other features retain projected geographic geometry.",
+                        "authoredLayoutSHA256": layout_digest,
+                        "authoredStructures": structures,
                         "sources": source_records, "features": features, "diagnostics": diagnostics}
     outputs["features.json"] = encoded(feature_database)
     outputs["atlas.svg"] = render_atlas(features, config)
     manifest = {"kind": "mount-dora-native-project", "version": 1, "id": config["id"], "name": config["name"], "target": config["target"],
                 "projection": config["projection"], "extent": {"widthM": width, "depthM": depth}, "sectorSize": size, "columns": extent["columns"], "rows": extent["rows"],
-                "featuresFile": "features.json", "atlasFile": "atlas.svg", "sectors": sectors, "sources": source_records,
-                "generation": {"tool": "tools/maps/build-mount-dora.py", "version": 2, "configFile": "source/authoring-config.json", "configSHA256": config_digest,
+                "featuresFile": "features.json", "atlasFile": "atlas.svg", "authoredBuildingsFile": "authored-buildings.json", "sectors": sectors, "sources": source_records,
+                "generation": {"tool": "tools/maps/build-mount-dora.py", "version": 3, "configFile": "source/authoring-config.json", "configSHA256": config_digest,
+                               "authoredLayoutSHA256": layout_digest,
                                "sourceDigest": digest, "terrainCodebook": list(KINDS), "globalTerrainSHA256": sha(terrain),
                                "sampleRule": "Global cell centre (column*240+x+0.5, row*240+y+0.5); one global raster sliced without seam repaint.",
                                "nativeCoordinates": "Wall metre endpoints = global east/south - sectorOrigin - 0.5; tile indices remain integer cells.",
@@ -706,7 +749,7 @@ def build_project(project=PROJECT):
                                               "policy": "Mapped tree cell proxies plus declared seeded broadleaf/reed scatter on mapped land vegetation, excluding all mapped sports pitches; not surveyed species or individual tree positions."},
                                "sportsSurfaces": "Mapped pitch polygons exclude procedural greenery; tennis/pickleball use a declared existing asphalt proxy unless a supported source surface tag is present. No invented court lines or current inventory claim.",
                                "buildingDefaults": {"stories": 1, "material": "brick", "heightM": 2, "slabM": .12, "pitchM": 2.12,
-                                                    "policy": "Native-kit closed exterior proxies; integer tagged levels1..5 honored. Source outlines/holes retained; no invented entrances/interiors; shared party wall ownership retained."}},
+                                                    "policy": "Native-kit closed exterior proxies on one-metre integer-edge plans; geographic outlines retained separately; courtyard holes and shared party wall relationships retained; no invented entrances/interiors."}},
                 "landmarks": config.get("landmarkOverrides", []),
                 "calibration": config.get("calibration", {}), "coverageNotes": config.get("coverageNotes", []),
                 "metrics": {"sectors": len(sectors), "nativeImportReady": sum(s["nativeImport"]["ready"] for s in sectors),
@@ -718,9 +761,9 @@ def build_project(project=PROJECT):
                             "unrepresentedWallSlivers": sum(d["kind"] == "wall-sliver-below-native-minimum" for d in diagnostics)},
                 "limitations": ["Geographic map-authoring source, not a deployed Farmyard mission or a property survey.",
                                 "Flat terrain; no elevation survey, true building heights, real interiors or mapped entrance survey is inferred.",
-                                "One-metre cell-centre floor/terrain masks approximate exact source polygons, whose vector geometry remains in features.json.",
-                                "Native wall runs retain angled exterior/courtyard boundaries; sub0.1m run slivers cannot be represented and are listed in features.json diagnostics.",
-                                "Native wall butt joints, per-run texture phases and one-metre floor stair-step boundaries retain the workshop's existing limits.",
+                                "Building outlines are deliberately generalized to cardinal integer tile edges; original geographic outlines remain in geographicGeometry and raw source snapshots.",
+                                "The former depot is relocated approximately6.2m to preserve its proportions while clearing the original streets; other fitting changes are recorded in authored-buildings.json.",
+                                "Native wall butt joints and per-run texture phases retain the workshop's existing limits; curved decorative parts and the lighthouse remain curved.",
                                 "Water-only sectors remain complete in the atlas/source but the existing four-start/one-exit native validator refuses them.",
                                 "Road widths, sidewalk widths, bridge/steps heights and seeded vegetation are declared authoring approximations, not measurements.",
                                 "No suggested future roads are painted; no enemies or gameplay objectives are authored."]}

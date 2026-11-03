@@ -323,6 +323,7 @@ def road_style(feature):
 
 EVIDENCE = (("house-reference.json", "county", "Lake County Property Appraiser tax roll and building sketches"),
             ("lidar-roofs.json", "lidar", "USGS 3DEP lidar FL_Peninsular_Lake_2018"),
+            ("county-buildings.json", "countyBuildings", "County building sketches OpenStreetMap lacks, placed on the 2018 lidar roofs"),
             ("house-survey.json", "survey", "A person viewing Google Maps Street View; no imagery stored"))
 # Survey wall finishes the native kit can draw; storefront glass keeps the record's material.
 SURVEY_WALLS = {"wood-siding": "wood", "other-siding": "wood", "brick": "brick", "stucco": "concrete", "block": "concrete", "stone": "concrete"}
@@ -332,9 +333,10 @@ SURVEY_STORIES = {"1": (1, False), "1.5": (1, True), "2": (2, False), "2.5": (2,
 def load_evidence(project=PROJECT):
     """Per-building county, lidar and survey facts from maps/mount-dora/reference.
 
-    The survey export is optional; the other two are required. Each file is
-    pinned by SHA-256 in project.json, and those files pin features.json without
-    nativeProxy, so writing nativeProxy here never invalidates them.
+    The survey export is optional; the others are required. Each file is pinned
+    by SHA-256 in project.json. They pin only the OSM-sourced fields of
+    features.json they read, so writing nativeProxy, the authored outlines and
+    the county buildings here never invalidates them.
     """
     found, inputs = defaultdict(dict), []
     for name, key, source in EVIDENCE:
@@ -354,12 +356,40 @@ def load_evidence(project=PROJECT):
             record["acquired"] = doc["collection"]["acquired"]["days"]
             for item in doc["buildings"]:
                 found[item["id"]]["lidar"] = item
+        elif key == "countyBuildings":
+            # Each carries county facts and a lidar record shaped like the
+            # game buildings' own, so building_style treats them alike.
+            record["buildings"] = len(doc["buildings"])
+            for item in doc["buildings"]:
+                found[item["id"]]["county"] = item["county"]
+                found[item["id"]]["lidar"] = item["lidar"]
         else:
             record["exportedAt"] = doc["exportedAt"]
             for item_id, answer in doc["answers"].items():
                 found[item_id]["survey"] = answer
         inputs.append(record)
     return found, inputs
+
+
+def county_buildings(project=PROJECT):
+    """Buildings the county sketched that OpenStreetMap lacks.
+
+    reference/county-buildings.json places each sketch on its lidar roof and
+    merges a structure's sketches (stacked or attached units) into one outline,
+    in the same town metres as the OSM outlines. They join the town as
+    buildings with no OSM tags; `county` says where each came from.
+    """
+    doc = json.loads((project / "reference" / "county-buildings.json").read_text("utf-8"))
+    features = []
+    for item in doc["buildings"]:
+        records = item["county"]["county"]["records"]
+        points = [p for polygon in item["geometry"]["coordinates"] for ring in polygon for p in ring]
+        features.append({"id": item["id"], "category": "building",
+                         "county": {"source": "reference/county-buildings.json", "sketches": [m["key"] for m in item["members"]],
+                                    "style": records[0]["style"] if records else None, "lidarSaw": item["lidarSaw"],
+                                    "roofShare": item["roofShare"], "clippedByGameM2": item["clippedByGameM2"]},
+                         "tags": {}, "geometry": item["geometry"], "bounds": bounds(points)})
+    return features
 
 
 def building_style(feature, evidence=None):
@@ -614,6 +644,7 @@ def render_atlas(features, config):
 def build_project(project=PROJECT):
     config, projection, source_records, features, diagnostics = load_source(project)
     evidence, evidence_inputs = load_evidence(project)
+    features = sorted(features + county_buildings(project), key=lambda f: f["id"])
     extent = config["extent"]
     width, depth, size = extent["widthM"], extent["depthM"], extent["sectorSizeM"]
     if width != 1440 or depth != 1680 or size != 240 or extent["columns"] != 6 or extent["rows"] != 7:
@@ -685,7 +716,20 @@ def build_project(project=PROJECT):
             bridge, wooden = style["bridge"], style["woodSurface"]
             paint_line(terrain, geometry["coordinates"], style["widthM"], CODE["bridge"] if bridge else CODE[style["terrain"]], width, depth,
                        land_only=not (bridge or wooden), water_code=CODE["bridge"] if wooden else None)
-    authored = author_buildings(buildings, deduplicated_walls(buildings), terrain, CODE, config['buildingGrid'])
+    # A county building stands on its 2018 lidar roof. Where the mapped Lake
+    # Dora shoreline runs through one, its outline already supports itself
+    # over that water, as a mapped footprint may; let the one-metre fit also
+    # take the water cells touching it. Only the fit sees this; nothing is
+    # painted as land.
+    fit_terrain = bytearray(terrain)
+    for feature in buildings:
+        if "county" in feature:
+            for x, y in _grid.cells(feature["geometry"]["coordinates"]):
+                for nx in range(max(0, x - 3), min(width, x + 4)):
+                    for ny in range(max(0, y - 3), min(depth, y + 4)):
+                        if fit_terrain[ny * width + nx] == WATER:
+                            fit_terrain[ny * width + nx] = CODE["ground-grass"]
+    authored = author_buildings(buildings, deduplicated_walls(buildings), fit_terrain, CODE, config['buildingGrid'])
     # A mapped shelter deck supplies support over water, never invented land.
     structures = []
     for source_id in ('osm-way-557051211', 'osm-way-557154683', 'osm-way-557154684'):
@@ -826,24 +870,25 @@ def build_project(project=PROJECT):
     manifest = {"kind": "mount-dora-native-project", "version": 1, "id": config["id"], "name": config["name"], "target": config["target"],
                 "projection": config["projection"], "extent": {"widthM": width, "depthM": depth}, "sectorSize": size, "columns": extent["columns"], "rows": extent["rows"],
                 "featuresFile": "features.json", "atlasFile": "atlas.svg", "authoredBuildingsFile": "authored-buildings.json", "sectors": sectors, "sources": source_records,
-                "generation": {"tool": "tools/maps/build-mount-dora.py", "version": 4, "configFile": "source/authoring-config.json", "configSHA256": config_digest,
+                "generation": {"tool": "tools/maps/build-mount-dora.py", "version": 5, "configFile": "source/authoring-config.json", "configSHA256": config_digest,
                                "authoredLayoutSHA256": layout_digest, "evidenceInputs": evidence_inputs,
                                "sourceDigest": digest, "terrainCodebook": list(KINDS), "globalTerrainSHA256": sha(terrain),
                                "sampleRule": "Global cell centre (column*240+x+0.5, row*240+y+0.5); one global raster sliced without seam repaint.",
                                "nativeCoordinates": "Wall metre endpoints = global east/south - sectorOrigin - 0.5; tile indices remain integer cells.",
                                "defaultRoadWidthsM": WIDTHS, "sidewalkWidthM": 1.5, "sidewalkPresence": "Mapped sidewalk=yes/both/left/right only; separate footways retain their source geometry.",
-                               "waterPolicy": "Fill complete source polygons first; land cover never creates land in water. Only mapped building footprints, bridges or wooden-surface paths can provide source-backed support over water.",
+                               "waterPolicy": "Fill complete source polygons first; land cover never creates land in water. Only mapped building footprints, bridges or wooden-surface paths can provide source-backed support over water; a county building on its lidar roof is such a footprint, and its one-metre fit may take the mapped water within three cells of it.",
                                "vegetation": {"seed": 1947, "gridM": 12, "jitterM": 3, "parkAcceptancePercent": 25, "woodAcceptancePercent": 80, "wetlandAcceptancePercent": 50,
                                               "policy": "Mapped tree cell proxies plus declared seeded broadleaf/reed scatter on mapped land vegetation, excluding all mapped sports pitches; not surveyed species or individual tree positions."},
                                "sportsSurfaces": "Mapped pitch polygons exclude procedural greenery; tennis/pickleball use a declared existing asphalt proxy unless a supported source surface tag is present. No invented court lines or current inventory claim.",
                                "buildingDefaults": {"stories": 1, "material": "brick", "heightM": 2, "slabM": .12, "pitchM": 2.12,
                                                     "policy": "Native-kit closed exterior proxies on one-metre integer-edge plans; geographic outlines retained separately; courtyard holes and shared party wall relationships retained; no invented entrances/interiors.",
-                                                    "evidence": "Storeys: survey > building:levels tag > county STORIES > lidar eave > default. Material: survey > building:material tag > county wall code > default. Each building records its sources in nativeProxy; county/lidar storey disagreements are kept for a survey."}},
+                                                    "evidence": "Storeys: survey > building:levels tag > county STORIES > lidar eave > default. Material: survey > building:material tag > county wall code > default. Each building records its sources in nativeProxy; county/lidar storey disagreements are kept for a survey.",
+                                                    "countyBuildings": "Buildings OpenStreetMap lacks, from Lake County sketches placed on their 2018 lidar roofs (reference/county-buildings.json); stacked and attached units are one outline; no OSM tags."}},
                 "landmarks": config.get("landmarkOverrides", []),
                 "calibration": config.get("calibration", {}), "coverageNotes": config.get("coverageNotes", []),
                 "metrics": {"sectors": len(sectors), "nativeImportReady": sum(s["nativeImport"]["ready"] for s in sectors),
                             "nativeImportRefused": sum(not s["nativeImport"]["ready"] for s in sectors), "featureCount": len(features),
-                            "featureCategories": dict(sorted(Counter(f["category"] for f in features).items())), "buildingCount": len(buildings),
+                            "featureCategories": dict(sorted(Counter(f["category"] for f in features).items())), "buildingCount": len(buildings), "countyBuildings": sum("county" in f for f in buildings),
                             "crossSectorBuildings": sum(len(f["nativeSectors"]) > 1 for f in buildings), "roadCount": len(roads),
                             "excludedProposedRoads": sum("nativeOmission" in f for f in features), "wallRuns": sum(len(r) for r in wall_pieces.values()),
                             "props": sum(len(p) for p in props_by_sector.values()), "terrainCounts": {KINDS[k]: v for k, v in sorted(Counter(terrain).items())},
@@ -851,6 +896,7 @@ def build_project(project=PROJECT):
                 "limitations": ["Geographic map-authoring source, not a deployed Farmyard mission or a property survey.",
                                 "Flat terrain. Storeys and wall materials follow recorded evidence (nativeProxy sources) as whole native-kit storeys, not measured wall heights; no interiors or entrances are inferred.",
                                 "Building outlines are deliberately generalized to cardinal integer tile edges; original geographic outlines remain in geographicGeometry and raw source snapshots.",
+                                "County buildings come from appraiser sketches placed on December 2018 lidar roofs; a few stand where the lidar saw no building class, and the mapped Lake Dora shoreline runs through six lakeside ones.",
                                 "The former depot is relocated approximately6.2m to preserve its proportions while clearing the original streets; other fitting changes are recorded in authored-buildings.json.",
                                 "Native wall butt joints and per-run texture phases retain the workshop's existing limits; curved decorative parts and the lighthouse remain curved.",
                                 "Water-only sectors remain complete in the atlas/source but the existing four-start/one-exit native validator refuses them.",

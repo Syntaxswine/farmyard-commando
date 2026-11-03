@@ -4,7 +4,8 @@
  "inputs": {
   "features": {
    "file": "maps/mount-dora/features.json",
-   "sha256OmittingNativeProxy": "ebf9d2241771a993cfbbd5c881a5e30456bcab251f2ed96bf0fd093e025b85d9"
+   "sha256OfFieldsRead": "33afcbbc035ba90bffe8c46d9840095709d5f041b6c2a16ec95e838decfadf6f",
+   "fields": "OSM-sourced features only: id, category, tags, geographicGeometry (else geometry); nativeSectors for buildings; authoredStructures ids and geometry"
   },
   "lidar": {
    "file": "maps/mount-dora/reference/lidar/source.json",
@@ -12,7 +13,7 @@
   },
   "county": {
    "file": "maps/mount-dora/reference/house-reference.json",
-   "sha256": "571c87fd146056f50614ffe88d4550c0ce5de6f496f15c08ca8870a51f8bffb6",
+   "sha256": "11f0b5b3d9f596e5ba3850fd0370b12eabd3c2a48d3d88eda4519ebbde194eeb",
    "usedFor": "validation only"
   }
  },

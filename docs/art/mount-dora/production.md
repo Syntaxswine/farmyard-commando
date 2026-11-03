@@ -113,7 +113,10 @@ plaster or brick), roof cover, roof form, pitch and ridge axis follow the county
 record and 2018 lidar where those are recorded
 ([maps/mount-dora/reference](../../../maps/mount-dora/reference/README.md)). Each
 placement's `provenance.evidence` names the source, and colors stay seeded
-placeholders until surveyed. The Gables/Terrace treatments suggest
+placeholders until surveyed. The 126 county-sketched buildings OpenStreetMap
+lacks (`county-` ids) have no OSM tags. Their county use decides the kit type: a
+store, office, shop or professional building is commercial, and the rest are
+vernacular. The Gables/Terrace treatments suggest
 the documented stucco annex typology. Source names, tags and all ten footprints
 remain separate, without claiming ten historically independent hotels.
 

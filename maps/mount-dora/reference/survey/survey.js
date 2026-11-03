@@ -27,7 +27,7 @@ const FIELDS = [
 const KEYS = [...FIELDS.map(f => f.key), 'imageryDate', 'entrances', 'note'];
 const $ = id => document.getElementById(id);
 const svgNS = 'http://www.w3.org/2000/svg';
-const state = {reference: null, sha256: '', byId: new Map(), order: [], shapes: new Map(), roads: [], answers: {}, current: null, edges: []};
+const state = {reference: null, sha256: '', byId: new Map(), order: [], shapes: new Map(), roads: [], answers: {}, current: null, edges: [], countyBuildings: 0};
 
 const status = text => { $('status').textContent = text; };
 const read = key => { try { return localStorage.getItem(key); } catch { return null; } };
@@ -71,9 +71,9 @@ function renderQueue() {
     button.addEventListener('click', () => select(id));
     li.append(button); list.append(li);
   }
-  const m = state.reference.metrics, missing = state.reference.countyOnly.filter(c => c.coveredByGame === 0).length;
+  const m = state.reference.metrics;
   $('summary').textContent = `${done} of ${total} buildings surveyed · county records for ${total - m.byMethod.none} · ` +
-    `${missing} county buildings have nothing in the game yet (countyOnly in house-reference.json).`;
+    `${state.countyBuildings} county-sketched buildings OpenStreetMap lacks are in the game (county-buildings.json), not yet in this queue.`;
   $('progress').style.width = `${(100 * done / total).toFixed(1)}%`;
   list.querySelector('[aria-current=true]')?.scrollIntoView({block: 'nearest'});
 }
@@ -279,6 +279,7 @@ try {
   state.reference = JSON.parse(new TextDecoder().decode(buffer));
   for (const b of state.reference.buildings) state.byId.set(b.id, b);
   state.order = sortBuildings(state.reference.buildings).map(b => b.id);
+  state.countyBuildings = features.features.filter(f => f.category === 'building' && f.county).length;
   for (const f of features.features) {
     if (f.category === 'building' && f.geographicGeometry) state.shapes.set(f.id, {id: f.id, d: ringsPath(f.geographicGeometry.coordinates),
       authored: f.geometry.coordinates, authoredD: ringsPath(f.geometry.coordinates), box: bbox(f.geographicGeometry.coordinates.flat())});

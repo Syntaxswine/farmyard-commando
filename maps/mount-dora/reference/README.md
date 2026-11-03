@@ -41,11 +41,50 @@ How each building was matched (`match.method`):
 | `parcel-area` | 23 | Several buildings on the lot; picked by ground-floor area |
 | `none` | 18 | No record: the high-school campus and a few outbuildings |
 
-**The county also has buildings the game lacks.** 247 appraiser sketches inside
-the town are claimed by no game building. 205 of them have no game building on
-them at all: 82 single-family houses, 89 residential-condo buildings, 4
-duplexes, and offices and shops. They are listed under `countyOnly`, with their
-outline in town metres and `coveredByGame`, so the generator can add them.
+**The county also has buildings OpenStreetMap lacks.** 247 appraiser sketches
+inside the town are claimed by no game building. They are listed under
+`countyOnly`, with their outline in town metres, `coveredByGame`, and the same
+county facts (`county`, `suggested`) a game building gets.
+
+## County buildings the game lacked
+
+`county-buildings.json` (written by `tools/maps/lidar/build-lidar.mjs`, logic in
+`county-buildings.mjs`) turns those sketches into buildings, and the generator
+adds them to the town. A sketch is not always a missing building: many are
+offset drawings of a house the game has, or one condo unit per floor. The 2018
+lidar's building returns (class 6) tell them apart:
+
+1. Each sketch moves, within 4 m, onto the building returns under it (median
+   1.4 m). One with less than half its area on a roof stays where it was drawn.
+2. Sketches that overlap or come within 0.5 m are one structure: stacked condo
+   units, attached units, a house drawn twice. Its outline is their union.
+3. A structure already in the game is kept out, and listed under
+   `represented`, with the game building it matches.
+4. Every other structure is added, minus any part a game building covers.
+
+| Of 247 county-only sketches | Sketches | Outcome |
+| --- | ---: | --- |
+| On a roof, or kept on the county record | 206 | **126 buildings**, 22,814 m²: 80 houses, 16 condo buildings (from 89 unit sketches), 7 offices, 4 stores, 4 duplexes and 15 others |
+| No roof, drawn over a game building | 31 | Already in the game: Dora Villa's units, drawn south of the building over open ground |
+| Record held by a game building it overlaps | 6 | Already in the game: the same house, drawn a few metres off |
+| On a mapped structure | 5 | Already in the game: the History Museum, the Lakeside Inn, a store, the lakefront pavilion, and the parking garage (OSM's multi-storey car park) |
+
+- **Lidar reading:** 120 of the 126 stand on a building-class roof. The other
+  six say what the lidar saw instead (`lidarSaw`):
+  - four have raised returns without the building class, a roof under trees;
+  - one (1475627/1, a 1935 house) shows open ground in December 2018 and is
+    placed on the county record alone;
+  - one has too few returns to tell.
+- **Heights:** storeys follow the county record where it has one, otherwise the
+  lidar eave, measured as for the game buildings. Where both exist they agree
+  for 88 of 109.
+- **The lakeside houses:** six lie partly inside OpenStreetMap's Lake Dora
+  polygon, though the lidar puts roofs there. The generator lets them stand over
+  that mapped water, as it does for any mapped footprint.
+- **Pieces:** a native outline is one connected footprint, so a sketch of two
+  parts meeting at a corner becomes two buildings (`-part2`).
+- **Not done:** these buildings are not in the survey's queue yet, and have no
+  Street View viewpoint.
 
 ## Caveats, checked on real buildings
 
@@ -104,6 +143,7 @@ Openly licensed street photos exist on Mapillary (CC BY-SA), but in November
 | `survey/` | hand-written | The survey page |
 | `house-survey.json` | the survey's Export | A person's answers, keyed by building id (not created yet) |
 | `lidar-roofs.json` | `tools/maps/lidar/build-lidar.mjs` | Lidar roof form, eave and ridge heights and ground per game building |
+| `county-buildings.json` | `tools/maps/lidar/build-lidar.mjs` | County-sketched buildings OSM lacks, placed on their lidar roofs, and the sketches already in the game |
 | `lidar/` | `tools/maps/lidar/` | Lidar provenance and the 1 m bare-earth grid ([details](lidar/README.md)) |
 
 Owner names and mailing addresses, sale prices, appraised values, exemptions,

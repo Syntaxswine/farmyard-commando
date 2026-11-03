@@ -27,7 +27,7 @@ test('every grid-aligned game building offers its whole perimeter for entrances'
     buildings++;
     if (Math.abs(edges - perimeter) > 1e-9) partial.push(f.id);
   }
-  assert.equal(buildings, 950);
+  assert.equal(buildings, 950 + 126, '950 OSM outlines and 126 county buildings (reference/county-buildings.json)');
   assert.deepEqual(partial, [], `outlines that are not fully on the 1 m grid: ${partial.join(', ')}`);
 });
 

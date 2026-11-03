@@ -8,6 +8,7 @@ import {createHash} from 'node:crypto';
 import {createProjection, headingDegrees} from '../../tools/maps/house-reference/projection.mjs';
 import {area, centroid, contains, overlapArea} from '../../tools/maps/house-reference/geometry.mjs';
 import {build, storeys, streetKey, MATCH} from '../../tools/maps/house-reference/build-house-reference.mjs';
+import {isOsm} from '../../tools/maps/house-reference/features-digest.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const town = path.join(root, 'maps/mount-dora');
@@ -79,7 +80,8 @@ test('house-reference.json is exactly what the builder produces from the committ
   const text = build();
   assert.equal(createHash('sha256').update(fs.readFileSync(path.join(town, 'reference/house-reference.json'))).digest('hex'),
     createHash('sha256').update(text).digest('hex'), 'Stale: run node tools/maps/house-reference/build-house-reference.mjs');
-  assert.equal(reference.buildings.length, features.filter(f => f.category === 'building').length);
+  // One record per OSM building; the county buildings the generator adds come from it (county-buildings.json).
+  assert.equal(reference.buildings.length, features.filter(f => f.category === 'building' && isOsm(f)).length);
 });
 
 test('recorded footprint matches hold up, and the same test fails 30 m away (negative control)', () => {

@@ -11,7 +11,7 @@ const make=async options=>new TownWorld(project,{baseURL:base,fetcher,...options
 test('walking adapter accepts all 42 released geographic files, including terrain-only water, without changing source',()=>{
   let walls=0,water=0;
   for(const sector of project.sectors){const bytes=fs.readFileSync(new URL(sector.file,base)),raw=JSON.parse(bytes),before=JSON.stringify(raw),p=decodeTownSector(raw,sector);assert.equal(JSON.stringify(raw),before);assert.equal(p.raw,raw);walls+=p.walls.records.length;if(!sector.nativeImport.ready){water++;assert(p.raw.terrain.every(r=>r.every(t=>t==='water')));}}
-  assert.equal(walls,5617);assert.equal(water,3);
+  assert.equal(walls,6909);assert.equal(water,3);
 });
 test('source-backed continuous movement crosses both axes and a four-sector corner without resetting state',async()=>{
   const w=await make();w.startPoint={x:479,y:479};try{await w.readyAt(w.startPoint);const s=createSoloGame(DEFAULT_BUILD,1947,'mount-dora',{tourWorld:w}),u=hero(s),pack=JSON.stringify(u.pack);

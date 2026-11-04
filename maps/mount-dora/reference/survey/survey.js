@@ -29,7 +29,9 @@ const FIELDS = [
 const KEYS = [...FIELDS.map(f => f.key), 'imageryDate', 'entrances', 'note'];
 const $ = id => document.getElementById(id);
 const svgNS = 'http://www.w3.org/2000/svg';
-const state = {ready: false, pins: {}, byId: new Map(), order: [], shapes: new Map(), roads: [], answers: {}, current: null, edges: [], countyBuildings: 0};
+// `drawn` holds the note and date text the page last drew or saved: a field
+// whose text differs from it holds unsaved typing.
+const state = {ready: false, pins: {}, drawn: {note: '', imagery: ''}, byId: new Map(), order: [], shapes: new Map(), roads: [], answers: {}, current: null, edges: [], countyBuildings: 0};
 
 const status = text => { $('status').textContent = text; };
 const read = key => { try { return localStorage.getItem(key); } catch { return null; } };
@@ -107,7 +109,8 @@ function renderUnknown() {
   intro.textContent = `${one ? '1 saved answer is for a building id' : `${list.length} saved answers are for building ids`} not in this queue. ` +
     `Export keeps ${one ? 'it' : 'them'}, and the generator lists ${one ? 'it' : 'them'} as lost in project.json until re-keyed or dropped. ` +
     `If a teammate made ${one ? 'it' : 'them'} with newer files, pull and regenerate first: those files may have the building. ` +
-    'To re-key one: export, rename its id in the file to the building\'s current id, import that file, then drop the old id here.';
+    'To re-key one: export, rename its id in the file to the building\'s current id, and import that file. Drop the old id here only once the import ' +
+    'reports the answer taken; if it says the copy here is newer, copy across by hand what only the old one holds.';
   const rows = list.map(({id, holds}) => {
     const row = document.createElement('div'), name = document.createElement('code'), what = document.createElement('span'), drop = document.createElement('button');
     name.textContent = id; what.textContent = holds.join(', '); drop.type = 'button'; drop.textContent = 'Drop';
@@ -197,8 +200,8 @@ function renderFields(b) {
     }
     set.append(legend, options); box.append(set);
   }
-  $('note').value = answer.note || '';
-  $('imagery').value = answer.imageryDate || '';
+  $('note').value = state.drawn.note = answer.note || '';
+  $('imagery').value = state.drawn.imagery = answer.imageryDate || '';
   const doors = answer.entrances?.length || 0;
   $('entrances').textContent = doors ? `${doors} entrance${doors === 1 ? '' : 's'} marked. Click a marked edge again to remove it.`
     : 'No entrance marked. Click the dashed game outline where you can see a door.';
@@ -255,10 +258,10 @@ function save(id, answer) { if (commit(id, answer)) { renderFields(state.byId.ge
 // on the mousedown of the next click. Redrawing the buttons or the queue then
 // would move that click's target before its mouseup, so only the marks update.
 function saveText(id, answer) {
-  if (!commit(id, answer)) return;
+  if (!commit(id, answer)) return false;
   const name = $('queue').querySelector(`button[data-id="${CSS.escape(id)}"] span`);
   if (name) markName(name, id);
-  renderSummary();
+  renderSummary(); return true;
 }
 const typedValue = id => id === 'note' ? $('note').value.trim() : $('imagery').value.trim();
 const textAnswer = (id, value) => ({...(state.answers[state.current] || {}), [id === 'note' ? 'note' : 'imageryDate']: value});
@@ -309,12 +312,13 @@ async function importAnswers(file) {
     sync();
     const merged = mergeAnswers(state.answers, data, KEYS, state.byId), differs = pinMismatches(data, state.pins);
     state.answers = merged.answers; persist(); select(state.current);
-    const ids = list => list.slice(0, 5).join(', ') + (list.length > 5 ? `, and ${list.length - 5} more` : '');
+    const ids = list => list.slice(0, 20).join(', ') + (list.length > 20 ? `, and ${list.length - 20} more` : '');
     status(`Imported ${merged.added} answer${merged.added === 1 ? '' : 's'}${merged.unknown ? `; ${merged.unknown} of them for building ids not in this queue, kept and listed below` : ''}` +
       `${merged.replaced.length ? `; it replaced the copy here for ${ids(merged.replaced)}${merged.cleared ? ` (${merged.cleared} cleared there)` : ''}` : ''}` +
       `${merged.older.length ? `; not taken, because the copy here is newer: ${ids(merged.older)}` : ''}` +
-      `${merged.ahead ? `; ${merged.ahead} dated ahead of this clock, so that computer's clock may be wrong` : ''}` +
-      `${merged.keptAhead.length ? `, and the copy here was kept for ${ids(merged.keptAhead)}` : ''}` +
+      `${merged.ahead ? `; ${merged.ahead} dated ahead of this clock, so one of the two clocks is off` : ''}` +
+      `${merged.keptAhead.length ? `, and the copy here was kept for ${ids(merged.keptAhead)}: set the clock that is off, then import again` : ''}` +
+      `${merged.broken ? `; ${merged.broken} dated more than a day ahead, read as undated` : ''}` +
       `${differs.length ? `; changed since it was exported: ${differs.join(', ')}. If the other files are newer, pull and regenerate before dropping answers or removing entrances` : ''}.`);
   } catch (error) { status(`Import failed: ${error.message}.`); }
 }
@@ -339,23 +343,26 @@ $('clear').addEventListener('click', () => { sync(); save(state.current, {}); })
 const saveTyped = id => {
   const value = typedValue(id);
   if (id === 'imagery' && value && !IMAGERY_DATE.test(value)) return status('Use the image month as YYYY-MM, for example 2024-03.');
-  sync(); saveText(state.current, textAnswer(id, value));
+  sync();
+  if (saveText(state.current, textAnswer(id, value))) state.drawn[id] = $(id).value;
 };
 for (const id of ['note', 'imagery']) $(id).addEventListener('change', () => saveTyped(id));
-// Leaving the page while still typing: save what is in the field, as leaving it would.
+// A field holds unsaved typing only where its text differs from what the page last drew or saved;
+// focus resting in a field is not typing.
+const unsaved = el => el && el === document.activeElement && el.value !== state.drawn[el.id];
+// Leaving the page while still typing: save what was typed, as leaving the field would.
 window.addEventListener('pagehide', () => {
-  const id = ['note', 'imagery'].find(id => $(id) === document.activeElement);
-  const saved = state.answers[state.current]?.[id === 'note' ? 'note' : 'imageryDate'] ?? '';
-  if (id && state.ready && typedValue(id) !== saved) saveTyped(id);
+  const id = ['note', 'imagery'].find(id => unsaved($(id)));
+  if (id && state.ready) saveTyped(id);
 });
-// Another tab saved: show its answers here too, keeping whatever is being typed.
+// Another tab saved: show its answers here too, keeping only what is being typed and not yet saved.
 window.addEventListener('storage', event => {
   if (event.key !== STORE || !state.ready) return;
   sync(); renderQueue();
   const b = state.byId.get(state.current);
   if (!b) return;
   minimap(b); renderWarnings(b);
-  const typing = [$('note'), $('imagery')].find(el => el === document.activeElement), kept = typing && [typing.value, typing.selectionStart, typing.selectionEnd];
+  const typing = [$('note'), $('imagery')].find(unsaved), kept = typing && [typing.value, typing.selectionStart, typing.selectionEnd];
   renderFields(b);
   if (typing) { typing.value = kept[0]; typing.setSelectionRange(kept[1], kept[2]); }
 });

@@ -18,7 +18,8 @@ fieldset{border:1px solid #50695b;border-radius:6px;margin:12px 0 0;padding:8px 
 .options button{padding:6px 10px;font-size:.88rem}.options button[aria-pressed=true]{background:#4b5840;border:2px solid #f1cd66;padding:5px 9px}
 .options .swatch{width:34px;height:34px;padding:0;border-radius:50%}.options .swatch[aria-pressed=true]{outline:3px solid #f1cd66;outline-offset:2px;border:2px solid #162421;padding:0}
 .hint{font-size:.7rem;color:#162421;background:#c0d5bd;border-radius:3px;padding:0 4px}.notes{display:block;margin-top:12px;font-size:.85rem;color:#c0d5bd}
-#status{padding:12px 0;color:#f1cd66;min-height:40px}[hidden]{display:none!important}
+#status{position:sticky;bottom:0;z-index:1;margin:0;padding:10px 12px;color:#f1cd66;background:#162421;border-top:1px solid #50695b}#status:empty{padding:0;border:0}
+[hidden]{display:none!important}
 #unknown{margin-top:14px;padding:10px;border:1px solid #f1cd66;border-radius:6px;font-size:.85rem}#unknown p{margin:0 0 8px;color:#f1cd66}
 #unknown div{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px}#unknown code{min-width:10em;overflow-wrap:anywhere}#unknown span{flex:1;color:#c0d5bd}
 #unknown button{padding:4px 8px;font-size:.8rem}

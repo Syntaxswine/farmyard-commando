@@ -221,9 +221,16 @@ Import reads every stamp as a date, in whatever form it comes, and treats
 anything else as undated. A copy dated more than a minute ahead of this
 browser's clock comes from a clock running fast (or this one runs slow).
 - It never replaces an answer here.
-- Where there is none, it lands dated now, so the skew stops there.
-- Import names, by building, what it replaced, what it did not take because the
-  copy here is newer, and what it kept here against a copy dated ahead.
+- Where there is none, it lands with its own stamp. An edit made on top of it is
+  then dated after it, and keeps its order on every machine.
+- A stamp more than a day ahead means a broken clock, and is read as undated.
+- If import keeps the copy here against a copy dated ahead, set whichever clock
+  is off, then import again.
+
+Import names what it replaced, what it did not take because the copy here is
+newer, and what it kept here against a copy dated ahead: up to 20 buildings per
+list, then a count. An identical copy, such as one in the file you just
+exported, changes nothing and is not mentioned.
 
 Until the reference files load, nothing saves, imports or exports.
 
@@ -284,7 +291,9 @@ Chromium, through its own controls, and the workshop CI job runs it. It covers:
 - stamps dated ahead, without milliseconds, as epoch numbers, or not dates at
   all;
 - real clicks right after typing a date or a note;
-- re-keying;
+- focus resting in a field while another tab saves or clears;
+- a door marked and removed on the mini-map with real clicks;
+- re-keying, with the whole export and one id renamed;
 - unknown answers.
 
 Any uncaught page error fails it.

@@ -57,6 +57,15 @@ const importFile = async (page, doc, expect = '^(Imported|Import failed)') => {
 const option = (page, field, text) => page.locator('#fields fieldset').nth(field).locator('button', {hasText: new RegExp(`^${text}`)});  // "Sure", not "Unsure"
 const pressed = (page, field, text) => page.waitForFunction(([n, t]) => [...document.querySelectorAll('#fields fieldset')[n].querySelectorAll('button')]
   .some(b => b.textContent.includes(t) && b.getAttribute('aria-pressed') === 'true'), [field, text]);
+// A real click on the mini-map at a town point: the midpoint of a building's first outline edge lies on one of its 1 m edges.
+const town = JSON.parse(await fs.readFile(path.join(root, 'maps/mount-dora/features.json'), 'utf8')).features;
+const edgeMid = id => { const [a, b] = town.find(f => f.id === id).geometry.coordinates[0][0]; return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; };
+const clickTown = async (page, [x, y]) => {
+  await page.locator('#minimap').scrollIntoViewIfNeeded();   // a real click needs the map on screen
+  const at = await page.evaluate(([x, y]) => { const svg = document.getElementById('minimap'), p = svg.createSVGPoint(); p.x = x; p.y = y;
+    const c = p.matrixTransform(svg.getScreenCTM()); return [c.x, c.y]; }, [x, y]);
+  await page.mouse.click(at[0], at[1]);
+};
 
 const browser = await chromium.launch({headless: true});
 let passed = 0;
@@ -104,7 +113,10 @@ try {
     await page.fill('#note', 'typed while loading'); await page.dispatchEvent('#note', 'change');
     await page.fill('#imagery', '2024-04'); await page.dispatchEvent('#imagery', 'change');
     await page.locator('body').press('2');
+    await importFile(page, {kind: 'mount-dora-house-survey', version: 3, answers: {'osm-way-8': {stories: '1', at: old(4)}}}, 'export and import are off');
+    await page.click('#export');
     assert.deepEqual(await stored(page), saved, 'nothing written while loading');
+    assert.equal(downloads, 0);
     release(); await loaded(page);
     assert.deepEqual(await stored(page), saved, 'nor afterwards, from what was typed while loading');
   });
@@ -166,10 +178,10 @@ try {
     const hour = Date.now() + 3600e3, noMillis = new Date(hour).toISOString().replace(/\.\d{3}Z$/, 'Z');
     await importFile(page, {kind: 'mount-dora-house-survey', version: 3, answers: {[HOUSE]: {stories: '4', at: noMillis}, [OTHER]: {stories: '2', at: hour},
       [THIRD]: {stories: '3', at: 'never'}, [GONE]: {stories: '1', at: noMillis}}});
-    assert.match(await statusLine(page), new RegExp(`3 dated ahead of this clock.*the copy here was kept for ${HOUSE}`));
+    assert.match(await statusLine(page), new RegExp(`3 dated ahead of this clock.*the copy here was kept for ${HOUSE}: set the clock that is off`));
     let now = await stored(page);
     assert.deepEqual([now[HOUSE].roofShape, now[HOUSE].stories], ['gable', undefined], 'a copy dated ahead never replaces an answer made here');
-    assert.ok(Date.parse(now[OTHER].at) <= Date.now() + 5000, 'where nothing was held it lands stamped now, so the skew stops');
+    assert.equal(now[OTHER].at, new Date(hour).toISOString(), 'where nothing was held it lands with its own stamp, in one form');
     assert.deepEqual([now[THIRD].stories, 'at' in now[THIRD]], ['3', false], 'a malformed stamp counts as undated');
     await page.selectOption('#show', 'all');               // the imported buildings are answered now, so To do hides them
     for (const id of [OTHER, THIRD]) { await page.click(`#queue button[data-id="${id}"]`); await option(page, 1, 'Hip').click(); }
@@ -213,24 +225,69 @@ try {
     await option(first, 6, 'Front').click();               // a change the second tab has not seen
     await second.fill('#note', 'stale tab'); await second.dispatchEvent('#note', 'change');   // so the note syncs on its own
     await second.mouse.click(5, 5);                        // focus off the note now: a later blur would save, and sync, again
+    await option(first, 8, 'Likely').click();              // another change it has not seen, then a door marked there
+    await clickTown(second, edgeMid(HOUSE));
     const house = (await stored(first))[HOUSE];
-    assert.deepEqual([house.roofShape, house.wall, house.porch, house.note], ['gable', 'wood-siding', 'front', 'stale tab']);
+    assert.deepEqual([house.roofShape, house.wall, house.porch, house.note, house.confidence, house.entrances?.length],
+      ['gable', 'wood-siding', 'front', 'stale tab', 'likely', 1]);
     await first.locator('#unknown div', {hasText: GONE}).locator('button').click();
     assert.ok(GONE in ((await exportFile(second)).cleared || {}), 'the stale tab\'s export carries the other tab\'s Drop');
-    await importFile(second, {kind: 'mount-dora-house-survey', version: 3, answers: {[HOUSE]: {stories: '1', at: old(2)}}});
-    assert.match(await statusLine(second), new RegExp(`not taken, because the copy here is newer: ${HOUSE}`));
+    // A Clear in the stale tab clears what the other tab answered since.
+    await first.click(`#queue button[data-id="${OTHER}"]`); await second.click(`#queue button[data-id="${OTHER}"]`);
+    await option(first, 1, 'Hip').click();
+    await second.click('#clear');
+    assert.equal((await stored(first))[OTHER].cleared, true, 'the stale tab\'s Clear sees the answer it was not shown');
+    // An import there compares with what the other tab saved since.
+    await first.click(`#queue button[data-id="${THIRD}"]`); await option(first, 1, 'Flat').click();
+    await importFile(second, {kind: 'mount-dora-house-survey', version: 3, answers: {[THIRD]: {stories: '1', at: old(2)}}});
+    assert.match(await statusLine(second), new RegExp(`^Imported 0 answers; not taken, because the copy here is newer: ${THIRD}\\.$`));
   });
 
-  await scenario('re-keying an answer: the import says whether it took the renamed copy', async context => {
+  await scenario('a tab with focus resting in a field never saves its old text over another tab\'s', async context => {
+    const first = await open(context); await loaded(first);
+    await first.click(`#queue button[data-id="${HOUSE}"]`);
+    await first.click('#note'); await first.keyboard.type('gate on the left');
+    await first.mouse.click(5, 5);                         // a real blur: saved
+    await first.click('#note');                            // focus back in, nothing typed
+    const second = watch(await context.newPage());
+    await second.goto(base); await loaded(second);         // a new tab opens on the same building
+    await second.fill('#note', 'gate on the right, corrected'); await second.dispatchEvent('#note', 'change');
+    await first.waitForFunction(() => document.getElementById('note').value === 'gate on the right, corrected');
+    await first.reload(); await loaded(first);
+    assert.equal((await stored(first))[HOUSE].note, 'gate on the right, corrected', 'closing the first tab does not save its old text');
+    await first.click('#note');
+    await second.click('#clear');
+    await first.waitForFunction(() => document.getElementById('note').value === '');
+    await first.reload(); await loaded(first);
+    assert.equal((await stored(first))[HOUSE].cleared, true, 'nor bring back what the other tab cleared');
+  });
+
+  await scenario('a door is marked on the mini-map with a real click, and removed with another', async context => {
+    const page = await open(context); await loaded(page);
+    await page.click(`#queue button[data-id="${HOUSE}"]`);
+    await clickTown(page, edgeMid(HOUSE));
+    const marked = (await stored(page))[HOUSE].entrances;
+    assert.equal(marked.length, 1);
+    assert.match(await page.textContent('#entrances'), /^1 entrance marked/);
+    assert.equal(await page.locator('#minimap line[stroke="#e8553f"]').count(), 1);
+    await clickTown(page, edgeMid(HOUSE));
+    assert.equal((await stored(page))[HOUSE]?.entrances, undefined, 'the second click removes it');
+  });
+
+  await scenario('re-keying an answer: the import says whether it took the renamed copy, and names only that', async context => {
     const page = await open(context, {[GONE]: {stories: '2', note: 'moved', at: old(1)}}); await loaded(page);
+    await page.click(`#queue button[data-id="${THIRD}"]`); await option(page, 1, 'Gable').click();
     const doc = await exportFile(page);
-    await importFile(page, {...doc, answers: {[OTHER]: doc.answers[GONE]}});
-    assert.match(await statusLine(page), /^Imported 1 answer/);
+    assert.deepEqual(Object.keys(doc.answers).sort(), [GONE, THIRD].sort());
+    // The whole export, one id renamed, as the README says: the unchanged answer is not reported.
+    const renamed = to => { const answers = {...doc.answers, [to]: doc.answers[GONE]}; delete answers[GONE]; return {...doc, answers}; };
+    await importFile(page, renamed(OTHER));
+    assert.equal(await statusLine(page), 'Imported 1 answer.');
     assert.equal((await stored(page))[OTHER].note, 'moved');
-    // Where the building already has a newer answer, the import says so before anything is dropped.
+    // Where the building already has a newer answer, the import names it, and only it.
     await page.click(`#queue button[data-id="${HOUSE}"]`); await option(page, 1, 'Gable').click();
-    await importFile(page, {...doc, answers: {[HOUSE]: doc.answers[GONE]}});
-    assert.match(await statusLine(page), new RegExp(`^Imported 0 answers; not taken, because the copy here is newer: ${HOUSE}`));
+    await importFile(page, renamed(HOUSE));
+    assert.equal(await statusLine(page), `Imported 0 answers; not taken, because the copy here is newer: ${HOUSE}.`);
   });
 
   await scenario('an answer for an unknown building id is listed with what it holds, exported and kept on import', async context => {

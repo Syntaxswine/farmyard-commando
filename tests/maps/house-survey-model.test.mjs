@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
-import {AHEAD_MS, cleanAnswer, edgeKey, exportDocument, mergeAnswers, nearestEdge, newestPerId, outlineText, pinMismatches, queueEntries, stampAfter,
+import {AHEAD_MS, BROKEN_MS, cleanAnswer, edgeKey, exportDocument, mergeAnswers, nearestEdge, newestPerId, outlineText, pinMismatches, queueEntries, stampAfter,
   staleEntrances, toggleEntrance, unitEdges, unknownAnswers,
   warningsFor} from '../../maps/mount-dora/reference/survey/model.js';
 
@@ -126,17 +126,38 @@ test('import reads every stamp as a date, never lets a copy dated ahead replace 
     a: {stories: '2', at: '2026-11-04T11:45:00+00:00'},           // newer, with an offset: replaces
     b: {stories: '2', at: new Date(ahead).toISOString()},           // dated ahead: never replaces what is here
     c: {stories: '2', at: '2026-11-04T11:00:00Z'},                  // older, with no milliseconds: not taken
-    d: {stories: '2', at: ahead},                                   // dated ahead, an epoch number, nothing here: lands stamped now
+    d: {stories: '2', at: ahead},                                   // dated ahead, an epoch number, nothing here: lands with its own stamp
     e: {stories: '2', at: 'never'},                                 // not a date: lands undated
     f: {stories: '2', at: '2026-11-04T11:59:30.000Z'}}}, KEYS, known, now);
-  assert.deepEqual([result.replaced, result.older, result.keptAhead, result.ahead], [['a'], ['c'], ['b'], 2]);
+  assert.deepEqual([result.replaced, result.older, result.keptAhead, result.ahead, result.broken], [['a'], ['c'], ['b'], 2, 0]);
   assert.deepEqual([result.answers.a.at, result.answers.b, result.answers.c, result.answers.d.at, 'at' in result.answers.e, result.answers.f.at],
-    ['2026-11-04T11:45:00.000Z', mine.b, mine.c, '2026-11-04T12:00:00.000Z', false, '2026-11-04T11:59:30.000Z'], 'one stamp form throughout');
+    ['2026-11-04T11:45:00.000Z', mine.b, mine.c, new Date(ahead).toISOString(), false, '2026-11-04T11:59:30.000Z'], 'one stamp form throughout');
   // Compared as dates, a stamp without milliseconds is not mistaken for a newer one, and an undated copy outranks nothing.
   assert.equal(newestPerId({x: {stories: '1', at: '2026-11-04T11:00:00.500Z'}}, {x: {stories: '2', at: '2026-11-04T11:00:00Z'}}).x.stories, '1');
   assert.equal(newestPerId({x: {stories: '1', at: '2026-11-04T11:00:00.000Z'}}, {x: {stories: '2'}}).x.stories, '1');
-  // So a local edit on top of an undated or a pulled-back copy always wins.
-  for (const id of ['d', 'e']) assert.ok(Date.parse(stampAfter(result.answers[id], now)) >= now, id);
+  // An edit made on top of a copy dated ahead is dated after it, so it wins.
+  const onTop = {stories: '9', at: stampAfter(result.answers.d, now)};
+  assert.equal(newestPerId({x: result.answers.d}, {x: onTop}).x, onTop);
+  // More than a day ahead, a clock is broken: the stamp is read as undated, so it cannot carry into later edits.
+  const broken = mergeAnswers({}, {answers: {g: {stories: '2', at: now + BROKEN_MS + 1}}}, KEYS, new Set(['g']), now);
+  assert.deepEqual([broken.broken, 'at' in broken.answers.g, stampAfter(broken.answers.g, now)], [1, false, new Date(now).toISOString()]);
+  // An identical copy, as when importing the file just exported, changes nothing and is reported nowhere.
+  const same = mergeAnswers(mine, {answers: {a: mine.a, b: mine.b}}, KEYS, known, now);
+  assert.deepEqual([same.added, same.replaced, same.older, same.keptAhead], [0, [], [], []]);
+});
+
+test('two clocks, one ten minutes slow: an edit made on top of the other\'s answer keeps its order on both machines', () => {
+  const known = new Set(['x']), real = t => Date.parse(`2026-11-04T12:${t}:00.000Z`), slow = ms => ms - 600000;
+  // B (a right clock) answers at 12:00. A, whose clock runs ten minutes slow, imports at 12:01.
+  const fromB = {answers: {x: {stories: '2', at: new Date(real('00')).toISOString()}}};
+  const atA = mergeAnswers({}, fromB, KEYS, known, slow(real('01'))).answers;
+  // A adds a note at 12:02 real (11:52 on A's clock), on top of B's answer.
+  const edit = {stories: '2', note: 'gate', at: stampAfter(atA.x, slow(real('02')))};
+  // B imports A's export: the note is newer, and it lands.
+  const atB = mergeAnswers(fromB.answers, {answers: {x: edit}}, KEYS, known, real('03'));
+  assert.deepEqual([atB.replaced, atB.answers.x.note], [['x'], 'gate']);
+  // A imports B's file again: its own edit stays.
+  assert.equal(mergeAnswers({x: edit}, fromB, KEYS, known, slow(real('04'))).answers.x.note, 'gate');
 });
 
 test('an entrance the outline has since lost is found, so it can be removed', () => {

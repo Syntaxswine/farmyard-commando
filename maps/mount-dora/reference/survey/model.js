@@ -107,36 +107,44 @@ export function newestPerId(a, b) {
 
 // The stamp for a local write: now, or just after the copy it replaces when
 // that copy is dated later, so the write always outranks what it replaced.
-// Stored stamps are never more than AHEAD_MS past a clock (import caps them), so
-// this cannot run away into the future.
+// Import reads a stamp more than BROKEN_MS ahead as undated, so a broken clock
+// elsewhere cannot carry this far into the future.
 export function stampAfter(previous, now = Date.now()) {
   const before = when(previous?.at);
   return new Date(before === null ? now : Math.max(now, before + 1)).toISOString();
 }
 
-// A copy dated more than this past the importing browser's clock came from a
-// clock running fast (or this one runs slow).
-export const AHEAD_MS = 60000;
+// Stamps past the importing browser's clock. Within AHEAD_MS they are ordinary.
+// Up to BROKEN_MS they come from a clock running fast, or this one runs slow.
+// Further than that, the clock is broken.
+export const AHEAD_MS = 60000, BROKEN_MS = 86400000;
+const canonical = a => JSON.stringify(Object.keys(a).sort().map(k => [k, a[k]]));
 
-// Import. Each copy's `at` is read as a date (anything else counts as undated)
-// and kept in one form. Per building the newer copy wins, an answer or a
-// clearing; an undated or empty copy never outranks one held here. A copy dated
-// ahead never replaces anything held here, and where nothing is held it lands
-// stamped now, so the skew cannot carry into later edits. Answers for ids this
-// queue lacks are kept too. Reports, by id, what it replaced, what it left
-// because it was older, and what it kept here against a copy dated ahead.
+// Import. Each copy's `at` is read as a date and kept in one form; anything not
+// a date, or more than BROKEN_MS ahead, counts as undated. Per building the
+// newer copy wins, an answer or a clearing. An undated or empty copy never
+// outranks one held here, and an identical copy changes nothing and is not
+// reported.
+// A copy dated ahead never replaces anything held here. Where nothing is held
+// it lands with its own stamp, so an edit made on top of it, dated after it,
+// keeps its order on every machine. Answers for ids this queue lacks are kept
+// too.
+// Reports, by id, what it replaced, what it left because the copy here is
+// newer, and what it kept here against a copy dated ahead.
 export function mergeAnswers(mine, doc, keys, known, now = Date.now()) {
   const answers = {...mine}, live = a => a && (isCleared(a) || cleanAnswer(a, keys)) ? a : null;
+  const out = {added: 0, cleared: 0, unknown: 0, ahead: 0, broken: 0, replaced: [], older: [], keptAhead: []};
   const dated = (base, at) => {
-    const t = when(at), ahead = t !== null && t > now + AHEAD_MS;
-    return {next: t === null ? base : {...base, at: new Date(ahead ? now : t).toISOString()}, ahead};
+    let t = when(at);
+    if (t !== null && t > now + BROKEN_MS) { out.broken++; t = null; }
+    return {next: t === null ? base : {...base, at: new Date(t).toISOString()}, ahead: t !== null && t > now + AHEAD_MS};
   };
   const incoming = [...Object.entries(doc.answers || {}).map(([id, a]) => { const c = cleanAnswer(a, keys); return [id, c && dated(c, a.at)]; }),
     ...Object.entries(doc.cleared || {}).map(([id, at]) => [id, when(at) === null ? null : dated({cleared: true}, at)])];
-  const out = {added: 0, cleared: 0, unknown: 0, ahead: 0, replaced: [], older: [], keptAhead: []};
   for (const [id, item] of incoming) {
     if (!item) continue;
     const {next, ahead} = item, held = live(answers[id]);
+    if (held && canonical(held) === canonical(next)) continue;
     if (ahead) out.ahead++;
     if (held && ahead) { out.keptAhead.push(id); continue; }
     if (held && !(rank(next) > rank(held))) { out.older.push(id); continue; }

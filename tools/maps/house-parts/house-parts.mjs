@@ -30,8 +30,23 @@ export const FRAME = {
   origin: 'the minimum corner of the outline',
   cells: 'cell [x, y] is the 1 m square from x to x+1 and y to y+1; floorCells rows are [y, x0, x1] covering x0 to x1-1',
   levels: 'every level from 0 to storeys has floor on floorCells: level 0 is the ground floor and level storeys is the roof deck',
+  walls: 'walls are centrelines on the outline; the kit wall, kit.wallThicknessM thick, is centred on its line',
   rotation: 'world = at + R(rotationDeg) * (p - pivot), where R turns +x toward +y, which is clockwise on a north-up map',
+  angles: 'roof.ridgeAxisDeg is the ridge direction in this frame, degrees from +x toward +y, 0 to 180; roof.ridgeBearingMeasuredDeg is its compass bearing on the real house',
+  geographic: 'latitude and longitude are WGS 84 degrees of placements.true.at, the centre of the outline bounds on the real house',
 };
+
+// Every part comes out of the town's derived feature database, which carries
+// the ODbL (maps/mount-dora/source/NOTICE.txt); a file used on its own keeps it.
+const LICENSE = {license: 'ODbL-1.0', licenseUrl: 'https://opendatacommons.org/licenses/odbl/1-0/', notice: 'maps/mount-dora/source/NOTICE.txt'};
+const OSM_CREDIT = '© OpenStreetMap contributors, https://www.openstreetmap.org/copyright';
+const COUNTY_CREDIT = 'Lake County Property Appraiser (Florida) public records';
+const LIDAR_CREDIT = 'USGS 3D Elevation Program lidar, public domain';
+export const credits = (usesCounty, lidarDataset) => [OSM_CREDIT, ...(usesCounty ? [COUNTY_CREDIT] : []), `${LIDAR_CREDIT} (${lidarDataset})`];
+
+// The grid fit is inverted to find a house's true pose. These methods moved
+// the plan by componentCentre and translationMetres alone, so they invert.
+const INVERTIBLE_FITS = new Set(['shared-component-dominant-axis']);
 
 // Native kit dimensions the town was built with (Nautilus wall runs at the
 // workshop pin, docs/wall-runs.md); wall height and storey pitch also come per
@@ -55,15 +70,15 @@ export function pyFloat(x) {
 }
 
 // A number the generator wrote as a Python float (all wall coordinates are).
-export class PyFloat { constructor(value) { this.value = value; } }
+// It serialises as a marked string that pyDumps turns back into the float.
+const FLOAT_MARK = '\u0000';
+export class PyFloat { constructor(value) { this.value = value; } toJSON() { return FLOAT_MARK + pyFloat(this.value) + FLOAT_MARK; } }
 
 // json.dumps(value, ensure_ascii=False, separators=(',', ':')) + '\n', the
-// generator's `encoded`. PyFloat values print as Python floats.
+// generator's `encoded`. Compact JSON.stringify writes the same bytes for
+// everything else the sectors hold; PyFloat values print as Python floats.
 export function pyDumps(value) {
-  const out = v => v instanceof PyFloat ? pyFloat(v.value) : Array.isArray(v) ? '[' + v.map(out).join(',') + ']'
-    : v !== null && typeof v === 'object' ? '{' + Object.entries(v).map(([k, x]) => JSON.stringify(k) + ':' + out(x)).join(',') + '}'
-    : JSON.stringify(v);
-  return out(value) + '\n';
+  return JSON.stringify(value).replace(/"\\u0000([-+.e\d]+)\\u0000"/g, '$1') + '\n';
 }
 
 const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
@@ -223,13 +238,15 @@ export function shiftTreatment(treatment, [sx, sy]) {
 
 // The art kit's building placement, rebuilt from a part. The kit derives the
 // anchor, bounds, polygons and solids from the outline; this is the inverse of
-// what buildParts takes from it, and must reproduce PLACEMENTS exactly.
-export function placementFromPart(part) {
+// what buildParts takes from it, and must reproduce PLACEMENTS exactly. In the
+// town the kit skips facades a neighbour draws (placements.grid
+// .suppressedWallEdges); a part used on its own draws every facade.
+export function placementFromPart(part, {inTown = true} = {}) {
   const [x0, y0] = part.placements.grid.origin, [w, h] = part.size, a = part.appearance;
   const polygons = shiftOutline(part.outline, [x0, y0]);
   return {id: part.id, kind: 'building', sourceIds: [part.id], anchor: [x0 + w / 2, y0 + h / 2], bounds: [x0 - .5, y0 - .5, x0 + w + .5, y0 + h + .5], polygons,
     treatment: shiftTreatment(a.treatment, [x0, y0]), seed: a.seed, collisionPolicy: a.collisionPolicy, solids: [{kind: 'polygon', polygons}],
-    replacesSourceIds: [part.id], provenance: a.provenance, suppressedWallEdges: a.suppressedWallEdges};
+    replacesSourceIds: [part.id], provenance: a.provenance, suppressedWallEdges: inTown ? part.placements.grid.suppressedWallEdges : []};
 }
 
 const shiftOutline = (outline, [sx, sy], digits = null) =>
@@ -259,7 +276,7 @@ export function localEntrances(survey, [x0, y0]) {
     records: survey.entrances.map(e => ({edge: e.segment.map(([x, y]) => [x - x0, y - y0])}))};
 }
 
-function localEvidence(evidence, origin) {
+export function localEvidence(evidence, origin) {
   if (!evidence?.survey?.entrances) return evidence ?? null;
   return {...evidence, survey: {...evidence.survey, entrances: localEntrances(evidence.survey, origin).records}};
 }
@@ -296,6 +313,22 @@ export function iou(p, q, step = .05) {
     inter += both; union += totalLength(a) + totalLength(b) - both;
   }
   return union ? inter / union : 0;
+}
+
+// Area centroid of a polygon set, whatever each ring's winding; holes subtract.
+export function centroid(polygons) {
+  let weight = 0, sx = 0, sy = 0;
+  for (const polygon of polygons) polygon.forEach((ring, k) => {
+    let area = 0, mx = 0, my = 0;
+    for (let i = 0; i + 1 < ring.length; i++) {
+      const [ax, ay] = ring[i], [bx, by] = ring[i + 1], cross = ax * by - bx * ay;
+      area += cross / 2; mx += (ax + bx) * cross / 6; my += (ay + by) * cross / 6;
+    }
+    if (!area) return;
+    const w = (k ? -1 : 1) * Math.abs(area);
+    weight += w; sx += w * mx / area; sy += w * my / area;
+  });
+  return [sx / weight, sy / weight];
 }
 
 // A point of the part placed with a pose {pivot, at, rotationDeg}.
@@ -335,16 +368,28 @@ export function buildParts(town) {
   return buildings.map(f => {
     const record = records.get(f.id), [x0, y0, x1, y1] = record.bounds, origin = [x0, y0], np = f.nativeProxy, d = record.derivation;
     const local = ([x, y]) => [x - x0, y - y0], outline = shiftOutline(record.geometry.coordinates, [-x0, -y0]);
-    const theta = d.dominantAxisDegrees, centre = d.componentCentre, shift = d.translationMetres;
-    const grid = {pivot: [centre[0] + shift[0] - x0, centre[1] + shift[1] - y0], at: [centre[0] + shift[0], centre[1] + shift[1]], rotationDeg: 0};
-    const truth = {pivot: grid.pivot, at: centre, rotationDeg: theta}, source = f.geographicGeometry.coordinates;
+    const theta = d.dominantAxisDegrees, source = f.geographicGeometry.coordinates;
+    // Any pivot gives the same rigid placement. The centre of the bounds (also
+    // the art kit's anchor) keeps each pose's `at`, and its latitude, on the house.
+    const pivot = [(x1 - x0) / 2, (y1 - y0) / 2], grid = {pivot, at: [x0 + pivot[0], y0 + pivot[1]], rotationDeg: 0};
+    // The true pose undoes the grid fit, which turned the measured house by
+    // -theta about componentCentre and moved it by translationMetres. A
+    // reviewed override moved the plan by hand instead, so its true pose sets
+    // the plan's centroid on the measured centroid at the measured angle.
+    const inverts = INVERTIBLE_FITS.has(d.method);
+    const fitted = inverts ? {pivot: [d.componentCentre[0] + d.translationMetres[0] - x0, d.componentCentre[1] + d.translationMetres[1] - y0], at: d.componentCentre}
+      : {pivot: centroid(outline), at: centroid(source)};
+    const truth = {pivot, at: placePoint(pivot, {...fitted, rotationDeg: theta}), rotationDeg: theta};
     const posed = pose => outline.map(polygon => polygon.map(ring => ring.map(v => placePoint(v, pose))));
-    const [lat, lon] = town.projection.toLatLon(centre[0], centre[1]);
+    const [lat, lon] = town.projection.toLatLon(truth.at[0], truth.at[1]);
     const roof = roofs.get(f.id), r = roof.record, rf = r.roof || {};
     const placement = art.get(f.id);
     if (!placement) throw Error('No art placement for ' + f.id);
+    const address = addressOf(f, references.get(f.id));
+    const county = Boolean(f.county || np.evidence?.county || [np.storiesSource, np.materialSource, address?.source].some(s => s?.startsWith('county')));
     const part = {
-      kind: KIND, version: VERSION, id: f.id, name: f.tags?.name ?? null, address: addressOf(f, references.get(f.id)), frame: FRAME,
+      kind: KIND, version: VERSION, id: f.id, name: f.tags?.name ?? null, address,
+      rights: {...LICENSE, attribution: credits(county, dataset)}, frame: FRAME,
       size: [x1 - x0, y1 - y0], outline, floorCells: floorCells(outline),
       walls: (wallsOf.get(f.id) || []).map(w => ({a: local(w.a), b: local(w.b), sharedWith: w.owners.filter(o => o !== f.id), sourceWallId: w.id})),
       storeys: {count: np.stories, source: np.storiesSource, ...(np.halfStory ? {halfStorey: true} : {})},
@@ -355,24 +400,31 @@ export function buildParts(town) {
         groundM: r.groundM, eaveM: r.eaveM, upperEaveM: r.upperEaveM ?? null, upperShare: r.upperShare ?? null, ridgeM: r.ridgeM, coverage: r.coverage,
         heights: 'eaveM, upperEaveM and ridgeM are metres above groundM; groundM is NAVD88 metres; ridgeAxisDeg is in the part frame',
         source: {dataset, observed: acquired.first, file: roof.file}},
-      appearance: {kit: 'Mount Dora production art kit (sites/tactical-animal/dist/mission-art/mount-dora)', artRevision: town.art.ART_REVISION,
-        treatment: shiftTreatment(placement.treatment, [-x0, -y0]), seed: placement.seed, collisionPolicy: placement.collisionPolicy,
-        suppressedWallEdges: placement.suppressedWallEdges, provenance: placement.provenance},
+      appearance: {kit: 'Mount Dora production art kit (sites/tactical-animal/dist/mission-art/mount-dora)',
+        treatment: shiftTreatment(placement.treatment, [-x0, -y0]), seed: placement.seed, collisionPolicy: placement.collisionPolicy, provenance: placement.provenance},
       entrances: localEntrances(np.evidence?.survey, origin),
-      placements: {pivot: grid.pivot.map(v => round(v, 6)),
-        grid: {frame: 'Mount Dora town metres, east and south', origin, at: grid.at.map(v => round(v, 6)), rotationDeg: 0, fitIoU: round(iou(posed(grid), source), 3)},
-        true: {frame: 'Mount Dora town metres, east and south', at: centre.map(v => round(v, 6)), rotationDeg: round(theta, 6),
-          latitude: round(lat, 8), longitude: round(lon, 8), fitIoU: round(iou(posed(truth), source), 3), method: d.method}},
+      placements: {pivot,
+        grid: {frame: 'Mount Dora town metres, east and south', origin, at: grid.at, rotationDeg: 0, fitIoU: round(iou(posed(grid), source), 3),
+          suppressedWallEdges: placement.suppressedWallEdges},
+        true: {frame: 'Mount Dora town metres, east and south', at: truth.at.map(v => round(v, 6)), rotationDeg: round(theta, 6),
+          latitude: round(lat, 8), longitude: round(lon, 8), fitIoU: round(iou(posed(truth), source), 3), method: d.method,
+          basis: inverts ? 'the inverse of the grid fit' : 'the plan centroid on the measured centroid at the measured angle; the plan was moved by review, so the fit does not invert'}},
       evidence: localEvidence(np.evidence, origin),
       source: f.osm ? {osm: f.osm, tags: f.tags} : {county: f.county, tags: f.tags},
       provenance: {project: town.project.id, authoredLayoutSHA256: f.authoredLayoutSHA256, componentIds: record.componentIds, sectors: f.nativeSectors,
         derivation: {method: d.method, dominantAxisDegrees: d.dominantAxisDegrees, phase: d.phase, translationMetres: d.translationMetres, note: d.note},
-        metrics: record.metrics, geographicOutline: shiftOutline(source, [-x0, -y0], 4)},
+        metrics: record.metrics,
+        // The measured footprint in the part frame: the true pose lays it on the real house.
+        geographicOutline: source.map(polygon => polygon.map(ring => ring.map(v => placePoint(v, {pivot: truth.at, at: pivot, rotationDeg: -theta}).map(n => round(n, 4)))))},
     };
-    const rebuilt = placementFromPart(part);
-    if (JSON.stringify(sortKeys(rebuilt)) !== JSON.stringify(sortKeys(placement))) throw Error('The art placement is not derivable from its part: ' + f.id);
     return part;
   });
+}
+
+// Parts whose art placement does not rebuild exactly from the part.
+export function artMismatches(parts, town) {
+  const kit = new Map(town.art.PLACEMENTS.filter(p => p.kind === 'building').map(p => [p.id, p]));
+  return parts.filter(part => JSON.stringify(sortKeys(placementFromPart(part))) !== JSON.stringify(sortKeys(kit.get(part.id)))).map(part => part.id);
 }
 
 const sortKeys = v => Array.isArray(v) ? v.map(sortKeys) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map(k => [k, sortKeys(v[k])])) : v;
@@ -433,6 +485,22 @@ export function stampSectors(parts, town) {
   return {sectors: out, slivers};
 }
 
+const clip = v => { const s = JSON.stringify(v); return s === undefined ? '(absent)' : s.length > 160 ? s.slice(0, 160) + '…' : s; };
+
+// The first JSON path where two parsed documents differ, so a mismatch names
+// the field a generator change touched. Null when only bytes differ.
+export function firstDifference(committed, stamped, at = '') {
+  if (Object.is(committed, stamped)) return null;
+  const objects = [committed, stamped].every(v => v && typeof v === 'object') && Array.isArray(committed) === Array.isArray(stamped);
+  if (!objects) return {path: at || '(document)', committed: clip(committed), stamped: clip(stamped)};
+  const keys = Array.isArray(committed) ? Array.from({length: Math.max(committed.length, stamped.length)}, (_, i) => i) : [...new Set([...Object.keys(committed), ...Object.keys(stamped)])];
+  for (const key of keys) {
+    const found = firstDifference(committed[key], stamped[key], at + (Array.isArray(committed) ? `[${key}]` : `.${key}`));
+    if (found) return found;
+  }
+  return null;
+}
+
 // Compares stamped sectors with the committed files: the round trip.
 export function roundTrip(parts, town) {
   const {sectors} = stampSectors(parts, town), rows = [];
@@ -440,7 +508,9 @@ export function roundTrip(parts, town) {
     const mine = sectors.get(sector.id), same = mine.equals(sector.bytes);
     let at = -1;
     if (!same) { at = 0; while (at < mine.length && mine[at] === sector.bytes[at]) at++; }
-    rows.push({id: sector.id, identical: same, ...(same ? {} : {firstDifference: at, committed: sector.bytes.subarray(Math.max(0, at - 60), at + 60).toString('utf8'), stamped: mine.subarray(Math.max(0, at - 60), at + 60).toString('utf8')})});
+    rows.push({id: sector.id, identical: same, ...(same ? {} : {
+      field: firstDifference(JSON.parse(sector.bytes.toString('utf8')), JSON.parse(mine.toString('utf8'))) ?? 'the values agree but the bytes differ (key order, number formatting or spacing)',
+      byte: at, committed: sector.bytes.subarray(Math.max(0, at - 60), at + 60).toString('utf8'), stamped: mine.subarray(Math.max(0, at - 60), at + 60).toString('utf8')})});
   }
   return {sectors: rows.length, identical: rows.filter(r => r.identical).length, mismatches: rows.filter(r => !r.identical)};
 }
@@ -467,10 +537,12 @@ export function validatePart(part) {
   if (!points.every(p => Number.isInteger(p[0]) && Number.isInteger(p[1]))) fail('outline is not on the 1 m grid');
   if (Math.min(...xs) !== 0 || Math.min(...ys) !== 0) fail('outline does not start at the origin');
   if (Math.max(...xs) !== part.size[0] || Math.max(...ys) !== part.size[1]) fail('size is not the outline extent');
-  const rings = part.outline.flat(1);
-  if (rings.some(r => r.length < 5 || r[0].join() !== r.at(-1).join())) fail('a ring is not closed');
-  const edges = rings.flatMap(r => r.slice(1).map((b, i) => [r[i], b]));
-  if (edges.some(([a, b]) => a[0] !== b[0] && a[1] !== b[1])) fail('an outline edge is not axis-aligned');
+  const rings = part.outline.flat(1), edges = rings.flatMap(r => r.slice(1).map((b, i) => [r[i], b]));
+  const open = rings.some(r => r.length < 5 || r[0].join() !== r.at(-1).join()), slanted = edges.some(([a, b]) => a[0] !== b[0] && a[1] !== b[1]);
+  if (open) fail('a ring is not closed');
+  if (slanted) fail('an outline edge is not axis-aligned');
+  // The cell and wall checks need a closed, axis-aligned outline.
+  if (open || slanted) return problems;
   if (JSON.stringify(floorCells(part.outline)) !== JSON.stringify(part.floorCells)) fail('floorCells are not the outline cells');
   const wallSegments = part.walls.map(w => [w.a, w.b]);
   if (!wallSegments.flat(2).every(Number.isInteger)) fail('a wall is not on the 1 m grid');
@@ -497,14 +569,19 @@ export function formatIndex({parts, ...head}) {
 
 // ---- 24 x 24 blocks for the Nautilus workshop ----
 
-export const BLOCK = {size: 24, ground: 'yard', maxLevels: 6};
-export const blockFits = part => part.size[0] <= BLOCK.size && part.size[1] <= BLOCK.size && part.storeys.count + 1 <= BLOCK.maxLevels;
+// The engine treats a wall run that touches a block's edge as crossing into
+// the next block: wallsInSector (packages/map-core/wall-runs.js at 2502646)
+// then refuses to place or capture that neighbour. So every block keeps at
+// least 1 m of yard on each side, and a house fits only up to 22 x 22 m.
+export const BLOCK = {size: 24, ground: 'yard', maxLevels: 6, marginM: 1};
+export const BLOCK_MAX_M = BLOCK.size - 2 * BLOCK.marginM;
+export const blockFits = part => part.size[0] <= BLOCK_MAX_M && part.size[1] <= BLOCK_MAX_M && part.storeys.count + 1 <= BLOCK.maxLevels;
 
 // A Nautilus `red-shift-block` v1 holding the house alone, centred, with its
 // walls as native wall runs. The workshop imports it, saves it in its Blocks
 // library and places it in any map; blocks land on the 24 m grid.
 export function toBlock(part, partSha256) {
-  if (!blockFits(part)) throw Error(part.id + ' does not fit a 24 x 24 block');
+  if (!blockFits(part)) throw Error(`${part.id} does not fit a block: it is ${part.size.join(' x ')} m with ${part.storeys.count} storeys, and a block holds at most ${BLOCK_MAX_M} x ${BLOCK_MAX_M} m and ${BLOCK.maxLevels - 1} storeys`);
   const [w, h] = part.size, ox = Math.floor((BLOCK.size - w) / 2), oy = Math.floor((BLOCK.size - h) / 2), storeys = part.storeys.count;
   const levels = Math.max(3, storeys + 1), terrain = Array.from({length: BLOCK.size}, () => Array(BLOCK.size).fill(BLOCK.ground));
   const upper = Array.from({length: levels - 1}, () => ({}));
@@ -514,6 +591,9 @@ export function toBlock(part, partSha256) {
   }
   const segments = part.walls.map(wall => ({id: wall.sourceWallId, a: [wall.a[0] + ox - .5, wall.a[1] + oy - .5], b: [wall.b[0] + ox - .5, wall.b[1] + oy - .5],
     z: 0, stories: storeys, material: part.material.wall}));
+  const low = BLOCK.marginM - .5, high = BLOCK.size - BLOCK.marginM - .5;
+  if (!segments.every(s => [...s.a, ...s.b].every(v => v >= low && v <= high))) throw Error(part.id + ': a wall would touch the block edge');
+  // The engine takes a name of 1 to 60 characters (validateMap in vendored maps.js at 2502646).
   return {kind: 'red-shift-block', version: 1, size: BLOCK.size, levels, name: (part.name || part.address?.text || part.id).slice(0, 60),
     terrain, upper, edges: {}, props: [], stairs: [], climbs: [], guards: [], wallRuns: {version: 1, segments},
     housePart: {id: part.id, sha256: partSha256, offset: [ox, oy], file: `${PARTS_DIR}/${part.id}.json`}};

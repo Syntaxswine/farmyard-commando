@@ -16,7 +16,7 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const {chromium} = await import(pathToFileURL(path.join(root, 'sites/tactical-animal/browser-tests/node_modules/playwright/index.mjs')).href);
-const STORE = 'mount-dora-house-survey-v1', HOUSE = 'county-1475627-1', OTHER = 'county-1082536-1', GONE = 'county-0000000-9';
+const STORE = 'mount-dora-house-survey-v1', HOUSE = 'county-1475627-1', OTHER = 'county-1082536-1', THIRD = 'county-1468612-1', GONE = 'county-0000000-9';
 const old = t => `2026-11-0${t}T00:00:00.000Z`;
 
 // The repository's read-only survey server, on a free port; stopped by PID at the end.
@@ -54,7 +54,7 @@ const importFile = async (page, doc, expect = '^(Imported|Import failed)') => {
   await page.waitForFunction(source => new RegExp(source).test(document.querySelector('p#status').textContent), expect);
 };
 // The button for an option of a field: fields in FIELDS order (0 storeys, 1 roof shape, 3 walls).
-const option = (page, field, text) => page.locator('#fields fieldset').nth(field).locator('button', {hasText: text});
+const option = (page, field, text) => page.locator('#fields fieldset').nth(field).locator('button', {hasText: new RegExp(`^${text}`)});  // "Sure", not "Unsure"
 const pressed = (page, field, text) => page.waitForFunction(([n, t]) => [...document.querySelectorAll('#fields fieldset')[n].querySelectorAll('button')]
   .some(b => b.textContent.includes(t) && b.getAttribute('aria-pressed') === 'true'), [field, text]);
 
@@ -100,7 +100,10 @@ try {
     const held = new Promise(resolve => { release = resolve; });
     await context.route('**/features.json', async route => { await held; await route.continue(); });
     await page.reload();
+    await page.click('#clear');
+    await page.fill('#note', 'typed while loading'); await page.dispatchEvent('#note', 'change');
     await page.fill('#imagery', '2024-04'); await page.dispatchEvent('#imagery', 'change');
+    await page.locator('body').press('2');
     assert.deepEqual(await stored(page), saved, 'nothing written while loading');
     release(); await loaded(page);
     assert.deepEqual(await stored(page), saved, 'nor afterwards, from what was typed while loading');
@@ -121,8 +124,8 @@ try {
     const next = await exportFile(page);
     assert.equal(HOUSE in next.answers || GONE in next.answers, false);
     assert.deepEqual(Object.keys(next.cleared).sort(), [GONE, HOUSE].sort());
-    // A newer answer does replace a clearing.
-    await importFile(page, {kind: 'mount-dora-house-survey', version: 3, answers: {[HOUSE]: {stories: '2', at: '2099-01-01T00:00:00.000Z'}}});
+    // A newer answer does replace a clearing (a genuinely newer one: a copy dated ahead never replaces anything here).
+    await importFile(page, {kind: 'mount-dora-house-survey', version: 3, answers: {[HOUSE]: {stories: '2', at: new Date().toISOString()}}});
     assert.equal((await stored(page))[HOUSE].stories, '2');
   });
 
@@ -144,27 +147,90 @@ try {
     await option(second, 3, 'Wood siding').click();
     assert.deepEqual([(await stored(first))[HOUSE].roofShape, (await stored(first))[HOUSE].wall], ['gable', 'wood-siding'], 'neither change lost the other');
     await pressed(first, 3, 'Wood siding');
+    // While the second tab is typing a note, the first tab's change redraws its buttons but keeps the typing.
+    await second.click('#note'); await second.keyboard.type('draft');
+    await option(first, 1, 'Hip').click();
+    await pressed(second, 1, 'Hip');
+    assert.deepEqual([await second.inputValue('#note'), await second.evaluate(() => document.activeElement.id)], ['draft', 'note']);
+    await second.fill('#note', ''); await second.dispatchEvent('#note', 'change');
     await first.click('#clear');
     await second.fill('#note', 'after the clear'); await second.dispatchEvent('#note', 'change');
     const after = (await stored(second))[HOUSE];
     assert.deepEqual([after.note, after.roofShape, after.wall, after.cleared], ['after the clear', undefined, undefined, undefined], 'the stale tab does not revive the cleared fields');
   });
 
-  await scenario('a copy dated in the future (a fast clock elsewhere) does not freeze a building', async context => {
+  await scenario('a stamp dated ahead, or in another form, neither replaces work here nor freezes a building', async context => {
     const page = await open(context); await loaded(page);
-    const ahead = new Date(Date.now() + 3600e3).toISOString();
-    await importFile(page, {kind: 'mount-dora-house-survey', version: 3, answers: {[HOUSE]: {stories: '2', at: ahead}, [GONE]: {stories: '1', at: ahead}}});
-    assert.match(await statusLine(page), /2 dated in the future/);
-    await page.selectOption('#show', 'all');               // HOUSE is answered now, so To do hides it
     await page.click(`#queue button[data-id="${HOUSE}"]`);
-    await option(page, 1, 'Gable').click();
-    let house = (await stored(page))[HOUSE];
-    assert.deepEqual([house.stories, house.roofShape, house.at > ahead], ['2', 'gable', true], 'the edit wins, dated after the copy it replaced');
-    await page.click('#clear');
-    house = (await stored(page))[HOUSE];
-    assert.deepEqual([house.cleared, house.at > ahead], [true, true]);
+    await option(page, 1, 'Gable').click();                // an answer made here first
+    const hour = Date.now() + 3600e3, noMillis = new Date(hour).toISOString().replace(/\.\d{3}Z$/, 'Z');
+    await importFile(page, {kind: 'mount-dora-house-survey', version: 3, answers: {[HOUSE]: {stories: '4', at: noMillis}, [OTHER]: {stories: '2', at: hour},
+      [THIRD]: {stories: '3', at: 'never'}, [GONE]: {stories: '1', at: noMillis}}});
+    assert.match(await statusLine(page), new RegExp(`3 dated ahead of this clock.*the copy here was kept for ${HOUSE}`));
+    let now = await stored(page);
+    assert.deepEqual([now[HOUSE].roofShape, now[HOUSE].stories], ['gable', undefined], 'a copy dated ahead never replaces an answer made here');
+    assert.ok(Date.parse(now[OTHER].at) <= Date.now() + 5000, 'where nothing was held it lands stamped now, so the skew stops');
+    assert.deepEqual([now[THIRD].stories, 'at' in now[THIRD]], ['3', false], 'a malformed stamp counts as undated');
+    await page.selectOption('#show', 'all');               // the imported buildings are answered now, so To do hides them
+    for (const id of [OTHER, THIRD]) { await page.click(`#queue button[data-id="${id}"]`); await option(page, 1, 'Hip').click(); }
+    now = await stored(page);
+    assert.deepEqual([now[OTHER].roofShape, now[THIRD].roofShape], ['hip', 'hip'], 'edits on top of them win');
     await page.locator('#unknown div', {hasText: GONE}).locator('button').click();
     assert.deepEqual([(await stored(page))[GONE].cleared, await page.isHidden('#unknown')], [true, true], 'Drop takes effect too');
+  });
+
+  await scenario('a click right after typing a date or a note lands where it was aimed', async context => {
+    const page = await open(context); await loaded(page);
+    await page.click(`#queue button[data-id="${HOUSE}"]`);
+    await page.click('#imagery'); await page.keyboard.type('2024-03');
+    await option(page, 8, 'Sure').click();                 // README step 4: the date, then a confidence
+    await page.click('#note'); await page.keyboard.type('porch');
+    await option(page, 1, 'Gable').click();
+    const house = (await stored(page))[HOUSE];
+    assert.deepEqual([house.imageryDate, house.confidence, house.note, house.roofShape], ['2024-03', 'sure', 'porch', 'gable']);
+    await page.click('#note'); await page.keyboard.type(' and steps');
+    const title = await page.textContent('#house-title');
+    await page.click('button[type=submit]');               // Save & next
+    assert.notEqual(await page.textContent('#house-title'), title, 'Save & next moved on');
+    assert.equal((await stored(page))[HOUSE].note, 'porch and steps');
+    await page.click('#note'); await page.keyboard.type('x');
+    await page.click(`#queue button[data-id="${OTHER}"]`);
+    assert.equal(await page.getAttribute(`#queue button[data-id="${OTHER}"]`, 'aria-current'), 'true', 'a queue click moved too');
+    // Leaving the page while still typing keeps what was typed.
+    await page.click('#note'); await page.keyboard.type('kept on reload');
+    await page.reload(); await loaded(page);
+    assert.equal((await stored(page))[OTHER].note, 'kept on reload');
+  });
+
+  await scenario('a tab that hears no storage events still builds every change and export on the other tab\'s', async context => {
+    const first = await open(context, {[GONE]: {stories: '2', at: old(1)}}), second = watch(await context.newPage());
+    await second.addInitScript(() => { const add = EventTarget.prototype.addEventListener;
+      EventTarget.prototype.addEventListener = function (type, ...rest) { return type === 'storage' ? undefined : add.call(this, type, ...rest); }; });
+    await second.goto(base); await loaded(first); await loaded(second);
+    await first.click(`#queue button[data-id="${HOUSE}"]`); await second.click(`#queue button[data-id="${HOUSE}"]`);
+    await option(first, 1, 'Gable').click();
+    await option(second, 3, 'Wood siding').click();        // the second tab still shows no roof: the click syncs first
+    await option(first, 6, 'Front').click();               // a change the second tab has not seen
+    await second.fill('#note', 'stale tab'); await second.dispatchEvent('#note', 'change');   // so the note syncs on its own
+    await second.mouse.click(5, 5);                        // focus off the note now: a later blur would save, and sync, again
+    const house = (await stored(first))[HOUSE];
+    assert.deepEqual([house.roofShape, house.wall, house.porch, house.note], ['gable', 'wood-siding', 'front', 'stale tab']);
+    await first.locator('#unknown div', {hasText: GONE}).locator('button').click();
+    assert.ok(GONE in ((await exportFile(second)).cleared || {}), 'the stale tab\'s export carries the other tab\'s Drop');
+    await importFile(second, {kind: 'mount-dora-house-survey', version: 3, answers: {[HOUSE]: {stories: '1', at: old(2)}}});
+    assert.match(await statusLine(second), new RegExp(`not taken, because the copy here is newer: ${HOUSE}`));
+  });
+
+  await scenario('re-keying an answer: the import says whether it took the renamed copy', async context => {
+    const page = await open(context, {[GONE]: {stories: '2', note: 'moved', at: old(1)}}); await loaded(page);
+    const doc = await exportFile(page);
+    await importFile(page, {...doc, answers: {[OTHER]: doc.answers[GONE]}});
+    assert.match(await statusLine(page), /^Imported 1 answer/);
+    assert.equal((await stored(page))[OTHER].note, 'moved');
+    // Where the building already has a newer answer, the import says so before anything is dropped.
+    await page.click(`#queue button[data-id="${HOUSE}"]`); await option(page, 1, 'Gable').click();
+    await importFile(page, {...doc, answers: {[HOUSE]: doc.answers[GONE]}});
+    assert.match(await statusLine(page), new RegExp(`^Imported 0 answers; not taken, because the copy here is newer: ${HOUSE}`));
   });
 
   await scenario('an answer for an unknown building id is listed with what it holds, exported and kept on import', async context => {

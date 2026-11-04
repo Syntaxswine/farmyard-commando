@@ -89,42 +89,62 @@ export const pinMismatches = (doc, pins) => Object.keys(PINNED).filter(key => do
 // outranks any older copy of the answer, from an import or another tab.
 export const isCleared = a => a?.cleared === true;
 
+// A copy's `at` in milliseconds, or null when it is not a date. Stamps can
+// arrive in other forms (no milliseconds, an offset, an epoch number), so every
+// comparison goes through this, never through the text.
+export function when(at) {
+  const t = typeof at === 'number' ? at : typeof at === 'string' ? Date.parse(at) : NaN;
+  return Number.isFinite(t) ? t : null;
+}
+const rank = copy => when(copy?.at) ?? -Infinity;
+
 // Per building, the newer of two copies, cleared ones included; a tie keeps `b`'s.
 export function newestPerId(a, b) {
   const out = {...a};
-  for (const [id, x] of Object.entries(b)) if (!out[id] || (x.at || '') >= (out[id].at || '')) out[id] = x;
+  for (const [id, x] of Object.entries(b)) if (!out[id] || rank(x) >= rank(out[id])) out[id] = x;
   return out;
 }
 
 // The stamp for a local write: now, or just after the copy it replaces when
-// that copy is dated later (another browser's clock ran fast, or this one runs
-// slow), so the write always outranks what it replaced, here and on import.
+// that copy is dated later, so the write always outranks what it replaced.
+// Stored stamps are never more than AHEAD_MS past a clock (import caps them), so
+// this cannot run away into the future.
 export function stampAfter(previous, now = Date.now()) {
-  const before = Date.parse(previous?.at ?? '');
-  return new Date(Number.isFinite(before) ? Math.max(now, before + 1) : now).toISOString();
+  const before = when(previous?.at);
+  return new Date(before === null ? now : Math.max(now, before + 1)).toISOString();
 }
 
-// How many copies in an export are dated after now, past a minute's slack.
-export function datedAhead(doc, now = Date.now(), slackMs = 60000) {
-  const stamps = [...Object.values(doc.answers || {}).map(a => a?.at), ...Object.values(doc.cleared || {})];
-  return stamps.filter(at => Date.parse(at ?? '') > now + slackMs).length;
-}
+// A copy dated more than this past the importing browser's clock came from a
+// clock running fast (or this one runs slow).
+export const AHEAD_MS = 60000;
 
-// Import: per building the newer copy wins, an answer or a clearing; an answer
-// with nothing in it never outranks either. Answers for ids this queue lacks
-// are kept too, so a teammate's answer made with other files is never dropped.
-export function mergeAnswers(mine, doc, keys, known) {
+// Import. Each copy's `at` is read as a date (anything else counts as undated)
+// and kept in one form. Per building the newer copy wins, an answer or a
+// clearing; an undated or empty copy never outranks one held here. A copy dated
+// ahead never replaces anything held here, and where nothing is held it lands
+// stamped now, so the skew cannot carry into later edits. Answers for ids this
+// queue lacks are kept too. Reports, by id, what it replaced, what it left
+// because it was older, and what it kept here against a copy dated ahead.
+export function mergeAnswers(mine, doc, keys, known, now = Date.now()) {
   const answers = {...mine}, live = a => a && (isCleared(a) || cleanAnswer(a, keys)) ? a : null;
-  const incoming = [...Object.entries(doc.answers || {}).map(([id, a]) => { const c = cleanAnswer(a, keys); return [id, c && {...c, ...(a.at ? {at: a.at} : {})}]; }),
-    ...Object.entries(doc.cleared || {}).map(([id, at]) => [id, typeof at === 'string' ? {cleared: true, at} : null])];
-  let added = 0, cleared = 0, unknown = 0;
-  for (const [id, next] of incoming) {
-    const held = live(answers[id]);
-    if (!next || held && (next.at || '') <= (held.at || '')) continue;
+  const dated = (base, at) => {
+    const t = when(at), ahead = t !== null && t > now + AHEAD_MS;
+    return {next: t === null ? base : {...base, at: new Date(ahead ? now : t).toISOString()}, ahead};
+  };
+  const incoming = [...Object.entries(doc.answers || {}).map(([id, a]) => { const c = cleanAnswer(a, keys); return [id, c && dated(c, a.at)]; }),
+    ...Object.entries(doc.cleared || {}).map(([id, at]) => [id, when(at) === null ? null : dated({cleared: true}, at)])];
+  const out = {added: 0, cleared: 0, unknown: 0, ahead: 0, replaced: [], older: [], keptAhead: []};
+  for (const [id, item] of incoming) {
+    if (!item) continue;
+    const {next, ahead} = item, held = live(answers[id]);
+    if (ahead) out.ahead++;
+    if (held && ahead) { out.keptAhead.push(id); continue; }
+    if (held && !(rank(next) > rank(held))) { out.older.push(id); continue; }
     answers[id] = next;
-    if (!isCleared(next)) { added++; if (!known.has(id)) unknown++; } else if (held && !isCleared(held)) cleared++;
+    if (held && !isCleared(held)) { out.replaced.push(id); if (isCleared(next)) out.cleared++; }
+    if (!isCleared(next)) { out.added++; if (!known.has(id)) out.unknown++; }
   }
-  return {answers, added, cleared, unknown};
+  return {answers, ...out};
 }
 
 // Saved answers whose building id the queue lacks (the town no longer has the

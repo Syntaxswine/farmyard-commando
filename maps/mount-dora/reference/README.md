@@ -189,32 +189,57 @@ building, flag *Changed since the record*. For each building:
 3. If you can see a door, click the dashed game outline on the mini-map where it
    is. That marks one 1 m wall edge; click it again to remove it.
 4. Type the panorama's "Image capture" month (`2024-03`) and pick a confidence.
-5. Press **Enter** for the next building. Answers save in the browser as you go.
+5. Press **Enter** for the next building. Answers save in the browser as you go:
+   a button as you click it, a note or a date when you leave the field (or the
+   page).
 
-Export whenever you stop. To commit, first import the committed
-`maps/mount-dora/reference/house-survey.json`, then export, and commit the export
-in its place: an export holds only the answers in your browser. Import merges by
-the newest copy per building, keeping the newer copy whole rather than merging
-fields. So two people can split the town by sector, but a building on a sector
-edge is listed under both sectors, and only one of them should answer it.
+Export whenever you stop. To commit:
+1. Import the committed `maps/mount-dora/reference/house-survey.json`, so the
+   export includes everyone's answers, not only those in your browser.
+2. Export, and put the export in its place.
+3. Regenerate what it feeds:
+   - `python -B tools/maps/build-mount-dora.py` (storeys, walls and the sectors);
+   - `node maps/mount-dora/art/tools/build-playable.mjs` (the art kit);
+   - `node tools/maps/review-mount-dora-routes.mjs` (the route pin);
+   - the workshop review in [workshop/README.md](../workshop/README.md).
+4. Commit them together.
+
+Import merges by the newest copy per building, keeping the newer copy whole
+rather than merging fields. So two people can split the town by sector, but a
+building on a sector edge is listed under both sectors, and only one of them
+should answer it.
+
 Clearing an answer, or dropping one, leaves a dated mark that the export carries
-under `cleared`, so importing an older file never brings it back. Every change
-first takes the newest copy of each building from the browser's storage, and the
-page redraws when another tab saves. So a second tab builds on the first tab's
-answers instead of writing over them. Each change is dated after the copy it
-replaces, so a copy stamped by a clock running fast cannot freeze a building.
-Import says when a file holds copies dated in the future. Until the reference
-files load, nothing saves, imports or exports.
+under `cleared`, so importing an older file never brings it back.
+
+Every change first takes the newest copy of each building from the browser's
+storage, and the page redraws when another tab saves. So a second tab builds on
+the first tab's answers instead of writing over them. Each change is dated after
+the copy it replaces.
+
+Import reads every stamp as a date, in whatever form it comes, and treats
+anything else as undated. A copy dated more than a minute ahead of this
+browser's clock comes from a clock running fast (or this one runs slow).
+- It never replaces an answer here.
+- Where there is none, it lands dated now, so the skew stops there.
+- Import names, by building, what it replaced, what it did not take because the
+  copy here is newer, and what it kept here against a copy dated ahead.
+
+Until the reference files load, nothing saves, imports or exports.
 
 An answer can name a building id this queue lacks: the town no longer has the
 building, its id changed (a county building's can when the county data does), or
 a teammate made it with other files. Import keeps it, Export keeps it, and the
 queue panel lists it with what it holds and a **Drop** button. The generator
-applies it to nothing and lists it as lost in `project.json`. To re-key one,
-export, rename its id in the file to the building's current id, import that
-file, then drop the old id. If a building's outline changes after you marked its
-doors, the page warns. Each marked edge that no longer lies on the outline can
-still be clicked to remove it.
+applies it to nothing and lists it as lost in `project.json`. To re-key one:
+1. Export, and rename its id in the file to the building's current id.
+2. Import that file. It must report the answer taken. If it says the copy here is
+   newer, the building already has an answer, and dropping the old id would lose
+   whatever only the old one holds. Copy that across by hand first.
+3. Drop the old id.
+
+If a building's outline changes after you marked its doors, the page warns. Each
+marked edge that no longer lies on the outline can still be clicked to remove it.
 
 ### Evidence rules
 
@@ -254,8 +279,12 @@ Chromium, through its own controls, and the workshop CI job runs it. It covers:
 - Clear, the note, the image date, a storey key, Import and Export, which write
   nothing before the reference files load, whether the load fails or is slow;
 - a cleared and a dropped answer surviving an import;
-- two tabs, on different buildings and on one;
-- a copy dated in the future;
+- two tabs, on different buildings and on one, and a tab that hears no storage
+  events;
+- stamps dated ahead, without milliseconds, as epoch numbers, or not dates at
+  all;
+- real clicks right after typing a date or a note;
+- re-keying;
 - unknown answers.
 
 Any uncaught page error fails it.

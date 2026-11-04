@@ -5,7 +5,7 @@
 // Answers autosave in this browser and export to house-survey.json, keyed by
 // the building's game id. Each answer carries its evidence (AGENTS.md): image
 // date, confidence, and only the entrances a person actually saw.
-import {CONFIDENCE, IMAGERY_DATE, cleanAnswer, datedAhead, edgeKey, exportDocument, mergeAnswers, nearestEdge, newestPerId, outlineText, pinMismatches,
+import {CONFIDENCE, IMAGERY_DATE, cleanAnswer, edgeKey, exportDocument, mergeAnswers, nearestEdge, newestPerId, outlineText, pinMismatches,
   queueEntries, stampAfter, staleEntrances, toggleEntrance, unitEdges, unknownAnswers, warningsFor} from './model.js';
 const REFERENCE = '../house-reference.json', COUNTY = '../county-buildings.json', FEATURES = '../../features.json';
 const STORE = 'mount-dora-house-survey-v1', CURRENT = STORE + ':current';
@@ -67,25 +67,31 @@ function passes(b) {
   return !q || [b.id, b.address, b.osmTags.name, b.placeName, b.streetView?.road].some(v => v && v.toUpperCase().includes(q));
 }
 
+const markName = (name, id) => { name.textContent = (answered(id) ? '✓ ' : '') + label(state.byId.get(id)); name.className = answered(id) ? 'done' : ''; };
+
+function renderSummary() {
+  const done = state.order.filter(answered).length, total = state.order.length;
+  const withRecord = state.order.filter(id => state.byId.get(id).county.records.length).length, n = v => v.toLocaleString('en-US');
+  $('summary').textContent = `${n(done)} of ${n(total)} buildings surveyed · in the queue, ${n(total - state.countyBuildings)} from OpenStreetMap and ` +
+    `${n(state.countyBuildings)} from county sketches it lacks · county records for ${n(withRecord)}`;
+  $('progress').style.width = `${(100 * done / total).toFixed(1)}%`;
+}
+
 function renderQueue() {
-  const list = $('queue'), done = state.order.filter(answered).length, total = state.order.length;
+  const list = $('queue');
   list.replaceChildren();
   for (const id of state.order) {
     const b = state.byId.get(id);
     if (!passes(b)) continue;
     const li = document.createElement('li'), button = document.createElement('button'), name = document.createElement('span'), meta = document.createElement('span');
-    name.textContent = (answered(id) ? '✓ ' : '') + label(b);
-    if (answered(id)) name.className = 'done';
+    markName(name, id);
     meta.className = 'street'; meta.textContent = b.sectors.join('/') + (b.countySketch ? ' · county' : '');
     button.append(name, meta); button.dataset.id = id;
     if (id === state.current) button.setAttribute('aria-current', 'true');
     button.addEventListener('click', () => select(id));
     li.append(button); list.append(li);
   }
-  const withRecord = state.order.filter(id => state.byId.get(id).county.records.length).length, n = v => v.toLocaleString('en-US');
-  $('summary').textContent = `${n(done)} of ${n(total)} buildings surveyed · in the queue, ${n(total - state.countyBuildings)} from OpenStreetMap and ` +
-    `${n(state.countyBuildings)} from county sketches it lacks · county records for ${n(withRecord)}`;
-  $('progress').style.width = `${(100 * done / total).toFixed(1)}%`;
+  renderSummary();
   list.querySelector('[aria-current=true]')?.scrollIntoView({block: 'nearest'});
   renderUnknown();
 }
@@ -235,14 +241,27 @@ function choose(field, value) {
   save(id, answer);
 }
 
-// Every write goes through here or Drop. A cleared answer leaves a dated mark,
-// so importing an older copy of it, or a stale tab, cannot bring it back.
-function save(id, answer) {
-  if (!state.ready || !state.byId.has(id)) return status('The house reference has not loaded, so nothing was saved; your saved answers are untouched.');
+// Every write goes through commit, or Drop. A cleared answer leaves a dated
+// mark, so importing an older copy of it, or a stale tab, cannot bring it back.
+function commit(id, answer) {
+  if (!state.ready || !state.byId.has(id)) { status('The house reference has not loaded, so nothing was saved; your saved answers are untouched.'); return false; }
   const clean = cleanAnswer(answer, KEYS), at = stampAfter(state.answers[id]);
   if (clean) state.answers[id] = {...clean, at}; else if (answered(id)) state.answers[id] = {cleared: true, at};
-  persist(); renderFields(state.byId.get(id)); renderQueue();
+  persist(); return true;
 }
+function save(id, answer) { if (commit(id, answer)) { renderFields(state.byId.get(id)); renderQueue(); } }
+
+// A note or date saves on change, which fires as the field loses focus, often
+// on the mousedown of the next click. Redrawing the buttons or the queue then
+// would move that click's target before its mouseup, so only the marks update.
+function saveText(id, answer) {
+  if (!commit(id, answer)) return;
+  const name = $('queue').querySelector(`button[data-id="${CSS.escape(id)}"] span`);
+  if (name) markName(name, id);
+  renderSummary();
+}
+const typedValue = id => id === 'note' ? $('note').value.trim() : $('imagery').value.trim();
+const textAnswer = (id, value) => ({...(state.answers[state.current] || {}), [id === 'note' ? 'note' : 'imageryDate']: value});
 
 function select(id) {
   const b = state.byId.get(id);
@@ -288,11 +307,14 @@ async function importAnswers(file) {
     const data = JSON.parse(await file.text());
     if (data.kind !== 'mount-dora-house-survey' || typeof data.answers !== 'object') throw Error('not a house-survey export');
     sync();
-    const merged = mergeAnswers(state.answers, data, KEYS, state.byId), differs = pinMismatches(data, state.pins), ahead = datedAhead(data);
+    const merged = mergeAnswers(state.answers, data, KEYS, state.byId), differs = pinMismatches(data, state.pins);
     state.answers = merged.answers; persist(); select(state.current);
+    const ids = list => list.slice(0, 5).join(', ') + (list.length > 5 ? `, and ${list.length - 5} more` : '');
     status(`Imported ${merged.added} answer${merged.added === 1 ? '' : 's'}${merged.unknown ? `; ${merged.unknown} of them for building ids not in this queue, kept and listed below` : ''}` +
-      `${merged.cleared ? `; ${merged.cleared} cleared there since` : ''}` +
-      `${ahead ? `; ${ahead} dated in the future, so that computer's clock may be wrong (edits here still win)` : ''}` +
+      `${merged.replaced.length ? `; it replaced the copy here for ${ids(merged.replaced)}${merged.cleared ? ` (${merged.cleared} cleared there)` : ''}` : ''}` +
+      `${merged.older.length ? `; not taken, because the copy here is newer: ${ids(merged.older)}` : ''}` +
+      `${merged.ahead ? `; ${merged.ahead} dated ahead of this clock, so that computer's clock may be wrong` : ''}` +
+      `${merged.keptAhead.length ? `, and the copy here was kept for ${ids(merged.keptAhead)}` : ''}` +
       `${differs.length ? `; changed since it was exported: ${differs.join(', ')}. If the other files are newer, pull and regenerate before dropping answers or removing entrances` : ''}.`);
   } catch (error) { status(`Import failed: ${error.message}.`); }
 }
@@ -314,11 +336,17 @@ $('survey').addEventListener('submit', event => { event.preventDefault(); step(1
 $('skip').addEventListener('click', () => step(1));
 $('prev').addEventListener('click', () => step(-1));
 $('clear').addEventListener('click', () => { sync(); save(state.current, {}); });
-$('note').addEventListener('change', () => { sync(); save(state.current, {...(state.answers[state.current] || {}), note: $('note').value.trim()}); });
-$('imagery').addEventListener('change', () => {
-  const value = $('imagery').value.trim();
-  if (value && !IMAGERY_DATE.test(value)) return status('Use the image month as YYYY-MM, for example 2024-03.');
-  sync(); save(state.current, {...(state.answers[state.current] || {}), imageryDate: value});
+const saveTyped = id => {
+  const value = typedValue(id);
+  if (id === 'imagery' && value && !IMAGERY_DATE.test(value)) return status('Use the image month as YYYY-MM, for example 2024-03.');
+  sync(); saveText(state.current, textAnswer(id, value));
+};
+for (const id of ['note', 'imagery']) $(id).addEventListener('change', () => saveTyped(id));
+// Leaving the page while still typing: save what is in the field, as leaving it would.
+window.addEventListener('pagehide', () => {
+  const id = ['note', 'imagery'].find(id => $(id) === document.activeElement);
+  const saved = state.answers[state.current]?.[id === 'note' ? 'note' : 'imageryDate'] ?? '';
+  if (id && state.ready && typedValue(id) !== saved) saveTyped(id);
 });
 // Another tab saved: show its answers here too, keeping whatever is being typed.
 window.addEventListener('storage', event => {
@@ -327,7 +355,9 @@ window.addEventListener('storage', event => {
   const b = state.byId.get(state.current);
   if (!b) return;
   minimap(b); renderWarnings(b);
-  if (![$('note'), $('imagery')].includes(document.activeElement)) renderFields(b);
+  const typing = [$('note'), $('imagery')].find(el => el === document.activeElement), kept = typing && [typing.value, typing.selectionStart, typing.selectionEnd];
+  renderFields(b);
+  if (typing) { typing.value = kept[0]; typing.setSelectionRange(kept[1], kept[2]); }
 });
 $('minimap').addEventListener('click', markEntrance);
 for (const id of ['sector', 'show', 'search']) $(id).addEventListener('input', renderQueue);

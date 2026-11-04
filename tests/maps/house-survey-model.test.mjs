@@ -5,13 +5,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
-import {cleanAnswer, datedAhead, edgeKey, exportDocument, mergeAnswers, nearestEdge, newestPerId, outlineText, pinMismatches, queueEntries, stampAfter,
+import {AHEAD_MS, cleanAnswer, edgeKey, exportDocument, mergeAnswers, nearestEdge, newestPerId, outlineText, pinMismatches, queueEntries, stampAfter,
   staleEntrances, toggleEntrance, unitEdges, unknownAnswers,
   warningsFor} from '../../maps/mount-dora/reference/survey/model.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const json = file => JSON.parse(fs.readFileSync(path.join(root, 'maps/mount-dora', file), 'utf8'));
 const features = json('features.json').features;
+// A clock after every date these tests write, so none of them reads as dated ahead.
+const LATER = Date.parse('2026-12-01T00:00:00.000Z');
 const KEYS = ['stories', 'roofShape', 'confidence', 'imageryDate', 'entrances', 'note'];
 
 const reference = json('reference/house-reference.json'), county = json('reference/county-buildings.json');
@@ -73,10 +75,10 @@ test('an answer for a building id the queue lacks is kept, exported and listed, 
   const doc = exportDocument({answers: {'osm-way-1': {stories: '1', at: at(1)}, 'county-9-9': {stories: '2', at: at(2)}}, pins: {}, keys: KEYS, exportedAt: at(3)});
   assert.deepEqual(Object.keys(doc.answers), ['county-9-9', 'osm-way-1']);
   // Import: a teammate's answer for an id this queue lacks is kept, and counted once; the newer answer wins.
-  const merged = mergeAnswers({'osm-way-1': {stories: '2', at: at(5)}}, {answers: {'osm-way-1': {stories: '3', at: at(4)}, 'county-7-7': {stories: '1', at: at(4)}}}, KEYS, known);
+  const merged = mergeAnswers({'osm-way-1': {stories: '2', at: at(5)}}, {answers: {'osm-way-1': {stories: '3', at: at(4)}, 'county-7-7': {stories: '1', at: at(4)}}}, KEYS, known, LATER);
   assert.deepEqual([merged.added, merged.unknown, merged.answers['osm-way-1'].stories, merged.answers['county-7-7'].stories], [1, 1, '2', '1']);
   // An answer with nothing in it never outranks one with content, however new it is.
-  const empty = mergeAnswers({'county-1-1': {at: at(9)}}, {answers: {'county-1-1': {stories: '2', note: 'porch', at: at(1)}}}, KEYS, known);
+  const empty = mergeAnswers({'county-1-1': {at: at(9)}}, {answers: {'county-1-1': {stories: '2', note: 'porch', at: at(1)}}}, KEYS, known, LATER);
   assert.deepEqual([empty.added, empty.answers['county-1-1'].stories], [1, '2']);
   // The page lists each unknown answer with what it holds.
   assert.deepEqual(unknownAnswers({...merged.answers, 'county-8-8': {note: 'gone', entrances: [{segment: [[0, 0], [1, 0]]}], at: at(4)}}, KEYS, known),
@@ -90,9 +92,9 @@ test('a cleared answer is a dated mark that outranks any older copy, from an imp
   assert.deepEqual([Object.keys(doc.answers), doc.cleared], [['osm-way-2'], {'osm-way-1': at(5)}]);
   assert.equal('cleared' in exportDocument({answers: {'osm-way-2': {stories: '1'}}, pins: {}, keys: KEYS, exportedAt: at(6)}), false);
   // Import of an older answer keeps the clearing; a newer answer replaces it; a newer clearing wins over an answer.
-  assert.deepEqual(mergeAnswers({'osm-way-1': gone}, {answers: {'osm-way-1': {stories: '3', at: at(4)}}}, KEYS, known).answers['osm-way-1'], gone);
-  assert.equal(mergeAnswers({'osm-way-1': gone}, {answers: {'osm-way-1': {stories: '3', at: at(7)}}}, KEYS, known).answers['osm-way-1'].stories, '3');
-  const cleared = mergeAnswers({'osm-way-2': {stories: '1', at: at(2)}}, {answers: {}, cleared: {'osm-way-2': at(3), 'osm-way-1': 7}}, KEYS, known);
+  assert.deepEqual(mergeAnswers({'osm-way-1': gone}, {answers: {'osm-way-1': {stories: '3', at: at(4)}}}, KEYS, known, LATER).answers['osm-way-1'], gone);
+  assert.equal(mergeAnswers({'osm-way-1': gone}, {answers: {'osm-way-1': {stories: '3', at: at(7)}}}, KEYS, known, LATER).answers['osm-way-1'].stories, '3');
+  const cleared = mergeAnswers({'osm-way-2': {stories: '1', at: at(2)}}, {answers: {}, cleared: {'osm-way-2': at(3), 'osm-way-1': 'never'}}, KEYS, known, LATER);
   assert.deepEqual([cleared.answers['osm-way-2'], cleared.cleared, 'osm-way-1' in cleared.answers], [{cleared: true, at: at(3)}, 1, false], 'a malformed clearing is ignored');
   // A clearing is not listed as an unknown answer.
   assert.deepEqual(unknownAnswers({'county-9-9': {cleared: true, at: at(1)}}, KEYS, known), []);
@@ -111,11 +113,30 @@ test('a local write is dated after the copy it replaces, whatever the clocks say
   // The written copy then outranks the one it replaced, on merge and between tabs.
   const ahead = {stories: '2', at: '2026-11-04T13:00:00.000Z'}, edit = {stories: '1', at: stampAfter(ahead, now)};
   assert.equal(newestPerId({x: ahead}, {x: edit}).x, edit);
-  assert.equal(mergeAnswers({x: edit}, {answers: {x: ahead}}, KEYS, new Set(['x'])).added, 0);
-  // Import counts what is dated past a minute ahead.
-  assert.equal(datedAhead({answers: {a: {at: '2026-11-04T12:00:30.000Z'}, b: {at: '2026-11-04T12:02:00.000Z'}, c: {}}, cleared: {d: '2026-11-05T00:00:00.000Z'}}, now), 2);
+  assert.equal(mergeAnswers({x: edit}, {answers: {x: ahead}}, KEYS, new Set(['x']), LATER).added, 0);
   // A clearing counts as clearing something only where there was an answer to clear.
-  assert.equal(mergeAnswers({}, {answers: {}, cleared: {x: '2026-11-04T12:00:00.000Z'}}, KEYS, new Set(['x'])).cleared, 0);
+  assert.equal(mergeAnswers({}, {answers: {}, cleared: {x: '2026-11-04T12:00:00.000Z'}}, KEYS, new Set(['x']), LATER).cleared, 0);
+});
+
+test('import reads every stamp as a date, never lets a copy dated ahead replace anything here, and says what it did', () => {
+  const now = Date.parse('2026-11-04T12:00:00.000Z'), known = new Set(['a', 'b', 'c', 'd', 'e', 'f']);
+  const mine = {a: {stories: '1', at: '2026-11-04T11:00:00.000Z'}, b: {stories: '1', at: '2026-11-04T11:00:00.000Z'}, c: {stories: '1', at: '2026-11-04T11:30:00.000Z'}};
+  const ahead = now + AHEAD_MS + 1000;
+  const result = mergeAnswers(mine, {answers: {
+    a: {stories: '2', at: '2026-11-04T11:45:00+00:00'},           // newer, with an offset: replaces
+    b: {stories: '2', at: new Date(ahead).toISOString()},           // dated ahead: never replaces what is here
+    c: {stories: '2', at: '2026-11-04T11:00:00Z'},                  // older, with no milliseconds: not taken
+    d: {stories: '2', at: ahead},                                   // dated ahead, an epoch number, nothing here: lands stamped now
+    e: {stories: '2', at: 'never'},                                 // not a date: lands undated
+    f: {stories: '2', at: '2026-11-04T11:59:30.000Z'}}}, KEYS, known, now);
+  assert.deepEqual([result.replaced, result.older, result.keptAhead, result.ahead], [['a'], ['c'], ['b'], 2]);
+  assert.deepEqual([result.answers.a.at, result.answers.b, result.answers.c, result.answers.d.at, 'at' in result.answers.e, result.answers.f.at],
+    ['2026-11-04T11:45:00.000Z', mine.b, mine.c, '2026-11-04T12:00:00.000Z', false, '2026-11-04T11:59:30.000Z'], 'one stamp form throughout');
+  // Compared as dates, a stamp without milliseconds is not mistaken for a newer one, and an undated copy outranks nothing.
+  assert.equal(newestPerId({x: {stories: '1', at: '2026-11-04T11:00:00.500Z'}}, {x: {stories: '2', at: '2026-11-04T11:00:00Z'}}).x.stories, '1');
+  assert.equal(newestPerId({x: {stories: '1', at: '2026-11-04T11:00:00.000Z'}}, {x: {stories: '2'}}).x.stories, '1');
+  // So a local edit on top of an undated or a pulled-back copy always wins.
+  for (const id of ['d', 'e']) assert.ok(Date.parse(stampAfter(result.answers[id], now)) >= now, id);
 });
 
 test('an entrance the outline has since lost is found, so it can be removed', () => {

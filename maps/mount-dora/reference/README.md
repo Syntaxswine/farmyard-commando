@@ -29,7 +29,7 @@ build does not publish this folder (`build.mjs` copies an explicit file list).
 | Wall material from a source | 0 | 759 (265 wood frame) |
 | Roof cover known | 0 | 729: 519 shingle, 176 metal, 18 tar-and-gravel (flat), 10 rolled, 6 tile |
 | Porch recorded | 0 | 638 |
-| Planned Street View camera | 0 | 950 (871 on the addressed street; median 24 m away) |
+| Planned Street View camera | 0 | 950 (873 on the addressed street; median 24 m away) |
 
 How each building was matched (`match.method`):
 
@@ -191,17 +191,21 @@ building, flag *Changed since the record*. For each building:
 4. Type the panorama's "Image capture" month (`2024-03`) and pick a confidence.
 5. Press **Enter** for the next building. Answers save in the browser as you go.
 
-Export whenever you stop, and commit the file as
-`maps/mount-dora/reference/house-survey.json`. Import merges by the newest answer
-per building, so two people can split the town by sector.
+Export whenever you stop. To commit, first import the committed
+`maps/mount-dora/reference/house-survey.json`, then export, and commit the export
+in its place: an export holds only the answers in your browser. Import merges by
+the newest answer per building, so two people can split the town by sector.
+Survey in one tab: two tabs on the same page overwrite each other's saves.
 
-An answer can name a building id this queue lacks: a county building that
-changed id when the county data did, a building the town no longer has, or a
-teammate's answer made with newer files. Nothing drops it. Import keeps it, the
-queue panel lists it with **Move to** (the selected building) and **Drop**, and
-Export writes it under `unmatched`, which the generator ignores. Moving keeps
-only the entrance edges that lie on the new building's outline, and says how
-many it left out.
+An answer can name a building id this queue lacks: the town no longer has the
+building, its id changed (a county building's can when the county data does), or
+a teammate made it with other files. Import keeps it, Export keeps it, and the
+queue panel lists it with what it holds and a **Drop** button. The generator
+applies it to nothing and lists it as lost in `project.json`. To re-key one,
+export, rename its id in the file to the building's current id, import that
+file, then drop the old id. If a building's outline changes after you marked its
+doors, the page warns. Each marked edge that no longer lies on the outline can
+still be clicked to remove it.
 
 ### Evidence rules
 
@@ -255,15 +259,14 @@ Each building records its sources in `nativeProxy` (`storiesSource`,
 (135 buildings: 114 OSM, 21 county), `evidence.storiesDisagreement` keeps both
 for a survey to settle.
 A county building's answer (a `county-` id) joins its county and lidar evidence
-the same way. A county building can change id when the county data does, so an
-answer under `answers` whose id matches no building stops the build, naming the
-ids. To clear it, import the file into the survey page, move each listed answer
-to its building or drop it, and export again. Answers under `unmatched` apply to
-nothing, and `project.json` counts them. The refusal sees only an id that
-vanishes. A county id comes from its structure's first sketch by key, and a
-`-part2` suffix from the pieces' area order, so a regeneration that hands an id
-to a different structure or piece would re-target its answers silently. The
-evidence files are pinned in `project.json`, as is the survey
+the same way. An answer whose id matches no building applies to nothing. The
+generator still builds, so that the regenerated house reference lets the survey
+page show the answer for re-keying. It lists such ids under the survey's `lost`
+in `project.json`'s `evidenceInputs` and prints a warning. That catches only an
+id that vanishes. A county id comes from its structure's first sketch by key,
+and a `-part2` suffix from the pieces' area order, so a regeneration that hands
+an id to a different structure or piece would re-target its answers silently.
+The evidence files are pinned in `project.json`, as is the survey
 export once it exists. The reference and lidar files pin only the OSM-sourced
 fields of `features.json` they read
 (`tools/maps/house-reference/features-digest.mjs`), so a regeneration never

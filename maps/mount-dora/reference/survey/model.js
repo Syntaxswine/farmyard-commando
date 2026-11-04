@@ -58,7 +58,7 @@ export function queueEntries(reference, county, features) {
 // What a surveyor should know about a building before looking.
 export function warningsFor(b) {
   const sv = b.streetView, sketched = b.countySketch, out = [];
-  if (b.match.method === 'none' || sketched && !b.county.records.length) out.push('No county record: everything here comes from what you see.');
+  if (!b.county.records.length) out.push('No county record: everything here comes from what you see.');
   if (b.match.method === 'footprint-partial') out.push('The game outline and the county sketch disagree; check this is one building.');
   if (b.match.method === 'parcel-area') out.push('Several buildings share this lot; the record was picked by size.');
   if (sketched) out.push(`OpenStreetMap lacks this building; the game drew it from ${sketched.sketches === 1 ? 'the county sketch' : `${sketched.sketches} county sketches`}. ` +
@@ -85,32 +85,33 @@ export const outlineText = features => JSON.stringify(features.filter(f => f.cat
 export const pinMismatches = (doc, pins) => Object.keys(PINNED).filter(key => doc[key]?.sha256 && doc[key].sha256 !== pins[key])
   .map(key => key === 'outlines' ? 'the building outlines in features.json' : PINNED[key].file.split('/').pop());
 
-// Import: the newer answer per building wins. Answers for ids this queue lacks
-// are kept as well, apart (they export under `unmatched`), so a teammate's
-// answer is never dropped because this copy of the files is older or newer.
+// Import: the newer answer per building wins, and an answer with nothing in it
+// never outranks one with content. Answers for ids this queue lacks are kept
+// too, so a teammate's answer made with older or newer files is never dropped.
 export function mergeAnswers(mine, doc, keys, known) {
   const answers = {...mine};
-  let added = 0, unmatched = 0;
-  for (const [id, answer] of [...Object.entries(doc.answers || {}), ...Object.entries(doc.unmatched || {})]) {
-    const clean = cleanAnswer(answer, keys);
-    if (!clean || answers[id] && (answer.at || '') <= (answers[id].at || '')) continue;
+  let added = 0, unknown = 0;
+  for (const [id, answer] of Object.entries(doc.answers || {})) {
+    const clean = cleanAnswer(answer, keys), held = cleanAnswer(answers[id], keys) && answers[id];
+    if (!clean || held && (answer.at || '') <= (held.at || '')) continue;
     answers[id] = {...clean, ...(answer.at ? {at: answer.at} : {})};
     added++;
-    if (!known.has(id)) unmatched++;
+    if (!known.has(id)) unknown++;
   }
-  return {answers, added, unmatched};
+  return {answers, added, unknown};
 }
 
-// Moves an answer to the building it belongs to, as when a county building's id
-// changed. Null if the target already has an answer. Entrances not on the
-// target's outline (its 1 m edges) are left out, and counted.
-export function moveAnswer(answers, from, to, edges) {
-  if (!answers[from] || answers[to]) return null;
-  const {[from]: answer, ...rest} = answers, on = new Set(edges.map(edgeKey));
-  const entrances = (answer.entrances || []).filter(e => on.has(edgeKey(e.segment)));
-  const moved = {...answer, entrances};
-  if (!entrances.length) delete moved.entrances;
-  return {answers: {...rest, [to]: moved}, entrancesLeftOut: (answer.entrances || []).length - entrances.length};
+// Saved answers whose building id the queue lacks (the town no longer has the
+// building, or its id changed), each with a short list of what it holds.
+export function unknownAnswers(answers, keys, known) {
+  const say = ([k, v]) => k === 'entrances' ? `${v.length} entrance${v.length === 1 ? '' : 's'}` : k === 'note' ? 'a note' : `${k} ${[v].flat().join('/')}`;
+  return Object.keys(answers).filter(id => !known.has(id)).sort().map(id => ({id, holds: Object.entries(cleanAnswer(answers[id], keys) || {}).map(say)}));
+}
+
+// Marked entrances no longer on the building's outline: it changed after they were marked.
+export function staleEntrances(answer, edges) {
+  const on = new Set(edges.map(edgeKey));
+  return (answer?.entrances || []).filter(e => !on.has(edgeKey(e.segment)));
 }
 
 // Drops empty values; an answer with nothing left is null.
@@ -126,14 +127,13 @@ export function cleanAnswer(answer, keys) {
   return Object.keys(out).length ? out : null;
 }
 
-// `known` holds the queue's building ids. Answers for any other id go under
-// `unmatched`, which the generator ignores, so nothing a surveyor saved is lost
-// and nothing the generator would refuse reaches `answers`.
-export function exportDocument({answers, known, pins, keys, exportedAt}) {
-  const out = {}, unmatched = {};
+// Every saved answer, including one whose building id the queue lacks: the
+// generator applies what matches and lists the rest as lost in project.json.
+export function exportDocument({answers, pins, keys, exportedAt}) {
+  const out = {};
   for (const id of Object.keys(answers).sort()) {
     const a = cleanAnswer(answers[id], keys);
-    if (a) (known.has(id) ? out : unmatched)[id] = {...a, ...(answers[id].at ? {at: answers[id].at} : {})};
+    if (a) out[id] = {...a, ...(answers[id].at ? {at: answers[id].at} : {})};
   }
   return {
     kind: 'mount-dora-house-survey', version: 3,
@@ -144,8 +144,8 @@ export function exportDocument({answers, known, pins, keys, exportedAt}) {
       observationDate: 'imageryDate is the "Image capture" month Google shows; at is when the answer was recorded.',
       uncertainty: 'confidence is the surveyor\'s own: sure, likely or unsure. Unanswered fields are unknown, not absent.',
       entrances: 'Only doors a person saw are marked. None are inferred from an address, outline or facade.',
-      unmatched: 'Answers for building ids the surveyor\'s queue lacked. The generator ignores them until they are moved to a building.',
+      lost: 'An answer whose building id the town no longer has applies to nothing; the generator lists such ids as lost in project.json.',
     },
-    answers: out, ...(Object.keys(unmatched).length ? {unmatched} : {}),
+    answers: out,
   };
 }

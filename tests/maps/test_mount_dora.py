@@ -289,23 +289,17 @@ class SurveyEvidence(unittest.TestCase):
         self.assertEqual(inputs[-1]["kind"], "survey")
         self.assertEqual(BUILDER.lost_survey_answers(found, BUILDER.county_buildings()), [])
 
-    def test_a_survey_answer_for_a_building_the_town_no_longer_has_stops_the_build(self):
-        """A county building can change id when the county data does; its answers must not vanish quietly."""
+    def test_an_answer_for_a_building_the_town_no_longer_has_is_listed_as_lost_and_the_rest_still_apply(self):
+        """A county building can change id when the county data does. Its answer must not vanish quietly, nor stop the build that
+        lets the survey page show it for re-keying: project.json lists it as lost, and every other answer still applies."""
         known = BUILDER.county_buildings()[0]["id"]
         with tempfile.TemporaryDirectory() as tmp:
             project = self.evidence_project(tmp, {"answers": {known: {"stories": "2"}, "county-0000000-9": {"stories": "1"}}}, source=True)
-            with self.assertRaisesRegex(ValueError, r"answers 1 building id\(s\) the town no longer has: county-0000000-9\. Nothing was written\. "
-                                                    r"Import the file into the survey page"):
-                BUILDER.build_project(project)
-
-    def test_answers_kept_apart_under_unmatched_apply_to_nothing_and_are_counted(self):
-        """The survey page exports answers for ids its queue lacks under `unmatched`, which the build must not refuse or apply."""
-        known = BUILDER.county_buildings()[0]["id"]
-        with tempfile.TemporaryDirectory() as tmp:
-            found, inputs = BUILDER.load_evidence(self.evidence_project(tmp, {"answers": {}, "unmatched": {"county-0000000-9": {"stories": "1"}, known: {"stories": "4"}}}))
-        self.assertEqual((inputs[-1]["kind"], inputs[-1]["unmatched"]), ("survey", 2))
-        self.assertEqual(BUILDER.lost_survey_answers(found, BUILDER.county_buildings()), [])
-        self.assertNotIn("survey", found[known])
+            _, manifest, database, _ = BUILDER.build_project(project)
+        survey = next(r for r in manifest["generation"]["evidenceInputs"] if r["kind"] == "survey")
+        self.assertEqual(survey["lost"], ["county-0000000-9"])
+        building = next(f for f in database["features"] if f["id"] == known)
+        self.assertEqual(building["nativeProxy"]["storiesSource"], "survey:stories 2")
 
 
 if __name__ == "__main__":

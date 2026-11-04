@@ -74,7 +74,8 @@ test('compass headings and street names', () => {
   assert.equal(streetKey('445 S GRANDVIEW ST 10').full, 'S GRANDVIEW ST');
   assert.equal(streetKey('112-D S GRANDVIEW ST').full, 'S GRANDVIEW ST');
   assert.equal(streetKey('142A/B W 4TH AVE').full, 'W 4TH AVE');
-  for (const unit of ['12 MAIN ST UNIT A', '12 MAIN ST 10-A', '12 MAIN ST A', '12 MAIN ST STE 200']) assert.equal(streetKey(unit).full, 'MAIN ST', unit);
+  for (const unit of ['12 MAIN ST UNIT A', '12 MAIN ST 10-A', '12 MAIN ST A', '12 MAIN ST STE 200', '12 MAIN ST STE. 5', '12 MAIN ST APT. 3'])
+    assert.equal(streetKey(unit).full, 'MAIN ST', unit);
   // ...a direction written last or glued on moves to the front...
   assert.equal(streetKey('620 HIGHLAND ST N').full, streetKey('North Highland Street').full);
   assert.equal(streetKey('325 E3RD AVE').full, streetKey('East 3rd Avenue').full);
@@ -87,6 +88,7 @@ test('compass headings and street names', () => {
   assert.equal(streetKey('9 SUITE ST').full, 'SUITE ST');
   assert.equal(streetKey('100 UNIT RD').full, 'UNIT RD');
   assert.equal(streetKey('Avenue A').full, 'AVE A');
+  assert.equal(streetKey('100 W AVE A').full, 'W AVE A');
   assert.equal(streetKey('1234 STATE ROAD 19').full, 'STATE RD 19');
   assert.equal(streetKey('US Highway 441').full, 'US HWY 441');
   // Known gap: an address without a street type matches no road ("N GRANDVIEW" is not "N GRANDVIEW ST").

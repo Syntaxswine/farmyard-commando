@@ -29,14 +29,15 @@ const UNIT_TOKEN = /^(\d+[A-Z]?|[A-Z])$/, COMPASS = new Set(['N', 'S', 'E', 'W']
 // ("460 N GRANDVIEW") still matches no road.
 export function streetKey(name) {
   if (!name) return null;
-  const words = name.toUpperCase().replace(/\s*(#|\b(UNIT|APT|STE|SUITE)(\s*#?\s*(?=[A-Z]?\d)|\s+(?=[A-Z]\b))).*$/, '')
+  const words = name.toUpperCase().replace(/\s*(#|\b(UNIT|APT|STE|SUITE)\.?(\s*#?\s*(?=[A-Z]?\d)|\s+(?=[A-Z]\b))).*$/, '')
     .replace(/^\s*(\d+[A-Z]?)[-/][A-Z0-9]+(?=\s)/, '$1').replace(/\b([NSEW])(\d+(ST|ND|RD|TH))\b/g, '$1 $2')
     .replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
   while (words.length && /^\d+[A-Z]?$/.test(words[0]) && !/^\d+(ST|ND|RD|TH)$/.test(words[0])) words.shift();
   const norm = words.map(w => ORDINALS[w] || TYPES[w] || DIRECTIONS[w] || w);
   if (norm.length > 2 && COMPASS.has(norm.at(-1)) && STREET_TYPES.has(norm.at(-2))) norm.unshift(norm.pop());
-  const type = norm.findLastIndex(w => UNIT_AFTER.has(w));
-  if (type >= 1 && type < norm.length - 1 && norm.slice(type + 1).every(w => UNIT_TOKEN.test(w))) norm.length = type + 1;
+  // A lettered street ("AVENUE A", "W AVE A") has no name before its type, so its letter stays.
+  const type = norm.findLastIndex(w => UNIT_AFTER.has(w)), named = norm.slice(0, Math.max(0, type)).some(w => !COMPASS.has(w));
+  if (named && type < norm.length - 1 && norm.slice(type + 1).every(w => UNIT_TOKEN.test(w))) norm.length = type + 1;
   if (!norm.length) return null;
   const base = norm.filter((w, i) => !(i === 0 && ['N', 'S', 'E', 'W'].includes(w) && norm.length > 1));
   return {full: norm.join(' '), base: base.join(' ')};

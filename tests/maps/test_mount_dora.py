@@ -46,13 +46,13 @@ class MountDoraGeneration(unittest.TestCase):
 
     def test_authored_buildings_share_tile_edges_without_losing_source_holes_or_neighbours(self):
         authored = json.loads(self.outputs['authored-buildings.json'])
-        self.assertEqual(len(authored['records']), 950)
+        self.assertEqual(len(authored['records']), 950 + 126)  # OSM outlines, then county buildings
         self.assertEqual(authored['metrics']['authoredHoles'], 2)
         self.assertEqual(authored['metrics']['sharedOwnerPairsRetained'], 30)
         digest = hashlib.sha256(self.outputs['authored-buildings.json']).hexdigest()
         self.assertEqual(digest, self.project['generation']['authoredLayoutSHA256'])
         self.assertEqual(digest, self.database['authoredLayoutSHA256'])
-        originals = {f['id']: f for f in BUILDER.load_source()[3]}
+        originals = {f['id']: f for f in BUILDER.load_source()[3] + BUILDER.county_buildings()}
         occupied = set()
         for record in authored['records']:
             feature = self.features[record['id']]

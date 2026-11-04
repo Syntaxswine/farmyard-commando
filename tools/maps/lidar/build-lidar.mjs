@@ -10,6 +10,9 @@
 //   reference/lidar/bare-earth.png           1 m terrain, centimetres above NAVD88
 //   reference/lidar/bare-earth-source.png    per cell: 0 measured, 1 filled, 2 water
 //   reference/lidar/bare-earth.json          grid definition, encoding, statistics
+//   reference/county-buildings.json          county-sketched buildings the game
+//                                            lacks, placed on their roofs
+//                                            (county-buildings.mjs)
 // Nothing here edits the generator, the sectors or the art kit.
 //
 //   node tools/maps/lidar/build-lidar.mjs [--check]
@@ -19,15 +22,16 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {area, bounds, centroid, contains} from '../house-reference/geometry.mjs';
-import {featuresPin} from '../house-reference/features-digest.mjs';
+import {featuresPin, isOsm} from '../house-reference/features-digest.mjs';
 import {cacheDir, MARGIN_M} from './fetch-lidar.mjs';
 import {loadPoints, pointsIn} from './points.mjs';
 import {classifyRoof, median, percentile, ROOF} from './roofs.mjs';
 import {decodePng, encodePng, fillGaps, maskOf} from './raster.mjs';
+import {brief, occupancy, PLACE, placeCountyBuildings, underfoot} from './county-buildings.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const town = path.join(root, 'maps/mount-dora'), ref = path.join(town, 'reference'), out = path.join(ref, 'lidar');
-const targets = {roofs: path.join(ref, 'lidar-roofs.json'), terrain: path.join(out, 'bare-earth.json'),
+const targets = {roofs: path.join(ref, 'lidar-roofs.json'), county: path.join(ref, 'county-buildings.json'), terrain: path.join(out, 'bare-earth.json'),
   elevation: path.join(out, 'bare-earth.png'), source: path.join(out, 'bare-earth-source.png')};
 const hash = data => createHash('sha256').update(data).digest('hex');
 const r2 = v => v === null || Number.isNaN(v) ? null : Math.round(v * 100) / 100, r1 = v => v === null || Number.isNaN(v) ? null : Math.round(v * 10) / 10;
@@ -280,7 +284,7 @@ export async function build() {
   const index = await loadPoints(files, project.projection, box, extent);
 
   const lake = features.find(f => f.category === 'water' && f.tags.name === 'Lake Dora').geometry.coordinates;
-  const houses = features.filter(f => f.category === 'building').map(f => {
+  const houses = features.filter(f => f.category === 'building' && isOsm(f)).map(f => {
     const geometry = f.geographicGeometry.coordinates;
     return {feature: f, geometry, box: bounds(geometry), area: area(geometry), centre: centroid(geometry)};
   }).sort((a, b) => a.feature.id.localeCompare(b.feature.id));
@@ -344,6 +348,45 @@ export async function build() {
   validation.landmarks = {lakesideInn: LANDMARKS.lakesideInn.map(pick), donnellyHouse: pick(LANDMARKS.donnellyHouse),
     lighthouse: {townPoint: lh.at, ...lighthouse(index, lhAt), realFt: lh.realFt, realM: r2(lh.realFt * .3048), gameProxyM: lh.proxyM, sources: lh.source}};
 
+  // County-sketched buildings the game lacks, on their roofs, then measured like
+  // the game's own (heights above the ground ring, roof planes).
+  const houseRef = JSON.parse(countyBytes);
+  const holders = new Map(houseRef.buildings.flatMap(b => b.county.records.map(r => [`${r.altKey}/${r.bldgNum}`, b.id])));
+  // Structures the game already draws besides its buildings: the generator's
+  // hand-placed shelters and stages, and OSM multi-storey car parks (drawn as
+  // lots; a closed block would wall off an open parking deck).
+  const asGame = (id, mp) => ({id, geometry: mp, box: bounds(mp)});
+  const placedCounty = placeCountyBuildings({sketches: houseRef.countyOnly, holders, base: reg, grid: occupancy(index),
+    games: [...houses.map(h => asGame(h.feature.id, h.geometry)),
+      ...(JSON.parse(featuresBytes).authoredStructures ?? []).map(s => asGame(s.id, s.geometry.coordinates)),
+      ...features.filter(f => isOsm(f) && f.tags.parking === 'multi-storey' && f.geometry.type === 'MultiPolygon').map(f => asGame(f.id, f.geometry.coordinates))]});
+  const saw = (b, seen) => b.roofShare >= PLACE.roofAt ? 'class-6 roof'
+    : seen.raisedShare >= .5 ? 'raised returns without the building class: a deck classed as ground, or a roof under trees'
+    : seen.groundShare >= .5 ? 'open ground in December 2018; placed on the county record alone' : 'too few returns to tell';
+  const countyBuildings = placedCounty.buildings.map(b => {
+    const geometry = shift(b.geometry, reg.dx, reg.dy), house = {feature: {id: b.id}, area: area(b.geometry), centre: centroid(geometry)};
+    const a = analyse(index, house, geometry, gridZ), seen = b.roofShare >= PLACE.roofAt ? null : underfoot(index, pointsIn, geometry, a.groundM);
+    return {id: b.id, areaM2: r1(house.area), centroid: centroid(b.geometry).map(r2), angleDeg: b.angleDeg, clippedByGameM2: b.clippedByGameM2, ...(b.piece ? {piece: b.piece} : {}),
+      roofShare: b.roofShare, lidarSaw: saw(b, seen), ...(seen ? {underfoot: seen} : {}),
+      members: b.members.map(brief), geometry: {type: 'MultiPolygon', coordinates: b.geometry}, county: b.county, lidar: record(house, a)};
+  });
+  const tally = (list, fn) => Object.fromEntries([...list.reduce((m, x) => m.set(fn(x), (m.get(fn(x)) || 0) + 1), new Map())].sort());
+  const countyCompared = countyBuildings.filter(b => b.county.suggested.stories && b.lidar.storeysFromLidar);
+  const countyDoc = {kind: 'mount-dora-county-buildings', version: 1,
+    inputs: {features: featuresPin(featuresBytes), houseReference: {file: 'maps/mount-dora/reference/house-reference.json', sha256: hash(countyBytes), usedFor: 'countyOnly sketches and the records game buildings hold'},
+      lidar: {file: 'maps/mount-dora/reference/lidar/source.json', sha256: hash(sourceBytes)}},
+    policy: 'Lake County Property Appraiser building sketches that no game building claims, placed on public-domain USGS 3DEP lidar roofs. build-mount-dora.py adds `buildings` to the town; `represented` lists sketches of buildings the game already has. No imagery; no owner, value or sale data.',
+    method: {place: PLACE, frame: 'Town metres in the OSM frame, as the game outlines: the sketch shift is applied after the outline registration of lidar-roofs.json is taken out.',
+      register: `Each sketch moves by the whole 0.5 m cell shift within ±${PLACE.searchM} m that puts most of it over class-6 returns; one with under ${PLACE.roofAt} of its area on a roof stays where the county drew it.`,
+      structures: `Sketches that overlap or come within ${PLACE.touchM} m are one structure: stacked condo units, attached units, a house drawn twice. Its outline is their union, closed across gaps under ${PLACE.touchM} m and simplified to ${PLACE.simplifyM} m in its own wall axes.`,
+      represented: `Already in the game: a structure ${PLACE.onGameAt * 100}%+ on game buildings, the generator's hand-placed shelters and stages, or OSM multi-storey car parks; a roofless one over a game building by more than ${PLACE.staleOnGameAt * 100}%; a sketch whose record a game building holds and overlaps by more than ${PLACE.holderAt * 100}%; one with under ${PLACE.minAddM2} m² or ${PLACE.minAddShare * 100}% of its area outside game buildings.`,
+      added: 'Every other structure, minus the parts game buildings cover. Heights and roof planes as in lidar-roofs.json. County facts: the largest sketch\'s record, with the tallest record\'s storeys.'},
+    metrics: {sketches: houseRef.countyOnly.length, represented: placedCounty.represented.length, representedBy: tally(placedCounty.represented, r => r.reason.replace(/\d+%/, 'N%').replace(/only [\d.]+ m2/, 'only N m2')),
+      buildings: countyBuildings.length, sketchesInBuildings: countyBuildings.reduce((n, b) => n + b.members.length, 0), areaM2: r1(countyBuildings.reduce((n, b) => n + b.areaM2, 0)),
+      lidarSaw: tally(countyBuildings, b => b.lidarSaw), storeysFromLidar: tally(countyBuildings, b => String(b.lidar.storeysFromLidar)),
+      countyStoreysAgreeWithLidar: {compared: countyCompared.length, agree: countyCompared.filter(b => b.county.suggested.stories === b.lidar.storeysFromLidar).length}},
+    buildings: countyBuildings, represented: placedCounty.represented};
+
   const s = index.stats, areaM2 = W * D, flights = [...s.flights.values()];
   const dates = [...new Set(flights.flatMap(f => [gpsDate(f.lo), gpsDate(f.hi)]))].sort();
   const forms = Object.fromEntries(['flat', 'gable', 'hip', 'other', 'unknown'].map(f => [f, buildings.filter(b => b.roof.form === f).length]));
@@ -387,7 +430,8 @@ export async function build() {
     stats: {minM: lo / 100, maxM: hi / 100, measuredShare: r3(measured / kind.length), filledShare: r3((kind.length - measured - wet) / kind.length), waterShare: r3(wet / kind.length),
       lakeLevelM: r2(t.level), lakeLevelFt: r2(t.level / .3048), lakeWaterReturns: t.waterReturns},
     collection: {dataset: source.dataset, acquired: [collection.acquired.first, collection.acquired.last]}};
-  return {roofsText: JSON.stringify(roofs, null, 1) + '\n', terrainText: JSON.stringify(terrainDoc, null, 1) + '\n', elevationPng, sourcePng, elevation, kind};
+  return {roofsText: JSON.stringify(roofs, null, 1) + '\n', countyText: JSON.stringify(countyDoc, null, 1) + '\n',
+    terrainText: JSON.stringify(terrainDoc, null, 1) + '\n', elevationPng, sourcePng, elevation, kind};
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -397,6 +441,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   if (args[0] === '--check') {
     for (const f of Object.values(targets)) assert(fs.existsSync(f), `${path.relative(root, f)} is missing; run without --check.`);
     assert.equal(hash(fs.readFileSync(targets.roofs)), hash(built.roofsText), 'lidar-roofs.json is stale; rerun without --check.');
+    assert.equal(hash(fs.readFileSync(targets.county)), hash(built.countyText), 'county-buildings.json is stale; rerun without --check.');
     assert.equal(hash(fs.readFileSync(targets.terrain)), hash(built.terrainText), 'bare-earth.json is stale; rerun without --check.');
     // PNG bytes depend on the zlib build; the samples must match exactly.
     assert.equal(hash(Buffer.from(decodePng(fs.readFileSync(targets.elevation)).samples.buffer)), hash(Buffer.from(built.elevation.buffer)), 'bare-earth.png is stale.');
@@ -404,7 +449,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     console.log(`Lidar roofs and terrain are current (${((Date.now() - started) / 1000).toFixed(0)} s).`);
   } else {
     fs.mkdirSync(out, {recursive: true});
-    fs.writeFileSync(targets.roofs, built.roofsText); fs.writeFileSync(targets.terrain, built.terrainText);
+    fs.writeFileSync(targets.roofs, built.roofsText); fs.writeFileSync(targets.county, built.countyText); fs.writeFileSync(targets.terrain, built.terrainText);
     fs.writeFileSync(targets.elevation, built.elevationPng); fs.writeFileSync(targets.source, built.sourcePng);
     const r = JSON.parse(built.roofsText);
     console.log(JSON.stringify({collection: r.collection.acquired, density: r.collection.densityPerM2, registration: {dx: r.registration.dx, dy: r.registration.dy},

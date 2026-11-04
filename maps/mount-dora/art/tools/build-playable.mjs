@@ -24,6 +24,8 @@ const palettes=[['cream-siding','slate',[1,.98,.9]],['sage-siding','brown-shingl
 // survey records them; `why` names the source of every evidence-driven field.
 const SIDINGS=['cream-siding','sage-siding','yellow-siding'],SHAPES=['gable','hip','flat'];
 const COVERS={metal:{roof:'blue-metal',roofFinish:'silver'},tile:{roof:'terracotta'},'tar-and-gravel':{roof:'slate',roofStyle:'flat'},'rolled-asphalt':{roof:'slate',roofStyle:'flat'}};
+// County-sketched buildings carry no OSM tags; their county use says shop or office.
+const COUNTY_COMMERCIAL=/STORE|OFFICE|SHOP|PROFESSIONAL/;
 function evidenceTreatment(f,seed){
  const np=f.nativeProxy,ev=np.evidence||{},lidar=ev.lidar||{},survey=ev.survey||{},cover=ev.county?.roofCover,out={},why={};
  if(!/^unsurveyed/.test(np.materialSource)){out.wall=np.material==='wood'?SIDINGS[seed%SIDINGS.length]:np.material==='brick'?'brick':'plaster';why.wall=np.materialSource;}
@@ -40,7 +42,7 @@ function evidenceTreatment(f,seed){
  return {out,why};
 }
 for(const f of source.features.filter(f=>f.category==='building')){
- const seed=hash(f.id),a=centre(f.bounds),isInn=inn.has(f.id),shop=f.tags.building==='commercial'||f.tags.shop||f.tags.amenity&&['restaurant','cafe','bar','pub','bank'].includes(f.tags.amenity)||(a[0]>345&&a[0]<590&&a[1]>520&&a[1]<690),p=palettes[seed%palettes.length];
+ const seed=hash(f.id),a=centre(f.bounds),isInn=inn.has(f.id),shop=f.tags.building==='commercial'||f.tags.shop||f.tags.amenity&&['restaurant','cafe','bar','pub','bank'].includes(f.tags.amenity)||COUNTY_COMMERCIAL.test(f.county?.style||'')||(a[0]>345&&a[0]<590&&a[1]>520&&a[1]<690),p=palettes[seed%palettes.length];
  const type=isInn?'lakeside-inn':shop?'commercial':f.id==='osm-way-557051202'?'donnelly-civic':'vernacular';
  const hero={'osm-way-547799531':'donnelly-house','osm-way-556809468':'history-museum','osm-way-557494933':'former-depot','osm-way-558337885':'shamrock-building'}[f.id];
  const stories=isInn||hero==='donnelly-house'?2:f.nativeProxy.stories;
@@ -55,7 +57,7 @@ for(const f of source.features.filter(f=>f.category==='building')){
  if(evidence)Object.assign(treatment,evidence.out);
  // Keep all rings, including inner courtyards. Local anchors do not quantize them.
  const polygons=f.geometry.coordinates;
- output.push({id:f.id,kind:'building',sourceIds:[f.id],anchor:a,bounds:expand(f.bounds,.5),polygons,treatment,seed,collisionPolicy:'retain-source-walls',solids:[{kind:'polygon',polygons}],replacesSourceIds:[f.id],provenance:{footprint:'grid-generalized-osm; original geographicGeometry retained',treatment:isInn?'observed-group-palette-inferred-details':['donnelly-house','former-depot'].includes(hero)?'observed-typology-inferred-details':'inferred-local-typology',height:isInn?'two-native-storey-approximation-city-documents-2-to-3-storey-complex':hero==='donnelly-house'?'native-two-storey-queen-anne-approximation':f.nativeProxy.storiesSource,details:'Repeated windows, roof form and facade divisions are approximations; no surveyed doors or interiors.',sourceRefs:isInn?['city-historic-sites','lakeside-owner','lakeside-history']:['city-preservation','city-historic-sites']}});
+ output.push({id:f.id,kind:'building',sourceIds:[f.id],anchor:a,bounds:expand(f.bounds,.5),polygons,treatment,seed,collisionPolicy:'retain-source-walls',solids:[{kind:'polygon',polygons}],replacesSourceIds:[f.id],provenance:{footprint:f.county?'grid-generalized county sketch placed on its 2018 lidar roof (reference/county-buildings.json); original geographicGeometry retained':'grid-generalized-osm; original geographicGeometry retained',treatment:isInn?'observed-group-palette-inferred-details':['donnelly-house','former-depot'].includes(hero)?'observed-typology-inferred-details':'inferred-local-typology',height:isInn?'two-native-storey-approximation-city-documents-2-to-3-storey-complex':hero==='donnelly-house'?'native-two-storey-queen-anne-approximation':f.nativeProxy.storiesSource,details:'Repeated windows, roof form and facade divisions are approximations; no surveyed doors or interiors.',sourceRefs:isInn?['city-historic-sites','lakeside-owner','lakeside-history']:['city-preservation','city-historic-sites']}});
  if(evidence)output.at(-1).provenance.evidence={...evidence.why,colour:'seeded placeholder until surveyed'};
  if(hero||isInn){const p=output.at(-1);p.provenance.sourceRefs.push('city-design-standards-2025');p.provenance.observedFeatures=hero==='donnelly-house'?'PDF76: yellow siding, white decorative veranda, silver stamped-tin roof, polygonal tower and multiple gables':hero==='shamrock-building'?'PDF84 historical image: brick upper facade, pale pilasters, arched lower windows, cornice; current three floors derive from OSM':hero==='former-depot'?'PDF82: white siding and low gray hipped roof':isInn?'PDF84 historical veranda/arched supports; current owner yellow/white group':'Facade remains inferred; no individual photo matched.';}
 }

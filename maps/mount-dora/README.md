@@ -73,7 +73,12 @@ evidence in [reference/](reference/README.md): a survey answer, then the mapped
 default. `nativeProxy.storiesSource` and `materialSource` name the source, and
 `nativeProxy.evidence` keeps the county, lidar and survey values. Storeys are whole
 native-kit storeys, not measured wall heights; the evidence files are pinned in
-`project.json` (`generation.evidenceInputs`). Closed exterior proxies do not imply known doors,
+`project.json` (`generation.evidenceInputs`). Besides the 950 OpenStreetMap
+footprints, the town has 126 buildings OSM lacks. They come from Lake County
+sketches, each placed on its 2018 lidar roof, with a structure's stacked or
+attached units merged into one outline
+([county-buildings.json](reference/README.md#county-buildings-the-game-lacked)).
+Their ids start `county-`, and `county` on each says where it came from. Closed exterior proxies do not imply known doors,
 rooms, roofs or accessible interiors. The grid layout has no unsupported wall
 slivers. Incomplete residential land-use relations are
 recorded and left unfilled. Proposed roads are retained as source references

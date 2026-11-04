@@ -1,6 +1,6 @@
 {
   "schema": "mount-dora-route-evidence/1",
-  "sourceProjectSHA256": "ea317693a26175f11831ace76350b008ec744e9cd3bfc520f9312d8e3bbdec3c",
+  "sourceProjectSHA256": "24e9bae48282c55176c964fad6171bf811d912473b1d683d5ee2d2f695a77f62",
   "sourceDigest": "2b742d1768425de6a41a60818a0d2fd3a72b71f1969de94a50ff9041ce216193",
   "coordinateFrame": "town east/south metres; game = town - (0.5,0.5)",
   "bounds": [
@@ -25,16 +25,16 @@
       500.5
     ]
   },
-  "reachableOutdoorCells": 1705871,
+  "reachableOutdoorCells": 1684556,
   "reachedLandSectors": 39,
   "sectors": [
     {
       "id": "A01",
-      "reachedOutdoorCells": 50484
+      "reachedOutdoorCells": 50093
     },
     {
       "id": "B01",
-      "reachedOutdoorCells": 48809
+      "reachedOutdoorCells": 48399
     },
     {
       "id": "C01",
@@ -42,35 +42,35 @@
     },
     {
       "id": "D01",
-      "reachedOutdoorCells": 49401
+      "reachedOutdoorCells": 49289
     },
     {
       "id": "E01",
-      "reachedOutdoorCells": 50732
+      "reachedOutdoorCells": 50308
     },
     {
       "id": "F01",
-      "reachedOutdoorCells": 51175
+      "reachedOutdoorCells": 50813
     },
     {
       "id": "A02",
-      "reachedOutdoorCells": 47138
+      "reachedOutdoorCells": 43386
     },
     {
       "id": "B02",
-      "reachedOutdoorCells": 48183
+      "reachedOutdoorCells": 46306
     },
     {
       "id": "C02",
-      "reachedOutdoorCells": 49487
+      "reachedOutdoorCells": 49041
     },
     {
       "id": "D02",
-      "reachedOutdoorCells": 50711
+      "reachedOutdoorCells": 50112
     },
     {
       "id": "E02",
-      "reachedOutdoorCells": 43285
+      "reachedOutdoorCells": 43219
     },
     {
       "id": "F02",
@@ -78,15 +78,15 @@
     },
     {
       "id": "A03",
-      "reachedOutdoorCells": 22255
+      "reachedOutdoorCells": 20962
     },
     {
       "id": "B03",
-      "reachedOutdoorCells": 41170
+      "reachedOutdoorCells": 40756
     },
     {
       "id": "C03",
-      "reachedOutdoorCells": 46437
+      "reachedOutdoorCells": 46147
     },
     {
       "id": "D03",
@@ -94,11 +94,11 @@
     },
     {
       "id": "E03",
-      "reachedOutdoorCells": 48898
+      "reachedOutdoorCells": 48790
     },
     {
       "id": "F03",
-      "reachedOutdoorCells": 51132
+      "reachedOutdoorCells": 50584
     },
     {
       "id": "A04",
@@ -106,23 +106,23 @@
     },
     {
       "id": "B04",
-      "reachedOutdoorCells": 48082
+      "reachedOutdoorCells": 48018
     },
     {
       "id": "C04",
-      "reachedOutdoorCells": 52760
+      "reachedOutdoorCells": 51125
     },
     {
       "id": "D04",
-      "reachedOutdoorCells": 51494
+      "reachedOutdoorCells": 50107
     },
     {
       "id": "E04",
-      "reachedOutdoorCells": 52054
+      "reachedOutdoorCells": 51914
     },
     {
       "id": "F04",
-      "reachedOutdoorCells": 51863
+      "reachedOutdoorCells": 51664
     },
     {
       "id": "A05",
@@ -134,7 +134,7 @@
     },
     {
       "id": "C05",
-      "reachedOutdoorCells": 30531
+      "reachedOutdoorCells": 30442
     },
     {
       "id": "D05",
@@ -142,11 +142,11 @@
     },
     {
       "id": "E05",
-      "reachedOutdoorCells": 50397
+      "reachedOutdoorCells": 50325
     },
     {
       "id": "F05",
-      "reachedOutdoorCells": 46077
+      "reachedOutdoorCells": 45737
     },
     {
       "id": "A06",
@@ -158,19 +158,19 @@
     },
     {
       "id": "C06",
-      "reachedOutdoorCells": 31148
+      "reachedOutdoorCells": 30282
     },
     {
       "id": "D06",
-      "reachedOutdoorCells": 51397
+      "reachedOutdoorCells": 50521
     },
     {
       "id": "E06",
-      "reachedOutdoorCells": 52013
+      "reachedOutdoorCells": 51070
     },
     {
       "id": "F06",
-      "reachedOutdoorCells": 52212
+      "reachedOutdoorCells": 50576
     },
     {
       "id": "A07",
@@ -182,19 +182,19 @@
     },
     {
       "id": "C07",
-      "reachedOutdoorCells": 36036
+      "reachedOutdoorCells": 35058
     },
     {
       "id": "D07",
-      "reachedOutdoorCells": 48888
+      "reachedOutdoorCells": 48182
     },
     {
       "id": "E07",
-      "reachedOutdoorCells": 53862
+      "reachedOutdoorCells": 53708
     },
     {
       "id": "F07",
-      "reachedOutdoorCells": 56823
+      "reachedOutdoorCells": 56685
     }
   ],
   "routes": [
@@ -314,8 +314,24 @@
           509.5
         ],
         [
-          570.5,
+          568.5,
           509.5
+        ],
+        [
+          568.5,
+          618.5
+        ],
+        [
+          569.5,
+          618.5
+        ],
+        [
+          569.5,
+          619.5
+        ],
+        [
+          570.5,
+          619.5
         ],
         [
           570.5,
@@ -562,27 +578,75 @@
         ],
         [
           643.5,
-          518.5
+          558.5
         ],
         [
-          700.5,
-          518.5
+          649.5,
+          558.5
         ],
         [
-          700.5,
-          562.5
+          649.5,
+          706.5
+        ],
+        [
+          652.5,
+          706.5
+        ],
+        [
+          652.5,
+          720.5
+        ],
+        [
+          653.5,
+          720.5
+        ],
+        [
+          653.5,
+          801.5
+        ],
+        [
+          656.5,
+          801.5
+        ],
+        [
+          656.5,
+          821.5
+        ],
+        [
+          660.5,
+          821.5
+        ],
+        [
+          660.5,
+          826.5
+        ],
+        [
+          668.5,
+          826.5
+        ],
+        [
+          668.5,
+          864.5
+        ],
+        [
+          695.5,
+          864.5
+        ],
+        [
+          695.5,
+          865.5
         ],
         [
           702.5,
-          562.5
+          865.5
         ],
         [
           702.5,
-          696.5
+          916.5
         ],
         [
           710.5,
-          696.5
+          916.5
         ],
         [
           710.5,
@@ -1198,8 +1262,16 @@
           500.5
         ],
         [
-          414.5,
+          417.5,
           500.5
+        ],
+        [
+          417.5,
+          492.5
+        ],
+        [
+          414.5,
+          492.5
         ],
         [
           414.5,

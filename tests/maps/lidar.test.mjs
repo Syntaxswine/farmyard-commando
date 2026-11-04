@@ -14,7 +14,7 @@ import {classifyRoof, ROOF} from '../../tools/maps/lidar/roofs.mjs';
 import {decodePng, encodePng, fillGaps, maskOf} from '../../tools/maps/lidar/raster.mjs';
 import {auc, CONTROLS, GATE, kappa, storeysFromWall, validate} from '../../tools/maps/lidar/build-lidar.mjs';
 import {nodeBounds} from '../../tools/maps/lidar/fetch-lidar.mjs';
-import {featuresPin} from '../../tools/maps/house-reference/features-digest.mjs';
+import {featuresPin, isOsm} from '../../tools/maps/house-reference/features-digest.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const town = path.join(root, 'maps/mount-dora'), ref = path.join(town, 'reference');
@@ -125,9 +125,11 @@ test('statistics: AUC, kappa and the storey rule', () => {
   assert.deepEqual([2.9, 4.59, 4.6, 7.79, 7.8, 11.1].map(storeysFromWall), [1, 1, 2, 2, 3, 4]);
 });
 
-test('lidar-roofs.json covers every game building and is current with its inputs', () => {
-  const buildings = json('features.json').features.filter(f => f.category === 'building').map(f => f.id).sort();
-  assert.deepEqual(roofs.buildings.map(b => b.id), buildings);
+test('lidar-roofs.json covers every OSM game building and is current with its inputs', () => {
+  const all = json('features.json').features.filter(f => f.category === 'building');
+  assert.deepEqual(roofs.buildings.map(b => b.id), all.filter(isOsm).map(f => f.id).sort());
+  // The rest are the county buildings, measured in county-buildings.json.
+  assert.deepEqual(all.filter(f => !isOsm(f)).map(f => f.id).sort(), json('reference/county-buildings.json').buildings.map(b => b.id));
   assert.deepEqual(roofs.inputs.features, featuresPin(fs.readFileSync(path.join(town, 'features.json'))));
   assert.equal(roofs.inputs.lidar.sha256, hash(fs.readFileSync(path.join(ref, 'lidar/source.json'))));
   assert.equal(roofs.inputs.county.sha256, hash(fs.readFileSync(path.join(ref, 'house-reference.json'))));

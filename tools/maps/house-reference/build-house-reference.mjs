@@ -14,7 +14,7 @@ import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {createProjection, headingDegrees} from './projection.mjs';
 import {area, bounds, centroid, contains, gridIndex, nearestOnPolyline, overlapArea} from './geometry.mjs';
-import {featuresPin} from './features-digest.mjs';
+import {featuresPin, isOsm} from './features-digest.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const town = path.join(root, 'maps/mount-dora');
@@ -127,7 +127,7 @@ export function build() {
     if (row.OXF_DESC) extras.get(row.REM_PID).add(row.OXF_DESC.trim());
   }
 
-  const houses = features.filter(f => f.category === 'building').map(f => {
+  const houses = features.filter(f => f.category === 'building' && isOsm(f)).map(f => {
     const geometry = f.geographicGeometry.coordinates;
     return {feature: f, geometry, box: bounds(geometry), area: area(geometry), centre: centroid(geometry)};
   }).sort((a, b) => a.feature.id.localeCompare(b.feature.id));
@@ -168,14 +168,44 @@ export function build() {
   };
   const groundM2 = rec => r1(SUBAREAS.ground.reduce((s, c) => s + (rec.subAreasSqft[c] || 0), 0) * SQFT);
   const parcelRecords = altKey => [...records.values()].filter(r => r.ALT_KEY === altKey).map(r => describe(altKey, r.BLDG_NUM));
+  // The parcels under a point, smallest first; stacked condo units share one
+  // outline, so the smallest non-condo hit is the lot itself.
+  const lotsAt = (box, centre) => {
+    const hits = parcelIndex(box).map(i => parcels[i]).filter(p => contains(p.geometry, centre));
+    hits.sort((a, b) => a.area - b.area || a.altKey.localeCompare(b.altKey));
+    return {hits, lot: hits.find(p => !/CONDO/.test(p.landUse)) || hits[0] || null};
+  };
+  // Storeys, wall, roof, porches and garage from a building's records.
+  const suggest = (recs, lot, method) => {
+    const primary = recs[0] || null;
+    const codes = primary ? Object.keys(primary.subAreasSqft) : [];
+    const sum = list => r1(list.reduce((s, c) => s + (primary?.subAreasSqft[c] || 0), 0) * SQFT);
+    const condoMax = method === 'condo-units' ? Math.max(...recs.map(r => Number.parseFloat(r.stories) || 0)) : null;
+    const st = primary ? storeys(condoMax ? String(condoMax) : primary.stories, codes) : {stories: null, halfStory: false, source: 'no-county-record'};
+    if (method === 'condo-units') st.source += ' (largest of the unit records; units may not span the building)';
+    const wall = primary && WALLS[primary.wall], roof = primary && ROOFS[primary.roofCover];
+    const lotExtras = lot ? [...(extras.get(lot.altKey) || [])].sort() : [];
+    const suggested = {
+      stories: st.stories, halfStory: st.halfStory, storiesSource: st.source,
+      material: wall?.material ?? null, wallConstruction: wall?.construction ?? null,
+      ...(wall?.finishUnknown ? {finishUnknown: wall.finishUnknown} : {}),
+      materialSource: primary?.wall ? `county:CNS_EXT_WALL_1 ${primary.wall}` : 'no-county-wall-record',
+      roofCover: roof?.cover ?? null, roofPitch: roof?.pitch ?? null,
+      roofSource: primary?.roofCover ? `county:ROOF_COVER ${primary.roofCover}` : 'no-county-roof-record',
+      porchM2: {open: sum(SUBAREAS.open), screen: sum(SUBAREAS.screen), enclosed: sum(SUBAREAS.enclosed)},
+      canopyM2: sum(SUBAREAS.canopy),
+      garage: codes.some(c => SUBAREAS.garage.includes(c)) ? 'attached' : codes.some(c => SUBAREAS.carport.includes(c)) ? 'carport'
+        : lotExtras.includes('DETACHED GARAGE') ? 'detached-on-lot' : null,
+      basement: codes.some(c => SUBAREAS.basement.includes(c)),
+      yearBuilt: primary?.yearBuilt ?? lot?.yearBuilt ?? null,
+    };
+    return {st, lotExtras, suggested};
+  };
 
   const out = [];
   for (const [h, house] of houses.entries()) {
     const f = house.feature, matches = assigned[h];
-    const hits = parcelIndex(house.box).map(i => parcels[i]).filter(p => contains(p.geometry, house.centre));
-    // Stacked condo units share one outline; the smallest-area hit is the lot itself.
-    hits.sort((a, b) => a.area - b.area || a.altKey.localeCompare(b.altKey));
-    const lot = hits.find(p => !/CONDO/.test(p.landUse)) || hits[0] || null;
+    const {hits, lot} = lotsAt(house.box, house.centre);
     let method = 'none', recs = [], match = null;
     if (matches.length) {
       recs = matches.map(m => describe(sketches[m.sketch].altKey, sketches[m.sketch].bldgNum)).filter(Boolean);
@@ -199,28 +229,7 @@ export function build() {
         }
       }
     }
-    const primary = recs[0] || null;
-    const codes = primary ? Object.keys(primary.subAreasSqft) : [];
-    const sum = list => r1(list.reduce((s, c) => s + (primary?.subAreasSqft[c] || 0), 0) * SQFT);
-    const condoMax = method === 'condo-units' ? Math.max(...recs.map(r => Number.parseFloat(r.stories) || 0)) : null;
-    const st = primary ? storeys(condoMax ? String(condoMax) : primary.stories, codes) : {stories: null, halfStory: false, source: 'no-county-record'};
-    if (method === 'condo-units') st.source += ' (largest of the unit records; units may not span the building)';
-    const wall = primary && WALLS[primary.wall], roof = primary && ROOFS[primary.roofCover];
-    const lotExtras = lot ? [...(extras.get(lot.altKey) || [])].sort() : [];
-    const suggested = {
-      stories: st.stories, halfStory: st.halfStory, storiesSource: st.source,
-      material: wall?.material ?? null, wallConstruction: wall?.construction ?? null,
-      ...(wall?.finishUnknown ? {finishUnknown: wall.finishUnknown} : {}),
-      materialSource: primary?.wall ? `county:CNS_EXT_WALL_1 ${primary.wall}` : 'no-county-wall-record',
-      roofCover: roof?.cover ?? null, roofPitch: roof?.pitch ?? null,
-      roofSource: primary?.roofCover ? `county:ROOF_COVER ${primary.roofCover}` : 'no-county-roof-record',
-      porchM2: {open: sum(SUBAREAS.open), screen: sum(SUBAREAS.screen), enclosed: sum(SUBAREAS.enclosed)},
-      canopyM2: sum(SUBAREAS.canopy),
-      garage: codes.some(c => SUBAREAS.garage.includes(c)) ? 'attached' : codes.some(c => SUBAREAS.carport.includes(c)) ? 'carport'
-        : lotExtras.includes('DETACHED GARAGE') ? 'detached-on-lot' : null,
-      basement: codes.some(c => SUBAREAS.basement.includes(c)),
-      yearBuilt: primary?.yearBuilt ?? lot?.yearBuilt ?? null,
-    };
+    const {st, lotExtras, suggested} = suggest(recs, lot, method);
 
     // Street View: the nearest point on the addressed street, else the nearest public road.
     const addressKey = streetKey(lot?.address && lot.address !== 'UNASSIGNED' ? lot.address : null);
@@ -268,10 +277,15 @@ export function build() {
   const countyOnly = sketches.map((s, i) => ({s, i})).filter(({i}) => !owner.has(i))
     .filter(({s}) => { const c = centroid(s.geometry); return c[0] >= extent[0] && c[1] >= extent[1] && c[0] <= extent[2] && c[1] <= extent[3]; })
     .map(({s, i}) => {
-      const rec = describe(s.altKey, s.bldgNum), c = centroid(s.geometry);
+      const rec = describe(s.altKey, s.bldgNum), c = centroid(s.geometry), {lot} = lotsAt(s.box, c);
+      const {lotExtras, suggested} = suggest(rec ? [rec] : [], lot, 'county-only');
       return {altKey: s.altKey, bldgNum: String(Number.parseInt(s.bldgNum, 10)), centroid: c.map(r2), areaM2: r1(s.area), coveredByGame: r2(covered.get(i) || 0),
         geometry: s.geometry.map(poly => poly.map(ring => ring.map(p => p.map(r2)))),
-        record: rec && {style: rec.style, stories: rec.stories, wall: rec.wall, roofCover: rec.roofCover, yearBuilt: rec.yearBuilt}};
+        record: rec && {style: rec.style, stories: rec.stories, wall: rec.wall, roofCover: rec.roofCover, yearBuilt: rec.yearBuilt},
+        // The facts a game building gets, for where this sketch becomes one
+        // (reference/county-buildings.json, written by tools/maps/lidar/build-lidar.mjs).
+        parcel: lot ? {altKey: lot.altKey, landUse: lot.landUse, buildings: lot.buildings} : null,
+        county: {records: rec ? [rec] : [], lotExtras}, suggested};
     }).sort((a, b) => a.altKey.localeCompare(b.altKey) || a.bldgNum.localeCompare(b.bldgNum));
 
   const count = fn => out.filter(fn).length;

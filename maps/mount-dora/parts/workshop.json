@@ -1,0 +1,93 @@
+{
+ "kind": "house-part-workshop-receipt",
+ "version": 1,
+ "nautilusCommit": "2502646482218524fd5129641da769bb82462e4d",
+ "source": {
+  "nautilusCommit": "2502646482218524fd5129641da769bb82462e4d",
+  "trackedBlobsVerified": 2297
+ },
+ "blocksSha256": "f51e63a15a77b24660c3271b12d7683c05d8b5f48fa839e51712ffd45c2a2309",
+ "slot": [
+  4,
+  4
+ ],
+ "counts": {
+  "fit": 873,
+  "validated": 873,
+  "importedUnchanged": 873,
+  "placedMapValid": 873,
+  "placedAndExtractedUnchanged": 873,
+  "quarterTurnsRestore": 873
+ },
+ "nativeAddedPaths": [],
+ "failures": [],
+ "browser": {
+  "passed": true,
+  "browser": {
+   "version": "156.0.4314.58",
+   "channel": "msedge",
+   "headless": true,
+   "softwareWebGL": true
+  },
+  "portReleased": true,
+  "scenarios": [
+   {
+    "id": "osm-way-1240415865",
+    "size": [
+     17,
+     16
+    ],
+    "storeys": 1,
+    "walls": 6,
+    "importedUnchanged": true,
+    "savedToDesignLibrary": true,
+    "placedInSlot": [
+     4,
+     4
+    ],
+    "exportedMapValid": true,
+    "exportedHouseMatchesPart": true,
+    "dialogsAccepted": 0,
+    "exportSha256": "456f7d9bfa1af2f66a69c7584a8c3d7fa9cbd1bde16dbc1e8c9e14740180bf88"
+   },
+   {
+    "id": "county-1464765-1",
+    "size": [
+     18,
+     15
+    ],
+    "storeys": 2,
+    "walls": 16,
+    "importedUnchanged": true,
+    "savedToDesignLibrary": true,
+    "placedInSlot": [
+     4,
+     4
+    ],
+    "exportedMapValid": true,
+    "exportedHouseMatchesPart": true,
+    "dialogsAccepted": 1,
+    "exportSha256": "aa411ab79e4e585977adf51f2b5dfa4442c32e18f0c1463226c7579479442575"
+   },
+   {
+    "id": "osm-way-547799531",
+    "size": [
+     23,
+     16
+    ],
+    "storeys": 2,
+    "walls": 14,
+    "importedUnchanged": true,
+    "savedToDesignLibrary": true,
+    "placedInSlot": [
+     4,
+     4
+    ],
+    "exportedMapValid": true,
+    "exportedHouseMatchesPart": true,
+    "dialogsAccepted": 1,
+    "exportSha256": "346a946f2de85a2f8a194b91a494a072f1c8d300224cbac285c4dd6b29f5ef20"
+   }
+  ]
+ }
+}

@@ -9,7 +9,7 @@
   },
   "houseReference": {
    "file": "maps/mount-dora/reference/house-reference.json",
-   "sha256": "981c17ba60500a0e5be2acf7ad528cc7ed64328ad4322431a3183491b765da81",
+   "sha256": "9184090a20324786d25b3d72fa12ce45e99255d8adba66c473b1030f25c95a79",
    "usedFor": "countyOnly sketches and the records game buildings hold"
   },
   "lidar": {
@@ -39,7 +39,7 @@
   "structures": "Sketches that overlap or come within 0.5 m are one structure: stacked condo units, attached units, a house drawn twice. Its outline is their union, closed across gaps under 0.5 m and simplified to 0.25 m in its own wall axes.",
   "represented": "Already in the game: a structure 50%+ on game buildings, the generator's hand-placed shelters and stages, or OSM multi-storey car parks; a roofless one over a game building by more than 10%; a sketch whose record a game building holds and overlaps by more than 5%; one with under 10 m² or 25% of its area outside game buildings.",
   "added": "Every other structure, minus the parts game buildings cover. Heights and roof planes as in lidar-roofs.json. County facts: the largest sketch's record, lot and address, with the tallest record's storeys.",
-  "streetView": "For the survey, planned as for the game buildings (house-reference.json, tools/maps/house-reference/viewpoint.mjs): the nearest point on the lot's addressed street, else the nearest public road, within 90 m; the camera faces the outline's centre."
+  "streetView": "For the survey, planned as for the game buildings (house-reference.json, tools/maps/house-reference/viewpoint.mjs). The camera stands within 90 m: on the lot's addressed street where its nearest point is within 45 m, or no more than 25 m farther than the nearest public road; else on that public road, then a service road, then any mapped way. It faces the outline's centre. The pitch rises with the county storeys, or the lidar's where the county has none; the game buildings' cameras are planned before the lidar, from county storeys alone."
  },
  "metrics": {
   "sketches": 247,

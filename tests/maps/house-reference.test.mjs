@@ -65,11 +65,22 @@ test('compass headings and street names', () => {
   assert.equal(streetKey('North McDonald Street').base, streetKey('MCDONALD ST').base);
   assert.equal(streetKey('100 N ALEXANDER ST').full, 'N ALEXANDER ST');
   assert.equal(streetKey(''), null);
-  // A unit is not part of the street.
+  // Neither a unit nor a house-number suffix is part of the street...
   assert.equal(streetKey('350 LIBERTY AVE # 14').full, streetKey('Liberty Avenue').full);
   assert.equal(streetKey('343 N MCDONALD ST APT 102').base, streetKey('McDonald Street').base);
+  assert.equal(streetKey('343 N MCDONALD ST APT101').full, 'N MCDONALD ST');
   assert.equal(streetKey('525 N TREMAIN ST # 1-A').full, 'N TREMAIN ST');
   assert.equal(streetKey('12 E 5TH AVE UNIT 3').full, 'E 5TH AVE');
+  assert.equal(streetKey('445 S GRANDVIEW ST 10').full, 'S GRANDVIEW ST');
+  assert.equal(streetKey('112-D S GRANDVIEW ST').full, 'S GRANDVIEW ST');
+  assert.equal(streetKey('142A/B W 4TH AVE').full, 'W 4TH AVE');
+  // ...but a name that starts with a unit word, and a route number, are.
+  assert.equal(streetKey('100 STEWART AVE').full, 'STEWART AVE');
+  assert.equal(streetKey('Unity Lane').full, 'UNITY LN');
+  assert.equal(streetKey('12 APTOS ST').full, 'APTOS ST');
+  assert.equal(streetKey('9 SUITER DR').full, 'SUITER DR');
+  assert.equal(streetKey('1234 STATE ROAD 19').full, 'STATE RD 19');
+  assert.equal(streetKey('US Highway 441').full, 'US HWY 441');
 });
 
 test('county storeys map onto the native kit', () => {

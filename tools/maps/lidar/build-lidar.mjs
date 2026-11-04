@@ -25,7 +25,7 @@ import assert from 'node:assert/strict';
 import {area, bounds, centroid, contains} from '../house-reference/geometry.mjs';
 import {featuresPin, isOsm} from '../house-reference/features-digest.mjs';
 import {createProjection} from '../house-reference/projection.mjs';
-import {aerialUrl, planStreetView, VIEW_RADIUS_M, viewRoads} from '../house-reference/viewpoint.mjs';
+import {ADDRESS_NEAR_M, ADDRESS_SLACK_M, aerialUrl, planStreetView, VIEW_RADIUS_M, viewRoads} from '../house-reference/viewpoint.mjs';
 import {cacheDir, MARGIN_M} from './fetch-lidar.mjs';
 import {loadPoints, pointsIn} from './points.mjs';
 import {classifyRoof, median, percentile, ROOF} from './roofs.mjs';
@@ -391,7 +391,7 @@ export async function build() {
       structures: `Sketches that overlap or come within ${PLACE.touchM} m are one structure: stacked condo units, attached units, a house drawn twice. Its outline is their union, closed across gaps under ${PLACE.touchM} m and simplified to ${PLACE.simplifyM} m in its own wall axes.`,
       represented: `Already in the game: a structure ${PLACE.onGameAt * 100}%+ on game buildings, the generator's hand-placed shelters and stages, or OSM multi-storey car parks; a roofless one over a game building by more than ${PLACE.staleOnGameAt * 100}%; a sketch whose record a game building holds and overlaps by more than ${PLACE.holderAt * 100}%; one with under ${PLACE.minAddM2} m² or ${PLACE.minAddShare * 100}% of its area outside game buildings.`,
       added: 'Every other structure, minus the parts game buildings cover. Heights and roof planes as in lidar-roofs.json. County facts: the largest sketch\'s record, lot and address, with the tallest record\'s storeys.',
-      streetView: `For the survey, planned as for the game buildings (house-reference.json, tools/maps/house-reference/viewpoint.mjs): the nearest point on the lot's addressed street, else the nearest public road, within ${VIEW_RADIUS_M} m; the camera faces the outline's centre.`},
+      streetView: `For the survey, planned as for the game buildings (house-reference.json, tools/maps/house-reference/viewpoint.mjs). The camera stands within ${VIEW_RADIUS_M} m: on the lot's addressed street where its nearest point is within ${ADDRESS_NEAR_M} m, or no more than ${ADDRESS_SLACK_M} m farther than the nearest public road; else on that public road, then a service road, then any mapped way. It faces the outline's centre. The pitch rises with the county storeys, or the lidar's where the county has none; the game buildings' cameras are planned before the lidar, from county storeys alone.`},
     metrics: {sketches: houseRef.countyOnly.length, represented: placedCounty.represented.length, representedBy: tally(placedCounty.represented, r => r.reason.replace(/\d+%/, 'N%').replace(/only [\d.]+ m2/, 'only N m2')),
       buildings: countyBuildings.length, sketchesInBuildings: countyBuildings.reduce((n, b) => n + b.members.length, 0), areaM2: r1(countyBuildings.reduce((n, b) => n + b.areaM2, 0)),
       lidarSaw: tally(countyBuildings, b => b.lidarSaw), storeysFromLidar: tally(countyBuildings, b => String(b.lidar.storeysFromLidar)),

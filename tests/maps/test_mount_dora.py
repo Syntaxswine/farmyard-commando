@@ -278,6 +278,23 @@ class SurveyEvidence(unittest.TestCase):
         self.assertEqual(after["evidence"]["county"], before["evidence"]["county"])
         self.assertEqual(after["evidence"]["lidar"], before["evidence"]["lidar"])
         self.assertEqual(inputs[-1]["kind"], "survey")
+        self.assertEqual(BUILDER.lost_survey_answers(found, BUILDER.county_buildings()), [])
+
+    def test_a_survey_answer_for_a_building_the_town_no_longer_has_stops_the_build(self):
+        """A county building can change id when the county data does; its answers must not vanish quietly."""
+        known = BUILDER.county_buildings()[0]["id"]
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            shutil.copytree(BUILDER.PROJECT / "source", project / "source")
+            (project / "reference").mkdir()
+            for name, kind, _ in BUILDER.EVIDENCE:
+                if kind != "survey":
+                    shutil.copy(BUILDER.PROJECT / "reference" / name, project / "reference" / name)
+            (project / "reference" / "house-survey.json").write_text(json.dumps(
+                {"kind": "mount-dora-house-survey", "version": 3, "exportedAt": "2026-11-03T00:00:00.000Z",
+                 "answers": {known: {"stories": "2"}, "county-0000000-9": {"stories": "1"}}}), "utf-8")
+            with self.assertRaisesRegex(ValueError, r"answers 1 building id\(s\) the town no longer has: county-0000000-9\. Nothing was written"):
+                BUILDER.build_project(project)
 
 
 if __name__ == "__main__":

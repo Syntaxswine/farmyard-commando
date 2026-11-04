@@ -392,6 +392,16 @@ def county_buildings(project=PROJECT):
     return features
 
 
+def lost_survey_answers(evidence, features):
+    """Survey answers keyed to no building in the town.
+
+    building_style looks answers up by building id, so these would otherwise be
+    dropped without a word: a regenerated county building can change its id.
+    """
+    known = {f["id"] for f in features if f["category"] == "building"}
+    return sorted(item_id for item_id, found in evidence.items() if "survey" in found and item_id not in known)
+
+
 def building_style(feature, evidence=None):
     """Storeys and wall material, from the best evidence available.
 
@@ -645,6 +655,10 @@ def build_project(project=PROJECT):
     config, projection, source_records, features, diagnostics = load_source(project)
     evidence, evidence_inputs = load_evidence(project)
     features = sorted(features + county_buildings(project), key=lambda f: f["id"])
+    lost = lost_survey_answers(evidence, features)
+    if lost:
+        raise ValueError("reference/house-survey.json answers %d building id(s) the town no longer has: %s. Nothing was written. "
+                         "Re-key each answer to the building's current id, or delete it." % (len(lost), ", ".join(lost)))
     extent = config["extent"]
     width, depth, size = extent["widthM"], extent["depthM"], extent["sectorSizeM"]
     if width != 1440 or depth != 1680 or size != 240 or extent["columns"] != 6 or extent["rows"] != 7:

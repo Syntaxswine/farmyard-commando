@@ -17,13 +17,18 @@ const ORDINALS = {FIRST: '1ST', SECOND: '2ND', THIRD: '3RD', FOURTH: '4TH', FIFT
 const TYPES = {AVENUE: 'AVE', STREET: 'ST', ROAD: 'RD', DRIVE: 'DR', COURT: 'CT', PARKWAY: 'PKWY', BOULEVARD: 'BLVD',
   LANE: 'LN', PLACE: 'PL', CIRCLE: 'CIR', TERRACE: 'TER', HIGHWAY: 'HWY', TRAIL: 'TRL'};
 const DIRECTIONS = {NORTH: 'N', SOUTH: 'S', EAST: 'E', WEST: 'W'};
+// A bare number after these is a unit; after RD or HWY it is the route ("STATE RD 19", "US HWY 441").
+const UNIT_AFTER = new Set(Object.values(TYPES).filter(t => t !== 'RD' && t !== 'HWY'));
 // "East 5th Avenue" and "412 E FIFTH AVE" both become {full: 'E 5TH AVE', base: '5TH AVE'}.
-// A unit ("350 LIBERTY AVE # 14", "343 N MCDONALD ST APT 102") is not part of the street.
+// Neither a unit ("# 14", "APT 102", "APT101", a bare trailing "10") nor a
+// house-number suffix ("112-D", "142A/B") is part of the street.
 export function streetKey(name) {
   if (!name) return null;
-  const words = name.toUpperCase().replace(/\s*(#|\b(UNIT|APT|STE|SUITE)\b).*$/, '').replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
+  const words = name.toUpperCase().replace(/\s*(#|\b(UNIT|APT|STE|SUITE)(?=\d|\b)).*$/, '').replace(/^\s*(\d+[A-Z]?)[-/][A-Z0-9]+(?=\s)/, '$1')
+    .replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
   while (words.length && /^\d+[A-Z]?$/.test(words[0]) && !/^\d+(ST|ND|RD|TH)$/.test(words[0])) words.shift();
   const norm = words.map(w => ORDINALS[w] || TYPES[w] || DIRECTIONS[w] || w);
+  while (norm.length > 2 && /^\d+[A-Z]?$/.test(norm.at(-1)) && UNIT_AFTER.has(norm.at(-2))) norm.pop();
   if (!norm.length) return null;
   const base = norm.filter((w, i) => !(i === 0 && ['N', 'S', 'E', 'W'].includes(w) && norm.length > 1));
   return {full: norm.join(' '), base: base.join(' ')};

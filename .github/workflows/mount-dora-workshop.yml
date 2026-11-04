@@ -38,6 +38,9 @@ jobs:
           python3 -B tools/maps/build-mount-dora.py --check
           python3 -B -m unittest discover -s tests/maps -p 'test_*.py' -v
           node tests/maps/validate-native-baseline.mjs
+      - name: Check the house reference, lidar, county-building and survey records
+        if: ${{ hashFiles('maps/mount-dora/project.json') != '' }}
+        run: node --test tests/maps/*.test.mjs
       - name: Verify continuous travel with production landmark solids
         if: ${{ hashFiles('sites/tactical-animal/dist/mount-dora-world.js') != '' }}
         run: |

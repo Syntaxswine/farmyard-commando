@@ -4,24 +4,46 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {cleanAnswer, countyEntry, edgeKey, exportDocument, nearestEdge, toggleEntrance, unitEdges} from '../../maps/mount-dora/reference/survey/model.js';
+import {cleanAnswer, edgeKey, exportDocument, nearestEdge, pinMismatches, PINNED, queueEntries, toggleEntrance, unitEdges, warningsFor} from '../../maps/mount-dora/reference/survey/model.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const json = file => JSON.parse(fs.readFileSync(path.join(root, 'maps/mount-dora', file), 'utf8'));
 const features = json('features.json').features;
 const KEYS = ['stories', 'roofShape', 'confidence', 'imageryDate', 'entrances', 'note'];
 
+const reference = json('reference/house-reference.json'), county = json('reference/county-buildings.json');
+const queue = queueEntries(reference, county, features), entry = id => queue.find(b => b.id === id);
+
 test('the queue holds every game building once: the OSM ones and the county ones, shaped alike', () => {
-  const reference = json('reference/house-reference.json').buildings, county = json('reference/county-buildings.json').buildings;
-  const sectorsOf = new Map(features.filter(f => f.category === 'building').map(f => [f.id, f.nativeSectors]));
-  const queue = [...reference, ...county.map(c => countyEntry(c, sectorsOf.get(c.id)))];
-  assert.deepEqual(queue.map(b => b.id).sort(), [...sectorsOf.keys()].sort());
-  // A county entry has every field the page reads from a house-reference.json building.
-  const fields = Object.keys(reference[0]);
-  for (const b of queue.slice(reference.length)) {
-    assert.deepEqual(fields.filter(k => !(k in b)), [], b.id);
+  assert.deepEqual(queue.map(b => b.id).sort(), features.filter(f => f.category === 'building').map(f => f.id).sort());
+  // A county entry has a value for every field the page reads from a house-reference.json building.
+  const fields = Object.keys(reference.buildings[0]);
+  for (const b of queue.slice(reference.buildings.length)) {
+    assert.deepEqual(fields.filter(k => b[k] === undefined), [], b.id);
     assert.ok(b.sectors.length && b.streetView && b.county.records && b.suggested && b.match.method === 'county-sketch' && b.countySketch.sketches >= 1, b.id);
   }
+});
+
+test('a county building warns that OSM lacks it, and to check it stands where the 2018 lidar saw no roof', () => {
+  const lacks = /^OpenStreetMap lacks this building/, noRoof = /^The 2018 lidar saw no building roof here/;
+  // A 1935 house on open ground in December 2018, with its camera on its own street.
+  const open = warningsFor(entry('county-1475627-1'));
+  assert.equal(open.length, 2, open.join(' | '));
+  assert.match(open[0], lacks); assert.match(open[0], /from the county sketch\./); assert.match(open[1], noRoof);
+  const roofed = queue.filter(b => b.countySketch?.lidarSaw === 'class-6 roof' && b.streetView.onAddressedStreet && b.streetView.distanceM <= 60);
+  assert.ok(roofed.length > 90);
+  for (const b of roofed) assert.deepEqual(warningsFor(b).map(w => lacks.test(w)), [true], b.id);
+  const stacked = roofed.find(b => b.countySketch.sketches > 1);
+  assert.match(warningsFor(stacked)[0], new RegExp(`from ${stacked.countySketch.sketches} county sketches\\.`));
+  // The OSM buildings are unchanged: a clean footprint match on its own street warns of nothing.
+  assert.deepEqual(warningsFor(queue.find(b => !b.countySketch && b.match.method === 'footprint' && b.streetView.onAddressedStreet && b.streetView.distanceM <= 60)), []);
+});
+
+test('an import names each file it was exported against that has changed since', () => {
+  const pins = {reference: 'r1', countyBuildings: 'c1', features: 'f1'};
+  assert.deepEqual(pinMismatches({reference: {sha256: 'r1'}, countyBuildings: {sha256: 'c0'}, features: {sha256: 'f0'}}, pins), ['county-buildings.json', 'features.json']);
+  assert.deepEqual(pinMismatches({reference: {sha256: 'r1'}}, pins), [], 'a version 2 export pins only house-reference.json');
+  assert.deepEqual(pinMismatches({reference: {sha256: 'r0'}}, pins), ['house-reference.json']);
 });
 
 test('authored outlines split into 1 m wall edges', () => {
@@ -63,10 +85,13 @@ test('marking an edge twice removes it, and the list stays ordered', () => {
 test('answers keep only valid evidence, and the export says what each field means', () => {
   assert.equal(cleanAnswer({stories: '', entrances: [], imageryDate: '03/2024', confidence: 'certain'}, KEYS), null);
   assert.deepEqual(cleanAnswer({stories: '2', imageryDate: '2024-03', confidence: 'likely', extra: 1}, KEYS), {stories: '2', confidence: 'likely', imageryDate: '2024-03'});
-  const doc = exportDocument({sha256: 'abc', countySha256: 'def', keys: KEYS, exportedAt: '2026-11-03T00:00:00.000Z', answers: {
+  const doc = exportDocument({pins: {reference: 'abc', countyBuildings: 'def', features: 'ghi'}, keys: KEYS, exportedAt: '2026-11-03T00:00:00.000Z', answers: {
     'osm-way-2': {roofShape: 'hip', at: '2026-11-03T01:00:00.000Z'}, 'osm-way-1': {note: 'porch', at: 'x'}, 'osm-way-3': {stories: ''}, 'county-1-1': {stories: '2'}}});
   assert.equal(doc.version, 3);
-  assert.deepEqual([doc.reference.sha256, doc.countyBuildings.sha256], ['abc', 'def'], 'pins both files the queue came from');
+  // The two files the queue came from, and the outlines its entrance edges lie on.
+  assert.deepEqual([doc.reference, doc.countyBuildings, doc.features], [{file: PINNED.reference, sha256: 'abc'}, {file: PINNED.countyBuildings, sha256: 'def'},
+    {file: 'maps/mount-dora/features.json', sha256: 'ghi'}]);
+  assert.deepEqual(pinMismatches(doc, {reference: 'abc', countyBuildings: 'def', features: 'ghi'}), [], 'an export matches the files it was made from');
   assert.deepEqual(Object.keys(doc.answers), ['county-1-1', 'osm-way-1', 'osm-way-2']);
   assert.equal(doc.answers['osm-way-2'].at, '2026-11-03T01:00:00.000Z');
   for (const k of ['source', 'coordinates', 'observationDate', 'uncertainty', 'entrances']) assert.ok(doc.evidence[k], k);

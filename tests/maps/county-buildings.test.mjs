@@ -82,7 +82,7 @@ test('each county sketch is added once, merged with its structure, or found alre
   assert.equal(house.lot.address, '66 TEST ST', 'the largest sketch with a record (B) gives the lot and address');
   assert.equal(buildings[1].roofShare, 0);
   assert.deepEqual(buildings.slice(2).map(b => b.piece.of), [2, 2]);
-  assert.deepEqual(buildings[2].lot, buildings[3].lot, 'both pieces keep their sketch\'s lot');
+  assert.deepEqual(buildings.slice(2).map(b => b.lot.address), ['72 TEST ST', '72 TEST ST'], 'both pieces keep their sketch\'s lot');
   assert.deepEqual(represented.map(r => [r.key, r.by]), [['D/1', ['osm-way-2']], ['E/1', ['osm-way-1']]]);
   assert.match(represented[0].reason, /no lidar roof/);
   assert.match(represented[1].reason, /record held/);

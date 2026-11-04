@@ -5,7 +5,7 @@
 // Answers autosave in this browser and export to house-survey.json, keyed by
 // the building's game id. Each answer carries its evidence (AGENTS.md): image
 // date, confidence, and only the entrances a person actually saw.
-import {CONFIDENCE, IMAGERY_DATE, cleanAnswer, countyEntry, edgeKey, exportDocument, nearestEdge, toggleEntrance, unitEdges} from './model.js';
+import {CONFIDENCE, IMAGERY_DATE, cleanAnswer, edgeKey, exportDocument, nearestEdge, pinMismatches, queueEntries, toggleEntrance, unitEdges, warningsFor} from './model.js';
 const REFERENCE = '../house-reference.json', COUNTY = '../county-buildings.json', FEATURES = '../../features.json';
 const STORE = 'mount-dora-house-survey-v1', CURRENT = STORE + ':current';
 const FIELDS = [
@@ -28,7 +28,7 @@ const FIELDS = [
 const KEYS = [...FIELDS.map(f => f.key), 'imageryDate', 'entrances', 'note'];
 const $ = id => document.getElementById(id);
 const svgNS = 'http://www.w3.org/2000/svg';
-const state = {reference: null, sha256: '', countySha256: '', byId: new Map(), order: [], shapes: new Map(), roads: [], answers: {}, current: null, edges: [], countyBuildings: 0};
+const state = {pins: {}, byId: new Map(), order: [], shapes: new Map(), roads: [], answers: {}, current: null, edges: [], countyBuildings: 0};
 
 const status = text => { $('status').textContent = text; };
 const read = key => { try { return localStorage.getItem(key); } catch { return null; } };
@@ -72,9 +72,9 @@ function renderQueue() {
     button.addEventListener('click', () => select(id));
     li.append(button); list.append(li);
   }
-  const withRecord = state.order.filter(id => state.byId.get(id).county.records.length).length;
-  $('summary').textContent = `${done} of ${total} buildings surveyed · ${state.countyBuildings} of them from county sketches OpenStreetMap lacks · ` +
-    `county records for ${withRecord}`;
+  const withRecord = state.order.filter(id => state.byId.get(id).county.records.length).length, n = v => v.toLocaleString('en-US');
+  $('summary').textContent = `${n(done)} of ${n(total)} buildings surveyed · in the queue, ${n(total - state.countyBuildings)} from OpenStreetMap and ` +
+    `${n(state.countyBuildings)} from county sketches it lacks · county records for ${n(withRecord)}`;
   $('progress').style.width = `${(100 * done / total).toFixed(1)}%`;
   list.querySelector('[aria-current=true]')?.scrollIntoView({block: 'nearest'});
 }
@@ -204,15 +204,7 @@ function select(id) {
   $('where').textContent = [b.osmTags.name || b.placeName, b.sectors.join(', '), b.id, `${Math.round(b.areaM2)} m² footprint`].filter(Boolean).join(' · ');
   $('streetview').href = sv ? sv.url : '#'; $('aerial').href = b.aerialUrl;
   $('camera').textContent = sv ? `Camera on ${sv.road || 'an unnamed road'} (${sv.roadClass}), ${sv.distanceM} m from the footprint centre, facing ${sv.heading}°. Google shows the nearest panorama, so pan if the house is off-centre.` : 'No street within reach.';
-  const warnings = [];
-  if (b.match.method === 'none') warnings.push('No county record: everything here comes from what you see.');
-  if (b.match.method === 'footprint-partial') warnings.push('The game outline and the county sketch disagree; check this is one building.');
-  if (b.match.method === 'parcel-area') warnings.push('Several buildings share this lot; the record was picked by size.');
-  if (b.countySketch) warnings.push('OpenStreetMap lacks this building; the game drew it from the county sketch. If Street View shows none here, flag "Changed since the record".');
-  if (b.countySketch && b.countySketch.lidarSaw !== 'class-6 roof') warnings.push(`The 2018 lidar saw no building roof here (${b.countySketch.lidarSaw}). Check that it stands.`);
-  if (sv && sv.distanceM > 60) warnings.push('Far from the street; it may be hidden or reached by a drive.');
-  if (sv && !sv.onAddressedStreet && b.address) warnings.push(`The camera is not on the addressed street (${b.address}).`);
-  $('warnings').replaceChildren(...warnings.map(w => { const li = document.createElement('li'); li.textContent = w; return li; }));
+  $('warnings').replaceChildren(...warningsFor(b).map(w => { const li = document.createElement('li'); li.textContent = w; return li; }));
   state.edges = unitEdges(state.shapes.get(id)?.authored || []);
   minimap(b); facts(b); renderFields(b); renderQueue();
 }
@@ -224,7 +216,7 @@ function step(delta) {
 }
 
 function exportAnswers() {
-  const data = exportDocument({answers: state.answers, sha256: state.sha256, countySha256: state.countySha256, keys: KEYS, exportedAt: new Date().toISOString()});
+  const data = exportDocument({answers: state.answers, pins: state.pins, keys: KEYS, exportedAt: new Date().toISOString()});
   const link = document.createElement('a');
   link.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1) + '\n'], {type: 'application/json'}));
   link.download = 'house-survey.json'; link.click();
@@ -244,8 +236,7 @@ async function importAnswers(file) {
       if (clean && (!mine || (answer.at || '') > (mine.at || ''))) { state.answers[id] = {...clean, ...(answer.at ? {at: answer.at} : {})}; merged++; }
     }
     persist(); select(state.current);
-    const differs = [[data.reference?.sha256, state.sha256, 'house-reference.json'], [data.countyBuildings?.sha256, state.countySha256, 'county-buildings.json']]
-      .filter(([theirs, mine]) => theirs && theirs !== mine).map(([, , file]) => file);
+    const differs = pinMismatches(data, state.pins);
     status(`Imported ${merged} answer${merged === 1 ? '' : 's'}${unknown ? `; ${unknown} unknown building ids skipped` : ''}${differs.length ? `; exported against a different ${differs.join(' and ')}` : ''}.`);
   } catch (error) { status(`Import failed: ${error.message}.`); }
 }
@@ -279,17 +270,17 @@ $('export').addEventListener('click', exportAnswers);
 $('import').addEventListener('change', event => { if (event.target.files[0]) importAnswers(event.target.files[0]); event.target.value = ''; });
 
 try {
-  const load = url => fetch(url).then(r => { if (!r.ok) throw Error(`${url}: ${r.status}`); return r; });
-  const [buffer, countyBuffer, features] = await Promise.all([load(REFERENCE).then(r => r.arrayBuffer()), load(COUNTY).then(r => r.arrayBuffer()),
-    load(FEATURES).then(r => r.json())]);
-  state.sha256 = hex(await crypto.subtle.digest('SHA-256', buffer));
-  state.countySha256 = hex(await crypto.subtle.digest('SHA-256', countyBuffer));
-  state.reference = JSON.parse(new TextDecoder().decode(buffer));
-  const county = JSON.parse(new TextDecoder().decode(countyBuffer)).buildings;
-  const sectorsOf = new Map(features.features.filter(f => f.category === 'building').map(f => [f.id, f.nativeSectors || []]));
-  for (const b of [...state.reference.buildings, ...county.map(c => countyEntry(c, sectorsOf.get(c.id)))]) state.byId.set(b.id, b);
+  // Each file is hashed as served, so an export pins exactly what the surveyor saw.
+  const load = async (key, url) => {
+    const r = await fetch(url); if (!r.ok) throw Error(`${url}: ${r.status}`);
+    const buffer = await r.arrayBuffer();
+    state.pins[key] = hex(await crypto.subtle.digest('SHA-256', buffer));
+    return JSON.parse(new TextDecoder().decode(buffer));
+  };
+  const [reference, county, features] = await Promise.all([load('reference', REFERENCE), load('countyBuildings', COUNTY), load('features', FEATURES)]);
+  for (const b of queueEntries(reference, county, features.features)) state.byId.set(b.id, b);
   state.order = sortBuildings([...state.byId.values()]).map(b => b.id);
-  state.countyBuildings = county.length;
+  state.countyBuildings = county.buildings.length;
   for (const f of features.features) {
     if (f.category === 'building' && f.geographicGeometry) state.shapes.set(f.id, {id: f.id, d: ringsPath(f.geographicGeometry.coordinates),
       authored: f.geometry.coordinates, authoredD: ringsPath(f.geometry.coordinates), box: bbox(f.geographicGeometry.coordinates.flat())});

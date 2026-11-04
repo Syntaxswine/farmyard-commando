@@ -29,7 +29,7 @@ build does not publish this folder (`build.mjs` copies an explicit file list).
 | Wall material from a source | 0 | 759 (265 wood frame) |
 | Roof cover known | 0 | 729: 519 shingle, 176 metal, 18 tar-and-gravel (flat), 10 rolled, 6 tile |
 | Porch recorded | 0 | 638 |
-| Planned Street View camera | 0 | 950 (868 on the addressed street; median 24 m away) |
+| Planned Street View camera | 0 | 950 (871 on the addressed street; median 24 m away) |
 
 How each building was matched (`match.method`):
 
@@ -84,9 +84,14 @@ lidar's building returns (class 6) tell them apart:
 - **Pieces:** a native outline is one connected footprint, so a sketch of two
   parts meeting at a corner becomes two buildings (`-part2`).
 - **Survey:** each building takes the lot and address of its largest sketch
-  with a record, and gets a Street View camera planned exactly as for the game
-  buildings (`tools/maps/house-reference/viewpoint.mjs`): 111 of 126 stand on
-  the addressed street, median 26 m away. All 126 are in the survey's queue.
+  with a record (its first sketch, if none has one). It gets a Street View
+  camera planned as for the game buildings
+  (`tools/maps/house-reference/viewpoint.mjs`), except that the camera's pitch
+  may follow the lidar storeys where the county has none: the game buildings'
+  cameras are planned before the lidar, from county storeys alone. 111 of 126
+  stand on the addressed street, median 26 m away. All 126 are in the survey's
+  queue. A piece (`-part2`) keeps the lead sketch's lot even where it lies on
+  another member's; no current structure has one that does.
 
 ## Caveats, checked on real buildings
 
@@ -196,9 +201,11 @@ The repository's `AGENTS.md` (from PR #39) says geographic details, doors above
 all, go "only where source data or reviewed observations establish them", and
 keep "the source, coordinates, observation date and uncertainty". A survey
 answer is such a reviewed observation, and its export says so in an `evidence`
-block. Version 3 pins both files the queue came from (`reference` and
-`countyBuildings`); version 2 exports, from before the county buildings joined
-the queue, still import.
+block. Version 3 pins the three files an export depends on: the two the queue
+came from (`reference`, `countyBuildings`), and `features`, whose authored
+outlines its entrance edges lie on. Import names any of them that has changed
+since. Version 2 exports, from before the county buildings joined the queue,
+still import.
 
 | Rule | Where it lives in `house-survey.json` |
 | --- | --- |
@@ -238,10 +245,13 @@ Each building records its sources in `nativeProxy` (`storiesSource`,
 (135 buildings: 114 OSM, 21 county), `evidence.storiesDisagreement` keeps both
 for a survey to settle.
 A county building's answer (a `county-` id) joins its county and lidar evidence
-the same way. The evidence files, and the survey export once it exists, are
-pinned in `project.json`. They pin only the OSM-sourced fields of
-`features.json` they read (`tools/maps/house-reference/features-digest.mjs`), so
-a regeneration never invalidates its own inputs.
+the same way. A county building can change id when the county data does, so an
+answer whose id matches no building stops the build, naming the ids; re-key or
+delete it. The evidence files are pinned in `project.json`, as is the survey
+export once it exists. The reference and lidar files pin only the OSM-sourced
+fields of `features.json` they read
+(`tools/maps/house-reference/features-digest.mjs`), so a regeneration never
+invalidates its own inputs.
 
 The art kit (`maps/mount-dora/art/tools/build-playable.mjs`) then sets the
 following from the same evidence:

@@ -1,5 +1,5 @@
 // Join Lake County building records to the game's 950 Mount Dora buildings and
-// plan one Street View viewpoint per building.
+// plan one Street View viewpoint per building (viewpoint.mjs).
 //
 // Reads maps/mount-dora/features.json and the county snapshot written by
 // fetch-county.mjs; writes maps/mount-dora/reference/house-reference.json.
@@ -12,9 +12,10 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
-import {createProjection, headingDegrees} from './projection.mjs';
-import {area, bounds, centroid, contains, gridIndex, nearestOnPolyline, overlapArea} from './geometry.mjs';
+import {createProjection} from './projection.mjs';
+import {area, bounds, centroid, contains, gridIndex, overlapArea} from './geometry.mjs';
 import {featuresPin, isOsm} from './features-digest.mjs';
+import {ADDRESS_NEAR_M, ADDRESS_SLACK_M, VIEW_RADIUS_M, aerialUrl, planStreetView, viewRoads} from './viewpoint.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const town = path.join(root, 'maps/mount-dora');
@@ -27,9 +28,6 @@ const SQFT = .09290304;
 // Match thresholds. A county sketch belongs to the game building holding most
 // of it; IoU grades how well the two outlines agree.
 export const MATCH = {assignCover: .5, assignIoU: .3, goodIoU: .5};
-const VIEW_ROADS = new Set(['primary', 'primary_link', 'secondary', 'secondary_link', 'tertiary', 'tertiary_link',
-  'residential', 'unclassified', 'living_street']);
-const VIEW_RADIUS_M = 90, ADDRESS_NEAR_M = 45, ADDRESS_SLACK_M = 25;
 
 // County code descriptions -> game vocabulary. Unknown codes fall through to null.
 export const WALLS = {
@@ -61,22 +59,6 @@ export function storeys(raw, codes) {
   }
   if (codes.some(c => SUBAREAS.upper.includes(c))) return {stories: 2, halfStory: false, source: 'county:upper-storey sub-area'};
   return {stories: null, halfStory: false, source: 'county:no-storey-record'};
-}
-
-const ORDINALS = {FIRST: '1ST', SECOND: '2ND', THIRD: '3RD', FOURTH: '4TH', FIFTH: '5TH', SIXTH: '6TH', SEVENTH: '7TH',
-  EIGHTH: '8TH', NINTH: '9TH', TENTH: '10TH', ELEVENTH: '11TH', TWELFTH: '12TH'};
-const TYPES = {AVENUE: 'AVE', STREET: 'ST', ROAD: 'RD', DRIVE: 'DR', COURT: 'CT', PARKWAY: 'PKWY', BOULEVARD: 'BLVD',
-  LANE: 'LN', PLACE: 'PL', CIRCLE: 'CIR', TERRACE: 'TER', HIGHWAY: 'HWY', TRAIL: 'TRL'};
-const DIRECTIONS = {NORTH: 'N', SOUTH: 'S', EAST: 'E', WEST: 'W'};
-// "East 5th Avenue" and "412 E FIFTH AVE" both become {full: 'E 5TH AVE', base: '5TH AVE'}.
-export function streetKey(name) {
-  if (!name) return null;
-  const words = name.toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
-  while (words.length && /^\d+[A-Z]?$/.test(words[0]) && !/^\d+(ST|ND|RD|TH)$/.test(words[0])) words.shift();
-  const norm = words.map(w => ORDINALS[w] || TYPES[w] || DIRECTIONS[w] || w);
-  if (!norm.length) return null;
-  const base = norm.filter((w, i) => !(i === 0 && ['N', 'S', 'E', 'W'].includes(w) && norm.length > 1));
-  return {full: norm.join(' '), base: base.join(' ')};
 }
 
 function readCsv(file) {
@@ -151,9 +133,7 @@ export function build() {
   for (const [s, m] of owner) assigned[m.house].push({sketch: s, ...m});
   for (const list of assigned) list.sort((a, b) => b.overlap - a.overlap || a.sketch - b.sketch);
 
-  const roads = features.filter(f => f.category === 'road' && f.geometry.type === 'LineString').map(f => ({
-    id: f.id, name: f.tags.name || null, highway: f.tags.highway, line: f.geometry.coordinates, key: streetKey(f.tags.name)}));
-  const roadIndex = gridIndex(roads.map(r => bounds([[r.line]])), 48);
+  const view = viewRoads(features);
 
   const describe = (altKey, bldgNum) => {
     const row = records.get(key(altKey, bldgNum));
@@ -201,6 +181,7 @@ export function build() {
     };
     return {st, lotExtras, suggested};
   };
+  const addressOf = lot => lot && lot.address !== 'UNASSIGNED' ? lot.address : null;
 
   const out = [];
   for (const [h, house] of houses.entries()) {
@@ -230,44 +211,12 @@ export function build() {
       }
     }
     const {st, lotExtras, suggested} = suggest(recs, lot, method);
-
-    // Street View: the nearest point on the addressed street, else the nearest public road.
-    const addressKey = streetKey(lot?.address && lot.address !== 'UNASSIGNED' ? lot.address : null);
-    const near = roadIndex([house.box[0] - VIEW_RADIUS_M, house.box[1] - VIEW_RADIUS_M, house.box[2] + VIEW_RADIUS_M, house.box[3] + VIEW_RADIUS_M])
-      .map(i => roads[i]).map(r => ({road: r, hit: nearestOnPolyline(r.line, house.centre)})).filter(x => x.hit.distance <= VIEW_RADIUS_M);
-    const pick = list => list.sort((a, b) => a.hit.distance - b.hit.distance || a.road.id.localeCompare(b.road.id))[0];
-    // "W 5TH AVE" must not snap to East 5th Avenue: the full name wins, then the base name.
-    const onAddress = addressKey && (pick(near.filter(x => x.road.key?.full === addressKey.full))
-      || pick(near.filter(x => x.road.key?.base === addressKey.base)));
-    // The addressed street wins unless it is much farther than the nearest public
-    // road (a way that stops short of the lot puts its nearest point far away).
-    const nearestPublic = pick(near.filter(x => VIEW_ROADS.has(x.road.highway)));
-    const addressOk = onAddress && (onAddress.hit.distance <= ADDRESS_NEAR_M || onAddress.hit.distance <= (nearestPublic?.hit.distance ?? Infinity) + ADDRESS_SLACK_M);
-    const chosen = (addressOk && onAddress) || nearestPublic || pick(near.filter(x => x.road.highway === 'service')) || pick(near);
-    let streetView = null;
-    if (chosen) {
-      const v = chosen.hit.point, [lat, lon] = toLatLon(v[0], v[1]), heading = Math.round(headingDegrees(v, house.centre)) % 360;
-      // Fit the outline's angular width as seen from the viewpoint, with margin.
-      const angles = house.geometry[0][0].map(p => Math.atan2(p[0] - v[0], -(p[1] - v[1])) * 180 / Math.PI - heading).map(a => ((a + 540) % 360) - 180);
-      const fov = Math.round(Math.max(35, Math.min(100, (Math.max(...angles) - Math.min(...angles)) * 1.25 + 10)));
-      const pitch = Math.min(20, 5 + 4 * Math.max(0, (st.stories || 1) - 1));
-      const ll = `${lat.toFixed(6)},${lon.toFixed(6)}`, line = chosen.road.line, seg = chosen.hit.segment;
-      // Metres along the road polyline, so a survey can walk one side of a street in order.
-      let along = Math.hypot(v[0] - line[seg][0], v[1] - line[seg][1]);
-      for (let i = 0; i < seg; i++) along += Math.hypot(line[i + 1][0] - line[i][0], line[i + 1][1] - line[i][1]);
-      streetView = {viewpoint: [Number(lat.toFixed(6)), Number(lon.toFixed(6))], town: v.map(r2), heading, pitch, fov,
-        road: chosen.road.name, roadId: chosen.road.id, roadClass: chosen.road.highway, alongM: r1(along), distanceM: r1(chosen.hit.distance),
-        onAddressedStreet: Boolean(addressOk && chosen === onAddress),
-        url: `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${ll}&heading=${heading}&pitch=${pitch}&fov=${fov}`};
-    }
-    // Roof shape reads best from above: the same building in Google Maps' satellite view.
-    const [clat, clon] = toLatLon(house.centre[0], house.centre[1]);
-    const aerialUrl = `https://www.google.com/maps/@?api=1&map_action=map&center=${clat.toFixed(6)},${clon.toFixed(6)}&zoom=20&basemap=satellite`;
+    const address = addressOf(lot), streetView = planStreetView(view, house, {stories: st.stories, address}, toLatLon);
     const tags = f.tags, keepTags = Object.fromEntries(Object.entries(tags).filter(([k]) => /^(building|name|building:levels|roof:|addr:|amenity|shop|tourism)/.test(k)));
     out.push({id: f.id, sectors: f.nativeSectors || [], centroid: house.centre.map(r2), areaM2: r1(house.area), osmTags: keepTags,
-      address: lot && lot.address !== 'UNASSIGNED' ? lot.address : null, placeName: lot?.name || null,
+      address, placeName: lot?.name || null,
       parcel: lot ? {altKey: lot.altKey, landUse: lot.landUse, buildings: lot.buildings} : null,
-      match: {method, ...match}, county: {records: recs, lotExtras}, suggested, streetView, aerialUrl});
+      match: {method, ...match}, county: {records: recs, lotExtras}, suggested, streetView, aerialUrl: aerialUrl(house.centre, toLatLon)});
   }
 
   // County sketches inside the town that no game building claims. `coveredByGame`
@@ -284,6 +233,7 @@ export function build() {
         record: rec && {style: rec.style, stories: rec.stories, wall: rec.wall, roofCover: rec.roofCover, yearBuilt: rec.yearBuilt},
         // The facts a game building gets, for where this sketch becomes one
         // (reference/county-buildings.json, written by tools/maps/lidar/build-lidar.mjs).
+        address: addressOf(lot), placeName: lot?.name || null,
         parcel: lot ? {altKey: lot.altKey, landUse: lot.landUse, buildings: lot.buildings} : null,
         county: {records: rec ? [rec] : [], lotExtras}, suggested};
     }).sort((a, b) => a.altKey.localeCompare(b.altKey) || a.bldgNum.localeCompare(b.bldgNum));

@@ -4,11 +4,25 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {cleanAnswer, edgeKey, exportDocument, nearestEdge, toggleEntrance, unitEdges} from '../../maps/mount-dora/reference/survey/model.js';
+import {cleanAnswer, countyEntry, edgeKey, exportDocument, nearestEdge, toggleEntrance, unitEdges} from '../../maps/mount-dora/reference/survey/model.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const features = JSON.parse(fs.readFileSync(path.join(root, 'maps/mount-dora/features.json'), 'utf8')).features;
+const json = file => JSON.parse(fs.readFileSync(path.join(root, 'maps/mount-dora', file), 'utf8'));
+const features = json('features.json').features;
 const KEYS = ['stories', 'roofShape', 'confidence', 'imageryDate', 'entrances', 'note'];
+
+test('the queue holds every game building once: the OSM ones and the county ones, shaped alike', () => {
+  const reference = json('reference/house-reference.json').buildings, county = json('reference/county-buildings.json').buildings;
+  const sectorsOf = new Map(features.filter(f => f.category === 'building').map(f => [f.id, f.nativeSectors]));
+  const queue = [...reference, ...county.map(c => countyEntry(c, sectorsOf.get(c.id)))];
+  assert.deepEqual(queue.map(b => b.id).sort(), [...sectorsOf.keys()].sort());
+  // A county entry has every field the page reads from a house-reference.json building.
+  const fields = Object.keys(reference[0]);
+  for (const b of queue.slice(reference.length)) {
+    assert.deepEqual(fields.filter(k => !(k in b)), [], b.id);
+    assert.ok(b.sectors.length && b.streetView && b.county.records && b.suggested && b.match.method === 'county-sketch' && b.countySketch.sketches >= 1, b.id);
+  }
+});
 
 test('authored outlines split into 1 m wall edges', () => {
   const lShape = [[[[0, 0], [3, 0], [3, 1], [1, 1], [1, 2], [0, 2], [0, 0]]]];
@@ -49,10 +63,11 @@ test('marking an edge twice removes it, and the list stays ordered', () => {
 test('answers keep only valid evidence, and the export says what each field means', () => {
   assert.equal(cleanAnswer({stories: '', entrances: [], imageryDate: '03/2024', confidence: 'certain'}, KEYS), null);
   assert.deepEqual(cleanAnswer({stories: '2', imageryDate: '2024-03', confidence: 'likely', extra: 1}, KEYS), {stories: '2', confidence: 'likely', imageryDate: '2024-03'});
-  const doc = exportDocument({sha256: 'abc', keys: KEYS, exportedAt: '2026-11-03T00:00:00.000Z', answers: {
-    'osm-way-2': {roofShape: 'hip', at: '2026-11-03T01:00:00.000Z'}, 'osm-way-1': {note: 'porch', at: 'x'}, 'osm-way-3': {stories: ''}}});
-  assert.equal(doc.version, 2);
-  assert.deepEqual(Object.keys(doc.answers), ['osm-way-1', 'osm-way-2']);
+  const doc = exportDocument({sha256: 'abc', countySha256: 'def', keys: KEYS, exportedAt: '2026-11-03T00:00:00.000Z', answers: {
+    'osm-way-2': {roofShape: 'hip', at: '2026-11-03T01:00:00.000Z'}, 'osm-way-1': {note: 'porch', at: 'x'}, 'osm-way-3': {stories: ''}, 'county-1-1': {stories: '2'}}});
+  assert.equal(doc.version, 3);
+  assert.deepEqual([doc.reference.sha256, doc.countyBuildings.sha256], ['abc', 'def'], 'pins both files the queue came from');
+  assert.deepEqual(Object.keys(doc.answers), ['county-1-1', 'osm-way-1', 'osm-way-2']);
   assert.equal(doc.answers['osm-way-2'].at, '2026-11-03T01:00:00.000Z');
   for (const k of ['source', 'coordinates', 'observationDate', 'uncertainty', 'entrances']) assert.ok(doc.evidence[k], k);
 });

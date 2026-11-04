@@ -29,7 +29,7 @@ build does not publish this folder (`build.mjs` copies an explicit file list).
 | Wall material from a source | 0 | 759 (265 wood frame) |
 | Roof cover known | 0 | 729: 519 shingle, 176 metal, 18 tar-and-gravel (flat), 10 rolled, 6 tile |
 | Porch recorded | 0 | 638 |
-| Planned Street View camera | 0 | 950 (865 on the addressed street; median 24 m away) |
+| Planned Street View camera | 0 | 950 (868 on the addressed street; median 24 m away) |
 
 How each building was matched (`match.method`):
 
@@ -83,8 +83,10 @@ lidar's building returns (class 6) tell them apart:
   that mapped water, as it does for any mapped footprint.
 - **Pieces:** a native outline is one connected footprint, so a sketch of two
   parts meeting at a corner becomes two buildings (`-part2`).
-- **Not done:** these buildings are not in the survey's queue yet, and have no
-  Street View viewpoint.
+- **Survey:** each building takes the lot and address of its largest sketch
+  with a record, and gets a Street View camera planned exactly as for the game
+  buildings (`tools/maps/house-reference/viewpoint.mjs`): 111 of 126 stand on
+  the addressed street, median 26 m away. All 126 are in the survey's queue.
 
 ## Caveats, checked on real buildings
 
@@ -141,9 +143,9 @@ Openly licensed street photos exist on Mapillary (CC BY-SA), but in November
 | `county/source.json` | `fetch-county.mjs` | URLs, retrieval times, bytes and SHA-256 of every input and kept file |
 | `house-reference.json` | `build-house-reference.mjs` | One record per game building, plus `countyOnly` |
 | `survey/` | hand-written | The survey page |
-| `house-survey.json` | the survey's Export | A person's answers, keyed by building id (not created yet) |
+| `house-survey.json` | the survey's Export | A person's answers, keyed by game building id (not created yet) |
 | `lidar-roofs.json` | `tools/maps/lidar/build-lidar.mjs` | Lidar roof form, eave and ridge heights and ground per game building |
-| `county-buildings.json` | `tools/maps/lidar/build-lidar.mjs` | County-sketched buildings OSM lacks, placed on their lidar roofs, and the sketches already in the game |
+| `county-buildings.json` | `tools/maps/lidar/build-lidar.mjs` | County-sketched buildings OSM lacks, placed on their lidar roofs with a planned Street View camera each, and the sketches already in the game |
 | `lidar/` | `tools/maps/lidar/` | Lidar provenance and the 1 m bare-earth grid ([details](lidar/README.md)) |
 
 Owner names and mailing addresses, sale prices, appraised values, exemptions,
@@ -168,7 +170,12 @@ the newest release; `--release 100626` pins one. A re-fetch changes
 ## Surveying
 
 Open the survey, pick a sector or keep the whole town, and work down the queue.
-It runs street by street. For each building:
+It runs street by street through all 1,076 game buildings: the 950 OSM ones
+(`house-reference.json`) and the 126 county-sketched ones OSM lacks
+(`county-buildings.json`). The latter are marked *county* in the queue, and
+typing `county-` in Find lists only them. Since OSM lacks them, check that each
+stands as drawn; the six with no 2018 lidar roof say so. If Street View shows no
+building, flag *Changed since the record*. For each building:
 
 1. Press **V**. Street View opens in a second tab, always the same one, at the
    nearest panorama, facing the building. Pan if it is off-centre. **A** opens
@@ -188,18 +195,20 @@ per building, so two people can split the town by sector.
 The repository's `AGENTS.md` (from PR #39) says geographic details, doors above
 all, go "only where source data or reviewed observations establish them", and
 keep "the source, coordinates, observation date and uncertainty". A survey
-answer is such a reviewed observation, and its export (version 2) says so in an
-`evidence` block:
+answer is such a reviewed observation, and its export says so in an `evidence`
+block. Version 3 pins both files the queue came from (`reference` and
+`countyBuildings`); version 2 exports, from before the county buildings joined
+the queue, still import.
 
 | Rule | Where it lives in `house-survey.json` |
 | --- | --- |
 | Source | `evidence.source`: a person viewing Google Maps; no imagery stored |
-| Coordinates | the building id; each entrance is a 1 m edge of the game's grid outline, in town metres |
+| Coordinates | the game building id (an OSM id, or a `county-` id); each entrance is a 1 m edge of the game's grid outline, in town metres |
 | Observation date | `imageryDate` (Google's capture month) and `at` (when the answer was recorded) |
 | Uncertainty | `confidence`: sure, likely or unsure. An unanswered field is unknown, not absent |
 
 Entrances are only doors a person saw. None are inferred from an address, an
-outline or a facade, so a building with no marked entrance keeps none. All 950
+outline or a facade, so a building with no marked entrance keeps none. All 1,076
 authored outlines lie on the 1 m grid (a test checks this), so any wall can take
 an entrance. Editor doors are grid edges too (`e:x:y` / `s:x:y` in a sector), so
 converting a marked edge to a door record is a sector offset away. That
@@ -226,10 +235,13 @@ Survey `wall` maps to the kit as follows: `wood-siding` and `other-siding` →
 
 Each building records its sources in `nativeProxy` (`storiesSource`,
 `materialSource`, `evidence`). Where county and lidar give different storeys
-(114 buildings), `evidence.storiesDisagreement` keeps both for a survey to settle.
-The three evidence files are pinned in `project.json`. They pin `features.json`
-without `nativeProxy` (`tools/maps/house-reference/features-digest.mjs`), so a
-regeneration never invalidates its own inputs.
+(135 buildings: 114 OSM, 21 county), `evidence.storiesDisagreement` keeps both
+for a survey to settle.
+A county building's answer (a `county-` id) joins its county and lidar evidence
+the same way. The evidence files, and the survey export once it exists, are
+pinned in `project.json`. They pin only the OSM-sourced fields of
+`features.json` they read (`tools/maps/house-reference/features-digest.mjs`), so
+a regeneration never invalidates its own inputs.
 
 The art kit (`maps/mount-dora/art/tools/build-playable.mjs`) then sets the
 following from the same evidence:

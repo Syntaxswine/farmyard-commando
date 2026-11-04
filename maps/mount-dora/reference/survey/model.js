@@ -39,6 +39,15 @@ export function toggleEntrance(list = [], segment) {
   return [...list, {segment: segment.map(p => [...p])}].sort((p, q) => edgeKey(p.segment).localeCompare(edgeKey(q.segment)));
 }
 
+// A county building (reference/county-buildings.json) as a queue entry with the
+// fields of a house-reference.json building. Its sectors come from
+// features.json, which the generator writes after both reference files.
+export function countyEntry(c, sectors = []) {
+  return {id: c.id, sectors, centroid: c.centroid, areaM2: c.areaM2, osmTags: {}, address: c.address, placeName: c.placeName, parcel: c.parcel,
+    match: c.county.match, county: c.county.county, suggested: c.county.suggested, streetView: c.streetView, aerialUrl: c.aerialUrl,
+    countySketch: {sketches: c.members.length, lidarSaw: c.lidarSaw, roofShare: c.roofShare}};
+}
+
 // Drops empty values; an answer with nothing left is null.
 export function cleanAnswer(answer, keys) {
   const out = {};
@@ -52,18 +61,19 @@ export function cleanAnswer(answer, keys) {
   return Object.keys(out).length ? out : null;
 }
 
-export function exportDocument({answers, sha256, keys, exportedAt}) {
+export function exportDocument({answers, sha256, countySha256, keys, exportedAt}) {
   const out = {};
   for (const id of Object.keys(answers).sort()) {
     const a = cleanAnswer(answers[id], keys);
     if (a) out[id] = {...a, ...(answers[id].at ? {at: answers[id].at} : {})};
   }
   return {
-    kind: 'mount-dora-house-survey', version: 2,
-    reference: {file: 'maps/mount-dora/reference/house-reference.json', sha256}, exportedAt,
+    kind: 'mount-dora-house-survey', version: 3,
+    reference: {file: 'maps/mount-dora/reference/house-reference.json', sha256},
+    countyBuildings: {file: 'maps/mount-dora/reference/county-buildings.json', sha256: countySha256}, exportedAt,
     evidence: {
       source: 'A person viewing Google Maps Street View and satellite imagery in Google Maps; no imagery is stored.',
-      coordinates: 'Keyed by game building id; entrances are 1 m edges of the authored outline in town east/south metres.',
+      coordinates: 'Keyed by game building id: an OSM id, or a county- id for a building OSM lacks (county-buildings.json). Entrances are 1 m edges of the authored outline in town east/south metres.',
       observationDate: 'imageryDate is the "Image capture" month Google shows; at is when the answer was recorded.',
       uncertainty: 'confidence is the surveyor\'s own: sure, likely or unsure. Unanswered fields are unknown, not absent.',
       entrances: 'Only doors a person saw are marked. None are inferred from an address, outline or facade.',

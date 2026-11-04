@@ -7,8 +7,9 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {createProjection, headingDegrees} from '../../tools/maps/house-reference/projection.mjs';
 import {area, centroid, contains, overlapArea} from '../../tools/maps/house-reference/geometry.mjs';
-import {build, storeys, streetKey, MATCH} from '../../tools/maps/house-reference/build-house-reference.mjs';
+import {build, storeys, MATCH} from '../../tools/maps/house-reference/build-house-reference.mjs';
 import {isOsm} from '../../tools/maps/house-reference/features-digest.mjs';
+import {streetKey} from '../../tools/maps/house-reference/viewpoint.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const town = path.join(root, 'maps/mount-dora');
@@ -64,6 +65,11 @@ test('compass headings and street names', () => {
   assert.equal(streetKey('North McDonald Street').base, streetKey('MCDONALD ST').base);
   assert.equal(streetKey('100 N ALEXANDER ST').full, 'N ALEXANDER ST');
   assert.equal(streetKey(''), null);
+  // A unit is not part of the street.
+  assert.equal(streetKey('350 LIBERTY AVE # 14').full, streetKey('Liberty Avenue').full);
+  assert.equal(streetKey('343 N MCDONALD ST APT 102').base, streetKey('McDonald Street').base);
+  assert.equal(streetKey('525 N TREMAIN ST # 1-A').full, 'N TREMAIN ST');
+  assert.equal(streetKey('12 E 5TH AVE UNIT 3').full, 'E 5TH AVE');
 });
 
 test('county storeys map onto the native kit', () => {
@@ -102,7 +108,10 @@ test('recorded footprint matches hold up, and the same test fails 30 m away (neg
 });
 
 test('every planned view is a keyless Google Maps URL within the documented ranges', () => {
-  for (const b of reference.buildings) {
+  // The game's OSM buildings here, and the county buildings OSM lacks (county-buildings.json).
+  const county = json('reference/county-buildings.json').buildings;
+  assert.equal(reference.buildings.length + county.length, features.filter(f => f.category === 'building').length);
+  for (const b of [...reference.buildings, ...county]) {
     const sv = b.streetView;
     assert.ok(sv, `${b.id} has no viewpoint`);
     const url = new URL(sv.url);
@@ -125,6 +134,9 @@ test('the county snapshot keeps building facts only', () => {
     const keys = new Set(json(`reference/county/${file}`).features.flatMap(f => Object.keys(f.properties)));
     assert.deepEqual([...keys].filter(k => banned.test(k)), [], file);
   }
-  const text = fs.readFileSync(path.join(town, 'reference/house-reference.json'), 'utf8');
-  assert.equal(/owner|grantee|sale_?price|appraised/i.test(text), false);
+  // Everything but the policy, which says what is left out.
+  for (const file of ['reference/house-reference.json', 'reference/county-buildings.json']) {
+    const {policy, ...data} = json(file);
+    assert.equal(/owner|grantee|sale_?price|appraised/i.test(JSON.stringify(data)), false, file);
+  }
 });

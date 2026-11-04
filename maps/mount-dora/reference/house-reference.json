@@ -132,7 +132,7 @@
   "metalRoof": 176,
   "withPorch": 638,
   "withStreetView": 950,
-  "onAddressedStreet": 865,
+  "onAddressedStreet": 868,
   "countyOnlySketches": 247,
   "countyOnlyHouseSized": 241
  },
@@ -33056,7 +33056,7 @@
     "roadClass": "residential",
     "alongM": 27.2,
     "distanceM": 26.5,
-    "onAddressedStreet": false,
+    "onAddressedStreet": true,
     "url": "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=28.798925,-81.646774&heading=271&pitch=5&fov=100"
    },
    "aerialUrl": "https://www.google.com/maps/@?api=1&map_action=map&center=28.798928,-81.647045&zoom=20&basemap=satellite"
@@ -37438,7 +37438,7 @@
     "roadClass": "residential",
     "alongM": 46.3,
     "distanceM": 22.1,
-    "onAddressedStreet": false,
+    "onAddressedStreet": true,
     "url": "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=28.800958,-81.642642&heading=269&pitch=5&fov=100"
    },
    "aerialUrl": "https://www.google.com/maps/@?api=1&map_action=map&center=28.800955,-81.642869&zoom=20&basemap=satellite"
@@ -74817,7 +74817,7 @@
     "roadClass": "residential",
     "alongM": 132.8,
     "distanceM": 19.2,
-    "onAddressedStreet": false,
+    "onAddressedStreet": true,
     "url": "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=28.794101,-81.641024&heading=180&pitch=5&fov=100"
    },
    "aerialUrl": "https://www.google.com/maps/@?api=1&map_action=map&center=28.793928,-81.641023&zoom=20&basemap=satellite"
@@ -97988,6 +97988,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1938
    },
+   "address": "408 LAKE DORA RD",
+   "placeName": null,
    "parcel": {
     "altKey": "1082536",
     "landUse": "SINGLE FAMILY LAKEFRONT",
@@ -98170,6 +98172,8 @@
     "roofCover": "METAL",
     "yearBuilt": 2002
    },
+   "address": "408 LAKE DORA RD",
+   "placeName": null,
    "parcel": {
     "altKey": "1082536",
     "landUse": "SINGLE FAMILY LAKEFRONT",
@@ -98339,6 +98343,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1940
    },
+   "address": "LAKESHORE DR",
+   "placeName": null,
    "parcel": {
     "altKey": "3883811",
     "landUse": "GOVT SUBMERGED LAND",
@@ -98449,6 +98455,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1978
    },
+   "address": "401 LAKE DORA RD",
+   "placeName": null,
    "parcel": {
     "altKey": "1236797",
     "landUse": "SINGLE FAMILY LAKEFRONT",
@@ -98649,6 +98657,8 @@
     "roofCover": "METAL",
     "yearBuilt": 2013
    },
+   "address": "655 ROSSELL ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1463556",
     "landUse": "SINGLE FAMILY",
@@ -98781,6 +98791,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1950
    },
+   "address": "412 W 10TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1464170",
     "landUse": "SINGLE FAMILY",
@@ -98910,6 +98922,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1935
    },
+   "address": "219 W 9TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1464251",
     "landUse": "SINGLE FAMILY",
@@ -99004,6 +99018,8 @@
     "roofCover": null,
     "yearBuilt": 1945
    },
+   "address": "930 N DONNELLY ST",
+   "placeName": "DESIGN INTERIORS",
    "parcel": {
     "altKey": "1464340",
     "landUse": "STORE 1 STORY FREE STANDING",
@@ -99141,6 +99157,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1912
    },
+   "address": "148 W 9TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1464501",
     "landUse": "SINGLE FAMILY",
@@ -99233,6 +99251,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1987
    },
+   "address": "132 W 9TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1464536",
     "landUse": "SINGLE FAMILY",
@@ -99478,6 +99498,8 @@
     "roofCover": "CONCRETE/CLAY TILE",
     "yearBuilt": 1940
    },
+   "address": "700 HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1464749",
     "landUse": "SINGLE FAMILY",
@@ -99610,6 +99632,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1950
    },
+   "address": "346 W 8TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1464757",
     "landUse": "SINGLE FAMILY",
@@ -99770,6 +99794,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1938
    },
+   "address": "748 N MCDONALD ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1464765",
     "landUse": "SINGLE FAMILY",
@@ -99900,6 +99926,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1950
    },
+   "address": "725 N ALEXANDER ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1464773",
     "landUse": "SINGLE FAMILY",
@@ -100022,6 +100050,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1925
    },
+   "address": "728 N MCDONALD ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1464781",
     "landUse": "SINGLE FAMILY",
@@ -100177,6 +100207,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1949
    },
+   "address": "724 N ALEXANDER ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1464820",
     "landUse": "SINGLE FAMILY",
@@ -100326,6 +100358,8 @@
     "roofCover": null,
     "yearBuilt": 1951
    },
+   "address": "717 N DONNELLY ST",
+   "placeName": "UROLOGY OF MOUNT DORA",
    "parcel": {
     "altKey": "1464838",
     "landUse": "MEDICAL BLDG",
@@ -100477,6 +100511,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1949
    },
+   "address": "720 N ALEXANDER ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1464846",
     "landUse": "SINGLE FAMILY",
@@ -100594,6 +100630,8 @@
     "roofCover": null,
     "yearBuilt": 1949
    },
+   "address": "777 N DONNELLY ST",
+   "placeName": "DOWNTOWN TANNING",
    "parcel": {
     "altKey": "1464862",
     "landUse": "OFFICE 1 STORY",
@@ -100686,6 +100724,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1994
    },
+   "address": "205 E 7TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1464943",
     "landUse": "MULTI FAMILY <5 UNITS",
@@ -100783,6 +100823,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1938
    },
+   "address": "619 N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1464994",
     "landUse": "MULTI FAMILY <5 UNITS",
@@ -100912,6 +100954,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1925
    },
+   "address": "229 E 6TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1465001",
     "landUse": "SINGLE FAMILY",
@@ -101020,6 +101064,8 @@
     "roofCover": null,
     "yearBuilt": 1917
    },
+   "address": "137 W 6TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1465095",
     "landUse": "STORE 1 STORY FREE STANDING",
@@ -101110,6 +101156,8 @@
     "roofCover": null,
     "yearBuilt": 1920
    },
+   "address": "137 W 6TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1465095",
     "landUse": "STORE 1 STORY FREE STANDING",
@@ -101216,6 +101264,8 @@
     "roofCover": null,
     "yearBuilt": 1945
    },
+   "address": "605 N DONNELLY ST",
+   "placeName": "KNIGHT BARRY TITLE SOLUTIONS",
    "parcel": {
     "altKey": "1465109",
     "landUse": "OFFICE 1 STORY",
@@ -101306,6 +101356,8 @@
     "roofCover": null,
     "yearBuilt": 1962
    },
+   "address": "604 ALEXANDER ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1465125",
     "landUse": "MULTI FAMILY >4 AND <10 UNITS",
@@ -101399,6 +101451,8 @@
     "roofCover": null,
     "yearBuilt": 1962
    },
+   "address": "604 ALEXANDER ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1465125",
     "landUse": "MULTI FAMILY >4 AND <10 UNITS",
@@ -101499,6 +101553,8 @@
     "roofCover": null,
     "yearBuilt": 1940
    },
+   "address": "215 W 5TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1465214",
     "landUse": "OFFICE MULTI STORY",
@@ -101590,6 +101646,8 @@
     "roofCover": null,
     "yearBuilt": 1920
    },
+   "address": "450 ROYELLOU LN",
+   "placeName": "MOUNT DORA HISTORY MUSEUM",
    "parcel": {
     "altKey": "1465290",
     "landUse": "IMPROVED GOVT MUNICIPAL",
@@ -101679,6 +101737,8 @@
     "roofCover": null,
     "yearBuilt": 1996
    },
+   "address": "230 W 4TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1465541",
     "landUse": "IMPROVED GOVT MUNICIPAL",
@@ -101770,6 +101830,8 @@
     "roofCover": null,
     "yearBuilt": 1998
    },
+   "address": "100 N DONNELLY ST",
+   "placeName": "MT DORA LAWN BOWLING CLUB",
    "parcel": {
     "altKey": "1465818",
     "landUse": "IMPROVED GOVT MUNICIPAL",
@@ -101865,6 +101927,8 @@
     "roofCover": null,
     "yearBuilt": 1987
    },
+   "address": "148 CHARLES AVE",
+   "placeName": "MOUNT DORA MARINA",
    "parcel": {
     "altKey": "1465826",
     "landUse": "MARINA",
@@ -101978,6 +102042,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1925
    },
+   "address": "1003 E 5TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1467926",
     "landUse": "SINGLE FAMILY",
@@ -102116,6 +102182,8 @@
     "roofCover": "ASPHALT ROLLED",
     "yearBuilt": 1919
    },
+   "address": "430 N ORANGE ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1468035",
     "landUse": "SINGLE FAMILY",
@@ -102240,6 +102308,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1902
    },
+   "address": "316 HIGHLAND ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1468159",
     "landUse": "SINGLE FAMILY",
@@ -102358,6 +102428,8 @@
     "roofCover": "ASPHALT ROLLED",
     "yearBuilt": 1922
    },
+   "address": "340 ORANGE ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1468191",
     "landUse": "SINGLE FAMILY",
@@ -102460,6 +102532,8 @@
     "roofCover": "ASPHALT ROLLED",
     "yearBuilt": 1972
    },
+   "address": "248 S CLAYTON ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1468426",
     "landUse": "SINGLE FAMILY",
@@ -102574,6 +102648,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1920
    },
+   "address": "305 S HIGHLAND ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1468612",
     "landUse": "SINGLE FAMILY",
@@ -102663,6 +102739,8 @@
     "roofCover": null,
     "yearBuilt": 1979
    },
+   "address": "555 S HIGHLAND ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1468710",
     "landUse": "STORE/RESIDENCE COMBO",
@@ -102761,6 +102839,8 @@
     "roofCover": null,
     "yearBuilt": 1988
    },
+   "address": "555 S HIGHLAND ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1468710",
     "landUse": "STORE/RESIDENCE COMBO",
@@ -102931,6 +103011,8 @@
     "roofCover": null,
     "yearBuilt": 1953
    },
+   "address": "555 S HIGHLAND ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1468710",
     "landUse": "STORE/RESIDENCE COMBO",
@@ -103049,6 +103131,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1925
    },
+   "address": "925 SUNSET CT",
+   "placeName": null,
    "parcel": {
     "altKey": "1468779",
     "landUse": "SINGLE FAMILY",
@@ -103186,6 +103270,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1920
    },
+   "address": "715 S GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1469325",
     "landUse": "SINGLE FAMILY",
@@ -103320,6 +103406,8 @@
     ]
    ],
    "record": null,
+   "address": "S GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1469341",
     "landUse": "VACANT RESIDENTIAL",
@@ -103412,6 +103500,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 2023
    },
+   "address": "723 S GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1469350",
     "landUse": "SINGLE FAMILY",
@@ -103542,6 +103632,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1986
    },
+   "address": "124 W 4TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1469457",
     "landUse": "STORE/RESIDENCE COMBO",
@@ -103653,6 +103745,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1926
    },
+   "address": "140 N JOHNS ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1469490",
     "landUse": "SINGLE FAMILY",
@@ -103751,6 +103845,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1926
    },
+   "address": "802 E 2ND AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1469511",
     "landUse": "SINGLE FAMILY",
@@ -103861,6 +103957,8 @@
     "roofCover": "ASPHALT ROLLED",
     "yearBuilt": 1961
    },
+   "address": "961 LIBERTY AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1470170",
     "landUse": "SINGLE FAMILY",
@@ -103979,6 +104077,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1923
    },
+   "address": "347 E 9TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1470633",
     "landUse": "SINGLE FAMILY",
@@ -104071,6 +104171,8 @@
     "roofCover": null,
     "yearBuilt": 1940
    },
+   "address": "535 N DONNELLY ST",
+   "placeName": "MASONIC TEMPLE",
    "parcel": {
     "altKey": "1470854",
     "landUse": "CLUB/LODGE/UNION HALL",
@@ -104211,6 +104313,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1925
    },
+   "address": "619 E 9TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1471621",
     "landUse": "SINGLE FAMILY",
@@ -104336,6 +104440,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1938
    },
+   "address": "647 E 9TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1471648",
     "landUse": "SINGLE FAMILY",
@@ -104480,6 +104586,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1948
    },
+   "address": "739 N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1472253",
     "landUse": "SINGLE FAMILY",
@@ -104641,6 +104749,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1947
    },
+   "address": "739 N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1472253",
     "landUse": "SINGLE FAMILY",
@@ -104786,6 +104896,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1971
    },
+   "address": "1019 E 1ST AVE",
+   "placeName": "JOY PHYSICAL THERAPY",
    "parcel": {
     "altKey": "1473951",
     "landUse": "OFFICE 1 STORY",
@@ -104890,6 +105002,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1965
    },
+   "address": "309 N HIGHLAND ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1474019",
     "landUse": "SINGLE FAMILY",
@@ -105032,6 +105146,8 @@
     "roofCover": "ASPHALT ROLLED",
     "yearBuilt": 1991
    },
+   "address": "402 LAKE DORA RD",
+   "placeName": null,
    "parcel": {
     "altKey": "1475414",
     "landUse": "SINGLE FAMILY LAKEFRONT",
@@ -105160,6 +105276,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1991
    },
+   "address": "LAKESHORE DR",
+   "placeName": null,
    "parcel": {
     "altKey": "3883811",
     "landUse": "GOVT SUBMERGED LAND",
@@ -105283,6 +105401,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1997
    },
+   "address": "403 LAKE DORA RD",
+   "placeName": null,
    "parcel": {
     "altKey": "1475422",
     "landUse": "SINGLE FAMILY LAKEFRONT",
@@ -105451,6 +105571,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1989
    },
+   "address": "404 LAKE DORA RD",
+   "placeName": null,
    "parcel": {
     "altKey": "1475431",
     "landUse": "SINGLE FAMILY LAKEFRONT",
@@ -105577,6 +105699,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1960
    },
+   "address": "406 LAKE DORA RD",
+   "placeName": null,
    "parcel": {
     "altKey": "1475449",
     "landUse": "SINGLE FAMILY LAKEFRONT",
@@ -105697,6 +105821,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1940
    },
+   "address": "512 LAKE DORA RD",
+   "placeName": null,
    "parcel": {
     "altKey": "1475481",
     "landUse": "SINGLE FAMILY LAKEFRONT",
@@ -105805,6 +105931,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1938
    },
+   "address": "513 LAKE DORA RD",
+   "placeName": null,
    "parcel": {
     "altKey": "1475490",
     "landUse": "SINGLE FAMILY LAKEFRONT",
@@ -105949,6 +106077,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1982
    },
+   "address": "514 LAKE DORA RD",
+   "placeName": null,
    "parcel": {
     "altKey": "1475503",
     "landUse": "SINGLE FAMILY LAKEFRONT",
@@ -106163,6 +106293,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1983
    },
+   "address": "621 LAKE DORA RD",
+   "placeName": null,
    "parcel": {
     "altKey": "1475511",
     "landUse": "SINGLE FAMILY LAKEFRONT",
@@ -106288,6 +106420,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1930
    },
+   "address": "624 LAKE DORA RD",
+   "placeName": null,
    "parcel": {
     "altKey": "1475520",
     "landUse": "SINGLE FAMILY LAKEFRONT",
@@ -106410,6 +106544,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1935
    },
+   "address": "132 W 10TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1475627",
     "landUse": "SINGLE FAMILY",
@@ -106517,6 +106653,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1977
    },
+   "address": "1010 SUN COUNTRY CT",
+   "placeName": null,
    "parcel": {
     "altKey": "1475724",
     "landUse": "SINGLE FAMILY",
@@ -106618,6 +106756,8 @@
     ]
    ],
    "record": null,
+   "address": "926 E FIFTH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1475953",
     "landUse": "SINGLE FAMILY",
@@ -106690,6 +106830,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1978
    },
+   "address": "347 E 3RD AVE",
+   "placeName": "MAGNOLIA INN B & B",
    "parcel": {
     "altKey": "1476127",
     "landUse": "SINGLE FAMILY",
@@ -106804,6 +106946,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1925
    },
+   "address": "933 E 10TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1476275",
     "landUse": "SINGLE FAMILY",
@@ -106921,6 +107065,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1962
    },
+   "address": "1012 E 10TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1476283",
     "landUse": "SINGLE FAMILY",
@@ -107028,6 +107174,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1938
    },
+   "address": "844 N CLAYTON ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1476437",
     "landUse": "SINGLE FAMILY",
@@ -107177,6 +107325,8 @@
     "roofCover": null,
     "yearBuilt": 1910
    },
+   "address": "221 E FOURTH AVE",
+   "placeName": "MOUNT DORA HISTORIC INN",
    "parcel": {
     "altKey": "1664098",
     "landUse": "HOTEL/MOTEL",
@@ -107323,6 +107473,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1925
    },
+   "address": "235 E FOURTH AVE",
+   "placeName": "235 COTTAGE",
    "parcel": {
     "altKey": "1664101",
     "landUse": "STORE/RESIDENCE COMBO",
@@ -107445,6 +107597,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1932
    },
+   "address": "630 E 8TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1665132",
     "landUse": "SINGLE FAMILY",
@@ -107586,6 +107740,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1928
    },
+   "address": "951 LIBERTY AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1665141",
     "landUse": "SINGLE FAMILY",
@@ -107748,6 +107904,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1947
    },
+   "address": "611 GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1665922",
     "landUse": "SINGLE FAMILY",
@@ -107883,6 +108041,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1950
    },
+   "address": "609 MICHIGAN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1665949",
     "landUse": "SINGLE FAMILY",
@@ -108012,6 +108172,8 @@
     "roofCover": "ASPHALT ROLLED",
     "yearBuilt": 1945
    },
+   "address": "609 S CLAYTON ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1666023",
     "landUse": "MULTI FAMILY <5 UNITS",
@@ -108134,6 +108296,8 @@
     "roofCover": "CONCRETE/CLAY TILE",
     "yearBuilt": 1940
    },
+   "address": "742 N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1666171",
     "landUse": "MULTI FAMILY <5 UNITS",
@@ -108307,6 +108471,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1999
    },
+   "address": "405 LAKE DORA RD",
+   "placeName": null,
    "parcel": {
     "altKey": "1667844",
     "landUse": "SINGLE FAMILY LAKEFRONT",
@@ -108411,6 +108577,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -108524,6 +108692,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -108629,6 +108799,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -108734,6 +108906,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -108839,6 +109013,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -108968,6 +109144,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -109089,6 +109267,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -109194,6 +109374,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -109299,6 +109481,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -109404,6 +109588,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -109517,6 +109703,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -109622,6 +109810,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -109727,6 +109917,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -109832,6 +110024,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -109936,6 +110130,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -110081,6 +110277,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -110202,6 +110400,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -110307,6 +110507,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -110412,6 +110614,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -110525,6 +110729,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -110638,6 +110844,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -110743,6 +110951,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -110848,6 +111058,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -110953,6 +111165,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -111058,6 +111272,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -111179,6 +111395,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -111300,6 +111518,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -111405,6 +111625,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -111509,6 +111731,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -111614,6 +111838,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -111727,6 +111953,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -111840,6 +112068,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -111945,6 +112175,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -112050,6 +112282,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -112155,6 +112389,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -112276,6 +112512,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -112397,6 +112635,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -112502,6 +112742,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -112607,6 +112849,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -112720,6 +112964,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -112845,6 +113091,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1951
    },
+   "address": "926 E 10TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1670519",
     "landUse": "SINGLE FAMILY",
@@ -112936,6 +113184,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1953
    },
+   "address": "S TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1709156",
     "landUse": "IMPROVED GOVT MUNICIPAL",
@@ -113075,6 +113325,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1910
    },
+   "address": "629 HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1728797",
     "landUse": "SINGLE FAMILY",
@@ -113167,6 +113419,8 @@
     "roofCover": null,
     "yearBuilt": 1954
    },
+   "address": "419 S HIGHLAND ST",
+   "placeName": "THE BREWERY  ROCKING RABBIT CAFE",
    "parcel": {
     "altKey": "1729335",
     "landUse": "STORE 1 STORY FREE STANDING",
@@ -113261,6 +113515,8 @@
     "roofCover": null,
     "yearBuilt": 1996
    },
+   "address": "310 S TREMAIN ST",
+   "placeName": "GILBERT PARK",
    "parcel": {
     "altKey": "1729378",
     "landUse": "IMPROVED GOVT MUNICIPAL",
@@ -113365,6 +113621,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1930
    },
+   "address": "510 LAKE DORA DR",
+   "placeName": null,
    "parcel": {
     "altKey": "1730970",
     "landUse": "SINGLE FAMILY LAKEFRONT",
@@ -113463,6 +113721,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -113600,6 +113860,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1951
    },
+   "address": "421 W 9TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1766133",
     "landUse": "SINGLE FAMILY",
@@ -113730,6 +113992,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1945
    },
+   "address": "701 N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1766206",
     "landUse": "SINGLE FAMILY",
@@ -113847,6 +114111,8 @@
     "roofCover": null,
     "yearBuilt": 1961
    },
+   "address": "344 S HIGHLAND ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1766478",
     "landUse": "OFFICE 1 STORY",
@@ -113999,6 +114265,8 @@
     "roofCover": "ASPHALT ROLLED",
     "yearBuilt": 1961
    },
+   "address": "933 LIBERTY AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "1766486",
     "landUse": "SINGLE FAMILY",
@@ -114130,6 +114398,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1925
    },
+   "address": "953 CLAYTON ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1766605",
     "landUse": "SINGLE FAMILY",
@@ -114260,6 +114530,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1956
    },
+   "address": "1006 GORHAM ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1766621",
     "landUse": "SINGLE FAMILY",
@@ -114360,6 +114632,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -114465,6 +114739,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -114578,6 +114854,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -114683,6 +114961,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -114788,6 +115068,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -114895,6 +115177,8 @@
     ]
    ],
    "record": null,
+   "address": "640 N BAKER ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1767547",
     "landUse": "SINGLE FAMILY",
@@ -114989,6 +115273,8 @@
     ]
    ],
    "record": null,
+   "address": "640 N BAKER ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1767547",
     "landUse": "SINGLE FAMILY",
@@ -115105,6 +115391,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1883
    },
+   "address": "717 N MCDONALD ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1797080",
     "landUse": "SINGLE FAMILY",
@@ -115305,6 +115593,8 @@
     "roofCover": null,
     "yearBuilt": 1900
    },
+   "address": "100 ALEXANDER ST",
+   "placeName": "LAKESIDE INN",
    "parcel": {
     "altKey": "1797101",
     "landUse": "HOTEL/MOTEL",
@@ -115406,6 +115696,8 @@
     "roofCover": null,
     "yearBuilt": 1930
    },
+   "address": "100 ALEXANDER ST",
+   "placeName": "LAKESIDE INN",
    "parcel": {
     "altKey": "1797101",
     "landUse": "HOTEL/MOTEL",
@@ -115520,6 +115812,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1957
    },
+   "address": "309 S SIMPSON ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1797233",
     "landUse": "SINGLE FAMILY",
@@ -115623,6 +115917,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1948
    },
+   "address": "336 N CLAYTON ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1797454",
     "landUse": "SINGLE FAMILY",
@@ -115734,6 +116030,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1956
    },
+   "address": "811 SUNSET CT",
+   "placeName": null,
    "parcel": {
     "altKey": "1805449",
     "landUse": "SINGLE FAMILY",
@@ -115949,6 +116247,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1977
    },
+   "address": "330 LAKE DORA RD",
+   "placeName": null,
    "parcel": {
     "altKey": "1820782",
     "landUse": "SINGLE FAMILY LAKEFRONT",
@@ -116091,6 +116391,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "320 LAKE DORA RD",
+   "placeName": null,
    "parcel": {
     "altKey": "1820791",
     "landUse": "MULTI FAMILY <5 UNITS",
@@ -116260,6 +116562,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1910
    },
+   "address": "516 LAKE DORA RD",
+   "placeName": null,
    "parcel": {
     "altKey": "1821151",
     "landUse": "SINGLE FAMILY LAKEFRONT",
@@ -116363,6 +116667,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "N GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891862",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -116460,6 +116766,8 @@
     "roofCover": null,
     "yearBuilt": 1952
    },
+   "address": "458 N HIGHLAND ST",
+   "placeName": null,
    "parcel": {
     "altKey": "1821177",
     "landUse": "STORE 1 STORY FREE STANDING",
@@ -116571,6 +116879,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -116689,6 +116999,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -116807,6 +117119,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -116925,6 +117239,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -117043,6 +117359,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -117161,6 +117479,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -117279,6 +117599,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -117397,6 +117719,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -117515,6 +117839,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -117633,6 +117959,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -117751,6 +118079,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -117869,6 +118199,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -117987,6 +118319,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -118105,6 +118439,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -118223,6 +118559,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -118341,6 +118679,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -118459,6 +118799,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -118577,6 +118919,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -118695,6 +119039,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -118813,6 +119159,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -118931,6 +119279,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -119049,6 +119399,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -119167,6 +119519,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -119285,6 +119639,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -119403,6 +119759,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -119521,6 +119879,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1980
    },
+   "address": "N TREMAIN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891860",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -119631,6 +119991,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -119729,6 +120091,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -119839,6 +120203,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -119940,6 +120306,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -120042,6 +120410,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -120144,6 +120514,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -120258,6 +120630,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -120367,6 +120741,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -120469,6 +120845,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -120571,6 +120949,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -120673,6 +121053,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -120787,6 +121169,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -120896,6 +121280,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -120998,6 +121384,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -121099,6 +121487,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -121201,6 +121591,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -121315,6 +121707,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -121424,6 +121818,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -121526,6 +121922,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -121628,6 +122026,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -121729,6 +122129,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -121843,6 +122245,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -121952,6 +122356,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -122054,6 +122460,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -122155,6 +122563,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -122269,6 +122679,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -122379,6 +122791,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -122481,6 +122895,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -122584,6 +123000,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -122686,6 +123104,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -122800,6 +123220,8 @@
     "roofCover": "TAR & GRAVEL",
     "yearBuilt": 1974
    },
+   "address": "HELEN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891858",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -122917,6 +123339,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1969
    },
+   "address": "350 LIBERTY AVE # 15",
+   "placeName": null,
    "parcel": {
     "altKey": "2579871",
     "landUse": "CONDOMINIUM",
@@ -123036,6 +123460,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1969
    },
+   "address": "350 LIBERTY AVE # 18",
+   "placeName": null,
    "parcel": {
     "altKey": "2579889",
     "landUse": "CONDOMINIUM",
@@ -123155,6 +123581,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1969
    },
+   "address": "350 LIBERTY AVE # 19",
+   "placeName": null,
    "parcel": {
     "altKey": "2579897",
     "landUse": "CONDOMINIUM",
@@ -123270,6 +123698,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1969
    },
+   "address": "350 LIBERTY AVE # 20",
+   "placeName": null,
    "parcel": {
     "altKey": "2593059",
     "landUse": "CONDOMINIUM",
@@ -123394,6 +123824,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1969
    },
+   "address": "350 LIBERTY AVE # 14",
+   "placeName": null,
    "parcel": {
     "altKey": "2593181",
     "landUse": "CONDOMINIUM",
@@ -123513,6 +123945,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1969
    },
+   "address": "350 LIBERTY AVE # 16",
+   "placeName": null,
    "parcel": {
     "altKey": "2593199",
     "landUse": "CONDOMINIUM",
@@ -123632,6 +124066,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1969
    },
+   "address": "350 LIBERTY AVE # 17",
+   "placeName": null,
    "parcel": {
     "altKey": "2593202",
     "landUse": "CONDOMINIUM",
@@ -123805,6 +124241,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1982
    },
+   "address": "ROSSELL ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891857",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -123940,6 +124378,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1982
    },
+   "address": "ROSSELL ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891857",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -124088,6 +124528,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1982
    },
+   "address": "ROSSELL ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891857",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -124220,6 +124662,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1982
    },
+   "address": "ROSSELL ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891857",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -124371,6 +124815,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1982
    },
+   "address": "ROSSELL ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891857",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -124518,6 +124964,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1982
    },
+   "address": "ROSSELL ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891857",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -124657,6 +125105,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1982
    },
+   "address": "ROSSELL ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891857",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -124806,6 +125256,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1982
    },
+   "address": "ROSSELL ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891857",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -124953,6 +125405,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1982
    },
+   "address": "ROSSELL ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3891857",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -125052,6 +125506,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1925
    },
+   "address": "633 N BAKER ST",
+   "placeName": null,
    "parcel": {
     "altKey": "2691476",
     "landUse": "SINGLE FAMILY",
@@ -125192,6 +125648,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 2003
    },
+   "address": "306 W SIXTH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "2720697",
     "landUse": "SINGLE FAMILY",
@@ -125313,6 +125771,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1967
    },
+   "address": "510 MICHIGAN ST",
+   "placeName": null,
    "parcel": {
     "altKey": "2740442",
     "landUse": "MULTI FAMILY <5 UNITS",
@@ -125476,6 +125936,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 2002
    },
+   "address": "501 HIGH POINT DR",
+   "placeName": null,
    "parcel": {
     "altKey": "2858851",
     "landUse": "SINGLE FAMILY",
@@ -125629,6 +126091,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1988
    },
+   "address": "512 HIGH POINT DR",
+   "placeName": null,
    "parcel": {
     "altKey": "2860022",
     "landUse": "SINGLE FAMILY",
@@ -125774,6 +126238,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1989
    },
+   "address": "511 HIGH POINT DR",
+   "placeName": null,
    "parcel": {
     "altKey": "2860049",
     "landUse": "SINGLE FAMILY",
@@ -125900,6 +126366,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1989
    },
+   "address": "515 HIGH POINT DR",
+   "placeName": null,
    "parcel": {
     "altKey": "2870010",
     "landUse": "SINGLE FAMILY",
@@ -126052,6 +126520,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1991
    },
+   "address": "505 HIGH POINT DR",
+   "placeName": null,
    "parcel": {
     "altKey": "2882166",
     "landUse": "SINGLE FAMILY",
@@ -126174,6 +126644,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1988
    },
+   "address": "614 HIGH POINT DR",
+   "placeName": null,
    "parcel": {
     "altKey": "2900253",
     "landUse": "SINGLE FAMILY",
@@ -126295,6 +126767,8 @@
     "roofCover": "CONCRETE/CLAY TILE",
     "yearBuilt": 1985
    },
+   "address": "304 W 6TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "2901675",
     "landUse": "SINGLE FAMILY",
@@ -126396,6 +126870,8 @@
     "roofCover": null,
     "yearBuilt": 1986
    },
+   "address": "508 HIGH POINT DR",
+   "placeName": null,
    "parcel": {
     "altKey": "3360451",
     "landUse": "RESIDENTIAL COMMON ELEMENTS/AREA",
@@ -126493,6 +126969,8 @@
     "roofCover": null,
     "yearBuilt": 1935
    },
+   "address": "123 N HIGHLAND ST",
+   "placeName": "BOARDWALK APPRAISALS",
    "parcel": {
     "altKey": "3412826",
     "landUse": "STORE 1 STORY FREE STANDING",
@@ -126641,6 +127119,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1938
    },
+   "address": "812 HACKETT CT",
+   "placeName": null,
    "parcel": {
     "altKey": "3480651",
     "landUse": "SINGLE FAMILY",
@@ -126814,6 +127294,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 2001
    },
+   "address": "585 SENECA OAKS CIR",
+   "placeName": null,
    "parcel": {
     "altKey": "3525884",
     "landUse": "SINGLE FAMILY",
@@ -126931,6 +127413,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1994
    },
+   "address": "1017 LIBERTY ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3596234",
     "landUse": "SINGLE FAMILY",
@@ -127059,6 +127543,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1925
    },
+   "address": "709 S HIGHLAND ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3747348",
     "landUse": "SINGLE FAMILY",
@@ -127269,6 +127755,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1996
    },
+   "address": "718 S GRANDVIEW ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3771742",
     "landUse": "SINGLE FAMILY",
@@ -127364,6 +127852,8 @@
     "roofCover": null,
     "yearBuilt": 1996
    },
+   "address": "N DONNELLY ST",
+   "placeName": null,
    "parcel": {
     "altKey": "3776368",
     "landUse": "IMPROVED GOVT MUNICIPAL",
@@ -127473,6 +127963,8 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1972
    },
+   "address": "442 E THIRD AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "3828963",
     "landUse": "STORE/RESIDENCE COMBO",
@@ -127619,6 +128111,8 @@
     "roofCover": "METAL",
     "yearBuilt": 1950
    },
+   "address": "604 E 7TH AVE",
+   "placeName": null,
    "parcel": {
     "altKey": "3844420",
     "landUse": "SINGLE FAMILY",

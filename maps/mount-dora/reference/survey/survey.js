@@ -1,11 +1,12 @@
-// Mount Dora house survey. Walks the game's buildings street by street, opens
-// each one in Google Maps Street View (a link, never an embed or a download),
-// and records what a person sees there. Answers autosave in this browser and
-// export to house-survey.json, keyed by the building's source id. Each answer
-// carries its evidence (AGENTS.md): image date, confidence, and only the
-// entrances a person actually saw.
-import {CONFIDENCE, IMAGERY_DATE, cleanAnswer, edgeKey, exportDocument, nearestEdge, toggleEntrance, unitEdges} from './model.js';
-const REFERENCE = '../house-reference.json', FEATURES = '../../features.json';
+// Mount Dora house survey. Walks the game's buildings street by street (the
+// OSM ones in house-reference.json and the county-sketched ones OSM lacks in
+// county-buildings.json), opens each one in Google Maps Street View (a link,
+// never an embed or a download), and records what a person sees there.
+// Answers autosave in this browser and export to house-survey.json, keyed by
+// the building's game id. Each answer carries its evidence (AGENTS.md): image
+// date, confidence, and only the entrances a person actually saw.
+import {CONFIDENCE, IMAGERY_DATE, cleanAnswer, countyEntry, edgeKey, exportDocument, nearestEdge, toggleEntrance, unitEdges} from './model.js';
+const REFERENCE = '../house-reference.json', COUNTY = '../county-buildings.json', FEATURES = '../../features.json';
 const STORE = 'mount-dora-house-survey-v1', CURRENT = STORE + ':current';
 const FIELDS = [
   {key: 'stories', label: 'Storeys', options: [['1', '1'], ['1.5', '1½'], ['2', '2'], ['2.5', '2½'], ['3', '3'], ['4', '4+']]},
@@ -27,7 +28,7 @@ const FIELDS = [
 const KEYS = [...FIELDS.map(f => f.key), 'imageryDate', 'entrances', 'note'];
 const $ = id => document.getElementById(id);
 const svgNS = 'http://www.w3.org/2000/svg';
-const state = {reference: null, sha256: '', byId: new Map(), order: [], shapes: new Map(), roads: [], answers: {}, current: null, edges: [], countyBuildings: 0};
+const state = {reference: null, sha256: '', countySha256: '', byId: new Map(), order: [], shapes: new Map(), roads: [], answers: {}, current: null, edges: [], countyBuildings: 0};
 
 const status = text => { $('status').textContent = text; };
 const read = key => { try { return localStorage.getItem(key); } catch { return null; } };
@@ -65,15 +66,15 @@ function renderQueue() {
     const li = document.createElement('li'), button = document.createElement('button'), name = document.createElement('span'), meta = document.createElement('span');
     name.textContent = (answered(id) ? '✓ ' : '') + label(b);
     if (answered(id)) name.className = 'done';
-    meta.className = 'street'; meta.textContent = b.sectors.join('/');
+    meta.className = 'street'; meta.textContent = b.sectors.join('/') + (b.countySketch ? ' · county' : '');
     button.append(name, meta); button.dataset.id = id;
     if (id === state.current) button.setAttribute('aria-current', 'true');
     button.addEventListener('click', () => select(id));
     li.append(button); list.append(li);
   }
-  const m = state.reference.metrics;
-  $('summary').textContent = `${done} of ${total} buildings surveyed · county records for ${total - m.byMethod.none} · ` +
-    `${state.countyBuildings} county-sketched buildings OpenStreetMap lacks are in the game (county-buildings.json), not yet in this queue.`;
+  const withRecord = state.order.filter(id => state.byId.get(id).county.records.length).length;
+  $('summary').textContent = `${done} of ${total} buildings surveyed · ${state.countyBuildings} of them from county sketches OpenStreetMap lacks · ` +
+    `county records for ${withRecord}`;
   $('progress').style.width = `${(100 * done / total).toFixed(1)}%`;
   list.querySelector('[aria-current=true]')?.scrollIntoView({block: 'nearest'});
 }
@@ -122,7 +123,9 @@ function facts(b) {
     add('Garage', s.garage); add('Basement', s.basement ? 'yes (the lot likely slopes)' : null);
   } else add('Record', 'none matched: look by eye');
   add('On the lot', b.county.lotExtras.join(', '));
-  add('Match', `${b.match.method}${b.match.iou !== undefined ? `, IoU ${b.match.iou}` : ''}${b.county.records.length > 1 ? `, ${b.county.records.length} county buildings` : ''}`);
+  const sketched = b.countySketch;
+  if (sketched) add('Source', `${sketched.sketches} county sketch${sketched.sketches === 1 ? '' : 'es'}, not in OpenStreetMap · 2018 lidar: ${sketched.lidarSaw}`);
+  else add('Match', `${b.match.method}${b.match.iou !== undefined ? `, IoU ${b.match.iou}` : ''}${b.county.records.length > 1 ? `, ${b.county.records.length} county buildings` : ''}`);
   dl.replaceChildren(...rows.flatMap(([k, v]) => { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = k; dd.textContent = v; return [dt, dd]; }));
 }
 
@@ -205,6 +208,8 @@ function select(id) {
   if (b.match.method === 'none') warnings.push('No county record: everything here comes from what you see.');
   if (b.match.method === 'footprint-partial') warnings.push('The game outline and the county sketch disagree; check this is one building.');
   if (b.match.method === 'parcel-area') warnings.push('Several buildings share this lot; the record was picked by size.');
+  if (b.countySketch) warnings.push('OpenStreetMap lacks this building; the game drew it from the county sketch. If Street View shows none here, flag "Changed since the record".');
+  if (b.countySketch && b.countySketch.lidarSaw !== 'class-6 roof') warnings.push(`The 2018 lidar saw no building roof here (${b.countySketch.lidarSaw}). Check that it stands.`);
   if (sv && sv.distanceM > 60) warnings.push('Far from the street; it may be hidden or reached by a drive.');
   if (sv && !sv.onAddressedStreet && b.address) warnings.push(`The camera is not on the addressed street (${b.address}).`);
   $('warnings').replaceChildren(...warnings.map(w => { const li = document.createElement('li'); li.textContent = w; return li; }));
@@ -219,7 +224,7 @@ function step(delta) {
 }
 
 function exportAnswers() {
-  const data = exportDocument({answers: state.answers, sha256: state.sha256, keys: KEYS, exportedAt: new Date().toISOString()});
+  const data = exportDocument({answers: state.answers, sha256: state.sha256, countySha256: state.countySha256, keys: KEYS, exportedAt: new Date().toISOString()});
   const link = document.createElement('a');
   link.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1) + '\n'], {type: 'application/json'}));
   link.download = 'house-survey.json'; link.click();
@@ -239,7 +244,9 @@ async function importAnswers(file) {
       if (clean && (!mine || (answer.at || '') > (mine.at || ''))) { state.answers[id] = {...clean, ...(answer.at ? {at: answer.at} : {})}; merged++; }
     }
     persist(); select(state.current);
-    status(`Imported ${merged} answer${merged === 1 ? '' : 's'}${unknown ? `; ${unknown} unknown building ids skipped` : ''}${data.reference?.sha256 && data.reference.sha256 !== state.sha256 ? '; exported against a different house-reference.json' : ''}.`);
+    const differs = [[data.reference?.sha256, state.sha256, 'house-reference.json'], [data.countyBuildings?.sha256, state.countySha256, 'county-buildings.json']]
+      .filter(([theirs, mine]) => theirs && theirs !== mine).map(([, , file]) => file);
+    status(`Imported ${merged} answer${merged === 1 ? '' : 's'}${unknown ? `; ${unknown} unknown building ids skipped` : ''}${differs.length ? `; exported against a different ${differs.join(' and ')}` : ''}.`);
   } catch (error) { status(`Import failed: ${error.message}.`); }
 }
 
@@ -272,14 +279,17 @@ $('export').addEventListener('click', exportAnswers);
 $('import').addEventListener('change', event => { if (event.target.files[0]) importAnswers(event.target.files[0]); event.target.value = ''; });
 
 try {
-  const [buffer, features] = await Promise.all([
-    fetch(REFERENCE).then(r => { if (!r.ok) throw Error(`${REFERENCE}: ${r.status}`); return r.arrayBuffer(); }),
-    fetch(FEATURES).then(r => { if (!r.ok) throw Error(`${FEATURES}: ${r.status}`); return r.json(); })]);
+  const load = url => fetch(url).then(r => { if (!r.ok) throw Error(`${url}: ${r.status}`); return r; });
+  const [buffer, countyBuffer, features] = await Promise.all([load(REFERENCE).then(r => r.arrayBuffer()), load(COUNTY).then(r => r.arrayBuffer()),
+    load(FEATURES).then(r => r.json())]);
   state.sha256 = hex(await crypto.subtle.digest('SHA-256', buffer));
+  state.countySha256 = hex(await crypto.subtle.digest('SHA-256', countyBuffer));
   state.reference = JSON.parse(new TextDecoder().decode(buffer));
-  for (const b of state.reference.buildings) state.byId.set(b.id, b);
-  state.order = sortBuildings(state.reference.buildings).map(b => b.id);
-  state.countyBuildings = features.features.filter(f => f.category === 'building' && f.county).length;
+  const county = JSON.parse(new TextDecoder().decode(countyBuffer)).buildings;
+  const sectorsOf = new Map(features.features.filter(f => f.category === 'building').map(f => [f.id, f.nativeSectors || []]));
+  for (const b of [...state.reference.buildings, ...county.map(c => countyEntry(c, sectorsOf.get(c.id)))]) state.byId.set(b.id, b);
+  state.order = sortBuildings([...state.byId.values()]).map(b => b.id);
+  state.countyBuildings = county.length;
   for (const f of features.features) {
     if (f.category === 'building' && f.geographicGeometry) state.shapes.set(f.id, {id: f.id, d: ringsPath(f.geographicGeometry.coordinates),
       authored: f.geometry.coordinates, authoredD: ringsPath(f.geometry.coordinates), box: bbox(f.geographicGeometry.coordinates.flat())});
@@ -288,7 +298,7 @@ try {
   }
   const stored = read(STORE);
   try { state.answers = stored ? JSON.parse(stored) : {}; } catch { state.answers = {}; }
-  const sectors = [...new Set(state.reference.buildings.flatMap(b => b.sectors))].sort();
+  const sectors = [...new Set([...state.byId.values()].flatMap(b => b.sectors))].sort();
   $('sector').append(...sectors.map(s => new Option(s, s)));
   const resume = read(CURRENT);
   select(state.byId.has(resume) ? resume : state.order.find(id => !answered(id)) || state.order[0]);

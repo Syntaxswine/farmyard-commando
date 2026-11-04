@@ -4,6 +4,8 @@ import importlib.util
 import json
 import math
 from pathlib import Path
+import shutil
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -250,6 +252,32 @@ class MountDoraGeneration(unittest.TestCase):
                 self.assertNotIn(mapping["terrain"][y][x],("water","floor"))
                 self.assertFalse(any(abs(p["x"]-x)<=1 and abs(p["y"]-y)<=1 for p in mapping["props"]))
                 self.assertTrue(all(segment_distance([x,y],r["a"],r["b"]) > 1 for r in mapping.get("wallRuns",{}).get("segments",[])))
+
+
+class SurveyEvidence(unittest.TestCase):
+    def test_a_survey_answer_reaches_a_county_building_beside_its_county_and_lidar_evidence(self):
+        """house-survey.json is keyed by game id, so a county- id from the survey queue joins that building's evidence."""
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp)
+            (project / "reference").mkdir()
+            for name, kind, _ in BUILDER.EVIDENCE:
+                if kind != "survey":
+                    shutil.copy(BUILDER.PROJECT / "reference" / name, project / "reference" / name)
+            base, _ = BUILDER.load_evidence(project)
+            county = next(f for f in BUILDER.county_buildings()
+                          if BUILDER.building_style(f, base)["stories"] == 1 and BUILDER.building_style(f, base)["material"] != "brick")
+            answer = {"stories": "2", "wall": "brick", "confidence": "sure", "imageryDate": "2024-03"}
+            (project / "reference" / "house-survey.json").write_text(json.dumps(
+                {"kind": "mount-dora-house-survey", "version": 3, "exportedAt": "2026-11-03T00:00:00.000Z", "answers": {county["id"]: answer}}), "utf-8")
+            found, inputs = BUILDER.load_evidence(project)
+        before, after = BUILDER.building_style(county, base), BUILDER.building_style(county, found)
+        self.assertFalse(before["storiesSource"].startswith("survey"))
+        self.assertEqual((after["stories"], after["storiesSource"]), (2, "survey:stories 2"))
+        self.assertEqual((after["material"], after["materialSource"]), ("brick", "survey:wall brick"))
+        self.assertEqual(after["evidence"]["survey"], answer)
+        self.assertEqual(after["evidence"]["county"], before["evidence"]["county"])
+        self.assertEqual(after["evidence"]["lidar"], before["evidence"]["lidar"])
+        self.assertEqual(inputs[-1]["kind"], "survey")
 
 
 if __name__ == "__main__":

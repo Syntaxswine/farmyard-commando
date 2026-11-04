@@ -194,8 +194,13 @@ building, flag *Changed since the record*. For each building:
 Export whenever you stop. To commit, first import the committed
 `maps/mount-dora/reference/house-survey.json`, then export, and commit the export
 in its place: an export holds only the answers in your browser. Import merges by
-the newest answer per building, so two people can split the town by sector.
-Survey in one tab: two tabs on the same page overwrite each other's saves.
+the newest copy per building, keeping the newer copy whole rather than merging
+fields. So two people can split the town by sector, but a building on a sector
+edge is listed under both sectors, and only one of them should answer it.
+Clearing an answer, or dropping one, leaves a dated mark that the export carries
+under `cleared`, so importing an older file never brings it back. Two tabs merge
+their saves the same way, building by building, so a stale tab cannot overwrite
+another's. Until the reference files load, nothing saves, imports or exports.
 
 An answer can name a building id this queue lacks: the town no longer has the
 building, its id changed (a county building's can when the county data does), or
@@ -213,13 +218,14 @@ The repository's `AGENTS.md` (from PR #39) says geographic details, doors above
 all, go "only where source data or reviewed observations establish them", and
 keep "the source, coordinates, observation date and uncertainty". A survey
 answer is such a reviewed observation, and its export says so in an `evidence`
-block. Version 3 pins what an export depends on: the two files the queue came
-from (`reference`, `countyBuildings`), and `outlines`, the building outlines its
-entrance edges lie on. The outlines pin hashes each building's id and authored
-geometry rather than `features.json`'s bytes, because the generator rewrites
-that file with every survey answer it applies. Import names whatever has changed
-since. Version 2 exports, from before the county buildings joined the queue,
-still import.
+block. Version 3 pins the files the exporting page had loaded, which an answer
+it imported may predate: the two the queue came from (`reference`,
+`countyBuildings`), and `outlines`, the building outlines its entrance edges
+lie on. The outlines pin hashes each building's id and authored geometry rather
+than `features.json`'s bytes, because the generator rewrites that file with
+every survey answer it applies. Import names whatever has changed since.
+Version 2 exports, from before the county buildings joined the queue, still
+import.
 
 | Rule | Where it lives in `house-survey.json` |
 | --- | --- |
@@ -234,7 +240,14 @@ authored outlines lie on the 1 m grid (a test checks this), so any wall can take
 an entrance. Editor doors are grid edges too (`e:x:y` / `s:x:y` in a sector), so
 converting a marked edge to a door record is a sector offset away. That
 conversion, and a playtest through the real game path, belong to the wiring
-step.
+step. That step must also check that each marked edge still lies on the
+building's current outline. The generator copies entrances into `nativeProxy`
+as given, and the page warns of a stale one only when that building is opened.
+
+`tools/maps/house-reference/test-survey-page.mjs` drives the page headlessly in
+Chromium, through its own controls, and the workshop CI job runs it. It covers
+the status line and filters, the load guard on every write, clearings surviving
+an import, two tabs, and unknown answers.
 
 ## Use in the generator and the art kit
 

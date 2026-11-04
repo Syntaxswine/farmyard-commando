@@ -5,8 +5,8 @@
 // Answers autosave in this browser and export to house-survey.json, keyed by
 // the building's game id. Each answer carries its evidence (AGENTS.md): image
 // date, confidence, and only the entrances a person actually saw.
-import {CONFIDENCE, IMAGERY_DATE, cleanAnswer, edgeKey, exportDocument, mergeAnswers, nearestEdge, outlineText, pinMismatches, queueEntries,
-  staleEntrances, toggleEntrance, unitEdges, unknownAnswers, warningsFor} from './model.js';
+import {CONFIDENCE, IMAGERY_DATE, cleanAnswer, edgeKey, exportDocument, mergeAnswers, nearestEdge, newestPerId, outlineText, pinMismatches,
+  queueEntries, staleEntrances, toggleEntrance, unitEdges, unknownAnswers, warningsFor} from './model.js';
 const REFERENCE = '../house-reference.json', COUNTY = '../county-buildings.json', FEATURES = '../../features.json';
 const STORE = 'mount-dora-house-survey-v1', CURRENT = STORE + ':current';
 const FIELDS = [
@@ -34,7 +34,15 @@ const state = {ready: false, pins: {}, byId: new Map(), order: [], shapes: new M
 const status = text => { $('status').textContent = text; };
 const read = key => { try { return localStorage.getItem(key); } catch { return null; } };
 const write = (key, value) => { try { localStorage.setItem(key, value); return true; } catch { return false; } };
-const persist = () => { if (!write(STORE, JSON.stringify(state.answers))) status('This browser refused to save; export your answers often.'); };
+// Another tab may have saved since this one loaded: keep the newer copy per
+// building, a cleared one included, rather than writing over it.
+const persist = () => {
+  if (!state.ready) return;
+  let stored = {};
+  try { stored = JSON.parse(read(STORE) || '{}'); } catch { stored = {}; }
+  state.answers = newestPerId(stored, state.answers);
+  if (!write(STORE, JSON.stringify(state.answers))) status('This browser refused to save; export your answers often.');
+};
 const answered = id => cleanAnswer(state.answers[id], KEYS) !== null;
 const label = b => b.address || b.osmTags.name || b.placeName || b.id;
 const hex = buffer => [...new Uint8Array(buffer)].map(x => x.toString(16).padStart(2, '0')).join('');
@@ -52,7 +60,7 @@ function sortBuildings(buildings) {
 }
 
 function passes(b) {
-  const sector = $('sector').value, show = $('status').value, q = $('search').value.trim().toUpperCase();
+  const sector = $('sector').value, show = $('show').value, q = $('search').value.trim().toUpperCase();
   if (sector && !b.sectors.includes(sector)) return false;
   if (show === 'todo' && answered(b.id) || show === 'done' && !answered(b.id)) return false;
   return !q || [b.id, b.address, b.osmTags.name, b.placeName, b.streetView?.road].some(v => v && v.toUpperCase().includes(q));
@@ -97,7 +105,7 @@ function renderUnknown() {
     name.textContent = id; what.textContent = holds.join(', '); drop.type = 'button'; drop.textContent = 'Drop';
     drop.addEventListener('click', () => {
       if (!confirm(`Drop the saved answer for ${id} (${holds.join(', ')})? This cannot be undone.`)) return;
-      delete state.answers[id]; persist(); renderQueue(); status(`Dropped the answer for ${id}.`);
+      state.answers[id] = {cleared: true, at: new Date().toISOString()}; persist(); renderQueue(); status(`Dropped the answer for ${id}.`);
     });
     row.append(name, what, drop); return row;
   });
@@ -222,9 +230,12 @@ function choose(field, value) {
   save(id, answer);
 }
 
+// Every write goes through here or Drop. A cleared answer leaves a dated mark,
+// so importing an older copy of it, or a stale tab, cannot bring it back.
 function save(id, answer) {
-  const clean = cleanAnswer(answer, KEYS);
-  if (clean) state.answers[id] = {...clean, at: new Date().toISOString()}; else delete state.answers[id];
+  if (!state.ready || !state.byId.has(id)) return status('The house reference has not loaded, so nothing was saved; your saved answers are untouched.');
+  const clean = cleanAnswer(answer, KEYS), now = new Date().toISOString();
+  if (clean) state.answers[id] = {...clean, at: now}; else if (answered(id)) state.answers[id] = {cleared: true, at: now};
   persist(); renderFields(state.byId.get(id)); renderQueue();
 }
 
@@ -260,7 +271,9 @@ function exportAnswers() {
   link.download = 'house-survey.json'; link.click();
   setTimeout(() => URL.revokeObjectURL(link.href), 2000);
   const n = Object.keys(data.answers).length, undated = Object.values(data.answers).filter(a => !a.imageryDate).length, lost = Object.keys(data.answers).filter(id => !state.byId.has(id)).length;
-  status(`Exported ${n} answer${n === 1 ? '' : 's'}${undated ? `; ${undated} without a Street View image date` : ''}${lost ? `; ${lost} for building ids not in this queue (listed below)` : ''}.`);
+  const cleared = Object.keys(data.cleared || {}).length;
+  status(`Exported ${n} answer${n === 1 ? '' : 's'}${undated ? `; ${undated} without a Street View image date` : ''}${lost ? `; ${lost} for building ids not in this queue (listed below)` : ''}` +
+    `${cleared ? `; ${cleared} cleared` : ''}.`);
 }
 
 async function importAnswers(file) {
@@ -271,7 +284,7 @@ async function importAnswers(file) {
     const merged = mergeAnswers(state.answers, data, KEYS, state.byId), differs = pinMismatches(data, state.pins);
     state.answers = merged.answers; persist(); select(state.current);
     status(`Imported ${merged.added} answer${merged.added === 1 ? '' : 's'}${merged.unknown ? `; ${merged.unknown} of them for building ids not in this queue, kept and listed below` : ''}` +
-      `${differs.length ? `; changed since it was exported: ${differs.join(', ')}` : ''}.`);
+      `${merged.cleared ? `; ${merged.cleared} cleared there since` : ''}${differs.length ? `; changed since it was exported: ${differs.join(', ')}` : ''}.`);
   } catch (error) { status(`Import failed: ${error.message}.`); }
 }
 
@@ -299,7 +312,7 @@ $('imagery').addEventListener('change', () => {
   save(state.current, {...(state.answers[state.current] || {}), imageryDate: value});
 });
 $('minimap').addEventListener('click', markEntrance);
-for (const id of ['sector', 'status', 'search']) $(id).addEventListener('input', renderQueue);
+for (const id of ['sector', 'show', 'search']) $(id).addEventListener('input', renderQueue);
 $('export').addEventListener('click', exportAnswers);
 $('import').addEventListener('change', event => { if (event.target.files[0]) importAnswers(event.target.files[0]); event.target.value = ''; });
 

@@ -85,27 +85,40 @@ export const outlineText = features => JSON.stringify(features.filter(f => f.cat
 export const pinMismatches = (doc, pins) => Object.keys(PINNED).filter(key => doc[key]?.sha256 && doc[key].sha256 !== pins[key])
   .map(key => key === 'outlines' ? 'the building outlines in features.json' : PINNED[key].file.split('/').pop());
 
-// Import: the newer answer per building wins, and an answer with nothing in it
-// never outranks one with content. Answers for ids this queue lacks are kept
-// too, so a teammate's answer made with older or newer files is never dropped.
+// A cleared answer is a dated mark, {cleared: true, at}, not a deletion: it
+// outranks any older copy of the answer, from an import or another tab.
+export const isCleared = a => a?.cleared === true;
+
+// Per building, the newer of two copies, cleared ones included; a tie keeps `b`'s.
+export function newestPerId(a, b) {
+  const out = {...a};
+  for (const [id, x] of Object.entries(b)) if (!out[id] || (x.at || '') >= (out[id].at || '')) out[id] = x;
+  return out;
+}
+
+// Import: per building the newer copy wins, an answer or a clearing; an answer
+// with nothing in it never outranks either. Answers for ids this queue lacks
+// are kept too, so a teammate's answer made with other files is never dropped.
 export function mergeAnswers(mine, doc, keys, known) {
-  const answers = {...mine};
-  let added = 0, unknown = 0;
-  for (const [id, answer] of Object.entries(doc.answers || {})) {
-    const clean = cleanAnswer(answer, keys), held = cleanAnswer(answers[id], keys) && answers[id];
-    if (!clean || held && (answer.at || '') <= (held.at || '')) continue;
-    answers[id] = {...clean, ...(answer.at ? {at: answer.at} : {})};
-    added++;
-    if (!known.has(id)) unknown++;
+  const answers = {...mine}, live = a => a && (isCleared(a) || cleanAnswer(a, keys)) ? a : null;
+  const incoming = [...Object.entries(doc.answers || {}).map(([id, a]) => { const c = cleanAnswer(a, keys); return [id, c && {...c, ...(a.at ? {at: a.at} : {})}]; }),
+    ...Object.entries(doc.cleared || {}).map(([id, at]) => [id, typeof at === 'string' ? {cleared: true, at} : null])];
+  let added = 0, cleared = 0, unknown = 0;
+  for (const [id, next] of incoming) {
+    const held = live(answers[id]);
+    if (!next || held && (next.at || '') <= (held.at || '')) continue;
+    answers[id] = next;
+    if (isCleared(next)) cleared++; else { added++; if (!known.has(id)) unknown++; }
   }
-  return {answers, added, unknown};
+  return {answers, added, cleared, unknown};
 }
 
 // Saved answers whose building id the queue lacks (the town no longer has the
 // building, or its id changed), each with a short list of what it holds.
 export function unknownAnswers(answers, keys, known) {
   const say = ([k, v]) => k === 'entrances' ? `${v.length} entrance${v.length === 1 ? '' : 's'}` : k === 'note' ? 'a note' : `${k} ${[v].flat().join('/')}`;
-  return Object.keys(answers).filter(id => !known.has(id)).sort().map(id => ({id, holds: Object.entries(cleanAnswer(answers[id], keys) || {}).map(say)}));
+  return Object.keys(answers).filter(id => !known.has(id) && !isCleared(answers[id])).sort()
+    .map(id => ({id, holds: Object.entries(cleanAnswer(answers[id], keys) || {}).map(say)}));
 }
 
 // Marked entrances no longer on the building's outline: it changed after they were marked.
@@ -129,9 +142,12 @@ export function cleanAnswer(answer, keys) {
 
 // Every saved answer, including one whose building id the queue lacks: the
 // generator applies what matches and lists the rest as lost in project.json.
+// Clearings go under `cleared` ({id: at}), which the generator does not read,
+// so that an import elsewhere keeps them cleared.
 export function exportDocument({answers, pins, keys, exportedAt}) {
-  const out = {};
+  const out = {}, cleared = {};
   for (const id of Object.keys(answers).sort()) {
+    if (isCleared(answers[id])) { cleared[id] = answers[id].at; continue; }
     const a = cleanAnswer(answers[id], keys);
     if (a) out[id] = {...a, ...(answers[id].at ? {at: answers[id].at} : {})};
   }
@@ -145,7 +161,8 @@ export function exportDocument({answers, pins, keys, exportedAt}) {
       uncertainty: 'confidence is the surveyor\'s own: sure, likely or unsure. Unanswered fields are unknown, not absent.',
       entrances: 'Only doors a person saw are marked. None are inferred from an address, outline or facade.',
       lost: 'An answer whose building id the town no longer has applies to nothing; the generator lists such ids as lost in project.json.',
+      cleared: 'Buildings whose answer a surveyor cleared or dropped, and when. An import of an older answer for one keeps it cleared.',
     },
-    answers: out,
+    answers: out, ...(Object.keys(cleared).length ? {cleared} : {}),
   };
 }

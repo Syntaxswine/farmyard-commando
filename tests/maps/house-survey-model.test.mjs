@@ -5,7 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
-import {cleanAnswer, edgeKey, exportDocument, mergeAnswers, nearestEdge, outlineText, pinMismatches, queueEntries, staleEntrances, toggleEntrance, unitEdges, unknownAnswers,
+import {cleanAnswer, edgeKey, exportDocument, mergeAnswers, nearestEdge, newestPerId, outlineText, pinMismatches, queueEntries, staleEntrances, toggleEntrance,
+  unitEdges, unknownAnswers,
   warningsFor} from '../../maps/mount-dora/reference/survey/model.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -82,6 +83,25 @@ test('an answer for a building id the queue lacks is kept, exported and listed, 
     [{id: 'county-7-7', holds: ['stories 1']}, {id: 'county-8-8', holds: ['1 entrance', 'a note']}]);
 });
 
+test('a cleared answer is a dated mark that outranks any older copy, from an import or another tab', () => {
+  const known = new Set(['osm-way-1', 'osm-way-2']), at = t => `2026-11-0${t}T00:00:00.000Z`, gone = {cleared: true, at: at(5)};
+  // Export: clearings go under `cleared`, never under `answers`.
+  const doc = exportDocument({answers: {'osm-way-1': gone, 'osm-way-2': {stories: '1', at: at(2)}}, pins: {}, keys: KEYS, exportedAt: at(6)});
+  assert.deepEqual([Object.keys(doc.answers), doc.cleared], [['osm-way-2'], {'osm-way-1': at(5)}]);
+  assert.equal('cleared' in exportDocument({answers: {'osm-way-2': {stories: '1'}}, pins: {}, keys: KEYS, exportedAt: at(6)}), false);
+  // Import of an older answer keeps the clearing; a newer answer replaces it; a newer clearing wins over an answer.
+  assert.deepEqual(mergeAnswers({'osm-way-1': gone}, {answers: {'osm-way-1': {stories: '3', at: at(4)}}}, KEYS, known).answers['osm-way-1'], gone);
+  assert.equal(mergeAnswers({'osm-way-1': gone}, {answers: {'osm-way-1': {stories: '3', at: at(7)}}}, KEYS, known).answers['osm-way-1'].stories, '3');
+  const cleared = mergeAnswers({'osm-way-2': {stories: '1', at: at(2)}}, {answers: {}, cleared: {'osm-way-2': at(3), 'osm-way-1': 7}}, KEYS, known);
+  assert.deepEqual([cleared.answers['osm-way-2'], cleared.cleared, 'osm-way-1' in cleared.answers], [{cleared: true, at: at(3)}, 1, false], 'a malformed clearing is ignored');
+  // A clearing is not listed as an unknown answer.
+  assert.deepEqual(unknownAnswers({'county-9-9': {cleared: true, at: at(1)}}, KEYS, known), []);
+  // Between tabs, the newer copy per building wins, clearings included; a tie keeps this tab's.
+  const merged = newestPerId({'osm-way-1': {stories: '2', at: at(3)}, 'osm-way-2': {stories: '4', at: at(9)}}, {'osm-way-1': gone, 'osm-way-2': {stories: '1', at: at(2)}});
+  assert.deepEqual([merged['osm-way-1'], merged['osm-way-2'].stories], [gone, '4']);
+  assert.equal(newestPerId({x: {stories: '1', at: at(1)}}, {x: {stories: '2', at: at(1)}}).x.stories, '2');
+});
+
 test('an entrance the outline has since lost is found, so it can be removed', () => {
   const edges = unitEdges([[[[0, 0], [4, 0], [4, 4], [0, 4], [0, 0]]]]);
   const answer = {entrances: [{segment: [[1, 0], [2, 0]]}, {segment: [[9, 9], [9, 10]]}]};
@@ -142,5 +162,5 @@ test('answers keep only valid evidence, and the export says what each field mean
   assert.deepEqual(pinMismatches(doc, pins), [], 'an export matches what it was made from');
   assert.deepEqual(Object.keys(doc.answers), ['county-1-1', 'osm-way-1', 'osm-way-2']);
   assert.equal(doc.answers['osm-way-2'].at, '2026-11-03T01:00:00.000Z');
-  for (const k of ['source', 'coordinates', 'observationDate', 'uncertainty', 'entrances', 'lost']) assert.ok(doc.evidence[k], k);
+  for (const k of ['source', 'coordinates', 'observationDate', 'uncertainty', 'entrances', 'lost', 'cleared']) assert.ok(doc.evidence[k], k);
 });

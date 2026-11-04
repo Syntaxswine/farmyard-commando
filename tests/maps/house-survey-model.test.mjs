@@ -4,7 +4,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {cleanAnswer, edgeKey, exportDocument, nearestEdge, pinMismatches, PINNED, queueEntries, toggleEntrance, unitEdges, warningsFor} from '../../maps/mount-dora/reference/survey/model.js';
+import {createHash} from 'node:crypto';
+import {cleanAnswer, edgeKey, exportDocument, mergeAnswers, moveAnswer, nearestEdge, outlineText, pinMismatches, queueEntries, toggleEntrance, unitEdges,
+  warningsFor} from '../../maps/mount-dora/reference/survey/model.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const json = file => JSON.parse(fs.readFileSync(path.join(root, 'maps/mount-dora', file), 'utf8'));
@@ -30,20 +32,57 @@ test('a county building warns that OSM lacks it, and to check it stands where th
   const open = warningsFor(entry('county-1475627-1'));
   assert.equal(open.length, 2, open.join(' | '));
   assert.match(open[0], lacks); assert.match(open[0], /from the county sketch\./); assert.match(open[1], noRoof);
-  const roofed = queue.filter(b => b.countySketch?.lidarSaw === 'class-6 roof' && b.streetView.onAddressedStreet && b.streetView.distanceM <= 60);
+  const roofed = queue.filter(b => b.countySketch?.lidarSaw === 'class-6 roof' && b.county.records.length && b.streetView.onAddressedStreet && b.streetView.distanceM <= 60);
   assert.ok(roofed.length > 90);
   for (const b of roofed) assert.deepEqual(warningsFor(b).map(w => lacks.test(w)), [true], b.id);
   const stacked = roofed.find(b => b.countySketch.sketches > 1);
   assert.match(warningsFor(stacked)[0], new RegExp(`from ${stacked.countySketch.sketches} county sketches\\.`));
+  // A county building with no record says so, like an OSM building with none.
+  const recordless = queue.filter(b => b.countySketch && !b.county.records.length);
+  assert.ok(recordless.length >= 1);
+  for (const b of recordless) assert.match(warningsFor(b)[0], /^No county record/, b.id);
   // The OSM buildings are unchanged: a clean footprint match on its own street warns of nothing.
   assert.deepEqual(warningsFor(queue.find(b => !b.countySketch && b.match.method === 'footprint' && b.streetView.onAddressedStreet && b.streetView.distanceM <= 60)), []);
 });
 
-test('an import names each file it was exported against that has changed since', () => {
-  const pins = {reference: 'r1', countyBuildings: 'c1', features: 'f1'};
-  assert.deepEqual(pinMismatches({reference: {sha256: 'r1'}, countyBuildings: {sha256: 'c0'}, features: {sha256: 'f0'}}, pins), ['county-buildings.json', 'features.json']);
+test('an import names what it was exported against that has changed since', () => {
+  const pins = {reference: 'r1', countyBuildings: 'c1', outlines: 'o1'};
+  assert.deepEqual(pinMismatches({reference: {sha256: 'r1'}, countyBuildings: {sha256: 'c0'}, outlines: {sha256: 'o0'}}, pins),
+    ['county-buildings.json', 'the building outlines in features.json']);
   assert.deepEqual(pinMismatches({reference: {sha256: 'r1'}}, pins), [], 'a version 2 export pins only house-reference.json');
   assert.deepEqual(pinMismatches({reference: {sha256: 'r0'}}, pins), ['house-reference.json']);
+});
+
+test('the outlines pin moves with a building outline, not with what the generator writes about it', () => {
+  const pin = list => createHash('sha256').update(outlineText(list)).digest('hex'), base = pin(features);
+  const copy = () => JSON.parse(JSON.stringify(features)), first = list => list.find(f => f.id === 'county-1475627-1');
+  // The generator writes each survey answer into nativeProxy; that must not read as an outline change.
+  const surveyed = copy(); first(surveyed).nativeProxy = {...first(surveyed).nativeProxy, stories: 2, evidence: {survey: {roofShape: 'hip'}}};
+  assert.equal(pin(surveyed), base);
+  const moved = copy(); first(moved).geometry.coordinates[0][0][0][0] += 1;
+  assert.notEqual(pin(moved), base);
+  const renamed = copy(); first(renamed).id = 'county-1475627-2';
+  assert.notEqual(pin(renamed), base);
+});
+
+test('answers for building ids the queue lacks are kept apart, never dropped, and can be moved or dropped', () => {
+  const known = new Set(['osm-way-1', 'county-1-1']), at = t => `2026-11-0${t}T00:00:00.000Z`;
+  // Export: an id the queue lacks goes under `unmatched`, which the generator ignores.
+  const doc = exportDocument({answers: {'osm-way-1': {stories: '1', at: at(1)}, 'county-9-9': {stories: '2', at: at(2)}}, known, pins: {}, keys: KEYS, exportedAt: at(3)});
+  assert.deepEqual([Object.keys(doc.answers), Object.keys(doc.unmatched)], [['osm-way-1'], ['county-9-9']]);
+  assert.equal('unmatched' in exportDocument({answers: {'osm-way-1': {stories: '1'}}, known, pins: {}, keys: KEYS, exportedAt: at(3)}), false);
+  // Import: a teammate's answer for an id this queue lacks is kept, and counted; the newer answer wins.
+  const merged = mergeAnswers({'osm-way-1': {stories: '2', at: at(5)}}, {answers: {'osm-way-1': {stories: '3', at: at(4)}, 'county-7-7': {stories: '1', at: at(4)}},
+    unmatched: {'county-8-8': {note: 'gone', at: at(4)}}}, KEYS, known);
+  assert.deepEqual([merged.added, merged.unmatched], [2, 2]);
+  assert.deepEqual([merged.answers['osm-way-1'].stories, merged.answers['county-7-7'].stories, merged.answers['county-8-8'].note], ['2', '1', 'gone']);
+  // Move: to the building it belongs to, keeping only entrances on that outline.
+  const edges = unitEdges([[[[0, 0], [4, 0], [4, 4], [0, 4], [0, 0]]]]);
+  const answer = {stories: '2', at: at(1), entrances: [{segment: [[1, 0], [2, 0]]}, {segment: [[9, 9], [9, 10]]}]};
+  const result = moveAnswer({'county-9-9': answer}, 'county-9-9', 'county-1-1', edges);
+  assert.deepEqual(Object.keys(result.answers), ['county-1-1']);
+  assert.deepEqual([result.answers['county-1-1'].entrances.map(e => edgeKey(e.segment)), result.answers['county-1-1'].at, result.entrancesLeftOut], [['1,0:2,0'], at(1), 1]);
+  assert.equal(moveAnswer({'county-9-9': answer, 'county-1-1': {stories: '1'}}, 'county-9-9', 'county-1-1', edges), null, 'never over another answer');
 });
 
 test('authored outlines split into 1 m wall edges', () => {
@@ -85,14 +124,16 @@ test('marking an edge twice removes it, and the list stays ordered', () => {
 test('answers keep only valid evidence, and the export says what each field means', () => {
   assert.equal(cleanAnswer({stories: '', entrances: [], imageryDate: '03/2024', confidence: 'certain'}, KEYS), null);
   assert.deepEqual(cleanAnswer({stories: '2', imageryDate: '2024-03', confidence: 'likely', extra: 1}, KEYS), {stories: '2', confidence: 'likely', imageryDate: '2024-03'});
-  const doc = exportDocument({pins: {reference: 'abc', countyBuildings: 'def', features: 'ghi'}, keys: KEYS, exportedAt: '2026-11-03T00:00:00.000Z', answers: {
+  const pins = {reference: 'abc', countyBuildings: 'def', outlines: 'ghi'}, known = new Set(['osm-way-1', 'osm-way-2', 'osm-way-3', 'county-1-1']);
+  const doc = exportDocument({pins, known, keys: KEYS, exportedAt: '2026-11-03T00:00:00.000Z', answers: {
     'osm-way-2': {roofShape: 'hip', at: '2026-11-03T01:00:00.000Z'}, 'osm-way-1': {note: 'porch', at: 'x'}, 'osm-way-3': {stories: ''}, 'county-1-1': {stories: '2'}}});
   assert.equal(doc.version, 3);
-  // The two files the queue came from, and the outlines its entrance edges lie on.
-  assert.deepEqual([doc.reference, doc.countyBuildings, doc.features], [{file: PINNED.reference, sha256: 'abc'}, {file: PINNED.countyBuildings, sha256: 'def'},
-    {file: 'maps/mount-dora/features.json', sha256: 'ghi'}]);
-  assert.deepEqual(pinMismatches(doc, {reference: 'abc', countyBuildings: 'def', features: 'ghi'}), [], 'an export matches the files it was made from');
+  // The two files the queue came from, and the building outlines its entrance edges lie on.
+  assert.deepEqual([doc.reference, doc.countyBuildings, doc.outlines], [{file: 'maps/mount-dora/reference/house-reference.json', sha256: 'abc'},
+    {file: 'maps/mount-dora/reference/county-buildings.json', sha256: 'def'},
+    {file: 'maps/mount-dora/features.json', fields: 'the id and authored geometry of every building', sha256: 'ghi'}]);
+  assert.deepEqual(pinMismatches(doc, pins), [], 'an export matches what it was made from');
   assert.deepEqual(Object.keys(doc.answers), ['county-1-1', 'osm-way-1', 'osm-way-2']);
   assert.equal(doc.answers['osm-way-2'].at, '2026-11-03T01:00:00.000Z');
-  for (const k of ['source', 'coordinates', 'observationDate', 'uncertainty', 'entrances']) assert.ok(doc.evidence[k], k);
+  for (const k of ['source', 'coordinates', 'observationDate', 'uncertainty', 'entrances', 'unmatched']) assert.ok(doc.evidence[k], k);
 });

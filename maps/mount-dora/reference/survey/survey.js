@@ -5,7 +5,8 @@
 // Answers autosave in this browser and export to house-survey.json, keyed by
 // the building's game id. Each answer carries its evidence (AGENTS.md): image
 // date, confidence, and only the entrances a person actually saw.
-import {CONFIDENCE, IMAGERY_DATE, cleanAnswer, edgeKey, exportDocument, nearestEdge, pinMismatches, queueEntries, toggleEntrance, unitEdges, warningsFor} from './model.js';
+import {CONFIDENCE, IMAGERY_DATE, cleanAnswer, edgeKey, exportDocument, mergeAnswers, moveAnswer, nearestEdge, outlineText, pinMismatches, queueEntries,
+  toggleEntrance, unitEdges, warningsFor} from './model.js';
 const REFERENCE = '../house-reference.json', COUNTY = '../county-buildings.json', FEATURES = '../../features.json';
 const STORE = 'mount-dora-house-survey-v1', CURRENT = STORE + ':current';
 const FIELDS = [
@@ -77,6 +78,39 @@ function renderQueue() {
     `${n(state.countyBuildings)} from county sketches it lacks · county records for ${n(withRecord)}`;
   $('progress').style.width = `${(100 * done / total).toFixed(1)}%`;
   list.querySelector('[aria-current=true]')?.scrollIntoView({block: 'nearest'});
+  renderUnmatched();
+}
+
+// Saved answers whose building id is not in this queue: a county building that
+// changed id, a building the town no longer has, or a teammate's answer from
+// newer files. They export apart (`unmatched`), which the generator ignores,
+// until moved to the building they belong to or dropped.
+function renderUnmatched() {
+  const box = $('unmatched'), ids = Object.keys(state.answers).filter(id => !state.byId.has(id)).sort();
+  box.hidden = !ids.length;
+  if (!ids.length) return box.replaceChildren();
+  const intro = document.createElement('p'), here = state.byId.get(state.current);
+  const one = ids.length === 1;
+  intro.textContent = `${one ? '1 saved answer is for a building id' : `${ids.length} saved answers are for building ids`} not in this queue. ` +
+    `Export keeps ${one ? 'it' : 'them'} apart, under "unmatched", which the generator ignores. ` +
+    (one ? 'Select the building it belongs to and move it there, or drop it.' : 'Select the building each belongs to and move it there, or drop it.');
+  const rows = ids.map(id => {
+    const row = document.createElement('div'), name = document.createElement('code'), move = document.createElement('button'), drop = document.createElement('button');
+    name.textContent = id; move.type = drop.type = 'button';
+    move.textContent = `Move to ${here ? label(here) : 'the selected building'}`; drop.textContent = 'Drop';
+    move.addEventListener('click', () => {
+      const moved = moveAnswer(state.answers, id, state.current, state.edges);
+      if (!moved) return status(`${label(here)} already has an answer. Clear it first, or select the building this one belongs to.`);
+      state.answers = moved.answers; persist(); select(state.current);
+      status(`Moved the answer for ${id} to ${label(here)}${moved.entrancesLeftOut ? `; ${moved.entrancesLeftOut} entrance edge${moved.entrancesLeftOut === 1 ? ' was' : 's were'} not on this outline and ${moved.entrancesLeftOut === 1 ? 'was' : 'were'} left out` : ''}.`);
+    });
+    drop.addEventListener('click', () => {
+      if (!confirm(`Drop the saved answer for ${id}? This cannot be undone.`)) return;
+      delete state.answers[id]; persist(); renderQueue(); status(`Dropped the answer for ${id}.`);
+    });
+    row.append(name, move, drop); return row;
+  });
+  box.replaceChildren(intro, ...rows);
 }
 
 function el(name, attrs = {}) { const node = document.createElementNS(svgNS, name); for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v); return node; }
@@ -216,28 +250,23 @@ function step(delta) {
 }
 
 function exportAnswers() {
-  const data = exportDocument({answers: state.answers, pins: state.pins, keys: KEYS, exportedAt: new Date().toISOString()});
+  const data = exportDocument({answers: state.answers, known: state.byId, pins: state.pins, keys: KEYS, exportedAt: new Date().toISOString()});
   const link = document.createElement('a');
   link.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1) + '\n'], {type: 'application/json'}));
   link.download = 'house-survey.json'; link.click();
   setTimeout(() => URL.revokeObjectURL(link.href), 2000);
-  const n = Object.keys(data.answers).length, undated = Object.values(data.answers).filter(a => !a.imageryDate).length;
-  status(`Exported ${n} answer${n === 1 ? '' : 's'}${undated ? `; ${undated} without a Street View image date` : ''}.`);
+  const n = Object.keys(data.answers).length, undated = Object.values(data.answers).filter(a => !a.imageryDate).length, apart = Object.keys(data.unmatched || {}).length;
+  status(`Exported ${n} answer${n === 1 ? '' : 's'}${undated ? `; ${undated} without a Street View image date` : ''}${apart ? `; ${apart} more under "unmatched"` : ''}.`);
 }
 
 async function importAnswers(file) {
   try {
     const data = JSON.parse(await file.text());
     if (data.kind !== 'mount-dora-house-survey' || typeof data.answers !== 'object') throw Error('not a house-survey export');
-    let merged = 0, unknown = 0;
-    for (const [id, answer] of Object.entries(data.answers)) {
-      if (!state.byId.has(id)) { unknown++; continue; }
-      const mine = state.answers[id], clean = cleanAnswer(answer, KEYS);
-      if (clean && (!mine || (answer.at || '') > (mine.at || ''))) { state.answers[id] = {...clean, ...(answer.at ? {at: answer.at} : {})}; merged++; }
-    }
-    persist(); select(state.current);
-    const differs = pinMismatches(data, state.pins);
-    status(`Imported ${merged} answer${merged === 1 ? '' : 's'}${unknown ? `; ${unknown} unknown building ids skipped` : ''}${differs.length ? `; exported against a different ${differs.join(' and ')}` : ''}.`);
+    const merged = mergeAnswers(state.answers, data, KEYS, state.byId), differs = pinMismatches(data, state.pins);
+    state.answers = merged.answers; persist(); select(state.current);
+    status(`Imported ${merged.added} answer${merged.added === 1 ? '' : 's'}${merged.unmatched ? `; ${merged.unmatched} of them for building ids not in this queue, kept apart below` : ''}` +
+      `${differs.length ? `; changed since it was exported: ${differs.join(', ')}` : ''}.`);
   } catch (error) { status(`Import failed: ${error.message}.`); }
 }
 
@@ -270,14 +299,16 @@ $('export').addEventListener('click', exportAnswers);
 $('import').addEventListener('change', event => { if (event.target.files[0]) importAnswers(event.target.files[0]); event.target.value = ''; });
 
 try {
-  // Each file is hashed as served, so an export pins exactly what the surveyor saw.
+  // The reference files are pinned as served; the outlines by their ids and authored geometry.
+  const sha = async data => hex(await crypto.subtle.digest('SHA-256', data));
   const load = async (key, url) => {
     const r = await fetch(url); if (!r.ok) throw Error(`${url}: ${r.status}`);
     const buffer = await r.arrayBuffer();
-    state.pins[key] = hex(await crypto.subtle.digest('SHA-256', buffer));
+    if (key) state.pins[key] = await sha(buffer);
     return JSON.parse(new TextDecoder().decode(buffer));
   };
-  const [reference, county, features] = await Promise.all([load('reference', REFERENCE), load('countyBuildings', COUNTY), load('features', FEATURES)]);
+  const [reference, county, features] = await Promise.all([load('reference', REFERENCE), load('countyBuildings', COUNTY), load(null, FEATURES)]);
+  state.pins.outlines = await sha(new TextEncoder().encode(outlineText(features.features)));
   for (const b of queueEntries(reference, county, features.features)) state.byId.set(b.id, b);
   state.order = sortBuildings([...state.byId.values()]).map(b => b.id);
   state.countyBuildings = county.buildings.length;

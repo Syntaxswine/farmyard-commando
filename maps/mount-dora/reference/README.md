@@ -195,15 +195,25 @@ Export whenever you stop, and commit the file as
 `maps/mount-dora/reference/house-survey.json`. Import merges by the newest answer
 per building, so two people can split the town by sector.
 
+An answer can name a building id this queue lacks: a county building that
+changed id when the county data did, a building the town no longer has, or a
+teammate's answer made with newer files. Nothing drops it. Import keeps it, the
+queue panel lists it with **Move to** (the selected building) and **Drop**, and
+Export writes it under `unmatched`, which the generator ignores. Moving keeps
+only the entrance edges that lie on the new building's outline, and says how
+many it left out.
+
 ### Evidence rules
 
 The repository's `AGENTS.md` (from PR #39) says geographic details, doors above
 all, go "only where source data or reviewed observations establish them", and
 keep "the source, coordinates, observation date and uncertainty". A survey
 answer is such a reviewed observation, and its export says so in an `evidence`
-block. Version 3 pins the three files an export depends on: the two the queue
-came from (`reference`, `countyBuildings`), and `features`, whose authored
-outlines its entrance edges lie on. Import names any of them that has changed
+block. Version 3 pins what an export depends on: the two files the queue came
+from (`reference`, `countyBuildings`), and `outlines`, the building outlines its
+entrance edges lie on. The outlines pin hashes each building's id and authored
+geometry rather than `features.json`'s bytes, because the generator rewrites
+that file with every survey answer it applies. Import names whatever has changed
 since. Version 2 exports, from before the county buildings joined the queue,
 still import.
 
@@ -246,8 +256,14 @@ Each building records its sources in `nativeProxy` (`storiesSource`,
 for a survey to settle.
 A county building's answer (a `county-` id) joins its county and lidar evidence
 the same way. A county building can change id when the county data does, so an
-answer whose id matches no building stops the build, naming the ids; re-key or
-delete it. The evidence files are pinned in `project.json`, as is the survey
+answer under `answers` whose id matches no building stops the build, naming the
+ids. To clear it, import the file into the survey page, move each listed answer
+to its building or drop it, and export again. Answers under `unmatched` apply to
+nothing, and `project.json` counts them. The refusal sees only an id that
+vanishes. A county id comes from its structure's first sketch by key, and a
+`-part2` suffix from the pieces' area order, so a regeneration that hands an id
+to a different structure or piece would re-target its answers silently. The
+evidence files are pinned in `project.json`, as is the survey
 export once it exists. The reference and lidar files pin only the OSM-sourced
 fields of `features.json` they read
 (`tools/maps/house-reference/features-digest.mjs`), so a regeneration never

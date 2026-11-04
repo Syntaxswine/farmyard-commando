@@ -364,7 +364,10 @@ def load_evidence(project=PROJECT):
                 found[item["id"]]["county"] = item["county"]
                 found[item["id"]]["lidar"] = item["lidar"]
         else:
+            # `unmatched` holds answers for ids the surveyor's queue lacked; they
+            # apply to nothing until the survey page moves them to a building.
             record["exportedAt"] = doc["exportedAt"]
+            record["unmatched"] = len(doc.get("unmatched", {}))
             for item_id, answer in doc["answers"].items():
                 found[item_id]["survey"] = answer
         inputs.append(record)
@@ -658,7 +661,8 @@ def build_project(project=PROJECT):
     lost = lost_survey_answers(evidence, features)
     if lost:
         raise ValueError("reference/house-survey.json answers %d building id(s) the town no longer has: %s. Nothing was written. "
-                         "Re-key each answer to the building's current id, or delete it." % (len(lost), ", ".join(lost)))
+                         "Import the file into the survey page (tools/maps/house-reference/serve.mjs), which lists answers for ids "
+                         "not in its queue: move each to its building or drop it, then export again." % (len(lost), ", ".join(lost)))
     extent = config["extent"]
     width, depth, size = extent["widthM"], extent["depthM"], extent["sectorSizeM"]
     if width != 1440 or depth != 1680 or size != 240 or extent["columns"] != 6 or extent["rows"] != 7:

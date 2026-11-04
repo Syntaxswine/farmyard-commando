@@ -17,32 +17,42 @@ const ORDINALS = {FIRST: '1ST', SECOND: '2ND', THIRD: '3RD', FOURTH: '4TH', FIFT
 const TYPES = {AVENUE: 'AVE', STREET: 'ST', ROAD: 'RD', DRIVE: 'DR', COURT: 'CT', PARKWAY: 'PKWY', BOULEVARD: 'BLVD',
   LANE: 'LN', PLACE: 'PL', CIRCLE: 'CIR', TERRACE: 'TER', HIGHWAY: 'HWY', TRAIL: 'TRL'};
 const DIRECTIONS = {NORTH: 'N', SOUTH: 'S', EAST: 'E', WEST: 'W'};
-// A bare number after these is a unit; after RD or HWY it is the route ("STATE RD 19", "US HWY 441").
-const UNIT_AFTER = new Set(Object.values(TYPES).filter(t => t !== 'RD' && t !== 'HWY'));
+// After these a trailing number or letter is a unit; after RD or HWY a number is the route ("STATE RD 19", "US HWY 441").
+const UNIT_AFTER = new Set(Object.values(TYPES).filter(t => t !== 'RD' && t !== 'HWY')), STREET_TYPES = new Set(Object.values(TYPES));
+const UNIT_TOKEN = /^(\d+[A-Z]?|[A-Z])$/, COMPASS = new Set(['N', 'S', 'E', 'W']);
 // "East 5th Avenue" and "412 E FIFTH AVE" both become {full: 'E 5TH AVE', base: '5TH AVE'}.
-// Neither a unit ("# 14", "APT 102", "APT101", a bare trailing "10") nor a
-// house-number suffix ("112-D", "142A/B") is part of the street.
+// Neither a unit ("# 14", "APT 102", "APT101", "UNIT A", a trailing "10" or "10-A")
+// nor a house-number suffix ("112-D", "142A/B") is part of the street. A unit
+// word starts a unit only before a unit number or letter, so "STE CLAIRE ST" and
+// "UNIT RD" stay streets. A direction written last ("620 HIGHLAND ST N") or glued
+// on ("325 E3RD AVE") moves to the front. An address without a street type
+// ("460 N GRANDVIEW") still matches no road.
 export function streetKey(name) {
   if (!name) return null;
-  const words = name.toUpperCase().replace(/\s*(#|\b(UNIT|APT|STE|SUITE)(?=\d|\b)).*$/, '').replace(/^\s*(\d+[A-Z]?)[-/][A-Z0-9]+(?=\s)/, '$1')
+  const words = name.toUpperCase().replace(/\s*(#|\b(UNIT|APT|STE|SUITE)(\s*#?\s*(?=[A-Z]?\d)|\s+(?=[A-Z]\b))).*$/, '')
+    .replace(/^\s*(\d+[A-Z]?)[-/][A-Z0-9]+(?=\s)/, '$1').replace(/\b([NSEW])(\d+(ST|ND|RD|TH))\b/g, '$1 $2')
     .replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
   while (words.length && /^\d+[A-Z]?$/.test(words[0]) && !/^\d+(ST|ND|RD|TH)$/.test(words[0])) words.shift();
   const norm = words.map(w => ORDINALS[w] || TYPES[w] || DIRECTIONS[w] || w);
-  while (norm.length > 2 && /^\d+[A-Z]?$/.test(norm.at(-1)) && UNIT_AFTER.has(norm.at(-2))) norm.pop();
+  if (norm.length > 2 && COMPASS.has(norm.at(-1)) && STREET_TYPES.has(norm.at(-2))) norm.unshift(norm.pop());
+  const type = norm.findLastIndex(w => UNIT_AFTER.has(w));
+  if (type >= 1 && type < norm.length - 1 && norm.slice(type + 1).every(w => UNIT_TOKEN.test(w))) norm.length = type + 1;
   if (!norm.length) return null;
   const base = norm.filter((w, i) => !(i === 0 && ['N', 'S', 'E', 'W'].includes(w) && norm.length > 1));
   return {full: norm.join(' '), base: base.join(' ')};
 }
 
-// The mapped roads a camera can stand on, indexed for nearby search.
+// The mapped roads a camera can stand on, indexed for nearby search. The line
+// is the one the features pin covers (features-digest.mjs).
 export function viewRoads(features) {
-  const roads = features.filter(f => isOsm(f) && f.category === 'road' && f.geometry.type === 'LineString').map(f => ({
-    id: f.id, name: f.tags.name || null, highway: f.tags.highway, line: f.geometry.coordinates, key: streetKey(f.tags.name)}));
+  const line = f => f.geographicGeometry ?? f.geometry;
+  const roads = features.filter(f => isOsm(f) && f.category === 'road' && line(f).type === 'LineString').map(f => ({
+    id: f.id, name: f.tags.name || null, highway: f.tags.highway, line: line(f).coordinates, key: streetKey(f.tags.name)}));
   return {roads, index: gridIndex(roads.map(r => bounds([[r.line]])), 48)};
 }
 
 // The camera for one building: the nearest point on the addressed street, else
-// the nearest public road, within VIEW_RADIUS_M of the outline. `building` is
+// the nearest public road, within VIEW_RADIUS_M of the outline's centre. `building` is
 // {geometry (MultiPolygon rings), box, centre}; `stories` sets the pitch and
 // `address` is the lot's situs address. Null when no road is in reach.
 export function planStreetView({roads, index}, {geometry, box, centre}, {stories, address}, toLatLon) {

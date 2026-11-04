@@ -124,7 +124,8 @@ test('every county building is in the town once, off the game buildings, with it
   assert.ok(county.buildings.filter(b => b.lidarSaw === 'class-6 roof').length >= .9 * county.buildings.length);
 });
 
-// The survey camera needs no lidar, so this checks it where the lidar cache is absent (CI).
+// The survey camera needs no lidar, so this checks it where the lidar cache is absent (the
+// workshop job in CI). The rule itself is tested on a synthetic street in house-reference.test.mjs.
 test('every county building has the survey camera the shared planner gives it, facing it from its road', () => {
   const {toLatLon} = createProjection(json('project.json').projection), view = viewRoads(features);
   const roads = new Map(features.filter(f => f.category === 'road').map(f => [f.id, f.geometry.coordinates]));

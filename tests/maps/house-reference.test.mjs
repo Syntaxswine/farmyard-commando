@@ -9,7 +9,7 @@ import {createProjection, headingDegrees} from '../../tools/maps/house-reference
 import {area, centroid, contains, overlapArea} from '../../tools/maps/house-reference/geometry.mjs';
 import {build, storeys, MATCH} from '../../tools/maps/house-reference/build-house-reference.mjs';
 import {isOsm} from '../../tools/maps/house-reference/features-digest.mjs';
-import {streetKey} from '../../tools/maps/house-reference/viewpoint.mjs';
+import {planStreetView, streetKey, viewRoads} from '../../tools/maps/house-reference/viewpoint.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const town = path.join(root, 'maps/mount-dora');
@@ -74,13 +74,39 @@ test('compass headings and street names', () => {
   assert.equal(streetKey('445 S GRANDVIEW ST 10').full, 'S GRANDVIEW ST');
   assert.equal(streetKey('112-D S GRANDVIEW ST').full, 'S GRANDVIEW ST');
   assert.equal(streetKey('142A/B W 4TH AVE').full, 'W 4TH AVE');
-  // ...but a name that starts with a unit word, and a route number, are.
+  for (const unit of ['12 MAIN ST UNIT A', '12 MAIN ST 10-A', '12 MAIN ST A', '12 MAIN ST STE 200']) assert.equal(streetKey(unit).full, 'MAIN ST', unit);
+  // ...a direction written last or glued on moves to the front...
+  assert.equal(streetKey('620 HIGHLAND ST N').full, streetKey('North Highland Street').full);
+  assert.equal(streetKey('325 E3RD AVE').full, streetKey('East 3rd Avenue').full);
+  // ...but a name with a unit word in it, a lettered street and a route number stay.
   assert.equal(streetKey('100 STEWART AVE').full, 'STEWART AVE');
   assert.equal(streetKey('Unity Lane').full, 'UNITY LN');
   assert.equal(streetKey('12 APTOS ST').full, 'APTOS ST');
   assert.equal(streetKey('9 SUITER DR').full, 'SUITER DR');
+  assert.equal(streetKey('123 STE CLAIRE ST').full, 'STE CLAIRE ST');
+  assert.equal(streetKey('9 SUITE ST').full, 'SUITE ST');
+  assert.equal(streetKey('100 UNIT RD').full, 'UNIT RD');
+  assert.equal(streetKey('Avenue A').full, 'AVE A');
   assert.equal(streetKey('1234 STATE ROAD 19').full, 'STATE RD 19');
   assert.equal(streetKey('US Highway 441').full, 'US HWY 441');
+  // Known gap: an address without a street type matches no road ("N GRANDVIEW" is not "N GRANDVIEW ST").
+  assert.notEqual(streetKey('460 N GRANDVIEW').full, streetKey('North Grandview Street').full);
+});
+
+test('the camera prefers the addressed street, by its full name, unless it is much farther than the nearest public road', () => {
+  // East-west roads; the building's centre is the origin, and town y runs south.
+  const road = (id, name, y, highway = 'residential') => ({id, osm: {}, category: 'road', tags: {name, highway}, geometry: {type: 'LineString', coordinates: [[-200, y], [200, y]]}});
+  const toLatLon = (x, y) => [28.8 - y / 111132, -81.6 + x / 97500], house = {geometry: [[[[-5, -5], [5, -5], [5, 5], [-5, 5], [-5, -5]]]], box: [-5, -5, 5, 5], centre: [0, 0]};
+  const plan = (roads, address) => planStreetView(viewRoads(roads), house, {stories: 1, address}, toLatLon);
+  assert.equal(plan([road('a', 'Elm Street', 40), road('b', 'Oak Street', -10)], '1 ELM ST').road, 'Elm Street', 'within 45 m, the addressed street wins');
+  assert.equal(plan([road('a', 'Elm Street', 70), road('b', 'Oak Street', -10)], '1 ELM ST').road, 'Oak Street', 'beyond 45 m and 25 m past the public road');
+  assert.equal(plan([road('a', 'Elm Street', 70), road('b', 'Oak Street', -50)], '1 ELM ST').road, 'Elm Street', 'within 25 m of the public road');
+  const ew = plan([road('e', 'East Elm Street', 10), road('w', 'West Elm Street', 30)], '1 W ELM ST');
+  assert.deepEqual([ew.road, ew.onAddressedStreet], ['West Elm Street', true], 'W ELM ST does not snap to the nearer East Elm');
+  assert.equal(plan([road('e', 'East Elm Street', 10), road('w', 'West Elm Street', 30)], null).road, 'East Elm Street');
+  assert.equal(plan([road('s', 'Back Alley', 20, 'service'), road('p', 'Oak Street', 60)], null).road, 'Oak Street', 'a public road before a service road');
+  assert.equal(plan([road('s', 'Back Alley', 20, 'service')], null).road, 'Back Alley');
+  assert.equal(plan([road('far', 'Oak Street', 120)], null), null, 'no road within 90 m');
 });
 
 test('county storeys map onto the native kit', () => {

@@ -58,7 +58,7 @@ export function queueEntries(reference, county, features) {
 // What a surveyor should know about a building before looking.
 export function warningsFor(b) {
   const sv = b.streetView, sketched = b.countySketch, out = [];
-  if (b.match.method === 'none') out.push('No county record: everything here comes from what you see.');
+  if (b.match.method === 'none' || sketched && !b.county.records.length) out.push('No county record: everything here comes from what you see.');
   if (b.match.method === 'footprint-partial') out.push('The game outline and the county sketch disagree; check this is one building.');
   if (b.match.method === 'parcel-area') out.push('Several buildings share this lot; the record was picked by size.');
   if (sketched) out.push(`OpenStreetMap lacks this building; the game drew it from ${sketched.sketches === 1 ? 'the county sketch' : `${sketched.sketches} county sketches`}. ` +
@@ -69,13 +69,49 @@ export function warningsFor(b) {
   return out;
 }
 
-// The files an export depends on: the two the queue came from, and the
-// authored outlines its entrance edges lie on.
-export const PINNED = {reference: 'maps/mount-dora/reference/house-reference.json', countyBuildings: 'maps/mount-dora/reference/county-buildings.json',
-  features: 'maps/mount-dora/features.json'};
+// What an export depends on: the two files the queue came from, and the
+// building outlines its entrance edges lie on. The outlines are pinned by their
+// ids and authored geometry, not by features.json's bytes, which the generator
+// rewrites with every survey answer it applies.
+export const PINNED = {
+  reference: {file: 'maps/mount-dora/reference/house-reference.json'},
+  countyBuildings: {file: 'maps/mount-dora/reference/county-buildings.json'},
+  outlines: {file: 'maps/mount-dora/features.json', fields: 'the id and authored geometry of every building'},
+};
+// The text the outlines pin hashes.
+export const outlineText = features => JSON.stringify(features.filter(f => f.category === 'building').map(f => [f.id, f.geometry]));
 
-// The pinned files an export was made against that differ from the loaded ones.
-export const pinMismatches = (doc, pins) => Object.entries(PINNED).filter(([key]) => doc[key]?.sha256 && doc[key].sha256 !== pins[key]).map(([, file]) => file.split('/').pop());
+// What an export was made against that differs from what is loaded now.
+export const pinMismatches = (doc, pins) => Object.keys(PINNED).filter(key => doc[key]?.sha256 && doc[key].sha256 !== pins[key])
+  .map(key => key === 'outlines' ? 'the building outlines in features.json' : PINNED[key].file.split('/').pop());
+
+// Import: the newer answer per building wins. Answers for ids this queue lacks
+// are kept as well, apart (they export under `unmatched`), so a teammate's
+// answer is never dropped because this copy of the files is older or newer.
+export function mergeAnswers(mine, doc, keys, known) {
+  const answers = {...mine};
+  let added = 0, unmatched = 0;
+  for (const [id, answer] of [...Object.entries(doc.answers || {}), ...Object.entries(doc.unmatched || {})]) {
+    const clean = cleanAnswer(answer, keys);
+    if (!clean || answers[id] && (answer.at || '') <= (answers[id].at || '')) continue;
+    answers[id] = {...clean, ...(answer.at ? {at: answer.at} : {})};
+    added++;
+    if (!known.has(id)) unmatched++;
+  }
+  return {answers, added, unmatched};
+}
+
+// Moves an answer to the building it belongs to, as when a county building's id
+// changed. Null if the target already has an answer. Entrances not on the
+// target's outline (its 1 m edges) are left out, and counted.
+export function moveAnswer(answers, from, to, edges) {
+  if (!answers[from] || answers[to]) return null;
+  const {[from]: answer, ...rest} = answers, on = new Set(edges.map(edgeKey));
+  const entrances = (answer.entrances || []).filter(e => on.has(edgeKey(e.segment)));
+  const moved = {...answer, entrances};
+  if (!entrances.length) delete moved.entrances;
+  return {answers: {...rest, [to]: moved}, entrancesLeftOut: (answer.entrances || []).length - entrances.length};
+}
 
 // Drops empty values; an answer with nothing left is null.
 export function cleanAnswer(answer, keys) {
@@ -90,22 +126,26 @@ export function cleanAnswer(answer, keys) {
   return Object.keys(out).length ? out : null;
 }
 
-export function exportDocument({answers, pins, keys, exportedAt}) {
-  const out = {};
+// `known` holds the queue's building ids. Answers for any other id go under
+// `unmatched`, which the generator ignores, so nothing a surveyor saved is lost
+// and nothing the generator would refuse reaches `answers`.
+export function exportDocument({answers, known, pins, keys, exportedAt}) {
+  const out = {}, unmatched = {};
   for (const id of Object.keys(answers).sort()) {
     const a = cleanAnswer(answers[id], keys);
-    if (a) out[id] = {...a, ...(answers[id].at ? {at: answers[id].at} : {})};
+    if (a) (known.has(id) ? out : unmatched)[id] = {...a, ...(answers[id].at ? {at: answers[id].at} : {})};
   }
   return {
     kind: 'mount-dora-house-survey', version: 3,
-    ...Object.fromEntries(Object.entries(PINNED).map(([key, file]) => [key, {file, sha256: pins[key]}])), exportedAt,
+    ...Object.fromEntries(Object.entries(PINNED).map(([key, pin]) => [key, {...pin, sha256: pins[key]}])), exportedAt,
     evidence: {
       source: 'A person viewing Google Maps Street View and satellite imagery in Google Maps; no imagery is stored.',
       coordinates: 'Keyed by game building id: an OSM id, or a county- id for a building OSM lacks (county-buildings.json). Entrances are 1 m edges of the authored outline in town east/south metres.',
       observationDate: 'imageryDate is the "Image capture" month Google shows; at is when the answer was recorded.',
       uncertainty: 'confidence is the surveyor\'s own: sure, likely or unsure. Unanswered fields are unknown, not absent.',
       entrances: 'Only doors a person saw are marked. None are inferred from an address, outline or facade.',
+      unmatched: 'Answers for building ids the surveyor\'s queue lacked. The generator ignores them until they are moved to a building.',
     },
-    answers: out,
+    answers: out, ...(Object.keys(unmatched).length ? {unmatched} : {}),
   };
 }

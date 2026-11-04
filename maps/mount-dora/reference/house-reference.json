@@ -132,7 +132,7 @@
   "metalRoof": 176,
   "withPorch": 638,
   "withStreetView": 950,
-  "onAddressedStreet": 871,
+  "onAddressedStreet": 873,
   "countyOnlySketches": 247,
   "countyOnlyHouseSized": 241
  },
@@ -12641,7 +12641,7 @@
     "roadClass": "residential",
     "alongM": 107.4,
     "distanceM": 17.7,
-    "onAddressedStreet": false,
+    "onAddressedStreet": true,
     "url": "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=28.801554,-81.636465&heading=88&pitch=5&fov=100"
    },
    "aerialUrl": "https://www.google.com/maps/@?api=1&map_action=map&center=28.801561,-81.636284&zoom=20&basemap=satellite"
@@ -16189,7 +16189,7 @@
     "roadClass": "residential",
     "alongM": 264.3,
     "distanceM": 31,
-    "onAddressedStreet": false,
+    "onAddressedStreet": true,
     "url": "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=28.798736,-81.642139&heading=0&pitch=5&fov=40"
    },
    "aerialUrl": "https://www.google.com/maps/@?api=1&map_action=map&center=28.799016,-81.642139&zoom=20&basemap=satellite"

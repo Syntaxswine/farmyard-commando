@@ -255,21 +255,30 @@ class MountDoraGeneration(unittest.TestCase):
 
 
 class SurveyEvidence(unittest.TestCase):
+    @staticmethod
+    def evidence_project(tmp, survey=None, source=False):
+        """A project folder holding the committed evidence files, and optionally a survey export and the sources."""
+        project = Path(tmp)
+        (project / "reference").mkdir()
+        for name, kind, _ in BUILDER.EVIDENCE:
+            if kind != "survey":
+                shutil.copy(BUILDER.PROJECT / "reference" / name, project / "reference" / name)
+        if source:
+            shutil.copytree(BUILDER.PROJECT / "source", project / "source")
+        if survey is not None:
+            (project / "reference" / "house-survey.json").write_text(json.dumps(
+                {"kind": "mount-dora-house-survey", "version": 3, "exportedAt": "2026-11-03T00:00:00.000Z", **survey}), "utf-8")
+        return project
+
     def test_a_survey_answer_reaches_a_county_building_beside_its_county_and_lidar_evidence(self):
         """house-survey.json is keyed by game id, so a county- id from the survey queue joins that building's evidence."""
         with tempfile.TemporaryDirectory() as tmp:
-            project = Path(tmp)
-            (project / "reference").mkdir()
-            for name, kind, _ in BUILDER.EVIDENCE:
-                if kind != "survey":
-                    shutil.copy(BUILDER.PROJECT / "reference" / name, project / "reference" / name)
-            base, _ = BUILDER.load_evidence(project)
-            county = next(f for f in BUILDER.county_buildings()
-                          if BUILDER.building_style(f, base)["stories"] == 1 and BUILDER.building_style(f, base)["material"] != "brick")
-            answer = {"stories": "2", "wall": "brick", "confidence": "sure", "imageryDate": "2024-03"}
-            (project / "reference" / "house-survey.json").write_text(json.dumps(
-                {"kind": "mount-dora-house-survey", "version": 3, "exportedAt": "2026-11-03T00:00:00.000Z", "answers": {county["id"]: answer}}), "utf-8")
-            found, inputs = BUILDER.load_evidence(project)
+            base, _ = BUILDER.load_evidence(self.evidence_project(tmp))
+        county = next(f for f in BUILDER.county_buildings()
+                      if BUILDER.building_style(f, base)["stories"] == 1 and BUILDER.building_style(f, base)["material"] != "brick")
+        answer = {"stories": "2", "wall": "brick", "confidence": "sure", "imageryDate": "2024-03"}
+        with tempfile.TemporaryDirectory() as tmp:
+            found, inputs = BUILDER.load_evidence(self.evidence_project(tmp, {"answers": {county["id"]: answer}}))
         before, after = BUILDER.building_style(county, base), BUILDER.building_style(county, found)
         self.assertFalse(before["storiesSource"].startswith("survey"))
         self.assertEqual((after["stories"], after["storiesSource"]), (2, "survey:stories 2"))
@@ -284,17 +293,19 @@ class SurveyEvidence(unittest.TestCase):
         """A county building can change id when the county data does; its answers must not vanish quietly."""
         known = BUILDER.county_buildings()[0]["id"]
         with tempfile.TemporaryDirectory() as tmp:
-            project = Path(tmp)
-            shutil.copytree(BUILDER.PROJECT / "source", project / "source")
-            (project / "reference").mkdir()
-            for name, kind, _ in BUILDER.EVIDENCE:
-                if kind != "survey":
-                    shutil.copy(BUILDER.PROJECT / "reference" / name, project / "reference" / name)
-            (project / "reference" / "house-survey.json").write_text(json.dumps(
-                {"kind": "mount-dora-house-survey", "version": 3, "exportedAt": "2026-11-03T00:00:00.000Z",
-                 "answers": {known: {"stories": "2"}, "county-0000000-9": {"stories": "1"}}}), "utf-8")
-            with self.assertRaisesRegex(ValueError, r"answers 1 building id\(s\) the town no longer has: county-0000000-9\. Nothing was written"):
+            project = self.evidence_project(tmp, {"answers": {known: {"stories": "2"}, "county-0000000-9": {"stories": "1"}}}, source=True)
+            with self.assertRaisesRegex(ValueError, r"answers 1 building id\(s\) the town no longer has: county-0000000-9\. Nothing was written\. "
+                                                    r"Import the file into the survey page"):
                 BUILDER.build_project(project)
+
+    def test_answers_kept_apart_under_unmatched_apply_to_nothing_and_are_counted(self):
+        """The survey page exports answers for ids its queue lacks under `unmatched`, which the build must not refuse or apply."""
+        known = BUILDER.county_buildings()[0]["id"]
+        with tempfile.TemporaryDirectory() as tmp:
+            found, inputs = BUILDER.load_evidence(self.evidence_project(tmp, {"answers": {}, "unmatched": {"county-0000000-9": {"stories": "1"}, known: {"stories": "4"}}}))
+        self.assertEqual((inputs[-1]["kind"], inputs[-1]["unmatched"]), ("survey", 2))
+        self.assertEqual(BUILDER.lost_survey_answers(found, BUILDER.county_buildings()), [])
+        self.assertNotIn("survey", found[known])
 
 
 if __name__ == "__main__":

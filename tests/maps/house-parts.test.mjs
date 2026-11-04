@@ -6,11 +6,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {root, PARTS_DIR, BLOCK, BLOCK_MAX_M, loadTown, buildParts, formatPart, roundTrip, stampSectors, splitWalls, floorCells, validatePart, placementFromPart, artMismatches, shiftTreatment,
-  pyFloat, pyDumps, PyFloat, placePoint, placePart, localAxisDeg, iou, centroid, localEntrances, localEvidence, firstDifference, toBlock, blockFits, credits, MATERIALS,
-  sha256} from '../../tools/maps/house-parts/house-parts.mjs';
-import {generate, compareFolder, inputDigests, median, REGENERATE} from '../../tools/maps/house-parts/build-house-parts.mjs';
+  pyFloat, pyDumps, PyFloat, placePoint, placePart, localAxisDeg, iou, centroid, localEntrances, localEvidence, firstDifference, toBlock, blockFits, credits, usesCounty,
+  MATERIALS, sha256} from '../../tools/maps/house-parts/house-parts.mjs';
+import {generate, refusals, compareFolder, runCli, inputDigests, median, REGENERATE} from '../../tools/maps/house-parts/build-house-parts.mjs';
 import {allBlocks, blockDigest, blockDigests} from '../../tools/maps/house-parts/export-block.mjs';
-import {RECEIPT, BROWSER_SAMPLES, SLOT, NEIGHBOURS, sameHouse, matchesPart, flushWest, reviewHeadless, edgeControl, keptBrowser} from '../../tools/maps/house-parts/review-house-part-blocks.mjs';
+import {RECEIPT, BROWSER_SAMPLES, SLOT, NEIGHBOURS, sameHouse, matchesPart, flushWest, reviewHeadless, edgeControl, keptBrowser, mergeResults, reviewPassed}
+  from '../../tools/maps/house-parts/review-house-part-blocks.mjs';
+import {NAUTILUS_COMMIT} from '../../maps/mount-dora/workshop/model.js';
 
 // Generation reports its refusals here instead of throwing, so each check below fails by name.
 const dir = path.join(root, PARTS_DIR), town = await loadTown(), generated = generate(town, {strict: false}), {parts, index, files} = generated;
@@ -51,6 +53,14 @@ test('the folder check names stale, missing and extra files', () => {
     assert.deepEqual(compareFolder(temp, some), {stale: names.slice(0, 2), extra: ['osm-way-0.json'], current: false});
     fs.rmSync(path.join(temp, 'osm-way-0.json'));
     assert.equal(compareFolder(temp, some).current, false, 'a stale file alone must fail the check');
+    // The command line: --check fails while anything is stale; writing removes extras and keeps README.md.
+    const said = [], cli = check => runCli({check, dir: temp, files: some, index, log: m => said.push(m), error: m => said.push(m)});
+    assert.equal(cli(true), 1);
+    assert.match(said.join('\n'), /House parts are stale: 2 differ or are missing[\s\S]*Regenerate with: node tools\/maps\/house-parts\/build-house-parts\.mjs/);
+    fs.writeFileSync(path.join(temp, 'osm-way-0.json'), '{}');
+    assert.equal(cli(false), 0);
+    assert.deepEqual(fs.readdirSync(temp).sort(), [...names, 'README.md'].sort());
+    assert.equal(cli(true), 0);
   } finally { fs.rmSync(temp, {recursive: true, force: true}); }
 });
 
@@ -97,12 +107,29 @@ test('generation refuses invalid parts, a failed round trip and art that does no
   });
 });
 
+test('generation refuses a stamp that throws, a fit method it does not know and a house with no roof record', () => {
+  const near = around(solo.id), cut = {...near, sectors: near.sectors.map((s, i) => i ? s : {...s, bytes: s.bytes.subarray(0, 100)})};
+  const broken = generate(cut, {strict: false});
+  assert.match(broken.refused.join('\n'), /do not reproduce \d+ of \d+ sectors\. Stamping the parts threw: /);
+  assert.equal(broken.index.checks.sectors.byteIdentical, 0, 'a stamp that threw is never recorded as identical');
+  // The first building in id order fails first, so these stay quick.
+  const first = town.features.features.find(f => f.category === 'building');
+  const renamed = {...town, authored: {...town.authored, records: town.authored.records.map(r => r.id === first.id ? {...r, derivation: {...r.derivation, method: 'some-new-fit'}} : r)}};
+  assert.throws(() => buildParts(renamed), new RegExp(`${first.id}: unknown grid-fit method some-new-fit`));
+  const roofless = {...town, lidar: {...town.lidar, buildings: town.lidar.buildings.filter(b => b.id !== first.id)}, county: {...town.county, buildings: town.county.buildings.filter(b => b.id !== first.id)}};
+  assert.throws(() => buildParts(roofless), new RegExp(`${first.id} has no lidar roof record`));
+});
+
 test('a mismatch names the field that differs', () => {
   assert.deepEqual(firstDifference({a: [1, {b: 2}]}, {a: [1, {b: 3}]}), {path: '.a[1].b', committed: '2', stamped: '3'});
   assert.deepEqual(firstDifference({a: 1}, {a: 1, thicknessM: .16}), {path: '.thicknessM', committed: '(absent)', stamped: '0.16'});
+  assert.deepEqual(firstDifference({a: 1}, {a: '1'}), {path: '.a', committed: '1', stamped: '"1"'});
   assert.equal(firstDifference({a: [1, 2]}, {a: [1, 2]}), null);
-  const ps = structuredClone(parts); ps.find(p => p.id === solo.id).material.wall = MATERIALS.find(m => m !== solo.material.wall);
-  assert.match(roundTrip(ps, around(solo.id)).mismatches[0].field.path, /^\.wallRuns\.segments\[\d+\]\.material$/);
+  const near = around(solo.id), ps = structuredClone(parts); ps.find(p => p.id === solo.id).material.wall = MATERIALS.find(m => m !== solo.material.wall);
+  assert.match(roundTrip(ps, near).mismatches[0].field.path, /^\.wallRuns\.segments\[\d+\]\.material$/);
+  const spaced = {...near, sectors: near.sectors.map(s => ({...s, bytes: Buffer.concat([s.bytes, Buffer.from(' ')])}))}, trip = roundTrip(parts, spaced);
+  assert.equal(trip.mismatches[0].field, 'the values agree but the bytes differ (key order, number formatting or spacing)');
+  assert.match(refusals(parts, spaced, trip).join('\n'), /where the values agree[\s\S]*The values agree, so pyDumps in house-parts\.mjs writes them differently/, 'a byte-only difference blames the serialiser, not the mirrors');
 });
 
 test('a floor no part claims comes back unclaimed, not as floor', () => {
@@ -125,6 +152,9 @@ test('the wall and floor mirrors follow the generator on synthetic shapes', () =
   assert.deepEqual(rows(cut.get('B01')), [['md-w3-2', [-0.5, 19.5], [9.5, 19.5]]]);
   assert.deepEqual(rows(pieces('w4', [-5, 30], [5, 30]).get('A01')), [['md-w4-1', [-0.5, 29.5], [4.5, 29.5]]], 'the town edge clips');
   assert.equal(pieces('w5', [-5, -1], [5, -1]).size, 0, 'a wall beside the town, outside it, is dropped');
+  const sliver = splitWalls([{id: 'w6', a: [239.93, 20], b: [250, 20], owners: ['x'], stories: 1, material: 'wood'}], extent);
+  assert.deepEqual([...sliver.pieces.keys()], ['B01'], 'a 7 cm piece is no wall run');
+  assert.deepEqual(sliver.slivers.map(s => [s.sourceWallId, s.sectorId, Number(s.lengthM.toFixed(4))]), [['w6', 'A01', .07]]);
   const outline = [[[[0, 0], [3, 0], [3, 3], [0, 3], [0, 0]], [[1, 1], [2, 1], [2, 2], [1, 2], [1, 1]]], [[[5, 0], [6, 0], [6, 2], [5, 2], [5, 0]]]];
   assert.deepEqual(floorCells(outline), [[0, 0, 3], [0, 5, 6], [1, 0, 1], [1, 2, 3], [1, 5, 6], [2, 0, 3]], 'both polygons count; the courtyard does not');
   // A three-storey house whose east wall lies on a sector line: the next sector
@@ -139,10 +169,11 @@ test('the wall and floor mirrors follow the generator on synthetic shapes', () =
   assert.deepEqual(east.terrain.flat().filter(t => t === 'floor'), []);
   // A house reaching past the town's west or east edge keeps only its cells
   // inside the town; unclamped, they would wrap onto the next row.
-  const rowsOf = origin => { const s = stampSectors([{...house, placements: {grid: {origin}}, walls: []}], tiny).sectors;
-    return ['A01', 'B01'].map(id => JSON.parse(s.get(id)).terrain.map(r => r.map(t => t === 'floor' ? 'F' : '.').join(''))); };
+  const stampAt = origin => stampSectors([{...house, placements: {grid: {origin}}, walls: []}], tiny).sectors;
+  const rowsOf = origin => ['A01', 'B01'].map(id => JSON.parse(stampAt(origin).get(id)).terrain.map(r => r.map(t => t === 'floor' ? 'F' : '.').join('')));
   assert.deepEqual(rowsOf([-2, 1]), [['....', 'FF..', 'FF..', '....'], ['....', '....', '....', '....']], 'west edge');
   assert.deepEqual(rowsOf([6, 1]), [['....', '....', '....', '....'], ['....', '..FF', '..FF', '....']], 'east edge');
+  assert.deepEqual(['A01', 'B01'].map(id => JSON.parse(stampAt([-2, 1]).get(id)).levels), [4, 3], 'upper floors alone raise their sector\'s levels');
 });
 
 test('each part closes on its own, on the 1 m grid', () => {
@@ -152,8 +183,11 @@ test('each part closes on its own, on the 1 m grid', () => {
     ['not a house-part v1', p => { p.version = 2; }],
     ['outline is not on the 1 m grid', p => { p.outline = p.outline.map(poly => poly.map(r => r.map(([x, y]) => [x + .5, y]))); }],
     ['outline does not start at the origin', p => { p.outline = p.outline.map(poly => poly.map(r => r.map(([x, y]) => [x + 1, y]))); }],
+    ['outline does not start at the origin', p => { p.outline = p.outline.map(poly => poly.map(r => r.map(([x, y]) => [x, y + 1]))); }],
     ['size is not the outline extent', p => { p.size = [4, 2]; }],
+    ['size is not the outline extent', p => { p.size = [3, 3]; }],
     ['a ring is not closed', p => { p.outline[0][0].pop(); }],
+    ['a ring is not closed', p => { p.outline = [[[[0, 0], [3, 0], [3, 2], [0, 0]]]]; }],
     ['an outline edge is not axis-aligned', p => { p.outline = [[[[0, 0], [3, 1], [3, 2], [0, 2], [0, 0]]]]; }],
     ['floorCells are not the outline cells', p => { p.floorCells.pop(); }],
     ['a wall is not on the 1 m grid', p => { p.walls[0].b = [3, .5]; }],
@@ -165,12 +199,20 @@ test('each part closes on its own, on the 1 m grid', () => {
     ['storeys out of range 1-5', p => { p.storeys.count = 1.5; }],
     ['unsupported wall material glass', p => { p.material.wall = 'glass'; }],
     ['placement pivot or origin invalid', p => { p.placements.pivot = [NaN, 1]; }],
+    ['placement pivot or origin invalid', p => { p.placements.pivot = [1, Infinity]; }],
     ['placement pivot or origin invalid', p => { p.placements.grid.origin = [10.5, 20]; }],
     ['unknown entrance status', p => { p.entrances.status = 'guessed'; }],
   ];
   for (const [message, mutate] of cases) {
     const part = box(); mutate(part);
     assert(validatePart(part).some(p => p === 'box: ' + message), `${message}: got ${JSON.stringify(validatePart(part))}`);
+  }
+  for (const status of ['not-recorded', 'surveyed']) { const part = box(); part.entrances.status = status; assert.deepEqual(validatePart(part), [], status); }
+  // The art kit's points must have moved into the part frame with the outline.
+  for (const p of parts) {
+    const t = p.appearance.treatment, points = [...(t.frontGables || []), ...(t.turret ? [t.turret.centre] : [])];
+    assert(points.every(([x, y]) => x >= 0 && y >= 0 && x <= p.size[0] && y <= p.size[1]), p.id + ': an art point outside the part');
+    assert(p.roof.ridgeAxisDeg === null || p.roof.ridgeAxisDeg >= 0 && p.roof.ridgeAxisDeg < 180, p.id);
   }
 });
 
@@ -314,9 +356,17 @@ test('each part carries its licence and credits', () => {
     const county = p.source.county || p.evidence?.county || [p.storeys.source, p.material.source, p.address?.source].some(s => s?.startsWith('county'));
     assert.equal(p.rights.attribution.includes('Lake County Property Appraiser (Florida) public records'), Boolean(county), p.id);
   }
-  // Every Mount Dora part uses some county record, so the rule is pinned here.
+  // Every Mount Dora part uses some county record, so the rules are pinned here.
   assert.deepEqual(credits(false, 'X'), ['© OpenStreetMap contributors, https://www.openstreetmap.org/copyright', 'USGS 3D Elevation Program lidar, public domain (X)']);
   assert.equal(credits(true, 'X').length, 3);
+  const plain = {nativeProxy: {storiesSource: 'tag:building:levels', materialSource: 'unsurveyed-native-kit-proxy'}};
+  assert.equal(usesCounty(plain, {source: 'osm'}), false);
+  assert.equal(usesCounty(plain, null), false);
+  assert.equal(usesCounty({...plain, county: {sketches: []}}, null), true);
+  assert.equal(usesCounty({nativeProxy: {...plain.nativeProxy, evidence: {county: {stories: 1}}}}, null), true);
+  assert.equal(usesCounty({nativeProxy: {...plain.nativeProxy, storiesSource: 'county:STORIES 1.00'}}, null), true);
+  assert.equal(usesCounty({nativeProxy: {...plain.nativeProxy, materialSource: 'county:CNS_EXT_WALL_1 BRICK'}}, null), true);
+  assert.equal(usesCounty(plain, {source: 'county parcel 123; join contains'}), true);
 });
 
 test('the index records where the art kit disagrees with the native storeys', () => {
@@ -336,6 +386,8 @@ test('blocks keep 1 m of yard on every side and the wall-run contract', () => {
     assert(typeof block.name === 'string' && block.name.length >= 1 && block.name.length <= 60, 'the engine takes names of 1 to 60 characters');
     const ids = new Set(block.wallRuns.segments.map(s => s.id));
     assert.equal(ids.size, block.wallRuns.segments.length);
+    // The engine takes unique ids of /^[\w:.-]{1,96}$/; placement prefixes the slot (s9-9:), so this length never truncates.
+    assert([...ids].every(id => /^[\w:.-]+$/.test(id) && id.length <= 96 - 's9-9:'.length), part.id + ': a run id the engine would refuse or cut');
     for (const s of block.wallRuns.segments) {
       assert([...s.a, ...s.b].every(v => v >= .5 && v <= 22.5), `${part.id}: a run touches the block edge`);
       const length = Math.hypot(s.b[0] - s.a[0], s.b[1] - s.a[1]);
@@ -351,6 +403,10 @@ test('blocks keep 1 m of yard on every side and the wall-run contract', () => {
   assert(flushWest(sample.block).wallRuns.segments.some(s => s.a[0] === -.5 || s.b[0] === -.5), 'the control sits on the edge');
   const stray = structuredClone(sample.part); stray.walls[0] = {...stray.walls[0], a: [-sample.block.housePart.offset[0], stray.walls[0].a[1]]};
   assert.throws(() => toBlock(stray, 'x'), /a wall would touch the block edge/);
+  // No Mount Dora part reaches these limits, so they are pinned here.
+  assert.equal(blockFits({...sample.part, storeys: {count: 5}}), true);
+  assert.equal(blockFits({...sample.part, storeys: {count: 6}}), false, 'six storeys need seven levels; a block has six');
+  assert.equal(toBlock({...sample.part, name: 'x'.repeat(70)}, 'x').name.length, 60, 'the engine takes names of 1 to 60 characters');
 });
 
 test('two blocks are the same house only with the same floors, levels and walls', () => {
@@ -366,18 +422,28 @@ test('two blocks are the same house only with the same floors, levels and walls'
     'a run storey': b => { b.wallRuns.segments[0].stories += 1; },
     'a run material': b => { b.wallRuns.segments[0].material = MATERIALS.find(m => m !== b.wallRuns.segments[0].material); },
     'a run dropped': b => { b.wallRuns.segments.pop(); },
+    'a run raised a level': b => { b.wallRuns.segments[0].z += 1; },
+    'a run moved a quarter metre': b => { b.wallRuns.segments[0].a[0] += .25; },
   };
   for (const [name, change] of Object.entries(variants)) { const b = structuredClone(block); change(b); assert(!sameHouse(block, b), name); }
-  for (const [name, change] of Object.entries({'an upper floor': variants['an upper floor'], 'a run end': variants['a run end'],
-    'one storey short': b => { b.upper[sample.part.storeys.count - 1] = {}; }})) {
+  assert(matchesPart(block, sample.part, block.housePart.offset));
+  for (const [name, change] of Object.entries({'a ground cell': variants['a ground cell'], 'an upper floor': variants['an upper floor'], 'a run end': variants['a run end'],
+    'a run moved a quarter metre': variants['a run moved a quarter metre'], 'one storey short': b => { b.upper[sample.part.storeys.count - 1] = {}; }})) {
     const b = structuredClone(block); change(b); assert(!matchesPart(b, sample.part, block.housePart.offset), name);
   }
+  // The control moves the whole house, upper floors too: it is the same house at another offset.
+  assert(matchesPart(flushWest(block), sample.part, [0, block.housePart.offset[1]]));
 });
 
 test('the block review fails a house at the step it breaks', () => {
+  // A stand-in engine: slots hold copies, and a quarter turn moves cell and point (x, y) to (23 - y, x) as the engine's does.
+  const quarter = b => ({...structuredClone(b), terrain: b.terrain.map((row, y) => row.map((_, x) => b.terrain[23 - x][y])),
+    upper: b.upper.map(level => Object.fromEntries(Object.entries(level).map(([key, v]) => { const [x, y] = key.split(',').map(Number); return [`${23 - y},${x}`, v]; }))),
+    wallRuns: {...b.wallRuns, segments: b.wallRuns.segments.map(s => ({...s, a: [23 - s.a[1], s.a[0]], b: [23 - s.b[1], s.b[0]]}))}});
+  assert(!sameHouse(sample.block, quarter(quarter(sample.block))), 'two quarter turns are not four');
   const engine = (change = {}) => ({validateBlock: b => b, openDocument: text => ({export: () => text}), blankMap: () => ({slots: {}}), validateMap: () => [],
     placeBlock: (map, block, x, y) => ({slots: {...map.slots, [x + ',' + y]: structuredClone(block)}}), extractBlock: (map, x, y) => structuredClone(map.slots[x + ',' + y]),
-    rotateSceneryBlock: b => b, ...change});
+    rotateSceneryBlock: quarter, ...change});
   const one = [{id: sample.id, block: sample.block}], clean = reviewHeadless(engine(), one);
   assert.deepEqual(clean.failures, []);
   assert(Object.values(clean.counts).every(n => n === 1));
@@ -405,12 +471,29 @@ test('the block review fails a house at the step it breaks', () => {
   const control = edgeControl(strict, blocks);
   assert(control.passedBeforeNeighbours && control.refusedByNeighbours, JSON.stringify(control));
   assert.deepEqual(reviewHeadless(strict, one).failures, [], 'the real block keeps off the edge');
+  // Refused for another reason, or before the neighbours, the control proves nothing.
+  assert.equal(edgeControl(engine({validateMap: map => Object.keys(map.slots).length > 1 ? ['bad'] : []}), blocks).refusedByNeighbours, false);
+  const early = edgeControl(engine({placeBlock: (map, block, x, y) => {
+    if (block.wallRuns.segments.some(s => s.a[0] === -.5 || s.b[0] === -.5)) throw Error('A wall run crosses this block boundary.');
+    return {slots: {...map.slots, [x + ',' + y]: structuredClone(block)}};
+  }}), blocks);
+  assert.equal(early.passedBeforeNeighbours, false, JSON.stringify(early));
+  const ok = {passedBeforeNeighbours: true, refusedByNeighbours: true};
+  assert.equal(reviewPassed({failures: []}, ok), true);
+  for (const [headless, edge] of [[{failures: [{id: 'x'}]}, ok], [{failures: []}, {...ok, refusedByNeighbours: false}], [{failures: []}, {...ok, passedBeforeNeighbours: false}]])
+    assert.equal(reviewPassed(headless, edge), false);
+  assert.deepEqual(mergeResults([{counts: {fit: 2, validated: 2}, nativeAddedPaths: ['b', 'a'], failures: [{id: 'z', error: 'e'}]},
+    {counts: {fit: 3, validated: 1}, nativeAddedPaths: ['a'], failures: [{id: 'b', error: 'f'}]}]),
+  {counts: {fit: 5, validated: 3}, nativeAddedPaths: ['a', 'b'], failures: [{id: 'b', error: 'f'}, {id: 'z', error: 'e'}]});
 });
 
 test('a block digest covers what the workshop reads, not the name or part provenance', () => {
   const {block} = sample, digest = blockDigest(block), copy = () => structuredClone(block);
   assert.equal(blockDigest({...copy(), name: 'Another name'}), digest);
   assert.equal(blockDigest({...copy(), housePart: {...block.housePart, sha256: 'other'}}), digest);
+  // A house moved in the town keeps its shape but takes new run ids, perhaps in another order.
+  const moved = copy(); moved.wallRuns.segments = moved.wallRuns.segments.map((s, i) => ({...s, id: 'wall-moved-' + i})).reverse();
+  assert.equal(blockDigest(moved), digest);
   for (const change of [b => { b.wallRuns.segments[0].a[0] += 1; }, b => { b.terrain[1][1] = 'floor'; }, b => { b.levels += 1; b.upper.push({}); }]) {
     const b = copy(); change(b); assert.notEqual(blockDigest(b), digest);
   }
@@ -420,6 +503,7 @@ test('the workshop receipt covers the current blocks', () => {
   const receipt = JSON.parse(fs.readFileSync(RECEIPT, 'utf8')), digests = blockDigests(blocks);
   const changed = Object.keys(digests).filter(id => receipt.blocks?.[id] !== digests[id]), gone = Object.keys(receipt.blocks || {}).filter(id => !(id in digests));
   assert.deepEqual([changed, gone], [[], []], `blocks changed since the workshop check (${changed.slice(0, 5)}; gone ${gone.slice(0, 5)}): rerun review-house-part-blocks.mjs`);
+  assert.equal(receipt.nautilusCommit, NAUTILUS_COMMIT, 'the receipt is from another workshop pin: rerun review-house-part-blocks.mjs');
   for (const count of Object.values(receipt.counts)) assert.equal(count, blocks.length);
   assert.deepEqual(Object.keys(receipt.counts), ['fit', 'validated', 'importedUnchanged', 'placedMapValid', 'placedAndExtractedUnchanged', 'neighboursPlaceAndCapture', 'quarterTurnsRestore']);
   assert.deepEqual(receipt.failures, []);
@@ -427,12 +511,19 @@ test('the workshop receipt covers the current blocks', () => {
   assert(receipt.control.passedBeforeNeighbours && receipt.control.refusedByNeighbours, 'the edge-flush control must reach the neighbour check and fail it');
   assert.match(receipt.control.error, /crosses this block boundary/);
   assert.equal(receipt.browser?.passed, true, 'rerun with --browser');
+  assert.equal(receipt.browser.nautilusCommit, NAUTILUS_COMMIT, 'the browser evidence is from another workshop pin');
   assert.deepEqual(receipt.browser.scenarios.map(s => [s.id, s.blockDigest]), BROWSER_SAMPLES.map(id => [id, digests[id]]), 'the browser checked other blocks');
   assert(receipt.browser.scenarios.every(s => s.importedUnchanged && s.savedToDesignLibrary && s.exportedMapValid && s.everySlotHoldsTheHouse && s.exportedHouseMatchesPart
     && JSON.stringify(s.placedInSlots) === JSON.stringify([SLOT, ...NEIGHBOURS])));
+  // The only dialog the workshop may raise is its confirm before New map replaces the last house.
+  assert(receipt.browser.scenarios.every(s => s.dialogsAccepted.every(d => d === 'A workspace has unsaved changes. Continue replacing a design?')), 'an unexpected dialog');
   assert.equal(keptBrowser(receipt.browser, blocks), receipt.browser);
   const other = blocks.map(b => b.id === BROWSER_SAMPLES[2] ? {...b, block: flushWest(b.block)} : b);
   assert.equal(keptBrowser(receipt.browser, other), null, 'changed blocks drop the browser evidence');
+  const {scenarios} = receipt.browser;
+  for (const [name, changed] of Object.entries({'another pin': {...receipt.browser, nautilusCommit: 'f'.repeat(40)}, 'the last sample missing': {...receipt.browser, scenarios: scenarios.slice(0, -1)},
+    'samples reordered': {...receipt.browser, scenarios: [scenarios[1], scenarios[0], ...scenarios.slice(2)]}}))
+    assert.equal(keptBrowser(changed, blocks), null, name);
   // The samples stay varied: a party wall, three or more storeys, a sector crossing and an L-shape.
   const samples = BROWSER_SAMPLES.map(id => byId.get(id));
   assert(samples.every(blockFits));

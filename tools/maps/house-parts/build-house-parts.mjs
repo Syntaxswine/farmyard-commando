@@ -93,8 +93,11 @@ export function refusals(parts, town, trip) {
   const out = [], problems = parts.flatMap(validatePart), art = artMismatches(parts, town);
   if (problems.length) out.push(`${problems.length} part checks fail:\n  ${problems.slice(0, 20).join('\n  ')}`);
   if (trip.identical !== trip.sectors) {
-    const first = trip.mismatches[0], field = typeof first.field === 'string' ? first.field : `${first.field.path} is ${first.field.committed} in the file but ${first.field.stamped} from the parts`;
-    out.push(`The parts do not reproduce ${trip.sectors - trip.identical} of ${trip.sectors} sectors. First: ${first.id}, where ${field}.\n`
+    const first = trip.mismatches[0], head = `The parts do not reproduce ${trip.sectors - trip.identical} of ${trip.sectors} sectors.`;
+    if (first.threw) out.push(`${head} Stamping the parts threw: ${first.threw}`);
+    else if (typeof first.field === 'string') out.push(`${head} First: ${first.id}, where ${first.field}.\n`
+      + '  The values agree, so pyDumps in house-parts.mjs writes them differently from json.dumps in the generator; its comment lists the forms it matches.');
+    else out.push(`${head} First: ${first.id}, where ${first.field.path} is ${first.field.committed} in the file but ${first.field.stamped} from the parts.\n`
       + '  The parts are built from the current town, so regenerating them will not fix this. Either the sectors are stale '
       + `(python -B tools/maps/build-mount-dora.py --check), or the generator now writes building layers differently from ${MIRRORS}. Update the mirrors to match, then regenerate.`);
   }
@@ -107,7 +110,7 @@ export function refusals(parts, town, trip) {
 export function generate(town, {strict = true} = {}) {
   const parts = buildParts(town);
   let trip;
-  try { trip = roundTrip(parts, town); } catch (error) { trip = {sectors: town.sectors.length, identical: 0, mismatches: [{id: 'every sector', field: 'stamping threw: ' + error.message}]}; }
+  try { trip = roundTrip(parts, town); } catch (error) { trip = {sectors: town.sectors.length, identical: 0, mismatches: [{id: 'every sector', threw: error.message}]}; }
   const refused = refusals(parts, town, trip);
   if (strict && refused.length) throw Error('House parts refused:\n' + refused.join('\n'));
   const files = new Map();
@@ -138,22 +141,29 @@ export function compareFolder(dir, files) {
   return {stale, extra, current: !stale.length && !extra.length};
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const check = process.argv.includes('--check'), dir = path.join(root, PARTS_DIR);
-  const {files, index} = generate(await loadTown());
+// The command line, given the generated files: with check it compares them
+// with `dir`, otherwise it writes them there and removes extras. Returns the
+// exit code.
+export function runCli({check, dir, files, index, log = console.log, error = console.error}) {
   if (check) {
     const {stale, extra, current} = compareFolder(dir, files);
     if (!current) {
-      console.error(`House parts are stale: ${stale.length} differ or are missing (${stale.slice(0, 5).join(', ')}), ${extra.length} extra (${extra.slice(0, 5).join(', ')}).`);
-      console.error('Regenerate with: ' + REGENERATE);
-      process.exit(1);
+      error(`House parts are stale: ${stale.length} differ or are missing (${stale.slice(0, 5).join(', ')}), ${extra.length} extra (${extra.slice(0, 5).join(', ')}).`);
+      error('Regenerate with: ' + REGENERATE);
+      return 1;
     }
-    console.log(`House parts are current: ${index.counts.parts} parts; ${index.checks.sectors.byteIdentical}/${index.checks.sectors.stamped} sectors reproduced byte for byte.`);
-  } else {
-    fs.mkdirSync(dir, {recursive: true});
-    for (const f of compareFolder(dir, files).extra) fs.rmSync(path.join(dir, f));
-    for (const [name, text] of files) fs.writeFileSync(path.join(dir, name), text);
-    console.log(`Wrote ${files.size - 1} house parts and index.json to ${PARTS_DIR}; ${index.counts.fitABlock} fit a block.`);
-    console.log(JSON.stringify(index.checks, null, 1));
+    log(`House parts are current: ${index.counts.parts} parts; ${index.checks.sectors.byteIdentical}/${index.checks.sectors.stamped} sectors reproduced byte for byte.`);
+    return 0;
   }
+  fs.mkdirSync(dir, {recursive: true});
+  for (const f of compareFolder(dir, files).extra) fs.rmSync(path.join(dir, f));
+  for (const [name, text] of files) fs.writeFileSync(path.join(dir, name), text);
+  log(`Wrote ${files.size - 1} house parts and index.json to ${dir}; ${index.counts.fitABlock} fit a block.`);
+  log(JSON.stringify(index.checks, null, 1));
+  return 0;
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const {files, index} = generate(await loadTown());
+  process.exitCode = runCli({check: process.argv.includes('--check'), dir: path.join(root, PARTS_DIR), files, index});
 }

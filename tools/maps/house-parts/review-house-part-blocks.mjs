@@ -96,10 +96,18 @@ export async function reviewHeadlessParallel(source, blocks, threads = Math.max(
     worker.once('message', resolve); worker.once('error', reject);
     worker.once('exit', code => { if (code) reject(Error('Block review worker exited with ' + code)); });
   })));
+  return mergeResults(results);
+}
+
+// The workers' results as one: counts summed, added paths and failures joined.
+export function mergeResults(results) {
   const counts = Object.fromEntries(Object.keys(results[0].counts).map(k => [k, results.reduce((s, r) => s + r.counts[k], 0)]));
   return {counts, nativeAddedPaths: [...new Set(results.flatMap(r => r.nativeAddedPaths))].sort(),
     failures: results.flatMap(r => r.failures).sort((a, b) => a.id < b.id ? -1 : 1)};
 }
+
+// A review passes when no block failed and the edge control was refused at the neighbours.
+export const reviewPassed = (headless, control) => !headless.failures.length && control.passedBeforeNeighbours && control.refusedByNeighbours;
 
 if (!isMainThread && workerData?.houseParts) {
   const N = await import(pathToFileURL(path.join(workerData.source, 'packages/map-core/index.js')).href), wanted = new Set(workerData.ids);
@@ -115,11 +123,13 @@ export function edgeControl(N, blocks) {
     refusedByNeighbours: c.neighboursPlaceAndCapture === 0 && /crosses this block boundary/.test(error ?? ''), error};
 }
 
-// The previous browser evidence still holds only for the same samples with
-// unchanged blocks; otherwise it is dropped and --browser must run again.
+// The previous browser evidence still holds only for the same engine, the
+// same samples and unchanged blocks; otherwise it is dropped and --browser
+// must run again.
 export function keptBrowser(previous, blocks) {
   const digests = blockDigests(blocks);
-  const same = previous?.scenarios?.length === BROWSER_SAMPLES.length && previous.scenarios.every((s, i) => s.id === BROWSER_SAMPLES[i] && s.blockDigest === digests[s.id]);
+  const same = previous?.nautilusCommit === NAUTILUS_COMMIT && previous.scenarios?.length === BROWSER_SAMPLES.length
+    && previous.scenarios.every((s, i) => s.id === BROWSER_SAMPLES[i] && s.blockDigest === digests[s.id]);
   return same ? previous : null;
 }
 
@@ -223,7 +233,7 @@ async function browserScenario(page, N, {id, part, block, file, out}) {
     await page.locator('#scene').screenshot({path: screenshot});
     return {id, blockDigest: blockDigest(block), size: part.size, storeys: part.storeys.count, walls: part.walls.length, sharedWallsInTown: part.walls.some(w => w.sharedWith.length),
       crossesSectorsInTown: part.provenance.sectors.length > 1, importedUnchanged: true, savedToDesignLibrary: true, placedInSlots: [SLOT, ...NEIGHBOURS],
-      exportedMapValid: true, everySlotHoldsTheHouse: true, exportedHouseMatchesPart: true, dialogsAccepted: dialogs.length};
+      exportedMapValid: true, everySlotHoldsTheHouse: true, exportedHouseMatchesPart: true, dialogsAccepted: dialogs};
   } finally { page.off('dialog', accept); }
 }
 
@@ -237,11 +247,11 @@ if (isMainThread && process.argv[1] && path.resolve(process.argv[1]) === fileURL
   fs.mkdirSync(out, {recursive: true});
   const previous = fs.existsSync(RECEIPT) ? JSON.parse(fs.readFileSync(RECEIPT, 'utf8')) : null;
   const ran = args.includes('--browser') ? await reviewBrowser(source, blocks, out) : null;
-  const browser = ran ? {passed: ran.passed, browser: ran.browser, portReleased: ran.portReleased, scenarios: ran.scenarios} : keptBrowser(previous?.browser, blocks);
-  if (!ran && !browser) console.warn('The browser evidence no longer matches these blocks and was dropped; rerun with --browser.');
+  const browser = ran ? {passed: ran.passed, nautilusCommit: NAUTILUS_COMMIT, browser: ran.browser, portReleased: ran.portReleased, scenarios: ran.scenarios} : keptBrowser(previous?.browser, blocks);
+  if (!ran && !browser) console.warn('The browser evidence no longer matches this engine or these blocks and was dropped; rerun with --browser.');
   const receipt = {kind: 'house-part-workshop-receipt', version: 1, nautilusCommit: NAUTILUS_COMMIT, source: provenance, slot: SLOT, neighbours: NEIGHBOURS,
     ...headless, control, browser, blocks: blockDigests(blocks)};
   fs.writeFileSync(RECEIPT, JSON.stringify(receipt, null, 1) + '\n');
   console.log(JSON.stringify({counts: headless.counts, failures: headless.failures.slice(0, 5), control, browser: browser?.passed ?? 'not run'}, null, 1));
-  if (headless.failures.length || !control.refusedByNeighbours) process.exitCode = 1;
+  if (!reviewPassed(headless, control)) process.exitCode = 1;
 }

@@ -32,21 +32,30 @@ export const FRAME = {
   levels: 'every level from 0 to storeys has floor on floorCells: level 0 is the ground floor and level storeys is the roof deck',
   walls: 'walls are centrelines on the outline; the kit wall, kit.wallThicknessM thick, is centred on its line',
   rotation: 'world = at + R(rotationDeg) * (p - pivot), where R turns +x toward +y, which is clockwise on a north-up map',
-  angles: 'roof.ridgeAxisDeg is the ridge direction in this frame, degrees from +x toward +y, 0 to 180; roof.ridgeBearingMeasuredDeg is its compass bearing on the real house',
+  angles: 'roof.ridgeAxisDeg is the ridge direction in this frame, degrees from +x toward +y, at least 0 and under 180; roof.ridgeBearingMeasuredDeg is its compass bearing on the real house',
   geographic: 'latitude and longitude are WGS 84 degrees of placements.true.at, the centre of the outline bounds on the real house',
+  fit: 'placements.grid.fitIoU and placements.true.fitIoU are the intersection over union of the outline, placed with that pose, and the measured footprint',
+  edges: 'placements.grid.suppressedWallEdges are [polygon, ring, edge] indices into outline, where edge i runs from ring[i] to ring[i+1]',
 };
 
 // Every part comes out of the town's derived feature database, which carries
 // the ODbL (maps/mount-dora/source/NOTICE.txt); a file used on its own keeps it.
-const LICENSE = {license: 'ODbL-1.0', licenseUrl: 'https://opendatacommons.org/licenses/odbl/1-0/', notice: 'maps/mount-dora/source/NOTICE.txt'};
+const LICENSE = {license: 'ODbL-1.0', licenseUrl: 'https://opendatacommons.org/licenses/odbl/1-0/',
+  notice: 'Derived from OpenStreetMap through the Mount Dora feature database, under the ODbL 1.0; keep this licence and the attribution with any copy or derived database',
+  noticeFile: 'maps/mount-dora/source/NOTICE.txt'};
 const OSM_CREDIT = '© OpenStreetMap contributors, https://www.openstreetmap.org/copyright';
 const COUNTY_CREDIT = 'Lake County Property Appraiser (Florida) public records';
 const LIDAR_CREDIT = 'USGS 3D Elevation Program lidar, public domain';
 export const credits = (usesCounty, lidarDataset) => [OSM_CREDIT, ...(usesCounty ? [COUNTY_CREDIT] : []), `${LIDAR_CREDIT} (${lidarDataset})`];
+// Whether a building's part carries a county record: its footprint, its evidence or a value's source.
+export const usesCounty = (feature, address) => Boolean(feature.county || feature.nativeProxy.evidence?.county
+  || [feature.nativeProxy.storiesSource, feature.nativeProxy.materialSource, address?.source].some(s => s?.startsWith('county')));
 
-// The grid fit is inverted to find a house's true pose. These methods moved
-// the plan by componentCentre and translationMetres alone, so they invert.
-const INVERTIBLE_FITS = new Set(['shared-component-dominant-axis']);
+// How each grid-fit method's true pose is found. The shared-component fit
+// moved the plan by componentCentre and translationMetres alone, so it
+// inverts. A reviewed override moved the plan by hand, so its true pose
+// matches centroids instead. Any other method refuses until it is added here.
+const TRUE_POSE = {'shared-component-dominant-axis': 'inverse', 'reviewed-grid-override': 'centroid'};
 
 // Native kit dimensions the town was built with (Nautilus wall runs at the
 // workshop pin, docs/wall-runs.md); wall height and storey pitch also come per
@@ -76,7 +85,11 @@ export class PyFloat { constructor(value) { this.value = value; } toJSON() { ret
 
 // json.dumps(value, ensure_ascii=False, separators=(',', ':')) + '\n', the
 // generator's `encoded`. Compact JSON.stringify writes the same bytes for
-// everything else the sectors hold; PyFloat values print as Python floats.
+// what the sectors hold: strings (control characters, U+2028 and astral
+// characters included), integers up to 2^53 and floats whose shortest form has
+// a decimal point. It differs for an integral float (90.0), -0.0, exponents,
+// larger integers and integer-like keys, so those must arrive as PyFloat or
+// not at all; a difference fails the round trip, never passes it.
 export function pyDumps(value) {
   return JSON.stringify(value).replace(/"\\u0000([-+.e\d]+)\\u0000"/g, '$1') + '\n';
 }
@@ -213,7 +226,7 @@ export async function loadTown(base = root) {
 // Ridge bearing measured on the real house (compass degrees, 0-180) to the
 // ridge's angle in the part's own frame, from +x toward +y (0-180). The grid
 // plan is the house turned by -rotationDeg, so the ridge turns with it.
-export const localAxisDeg = (bearingDeg, rotationDeg) => round((((bearingDeg - 90 - rotationDeg) % 180) + 180) % 180, 1);
+export const localAxisDeg = (bearingDeg, rotationDeg) => { const v = round((((bearingDeg - 90 - rotationDeg) % 180) + 180) % 180, 1); return v === 180 ? 0 : v; };
 
 const SHIFT_COORDINATES = new Set(['frontGables']);
 const TREATMENT_KEYS = new Set(['type', 'wall', 'trim', 'roof', 'roofStyle', 'tint', 'stories', 'pitch', 'windowSpacing', 'veranda', 'roofFinish', 'roofAxis',
@@ -376,20 +389,23 @@ export function buildParts(town) {
     // -theta about componentCentre and moved it by translationMetres. A
     // reviewed override moved the plan by hand instead, so its true pose sets
     // the plan's centroid on the measured centroid at the measured angle.
-    const inverts = INVERTIBLE_FITS.has(d.method);
+    const how = TRUE_POSE[d.method];
+    if (!how) throw Error(`${f.id}: unknown grid-fit method ${d.method}; add how to find its true pose to TRUE_POSE in house-parts.mjs`);
+    const inverts = how === 'inverse';
     const fitted = inverts ? {pivot: [d.componentCentre[0] + d.translationMetres[0] - x0, d.componentCentre[1] + d.translationMetres[1] - y0], at: d.componentCentre}
       : {pivot: centroid(outline), at: centroid(source)};
     const truth = {pivot, at: placePoint(pivot, {...fitted, rotationDeg: theta}), rotationDeg: theta};
     const posed = pose => outline.map(polygon => polygon.map(ring => ring.map(v => placePoint(v, pose))));
     const [lat, lon] = town.projection.toLatLon(truth.at[0], truth.at[1]);
-    const roof = roofs.get(f.id), r = roof.record, rf = r.roof || {};
+    const roof = roofs.get(f.id);
+    if (!roof?.record) throw Error(`${f.id} has no lidar roof record in lidar-roofs.json or county-buildings.json`);
+    const r = roof.record, rf = r.roof || {};
     const placement = art.get(f.id);
     if (!placement) throw Error('No art placement for ' + f.id);
     const address = addressOf(f, references.get(f.id));
-    const county = Boolean(f.county || np.evidence?.county || [np.storiesSource, np.materialSource, address?.source].some(s => s?.startsWith('county')));
     const part = {
       kind: KIND, version: VERSION, id: f.id, name: f.tags?.name ?? null, address,
-      rights: {...LICENSE, attribution: credits(county, dataset)}, frame: FRAME,
+      rights: {...LICENSE, attribution: credits(usesCounty(f, address), dataset)}, frame: FRAME,
       size: [x1 - x0, y1 - y0], outline, floorCells: floorCells(outline),
       walls: (wallsOf.get(f.id) || []).map(w => ({a: local(w.a), b: local(w.b), sharedWith: w.owners.filter(o => o !== f.id), sourceWallId: w.id})),
       storeys: {count: np.stories, source: np.storiesSource, ...(np.halfStory ? {halfStorey: true} : {})},
@@ -398,7 +414,7 @@ export function buildParts(town) {
       roof: {form: rf.form ?? null, confidence: rf.confidence ?? null, basis: rf.basis ?? null, pitchDeg: rf.pitchDeg ?? null, pitch12: rf.pitch12 ?? null,
         ridgeAxisDeg: rf.ridgeBearingDeg == null ? null : localAxisDeg(rf.ridgeBearingDeg, theta), ridgeBearingMeasuredDeg: rf.ridgeBearingDeg ?? null,
         groundM: r.groundM, eaveM: r.eaveM, upperEaveM: r.upperEaveM ?? null, upperShare: r.upperShare ?? null, ridgeM: r.ridgeM, coverage: r.coverage,
-        heights: 'eaveM, upperEaveM and ridgeM are metres above groundM; groundM is NAVD88 metres; ridgeAxisDeg is in the part frame',
+        heights: 'eaveM, upperEaveM and ridgeM are metres above groundM; groundM is NAVD88 metres; ridgeAxisDeg is in the part frame; coverage is the share, 0 to 1, of the outline that lidar roof returns cover',
         source: {dataset, observed: acquired.first, file: roof.file}},
       appearance: {kit: 'Mount Dora production art kit (sites/tactical-animal/dist/mission-art/mount-dora)',
         treatment: shiftTreatment(placement.treatment, [-x0, -y0]), seed: placement.seed, collisionPolicy: placement.collisionPolicy, provenance: placement.provenance},

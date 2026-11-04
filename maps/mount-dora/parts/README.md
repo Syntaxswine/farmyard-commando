@@ -54,10 +54,12 @@ in `tools/maps/house-parts/house-parts.mjs` are the reference implementation.
   town. 10 parts have any.
 - **True pose** (`placements.true`): the angle the grid fit removed when it
   squared the house to the town grid, with the latitude and longitude of the
-  house's centre. Most Mount Dora houses are within a few degrees of the grid.
-  For the 52 turned more than 5°, the true pose covers the measured footprint
-  at a median IoU of 0.91, against 0.66 squared to the grid and 0.58 turned the
-  wrong way about the same centre. It wins on all 52.
+  centre of its bounds. Most Mount Dora houses are within a few degrees of the
+  grid, and for them the two poses fit about equally: on 235 the grid pose is
+  better, by at most 0.024. For the 52 turned more than 5°, the true pose
+  covers the measured footprint at a median IoU of 0.91, against 0.66 squared
+  to the grid and 0.58 turned the wrong way about the same centre. It wins on
+  all 52.
 - **Reviewed overrides:** the review moved three plans by hand, so their grid
   fit does not invert (`placements.true.basis`). Their true pose sets the plan's
   centroid on the measured centroid at the measured angle. The Chamber of
@@ -96,7 +98,10 @@ sits centred in it; `housePart.offset` records where.
 `workshop.json` is the receipt for the pinned workshop at Nautilus `2502646`:
 - **Every block:** validates, imports with no value changed, places into a valid
   map and extracts back unchanged. Copies then go into the four slots around it,
-  every slot captures back unchanged, and four quarter turns restore it.
+  every slot captures back unchanged, and four quarter turns restore it. "Valid"
+  is the engine's validation with connectivity off, as when placing by hand: a
+  closed house dropped on the default squad starts (sector 1,1 of a new map)
+  can cut them off, which a full validation reports.
 - **A control:** a house moved flush against its block's edge passes every step
   up to the neighbours, then the engine refuses it, as it did 67 blocks before
   the margin.
@@ -104,10 +109,11 @@ sits centred in it; `housePart.offset` records where.
   in a slot and its four neighbours, Export. They include a party-wall house, a
   four-storey house and one that crosses sectors in the town.
 
-The receipt pins a digest of each block's geometry. A part's name, look,
-address or evidence can change without staling it; a change to the cells,
-levels or walls of a block-sized part does, and the test names the block. Then
-rerun it (the commands are in `maps/mount-dora/workshop/README.md`):
+The receipt pins a digest of each block's geometry, with the engine commit. A
+part's name, look, address, evidence or place in the town can change without
+staling it; a change to the cells, levels or walls of a block-sized part does,
+and so does a new engine pin. The test names the block. Then rerun it (the
+commands are in `maps/mount-dora/workshop/README.md`):
 
 ```powershell
 node tools/prepare-mount-dora-workshop.mjs --source artifacts/mount-dora-workshop/nautilus-2502646 --git-source <read-only Nautilus repository> --project maps/mount-dora/project.json
@@ -115,7 +121,9 @@ node tools/maps/house-parts/review-house-part-blocks.mjs --source artifacts/moun
 ```
 
 Without `--browser` the review keeps the earlier browser evidence only while
-those five blocks are unchanged.
+the engine pin and those five blocks are unchanged. The browser drives the
+built workshop in `dist/`; the source check covers the tracked files it is
+built from.
 
 ## Regenerating and checking
 

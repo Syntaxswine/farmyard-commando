@@ -24,11 +24,16 @@ export function allBlocks(base = root) {
 
 export const blockText = block => JSON.stringify(block) + '\n';
 
-// What the workshop's checks read from a block: all of it but the name, which
-// the engine only requires to be 1 to 60 characters, and housePart, which
-// points back to the part file. The receipt pins this per block, so a change
-// to a part's look, address or evidence does not stale it.
-export const blockGeometry = ({name, housePart, ...rest}) => rest;
+// What the workshop's checks read from a block. Three things are left out:
+// - the name, which the engine only requires to be 1 to 60 characters;
+// - housePart, which points back to the part file;
+// - the run ids, which the engine checks only for form and placement renames.
+//   They hash the house's town coordinates, so they change when a house moves.
+// The runs are sorted, so their order does not count either. The receipt pins
+// this per block, so a part's look, address, evidence or place in the town can
+// change without staling it.
+export const blockGeometry = ({name, housePart, wallRuns, ...rest}) =>
+  ({...rest, wallRuns: {...wallRuns, segments: wallRuns.segments.map(({id, ...run}) => JSON.stringify(run)).sort()}});
 export const blockDigest = block => sha256(JSON.stringify(blockGeometry(block))).slice(0, 16);
 export const blockDigests = blocks => Object.fromEntries(blocks.map(b => [b.id, blockDigest(b.block)]));
 

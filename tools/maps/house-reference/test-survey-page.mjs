@@ -47,10 +47,16 @@ const exportFile = async page => {
   const [download] = await Promise.all([page.waitForEvent('download'), page.click('#export')]);
   return JSON.parse(await fs.readFile(await download.path(), 'utf8'));
 };
-const importFile = async (page, doc) => {
+// Waits for the import's own message: clear the status line first, so an earlier one cannot satisfy it.
+const importFile = async (page, doc, expect = '^(Imported|Import failed)') => {
+  await page.evaluate(() => { document.querySelector('p#status').textContent = ''; });
   await page.setInputFiles('#import', {name: 'house-survey.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(doc))});
-  await page.waitForFunction(() => /^(Imported|Import failed|The house reference)/.test(document.querySelector('p#status').textContent));
+  await page.waitForFunction(source => new RegExp(source).test(document.querySelector('p#status').textContent), expect);
 };
+// The button for an option of a field: fields in FIELDS order (0 storeys, 1 roof shape, 3 walls).
+const option = (page, field, text) => page.locator('#fields fieldset').nth(field).locator('button', {hasText: text});
+const pressed = (page, field, text) => page.waitForFunction(([n, t]) => [...document.querySelectorAll('#fields fieldset')[n].querySelectorAll('button')]
+  .some(b => b.textContent.includes(t) && b.getAttribute('aria-pressed') === 'true'), [field, text]);
 
 const browser = await chromium.launch({headless: true});
 let passed = 0;
@@ -82,7 +88,8 @@ try {
     await page.click('#clear');
     await page.fill('#note', 'typed before load'); await page.dispatchEvent('#note', 'change');
     await page.fill('#imagery', '2024-03'); await page.dispatchEvent('#imagery', 'change');
-    await importFile(page, {kind: 'mount-dora-house-survey', version: 3, answers: {'osm-way-9': {stories: '1', at: old(4)}}});
+    await page.locator('body').press('1');
+    await importFile(page, {kind: 'mount-dora-house-survey', version: 3, answers: {'osm-way-9': {stories: '1', at: old(4)}}}, 'export and import are off');
     await page.click('#export');
     assert.deepEqual(await stored(page), saved, 'a failed load leaves the saved answers as they were');
     assert.equal(downloads, 0);
@@ -126,6 +133,38 @@ try {
     await answerStoreys(second, OTHER);
     const after = await stored(second);
     assert.ok(after[HOUSE]?.stories && after[OTHER]?.stories, JSON.stringify(after));
+  });
+
+  await scenario('two tabs on one building: each change builds on the other\'s, a clearing stays cleared, and both show it', async context => {
+    const first = await open(context), second = watch(await context.newPage());
+    await second.goto(base); await loaded(first); await loaded(second);
+    await first.click(`#queue button[data-id="${HOUSE}"]`); await second.click(`#queue button[data-id="${HOUSE}"]`);
+    await option(first, 1, 'Gable').click();
+    await pressed(second, 1, 'Gable');                     // the other tab redraws from storage
+    await option(second, 3, 'Wood siding').click();
+    assert.deepEqual([(await stored(first))[HOUSE].roofShape, (await stored(first))[HOUSE].wall], ['gable', 'wood-siding'], 'neither change lost the other');
+    await pressed(first, 3, 'Wood siding');
+    await first.click('#clear');
+    await second.fill('#note', 'after the clear'); await second.dispatchEvent('#note', 'change');
+    const after = (await stored(second))[HOUSE];
+    assert.deepEqual([after.note, after.roofShape, after.wall, after.cleared], ['after the clear', undefined, undefined, undefined], 'the stale tab does not revive the cleared fields');
+  });
+
+  await scenario('a copy dated in the future (a fast clock elsewhere) does not freeze a building', async context => {
+    const page = await open(context); await loaded(page);
+    const ahead = new Date(Date.now() + 3600e3).toISOString();
+    await importFile(page, {kind: 'mount-dora-house-survey', version: 3, answers: {[HOUSE]: {stories: '2', at: ahead}, [GONE]: {stories: '1', at: ahead}}});
+    assert.match(await statusLine(page), /2 dated in the future/);
+    await page.selectOption('#show', 'all');               // HOUSE is answered now, so To do hides it
+    await page.click(`#queue button[data-id="${HOUSE}"]`);
+    await option(page, 1, 'Gable').click();
+    let house = (await stored(page))[HOUSE];
+    assert.deepEqual([house.stories, house.roofShape, house.at > ahead], ['2', 'gable', true], 'the edit wins, dated after the copy it replaced');
+    await page.click('#clear');
+    house = (await stored(page))[HOUSE];
+    assert.deepEqual([house.cleared, house.at > ahead], [true, true]);
+    await page.locator('#unknown div', {hasText: GONE}).locator('button').click();
+    assert.deepEqual([(await stored(page))[GONE].cleared, await page.isHidden('#unknown')], [true, true], 'Drop takes effect too');
   });
 
   await scenario('an answer for an unknown building id is listed with what it holds, exported and kept on import', async context => {

@@ -96,6 +96,20 @@ export function newestPerId(a, b) {
   return out;
 }
 
+// The stamp for a local write: now, or just after the copy it replaces when
+// that copy is dated later (another browser's clock ran fast, or this one runs
+// slow), so the write always outranks what it replaced, here and on import.
+export function stampAfter(previous, now = Date.now()) {
+  const before = Date.parse(previous?.at ?? '');
+  return new Date(Number.isFinite(before) ? Math.max(now, before + 1) : now).toISOString();
+}
+
+// How many copies in an export are dated after now, past a minute's slack.
+export function datedAhead(doc, now = Date.now(), slackMs = 60000) {
+  const stamps = [...Object.values(doc.answers || {}).map(a => a?.at), ...Object.values(doc.cleared || {})];
+  return stamps.filter(at => Date.parse(at ?? '') > now + slackMs).length;
+}
+
 // Import: per building the newer copy wins, an answer or a clearing; an answer
 // with nothing in it never outranks either. Answers for ids this queue lacks
 // are kept too, so a teammate's answer made with other files is never dropped.
@@ -108,7 +122,7 @@ export function mergeAnswers(mine, doc, keys, known) {
     const held = live(answers[id]);
     if (!next || held && (next.at || '') <= (held.at || '')) continue;
     answers[id] = next;
-    if (isCleared(next)) cleared++; else { added++; if (!known.has(id)) unknown++; }
+    if (!isCleared(next)) { added++; if (!known.has(id)) unknown++; } else if (held && !isCleared(held)) cleared++;
   }
   return {answers, added, cleared, unknown};
 }

@@ -5,8 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
-import {cleanAnswer, edgeKey, exportDocument, mergeAnswers, nearestEdge, newestPerId, outlineText, pinMismatches, queueEntries, staleEntrances, toggleEntrance,
-  unitEdges, unknownAnswers,
+import {cleanAnswer, datedAhead, edgeKey, exportDocument, mergeAnswers, nearestEdge, newestPerId, outlineText, pinMismatches, queueEntries, stampAfter,
+  staleEntrances, toggleEntrance, unitEdges, unknownAnswers,
   warningsFor} from '../../maps/mount-dora/reference/survey/model.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -100,6 +100,22 @@ test('a cleared answer is a dated mark that outranks any older copy, from an imp
   const merged = newestPerId({'osm-way-1': {stories: '2', at: at(3)}, 'osm-way-2': {stories: '4', at: at(9)}}, {'osm-way-1': gone, 'osm-way-2': {stories: '1', at: at(2)}});
   assert.deepEqual([merged['osm-way-1'], merged['osm-way-2'].stories], [gone, '4']);
   assert.equal(newestPerId({x: {stories: '1', at: at(1)}}, {x: {stories: '2', at: at(1)}}).x.stories, '2');
+});
+
+test('a local write is dated after the copy it replaces, whatever the clocks say', () => {
+  const now = Date.parse('2026-11-04T12:00:00.000Z');
+  assert.equal(stampAfter({at: '2026-11-04T11:00:00.000Z'}, now), '2026-11-04T12:00:00.000Z', 'an older copy: now');
+  assert.equal(stampAfter({at: '2026-11-04T13:00:00.000Z'}, now), '2026-11-04T13:00:00.001Z', 'a copy from a fast clock: just after it');
+  assert.equal(stampAfter({cleared: true, at: '2026-11-05T00:00:00.000Z'}, now), '2026-11-05T00:00:00.001Z', 'a clearing too');
+  for (const previous of [undefined, {}, {at: 'never'}]) assert.equal(stampAfter(previous, now), '2026-11-04T12:00:00.000Z');
+  // The written copy then outranks the one it replaced, on merge and between tabs.
+  const ahead = {stories: '2', at: '2026-11-04T13:00:00.000Z'}, edit = {stories: '1', at: stampAfter(ahead, now)};
+  assert.equal(newestPerId({x: ahead}, {x: edit}).x, edit);
+  assert.equal(mergeAnswers({x: edit}, {answers: {x: ahead}}, KEYS, new Set(['x'])).added, 0);
+  // Import counts what is dated past a minute ahead.
+  assert.equal(datedAhead({answers: {a: {at: '2026-11-04T12:00:30.000Z'}, b: {at: '2026-11-04T12:02:00.000Z'}, c: {}}, cleared: {d: '2026-11-05T00:00:00.000Z'}}, now), 2);
+  // A clearing counts as clearing something only where there was an answer to clear.
+  assert.equal(mergeAnswers({}, {answers: {}, cleared: {x: '2026-11-04T12:00:00.000Z'}}, KEYS, new Set(['x'])).cleared, 0);
 });
 
 test('an entrance the outline has since lost is found, so it can be removed', () => {

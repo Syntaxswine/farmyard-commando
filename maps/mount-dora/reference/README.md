@@ -198,9 +198,13 @@ the newest copy per building, keeping the newer copy whole rather than merging
 fields. So two people can split the town by sector, but a building on a sector
 edge is listed under both sectors, and only one of them should answer it.
 Clearing an answer, or dropping one, leaves a dated mark that the export carries
-under `cleared`, so importing an older file never brings it back. Two tabs merge
-their saves the same way, building by building, so a stale tab cannot overwrite
-another's. Until the reference files load, nothing saves, imports or exports.
+under `cleared`, so importing an older file never brings it back. Every change
+first takes the newest copy of each building from the browser's storage, and the
+page redraws when another tab saves. So a second tab builds on the first tab's
+answers instead of writing over them. Each change is dated after the copy it
+replaces, so a copy stamped by a clock running fast cannot freeze a building.
+Import says when a file holds copies dated in the future. Until the reference
+files load, nothing saves, imports or exports.
 
 An answer can name a building id this queue lacks: the town no longer has the
 building, its id changed (a county building's can when the county data does), or
@@ -245,9 +249,16 @@ building's current outline. The generator copies entrances into `nativeProxy`
 as given, and the page warns of a stale one only when that building is opened.
 
 `tools/maps/house-reference/test-survey-page.mjs` drives the page headlessly in
-Chromium, through its own controls, and the workshop CI job runs it. It covers
-the status line and filters, the load guard on every write, clearings surviving
-an import, two tabs, and unknown answers.
+Chromium, through its own controls, and the workshop CI job runs it. It covers:
+- the status line and the Show filter;
+- Clear, the note, the image date, a storey key, Import and Export, which write
+  nothing before the reference files load, whether the load fails or is slow;
+- a cleared and a dropped answer surviving an import;
+- two tabs, on different buildings and on one;
+- a copy dated in the future;
+- unknown answers.
+
+Any uncaught page error fails it.
 
 ## Use in the generator and the art kit
 

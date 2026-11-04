@@ -16,8 +16,11 @@ This folder adds two layers on top of the OSM geography, without editing it:
    sees: roof shape, colours, wall finish, porch. Answers export to
    `house-survey.json`.
 
-Nothing here changes the sectors, `features.json` or the art kit, and the Pages
-build does not publish this folder (`build.mjs` copies an explicit file list).
+These files feed the generator and, through it, the sectors, `features.json`
+and the art kit ([below](#use-in-the-generator-and-the-art-kit)). A committed
+`house-survey.json` does too, so regenerate after changing it
+([Surveying](#surveying)). The Pages build does not publish this folder
+(`build.mjs` copies an explicit file list).
 
 ## What the county records add
 

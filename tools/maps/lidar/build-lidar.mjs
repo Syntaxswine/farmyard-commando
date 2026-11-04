@@ -12,7 +12,8 @@
 //   reference/lidar/bare-earth.json          grid definition, encoding, statistics
 //   reference/county-buildings.json          county-sketched buildings the game
 //                                            lacks, placed on their roofs
-//                                            (county-buildings.mjs)
+//                                            (county-buildings.mjs), each with
+//                                            a planned Street View camera
 // Nothing here edits the generator, the sectors or the art kit.
 //
 //   node tools/maps/lidar/build-lidar.mjs [--check]
@@ -23,6 +24,8 @@ import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {area, bounds, centroid, contains} from '../house-reference/geometry.mjs';
 import {featuresPin, isOsm} from '../house-reference/features-digest.mjs';
+import {createProjection} from '../house-reference/projection.mjs';
+import {ADDRESS_NEAR_M, ADDRESS_SLACK_M, aerialUrl, planStreetView, VIEW_RADIUS_M, viewRoads} from '../house-reference/viewpoint.mjs';
 import {cacheDir, MARGIN_M} from './fetch-lidar.mjs';
 import {loadPoints, pointsIn} from './points.mjs';
 import {classifyRoof, median, percentile, ROOF} from './roofs.mjs';
@@ -363,28 +366,37 @@ export async function build() {
   const saw = (b, seen) => b.roofShare >= PLACE.roofAt ? 'class-6 roof'
     : seen.raisedShare >= .5 ? 'raised returns without the building class: a deck classed as ground, or a roof under trees'
     : seen.groundShare >= .5 ? 'open ground in December 2018; placed on the county record alone' : 'too few returns to tell';
+  // The survey's camera, planned as for the game buildings in house-reference.json.
+  const view = viewRoads(features), {toLatLon} = createProjection(project.projection);
   const countyBuildings = placedCounty.buildings.map(b => {
     const geometry = shift(b.geometry, reg.dx, reg.dy), house = {feature: {id: b.id}, area: area(b.geometry), centre: centroid(geometry)};
     const a = analyse(index, house, geometry, gridZ), seen = b.roofShare >= PLACE.roofAt ? null : underfoot(index, pointsIn, geometry, a.groundM);
-    return {id: b.id, areaM2: r1(house.area), centroid: centroid(b.geometry).map(r2), angleDeg: b.angleDeg, clippedByGameM2: b.clippedByGameM2, ...(b.piece ? {piece: b.piece} : {}),
+    const lidar = record(house, a), centre = centroid(b.geometry);
+    const streetView = planStreetView(view, {geometry: b.geometry, box: bounds(b.geometry), centre},
+      {stories: b.county.suggested.stories ?? lidar.storeysFromLidar, address: b.lot.address}, toLatLon);
+    return {id: b.id, areaM2: r1(house.area), centroid: centre.map(r2), address: b.lot.address, placeName: b.lot.placeName, parcel: b.lot.parcel,
+      angleDeg: b.angleDeg, clippedByGameM2: b.clippedByGameM2, ...(b.piece ? {piece: b.piece} : {}),
       roofShare: b.roofShare, lidarSaw: saw(b, seen), ...(seen ? {underfoot: seen} : {}),
-      members: b.members.map(brief), geometry: {type: 'MultiPolygon', coordinates: b.geometry}, county: b.county, lidar: record(house, a)};
+      members: b.members.map(brief), geometry: {type: 'MultiPolygon', coordinates: b.geometry}, county: b.county, lidar,
+      streetView, aerialUrl: aerialUrl(centre, toLatLon)};
   });
   const tally = (list, fn) => Object.fromEntries([...list.reduce((m, x) => m.set(fn(x), (m.get(fn(x)) || 0) + 1), new Map())].sort());
   const countyCompared = countyBuildings.filter(b => b.county.suggested.stories && b.lidar.storeysFromLidar);
   const countyDoc = {kind: 'mount-dora-county-buildings', version: 1,
     inputs: {features: featuresPin(featuresBytes), houseReference: {file: 'maps/mount-dora/reference/house-reference.json', sha256: hash(countyBytes), usedFor: 'countyOnly sketches and the records game buildings hold'},
       lidar: {file: 'maps/mount-dora/reference/lidar/source.json', sha256: hash(sourceBytes)}},
-    policy: 'Lake County Property Appraiser building sketches that no game building claims, placed on public-domain USGS 3DEP lidar roofs. build-mount-dora.py adds `buildings` to the town; `represented` lists sketches of buildings the game already has. No imagery; no owner, value or sale data.',
+    policy: 'Lake County Property Appraiser building sketches that no game building claims, placed on public-domain USGS 3DEP lidar roofs. build-mount-dora.py adds `buildings` to the town; `represented` lists sketches of buildings the game already has. Street View is opened in Google Maps by URL for a person to look at; no imagery is requested, stored or traced. No owner, value or sale data.',
     method: {place: PLACE, frame: 'Town metres in the OSM frame, as the game outlines: the sketch shift is applied after the outline registration of lidar-roofs.json is taken out.',
       register: `Each sketch moves by the whole 0.5 m cell shift within ±${PLACE.searchM} m that puts most of it over class-6 returns; one with under ${PLACE.roofAt} of its area on a roof stays where the county drew it.`,
       structures: `Sketches that overlap or come within ${PLACE.touchM} m are one structure: stacked condo units, attached units, a house drawn twice. Its outline is their union, closed across gaps under ${PLACE.touchM} m and simplified to ${PLACE.simplifyM} m in its own wall axes.`,
       represented: `Already in the game: a structure ${PLACE.onGameAt * 100}%+ on game buildings, the generator's hand-placed shelters and stages, or OSM multi-storey car parks; a roofless one over a game building by more than ${PLACE.staleOnGameAt * 100}%; a sketch whose record a game building holds and overlaps by more than ${PLACE.holderAt * 100}%; one with under ${PLACE.minAddM2} m² or ${PLACE.minAddShare * 100}% of its area outside game buildings.`,
-      added: 'Every other structure, minus the parts game buildings cover. Heights and roof planes as in lidar-roofs.json. County facts: the largest sketch\'s record, with the tallest record\'s storeys.'},
+      added: 'Every other structure, minus the parts game buildings cover. Heights and roof planes as in lidar-roofs.json. County facts: the largest sketch\'s record, lot and address, with the tallest record\'s storeys.',
+      streetView: `For the survey, planned as for the game buildings (house-reference.json, tools/maps/house-reference/viewpoint.mjs). The camera stands within ${VIEW_RADIUS_M} m: on the lot's addressed street where its nearest point is within ${ADDRESS_NEAR_M} m, or no more than ${ADDRESS_SLACK_M} m farther than the nearest public road; else on that public road, then a service road, then any mapped way. It faces the outline's centre. The pitch rises with the county storeys, or the lidar's where the county has none; the game buildings' cameras are planned before the lidar, from county storeys alone.`},
     metrics: {sketches: houseRef.countyOnly.length, represented: placedCounty.represented.length, representedBy: tally(placedCounty.represented, r => r.reason.replace(/\d+%/, 'N%').replace(/only [\d.]+ m2/, 'only N m2')),
       buildings: countyBuildings.length, sketchesInBuildings: countyBuildings.reduce((n, b) => n + b.members.length, 0), areaM2: r1(countyBuildings.reduce((n, b) => n + b.areaM2, 0)),
       lidarSaw: tally(countyBuildings, b => b.lidarSaw), storeysFromLidar: tally(countyBuildings, b => String(b.lidar.storeysFromLidar)),
-      countyStoreysAgreeWithLidar: {compared: countyCompared.length, agree: countyCompared.filter(b => b.county.suggested.stories === b.lidar.storeysFromLidar).length}},
+      countyStoreysAgreeWithLidar: {compared: countyCompared.length, agree: countyCompared.filter(b => b.county.suggested.stories === b.lidar.storeysFromLidar).length},
+      withStreetView: countyBuildings.filter(b => b.streetView).length, onAddressedStreet: countyBuildings.filter(b => b.streetView?.onAddressedStreet).length},
     buildings: countyBuildings, represented: placedCounty.represented};
 
   const s = index.stats, areaM2 = W * D, flights = [...s.flights.values()];

@@ -15,6 +15,7 @@ import math
 from pathlib import Path
 import re
 import importlib.util
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 _grid_spec = importlib.util.spec_from_file_location('mount_dora_grid', Path(__file__).with_name('mount_dora_grid.py'))
@@ -392,6 +393,19 @@ def county_buildings(project=PROJECT):
     return features
 
 
+def lost_survey_answers(evidence, features):
+    """Survey answers keyed to no building in the town.
+
+    building_style looks answers up by building id, so these apply to nothing:
+    the building is gone, or its id changed (a county building's can when the
+    county data does). build_project lists them in project.json and warns,
+    rather than refusing, so the regenerated town and house reference let the
+    survey page show them for re-keying or dropping.
+    """
+    known = {f["id"] for f in features if f["category"] == "building"}
+    return sorted(item_id for item_id, found in evidence.items() if "survey" in found and item_id not in known)
+
+
 def building_style(feature, evidence=None):
     """Storeys and wall material, from the best evidence available.
 
@@ -645,6 +659,14 @@ def build_project(project=PROJECT):
     config, projection, source_records, features, diagnostics = load_source(project)
     evidence, evidence_inputs = load_evidence(project)
     features = sorted(features + county_buildings(project), key=lambda f: f["id"])
+    lost = lost_survey_answers(evidence, features)
+    for record in evidence_inputs:
+        if record["kind"] == "survey":
+            record["lost"] = lost
+    if lost:
+        print("warning: reference/house-survey.json answers %d building id(s) the town no longer has, and they apply to nothing: %s. "
+              "project.json lists them as lost. Re-key or drop each in the survey page, then export again." % (len(lost), ", ".join(lost)),
+              file=sys.stderr)
     extent = config["extent"]
     width, depth, size = extent["widthM"], extent["depthM"], extent["sectorSizeM"]
     if width != 1440 or depth != 1680 or size != 240 or extent["columns"] != 6 or extent["rows"] != 7:

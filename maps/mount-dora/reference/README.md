@@ -16,8 +16,11 @@ This folder adds two layers on top of the OSM geography, without editing it:
    sees: roof shape, colours, wall finish, porch. Answers export to
    `house-survey.json`.
 
-Nothing here changes the sectors, `features.json` or the art kit, and the Pages
-build does not publish this folder (`build.mjs` copies an explicit file list).
+These files feed the generator and, through it, the sectors, `features.json`
+and the art kit ([below](#use-in-the-generator-and-the-art-kit)). A committed
+`house-survey.json` does too, so regenerate after changing it
+([Surveying](#surveying)). The Pages build does not publish this folder
+(`build.mjs` copies an explicit file list).
 
 ## What the county records add
 
@@ -29,7 +32,7 @@ build does not publish this folder (`build.mjs` copies an explicit file list).
 | Wall material from a source | 0 | 759 (265 wood frame) |
 | Roof cover known | 0 | 729: 519 shingle, 176 metal, 18 tar-and-gravel (flat), 10 rolled, 6 tile |
 | Porch recorded | 0 | 638 |
-| Planned Street View camera | 0 | 950 (865 on the addressed street; median 24 m away) |
+| Planned Street View camera | 0 | 950 (873 on the addressed street; median 24 m away) |
 
 How each building was matched (`match.method`):
 
@@ -83,8 +86,15 @@ lidar's building returns (class 6) tell them apart:
   that mapped water, as it does for any mapped footprint.
 - **Pieces:** a native outline is one connected footprint, so a sketch of two
   parts meeting at a corner becomes two buildings (`-part2`).
-- **Not done:** these buildings are not in the survey's queue yet, and have no
-  Street View viewpoint.
+- **Survey:** each building takes the lot and address of its largest sketch
+  with a record (its first sketch, if none has one). It gets a Street View
+  camera planned as for the game buildings
+  (`tools/maps/house-reference/viewpoint.mjs`), except that the camera's pitch
+  may follow the lidar storeys where the county has none: the game buildings'
+  cameras are planned before the lidar, from county storeys alone. 111 of 126
+  stand on the addressed street, median 26 m away. All 126 are in the survey's
+  queue. A piece (`-part2`) keeps the lead sketch's lot even where it lies on
+  another member's; no current structure has one that does.
 
 ## Caveats, checked on real buildings
 
@@ -141,9 +151,9 @@ Openly licensed street photos exist on Mapillary (CC BY-SA), but in November
 | `county/source.json` | `fetch-county.mjs` | URLs, retrieval times, bytes and SHA-256 of every input and kept file |
 | `house-reference.json` | `build-house-reference.mjs` | One record per game building, plus `countyOnly` |
 | `survey/` | hand-written | The survey page |
-| `house-survey.json` | the survey's Export | A person's answers, keyed by building id (not created yet) |
+| `house-survey.json` | the survey's Export | A person's answers, keyed by game building id (not created yet) |
 | `lidar-roofs.json` | `tools/maps/lidar/build-lidar.mjs` | Lidar roof form, eave and ridge heights and ground per game building |
-| `county-buildings.json` | `tools/maps/lidar/build-lidar.mjs` | County-sketched buildings OSM lacks, placed on their lidar roofs, and the sketches already in the game |
+| `county-buildings.json` | `tools/maps/lidar/build-lidar.mjs` | County-sketched buildings OSM lacks, placed on their lidar roofs with a planned Street View camera each, and the sketches already in the game |
 | `lidar/` | `tools/maps/lidar/` | Lidar provenance and the 1 m bare-earth grid ([details](lidar/README.md)) |
 
 Owner names and mailing addresses, sale prices, appraised values, exemptions,
@@ -168,7 +178,12 @@ the newest release; `--release 100626` pins one. A re-fetch changes
 ## Surveying
 
 Open the survey, pick a sector or keep the whole town, and work down the queue.
-It runs street by street. For each building:
+It runs street by street through all 1,076 game buildings: the 950 OSM ones
+(`house-reference.json`) and the 126 county-sketched ones OSM lacks
+(`county-buildings.json`). The latter are marked *county* in the queue, and
+typing `county-` in Find lists only them. Since OSM lacks them, check that each
+stands as drawn; the six with no 2018 lidar roof say so. If Street View shows no
+building, flag *Changed since the record*. For each building:
 
 1. Press **V**. Street View opens in a second tab, always the same one, at the
    nearest panorama, facing the building. Pan if it is off-centre. **A** opens
@@ -177,34 +192,114 @@ It runs street by street. For each building:
 3. If you can see a door, click the dashed game outline on the mini-map where it
    is. That marks one 1 m wall edge; click it again to remove it.
 4. Type the panorama's "Image capture" month (`2024-03`) and pick a confidence.
-5. Press **Enter** for the next building. Answers save in the browser as you go.
+5. Press **Enter** for the next building. Answers save in the browser as you go:
+   a button as you click it, a note or a date when you leave the field (or the
+   page).
 
-Export whenever you stop, and commit the file as
-`maps/mount-dora/reference/house-survey.json`. Import merges by the newest answer
-per building, so two people can split the town by sector.
+Export whenever you stop. To commit:
+1. Import the committed `maps/mount-dora/reference/house-survey.json`, so the
+   export includes everyone's answers, not only those in your browser.
+2. Export, and put the export in its place.
+3. Regenerate what it feeds:
+   - `python -B tools/maps/build-mount-dora.py` (storeys, walls and the sectors);
+   - `node maps/mount-dora/art/tools/build-playable.mjs` (the art kit);
+   - `node tools/maps/review-mount-dora-routes.mjs` (the route pin);
+   - the workshop review in [workshop/README.md](../workshop/README.md).
+4. Commit them together.
+
+Import merges by the newest copy per building, keeping the newer copy whole
+rather than merging fields. So two people can split the town by sector, but a
+building on a sector edge is listed under both sectors, and only one of them
+should answer it.
+
+Clearing an answer, or dropping one, leaves a dated mark that the export carries
+under `cleared`, so importing an older file never brings it back.
+
+Every change first takes the newest copy of each building from the browser's
+storage, and the page redraws when another tab saves. So a second tab builds on
+the first tab's answers instead of writing over them. Each change is dated after
+the copy it replaces.
+
+Import reads every stamp as a date, in whatever form it comes, and treats
+anything else as undated. A copy dated more than a minute ahead of this
+browser's clock comes from a clock running fast (or this one runs slow).
+- It never replaces an answer here.
+- Where there is none, it lands with its own stamp. An edit made on top of it is
+  then dated after it, and keeps its order on every machine.
+- A stamp more than a day ahead means a broken clock, and is read as undated.
+- If import keeps the copy here against a copy dated ahead, set whichever clock
+  is off, then import again.
+
+Import names what it replaced, what it did not take because the copy here is
+newer, and what it kept here against a copy dated ahead: up to 20 buildings per
+list, then a count. An identical copy, such as one in the file you just
+exported, changes nothing and is not mentioned.
+
+Until the reference files load, nothing saves, imports or exports.
+
+An answer can name a building id this queue lacks: the town no longer has the
+building, its id changed (a county building's can when the county data does), or
+a teammate made it with other files. Import keeps it, Export keeps it, and the
+queue panel lists it with what it holds and a **Drop** button. The generator
+applies it to nothing and lists it as lost in `project.json`. To re-key one:
+1. Export, and rename its id in the file to the building's current id.
+2. Import that file. It must report the answer taken. If it says the copy here is
+   newer, the building already has an answer, and dropping the old id would lose
+   whatever only the old one holds. Copy that across by hand first.
+3. Drop the old id.
+
+If a building's outline changes after you marked its doors, the page warns. Each
+marked edge that no longer lies on the outline can still be clicked to remove it.
 
 ### Evidence rules
 
 The repository's `AGENTS.md` (from PR #39) says geographic details, doors above
 all, go "only where source data or reviewed observations establish them", and
 keep "the source, coordinates, observation date and uncertainty". A survey
-answer is such a reviewed observation, and its export (version 2) says so in an
-`evidence` block:
+answer is such a reviewed observation, and its export says so in an `evidence`
+block. Version 3 pins the files the exporting page had loaded, which an answer
+it imported may predate: the two the queue came from (`reference`,
+`countyBuildings`), and `outlines`, the building outlines its entrance edges
+lie on. The outlines pin hashes each building's id and authored geometry rather
+than `features.json`'s bytes, because the generator rewrites that file with
+every survey answer it applies. Import names whatever has changed since.
+Version 2 exports, from before the county buildings joined the queue, still
+import.
 
 | Rule | Where it lives in `house-survey.json` |
 | --- | --- |
 | Source | `evidence.source`: a person viewing Google Maps; no imagery stored |
-| Coordinates | the building id; each entrance is a 1 m edge of the game's grid outline, in town metres |
+| Coordinates | the game building id (an OSM id, or a `county-` id); each entrance is a 1 m edge of the game's grid outline, in town metres |
 | Observation date | `imageryDate` (Google's capture month) and `at` (when the answer was recorded) |
 | Uncertainty | `confidence`: sure, likely or unsure. An unanswered field is unknown, not absent |
 
 Entrances are only doors a person saw. None are inferred from an address, an
-outline or a facade, so a building with no marked entrance keeps none. All 950
+outline or a facade, so a building with no marked entrance keeps none. All 1,076
 authored outlines lie on the 1 m grid (a test checks this), so any wall can take
 an entrance. Editor doors are grid edges too (`e:x:y` / `s:x:y` in a sector), so
 converting a marked edge to a door record is a sector offset away. That
 conversion, and a playtest through the real game path, belong to the wiring
-step.
+step. That step must also check that each marked edge still lies on the
+building's current outline. The generator copies entrances into `nativeProxy`
+as given, and the page warns of a stale one only when that building is opened.
+
+`tools/maps/house-reference/test-survey-page.mjs` drives the page headlessly in
+Chromium, through its own controls, and the workshop CI job runs it. It covers:
+- the status line and the Show filter;
+- Clear, the note, the image date, a storey key, Import and Export, which write
+  nothing before the reference files load, whether the load fails or is slow;
+- a cleared and a dropped answer surviving an import;
+- two tabs, on different buildings and on one, and a tab that hears no storage
+  events;
+- stamps dated ahead, without milliseconds, as epoch numbers, or not dates at
+  all;
+- real clicks right after typing a date or a note;
+- focus resting in a field while another tab saves or clears;
+- a door marked and removed on the mini-map with real clicks;
+- re-keying, with the whole export and one id renamed;
+- unknown answers.
+
+Any uncaught page error fails it.
 
 ## Use in the generator and the art kit
 
@@ -226,10 +321,21 @@ Survey `wall` maps to the kit as follows: `wood-siding` and `other-siding` →
 
 Each building records its sources in `nativeProxy` (`storiesSource`,
 `materialSource`, `evidence`). Where county and lidar give different storeys
-(114 buildings), `evidence.storiesDisagreement` keeps both for a survey to settle.
-The three evidence files are pinned in `project.json`. They pin `features.json`
-without `nativeProxy` (`tools/maps/house-reference/features-digest.mjs`), so a
-regeneration never invalidates its own inputs.
+(135 buildings: 114 OSM, 21 county), `evidence.storiesDisagreement` keeps both
+for a survey to settle.
+A county building's answer (a `county-` id) joins its county and lidar evidence
+the same way. An answer whose id matches no building applies to nothing. The
+generator still builds, so that the regenerated house reference lets the survey
+page show the answer for re-keying. It lists such ids under the survey's `lost`
+in `project.json`'s `evidenceInputs` and prints a warning. That catches only an
+id that vanishes. A county id comes from its structure's first sketch by key,
+and a `-part2` suffix from the pieces' area order, so a regeneration that hands
+an id to a different structure or piece would re-target its answers silently.
+The evidence files are pinned in `project.json`, as is the survey
+export once it exists. The reference and lidar files pin only the OSM-sourced
+fields of `features.json` they read
+(`tools/maps/house-reference/features-digest.mjs`), so a regeneration never
+invalidates its own inputs.
 
 The art kit (`maps/mount-dora/art/tools/build-playable.mjs`) then sets the
 following from the same evidence:

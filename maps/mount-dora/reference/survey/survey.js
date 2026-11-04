@@ -1,11 +1,13 @@
-// Mount Dora house survey. Walks the game's buildings street by street, opens
-// each one in Google Maps Street View (a link, never an embed or a download),
-// and records what a person sees there. Answers autosave in this browser and
-// export to house-survey.json, keyed by the building's source id. Each answer
-// carries its evidence (AGENTS.md): image date, confidence, and only the
-// entrances a person actually saw.
-import {CONFIDENCE, IMAGERY_DATE, cleanAnswer, edgeKey, exportDocument, nearestEdge, toggleEntrance, unitEdges} from './model.js';
-const REFERENCE = '../house-reference.json', FEATURES = '../../features.json';
+// Mount Dora house survey. Walks the game's buildings street by street (the
+// OSM ones in house-reference.json and the county-sketched ones OSM lacks in
+// county-buildings.json), opens each one in Google Maps Street View (a link,
+// never an embed or a download), and records what a person sees there.
+// Answers autosave in this browser and export to house-survey.json, keyed by
+// the building's game id. Each answer carries its evidence (AGENTS.md): image
+// date, confidence, and only the entrances a person actually saw.
+import {CONFIDENCE, IMAGERY_DATE, cleanAnswer, edgeKey, exportDocument, mergeAnswers, nearestEdge, newestPerId, outlineText, pinMismatches,
+  queueEntries, stampAfter, staleEntrances, toggleEntrance, unitEdges, unknownAnswers, warningsFor} from './model.js';
+const REFERENCE = '../house-reference.json', COUNTY = '../county-buildings.json', FEATURES = '../../features.json';
 const STORE = 'mount-dora-house-survey-v1', CURRENT = STORE + ':current';
 const FIELDS = [
   {key: 'stories', label: 'Storeys', options: [['1', '1'], ['1.5', '1½'], ['2', '2'], ['2.5', '2½'], ['3', '3'], ['4', '4+']]},
@@ -27,12 +29,23 @@ const FIELDS = [
 const KEYS = [...FIELDS.map(f => f.key), 'imageryDate', 'entrances', 'note'];
 const $ = id => document.getElementById(id);
 const svgNS = 'http://www.w3.org/2000/svg';
-const state = {reference: null, sha256: '', byId: new Map(), order: [], shapes: new Map(), roads: [], answers: {}, current: null, edges: [], countyBuildings: 0};
+// `drawn` holds the note and date text the page last drew or saved: a field
+// whose text differs from it holds unsaved typing.
+const state = {ready: false, pins: {}, drawn: {note: '', imagery: ''}, byId: new Map(), order: [], shapes: new Map(), roads: [], answers: {}, current: null, edges: [], countyBuildings: 0};
 
 const status = text => { $('status').textContent = text; };
 const read = key => { try { return localStorage.getItem(key); } catch { return null; } };
 const write = (key, value) => { try { localStorage.setItem(key, value); return true; } catch { return false; } };
-const persist = () => { if (!write(STORE, JSON.stringify(state.answers))) status('This browser refused to save; export your answers often.'); };
+// Another tab may have saved since this one loaded. Every change first takes
+// the newer copy per building from storage (sync), so it builds on what is
+// there rather than on this tab's older copy, and persist merges again as it writes.
+const readStored = () => { try { return JSON.parse(read(STORE) || '{}'); } catch { return {}; } };
+const sync = () => { if (state.ready) state.answers = newestPerId(readStored(), state.answers); };
+const persist = () => {
+  if (!state.ready) return;
+  sync();
+  if (!write(STORE, JSON.stringify(state.answers))) status('This browser refused to save; export your answers often.');
+};
 const answered = id => cleanAnswer(state.answers[id], KEYS) !== null;
 const label = b => b.address || b.osmTags.name || b.placeName || b.id;
 const hex = buffer => [...new Uint8Array(buffer)].map(x => x.toString(16).padStart(2, '0')).join('');
@@ -50,32 +63,64 @@ function sortBuildings(buildings) {
 }
 
 function passes(b) {
-  const sector = $('sector').value, show = $('status').value, q = $('search').value.trim().toUpperCase();
+  const sector = $('sector').value, show = $('show').value, q = $('search').value.trim().toUpperCase();
   if (sector && !b.sectors.includes(sector)) return false;
   if (show === 'todo' && answered(b.id) || show === 'done' && !answered(b.id)) return false;
   return !q || [b.id, b.address, b.osmTags.name, b.placeName, b.streetView?.road].some(v => v && v.toUpperCase().includes(q));
 }
 
+const markName = (name, id) => { name.textContent = (answered(id) ? '✓ ' : '') + label(state.byId.get(id)); name.className = answered(id) ? 'done' : ''; };
+
+function renderSummary() {
+  const done = state.order.filter(answered).length, total = state.order.length;
+  const withRecord = state.order.filter(id => state.byId.get(id).county.records.length).length, n = v => v.toLocaleString('en-US');
+  $('summary').textContent = `${n(done)} of ${n(total)} buildings surveyed · in the queue, ${n(total - state.countyBuildings)} from OpenStreetMap and ` +
+    `${n(state.countyBuildings)} from county sketches it lacks · county records for ${n(withRecord)}`;
+  $('progress').style.width = `${(100 * done / total).toFixed(1)}%`;
+}
+
 function renderQueue() {
-  const list = $('queue'), done = state.order.filter(answered).length, total = state.order.length;
+  const list = $('queue');
   list.replaceChildren();
   for (const id of state.order) {
     const b = state.byId.get(id);
     if (!passes(b)) continue;
     const li = document.createElement('li'), button = document.createElement('button'), name = document.createElement('span'), meta = document.createElement('span');
-    name.textContent = (answered(id) ? '✓ ' : '') + label(b);
-    if (answered(id)) name.className = 'done';
-    meta.className = 'street'; meta.textContent = b.sectors.join('/');
+    markName(name, id);
+    meta.className = 'street'; meta.textContent = b.sectors.join('/') + (b.countySketch ? ' · county' : '');
     button.append(name, meta); button.dataset.id = id;
     if (id === state.current) button.setAttribute('aria-current', 'true');
     button.addEventListener('click', () => select(id));
     li.append(button); list.append(li);
   }
-  const m = state.reference.metrics;
-  $('summary').textContent = `${done} of ${total} buildings surveyed · county records for ${total - m.byMethod.none} · ` +
-    `${state.countyBuildings} county-sketched buildings OpenStreetMap lacks are in the game (county-buildings.json), not yet in this queue.`;
-  $('progress').style.width = `${(100 * done / total).toFixed(1)}%`;
+  renderSummary();
   list.querySelector('[aria-current=true]')?.scrollIntoView({block: 'nearest'});
+  renderUnknown();
+}
+
+// Saved answers whose building id is not in this queue: the town no longer has
+// the building, its id changed, or a teammate made the answer with other files.
+// They stay in the export, where the generator lists them as lost.
+function renderUnknown() {
+  const box = $('unknown'), list = unknownAnswers(state.answers, KEYS, state.byId), one = list.length === 1;
+  box.hidden = !list.length;
+  if (!list.length) return box.replaceChildren();
+  const intro = document.createElement('p');
+  intro.textContent = `${one ? '1 saved answer is for a building id' : `${list.length} saved answers are for building ids`} not in this queue. ` +
+    `Export keeps ${one ? 'it' : 'them'}, and the generator lists ${one ? 'it' : 'them'} as lost in project.json until re-keyed or dropped. ` +
+    `If a teammate made ${one ? 'it' : 'them'} with newer files, pull and regenerate first: those files may have the building. ` +
+    'To re-key one: export, rename its id in the file to the building\'s current id, and import that file. Drop the old id here only once the import ' +
+    'reports the answer taken; if it says the copy here is newer, copy across by hand what only the old one holds.';
+  const rows = list.map(({id, holds}) => {
+    const row = document.createElement('div'), name = document.createElement('code'), what = document.createElement('span'), drop = document.createElement('button');
+    name.textContent = id; what.textContent = holds.join(', '); drop.type = 'button'; drop.textContent = 'Drop';
+    drop.addEventListener('click', () => {
+      if (!confirm(`Drop the saved answer for ${id} (${holds.join(', ')})? This cannot be undone.`)) return;
+      sync(); state.answers[id] = {cleared: true, at: stampAfter(state.answers[id])}; persist(); renderQueue(); status(`Dropped the answer for ${id}.`);
+    });
+    row.append(name, what, drop); return row;
+  });
+  box.replaceChildren(intro, ...rows);
 }
 
 function el(name, attrs = {}) { const node = document.createElementNS(svgNS, name); for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v); return node; }
@@ -122,7 +167,9 @@ function facts(b) {
     add('Garage', s.garage); add('Basement', s.basement ? 'yes (the lot likely slopes)' : null);
   } else add('Record', 'none matched: look by eye');
   add('On the lot', b.county.lotExtras.join(', '));
-  add('Match', `${b.match.method}${b.match.iou !== undefined ? `, IoU ${b.match.iou}` : ''}${b.county.records.length > 1 ? `, ${b.county.records.length} county buildings` : ''}`);
+  const sketched = b.countySketch;
+  if (sketched) add('Source', `${sketched.sketches} county sketch${sketched.sketches === 1 ? '' : 'es'}, not in OpenStreetMap · 2018 lidar: ${sketched.lidarSaw}`);
+  else add('Match', `${b.match.method}${b.match.iou !== undefined ? `, IoU ${b.match.iou}` : ''}${b.county.records.length > 1 ? `, ${b.county.records.length} county buildings` : ''}`);
   dl.replaceChildren(...rows.flatMap(([k, v]) => { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = k; dd.textContent = v; return [dt, dd]; }));
 }
 
@@ -153,29 +200,41 @@ function renderFields(b) {
     }
     set.append(legend, options); box.append(set);
   }
-  $('note').value = answer.note || '';
-  $('imagery').value = answer.imageryDate || '';
+  $('note').value = state.drawn.note = answer.note || '';
+  $('imagery').value = state.drawn.imagery = answer.imageryDate || '';
   const doors = answer.entrances?.length || 0;
   $('entrances').textContent = doors ? `${doors} entrance${doors === 1 ? '' : 's'} marked. Click a marked edge again to remove it.`
     : 'No entrance marked. Click the dashed game outline where you can see a door.';
 }
 
-// A click near the dashed outline toggles an entrance on that 1 m wall edge.
+// A click near the dashed outline toggles an entrance on that 1 m wall edge. A
+// marked edge the outline has since lost can be clicked too, to remove it.
 function markEntrance(event) {
   const b = state.byId.get(state.current), svg = $('minimap');
   if (!b || !state.edges.length) return;
   const point = svg.createSVGPoint();
   point.x = event.clientX; point.y = event.clientY;
   const town = point.matrixTransform(svg.getScreenCTM().inverse()), span = svg.viewBox.baseVal.width;
-  const hit = nearestEdge(state.edges, [town.x, town.y], Math.max(1.5, span / 40));
+  sync();
+  const stale = staleEntrances(state.answers[b.id], state.edges).map(e => e.segment);
+  const hit = nearestEdge([...state.edges, ...stale], [town.x, town.y], Math.max(1.5, span / 40));
   if (!hit) return status('Click closer to the dashed outline to mark an entrance.');
   const answer = {...(state.answers[b.id] || {})};
   answer.entrances = toggleEntrance(answer.entrances, hit.segment);
-  save(b.id, answer); minimap(b);
+  save(b.id, answer); minimap(b); renderWarnings(b);
   status(`Entrance edge ${edgeKey(hit.segment)} ${answer.entrances.some(e => edgeKey(e.segment) === edgeKey(hit.segment)) ? 'marked' : 'removed'}.`);
 }
 
+function renderWarnings(b) {
+  const warnings = warningsFor(b), stale = staleEntrances(state.answers[b.id], state.edges).length;
+  if (stale) warnings.push(`${stale} marked entrance${stale === 1 ? ' is' : 's are'} not on this building's outline as these files draw it. If the doors were marked ` +
+    `with newer files, pull and regenerate first. Otherwise the outline changed: click ${stale === 1 ? 'it' : 'each'} on the mini-map to remove ${stale === 1 ? 'it' : 'them'}, ` +
+    'then mark the doors again.');
+  $('warnings').replaceChildren(...warnings.map(w => { const li = document.createElement('li'); li.textContent = w; return li; }));
+}
+
 function choose(field, value) {
+  sync();
   const id = state.current, answer = {...(state.answers[id] || {})};
   if (field.multi) {
     const list = new Set(answer[field.key] || []);
@@ -185,11 +244,27 @@ function choose(field, value) {
   save(id, answer);
 }
 
-function save(id, answer) {
-  const clean = cleanAnswer(answer, KEYS);
-  if (clean) state.answers[id] = {...clean, at: new Date().toISOString()}; else delete state.answers[id];
-  persist(); renderFields(state.byId.get(id)); renderQueue();
+// Every write goes through commit, or Drop. A cleared answer leaves a dated
+// mark, so importing an older copy of it, or a stale tab, cannot bring it back.
+function commit(id, answer) {
+  if (!state.ready || !state.byId.has(id)) { status('The house reference has not loaded, so nothing was saved; your saved answers are untouched.'); return false; }
+  const clean = cleanAnswer(answer, KEYS), at = stampAfter(state.answers[id]);
+  if (clean) state.answers[id] = {...clean, at}; else if (answered(id)) state.answers[id] = {cleared: true, at};
+  persist(); return true;
 }
+function save(id, answer) { if (commit(id, answer)) { renderFields(state.byId.get(id)); renderQueue(); } }
+
+// A note or date saves on change, which fires as the field loses focus, often
+// on the mousedown of the next click. Redrawing the buttons or the queue then
+// would move that click's target before its mouseup, so only the marks update.
+function saveText(id, answer) {
+  if (!commit(id, answer)) return false;
+  const name = $('queue').querySelector(`button[data-id="${CSS.escape(id)}"] span`);
+  if (name) markName(name, id);
+  renderSummary(); return true;
+}
+const typedValue = id => id === 'note' ? $('note').value.trim() : $('imagery').value.trim();
+const textAnswer = (id, value) => ({...(state.answers[state.current] || {}), [id === 'note' ? 'note' : 'imageryDate']: value});
 
 function select(id) {
   const b = state.byId.get(id);
@@ -201,15 +276,8 @@ function select(id) {
   $('where').textContent = [b.osmTags.name || b.placeName, b.sectors.join(', '), b.id, `${Math.round(b.areaM2)} m² footprint`].filter(Boolean).join(' · ');
   $('streetview').href = sv ? sv.url : '#'; $('aerial').href = b.aerialUrl;
   $('camera').textContent = sv ? `Camera on ${sv.road || 'an unnamed road'} (${sv.roadClass}), ${sv.distanceM} m from the footprint centre, facing ${sv.heading}°. Google shows the nearest panorama, so pan if the house is off-centre.` : 'No street within reach.';
-  const warnings = [];
-  if (b.match.method === 'none') warnings.push('No county record: everything here comes from what you see.');
-  if (b.match.method === 'footprint-partial') warnings.push('The game outline and the county sketch disagree; check this is one building.');
-  if (b.match.method === 'parcel-area') warnings.push('Several buildings share this lot; the record was picked by size.');
-  if (sv && sv.distanceM > 60) warnings.push('Far from the street; it may be hidden or reached by a drive.');
-  if (sv && !sv.onAddressedStreet && b.address) warnings.push(`The camera is not on the addressed street (${b.address}).`);
-  $('warnings').replaceChildren(...warnings.map(w => { const li = document.createElement('li'); li.textContent = w; return li; }));
   state.edges = unitEdges(state.shapes.get(id)?.authored || []);
-  minimap(b); facts(b); renderFields(b); renderQueue();
+  renderWarnings(b); minimap(b); facts(b); renderFields(b); renderQueue();
 }
 
 function step(delta) {
@@ -218,28 +286,40 @@ function step(delta) {
   status(delta > 0 ? 'End of this queue.' : 'Start of this queue.');
 }
 
+// Until the reference files load, the saved answers have not been read, so an
+// export would write none and an import would overwrite them.
+const notLoaded = () => !state.ready && (status('The house reference has not loaded, so export and import are off; your saved answers are untouched.'), true);
+
 function exportAnswers() {
-  const data = exportDocument({answers: state.answers, sha256: state.sha256, keys: KEYS, exportedAt: new Date().toISOString()});
+  if (notLoaded()) return;
+  sync();
+  const data = exportDocument({answers: state.answers, pins: state.pins, keys: KEYS, exportedAt: new Date().toISOString()});
   const link = document.createElement('a');
   link.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1) + '\n'], {type: 'application/json'}));
   link.download = 'house-survey.json'; link.click();
   setTimeout(() => URL.revokeObjectURL(link.href), 2000);
-  const n = Object.keys(data.answers).length, undated = Object.values(data.answers).filter(a => !a.imageryDate).length;
-  status(`Exported ${n} answer${n === 1 ? '' : 's'}${undated ? `; ${undated} without a Street View image date` : ''}.`);
+  const n = Object.keys(data.answers).length, undated = Object.values(data.answers).filter(a => !a.imageryDate).length, lost = Object.keys(data.answers).filter(id => !state.byId.has(id)).length;
+  const cleared = Object.keys(data.cleared || {}).length;
+  status(`Exported ${n} answer${n === 1 ? '' : 's'}${undated ? `; ${undated} without a Street View image date` : ''}${lost ? `; ${lost} for building ids not in this queue (listed below)` : ''}` +
+    `${cleared ? `; ${cleared} cleared` : ''}.`);
 }
 
 async function importAnswers(file) {
+  if (notLoaded()) return;
   try {
     const data = JSON.parse(await file.text());
     if (data.kind !== 'mount-dora-house-survey' || typeof data.answers !== 'object') throw Error('not a house-survey export');
-    let merged = 0, unknown = 0;
-    for (const [id, answer] of Object.entries(data.answers)) {
-      if (!state.byId.has(id)) { unknown++; continue; }
-      const mine = state.answers[id], clean = cleanAnswer(answer, KEYS);
-      if (clean && (!mine || (answer.at || '') > (mine.at || ''))) { state.answers[id] = {...clean, ...(answer.at ? {at: answer.at} : {})}; merged++; }
-    }
-    persist(); select(state.current);
-    status(`Imported ${merged} answer${merged === 1 ? '' : 's'}${unknown ? `; ${unknown} unknown building ids skipped` : ''}${data.reference?.sha256 && data.reference.sha256 !== state.sha256 ? '; exported against a different house-reference.json' : ''}.`);
+    sync();
+    const merged = mergeAnswers(state.answers, data, KEYS, state.byId), differs = pinMismatches(data, state.pins);
+    state.answers = merged.answers; persist(); select(state.current);
+    const ids = list => list.slice(0, 20).join(', ') + (list.length > 20 ? `, and ${list.length - 20} more` : '');
+    status(`Imported ${merged.added} answer${merged.added === 1 ? '' : 's'}${merged.unknown ? `; ${merged.unknown} of them for building ids not in this queue, kept and listed below` : ''}` +
+      `${merged.replaced.length ? `; it replaced the copy here for ${ids(merged.replaced)}${merged.cleared ? ` (${merged.cleared} cleared there)` : ''}` : ''}` +
+      `${merged.older.length ? `; not taken, because the copy here is newer: ${ids(merged.older)}` : ''}` +
+      `${merged.ahead ? `; ${merged.ahead} dated ahead of this clock, so one of the two clocks is off` : ''}` +
+      `${merged.keptAhead.length ? `, and the copy here was kept for ${ids(merged.keptAhead)}: set the clock that is off, then import again` : ''}` +
+      `${merged.broken ? `; ${merged.broken} dated more than a day ahead, read as undated` : ''}` +
+      `${differs.length ? `; changed since it was exported: ${differs.join(', ')}. If the other files are newer, pull and regenerate before dropping answers or removing entrances` : ''}.`);
   } catch (error) { status(`Import failed: ${error.message}.`); }
 }
 
@@ -259,27 +339,52 @@ document.addEventListener('keydown', event => {
 $('survey').addEventListener('submit', event => { event.preventDefault(); step(1); });
 $('skip').addEventListener('click', () => step(1));
 $('prev').addEventListener('click', () => step(-1));
-$('clear').addEventListener('click', () => save(state.current, {}));
-$('note').addEventListener('change', () => save(state.current, {...(state.answers[state.current] || {}), note: $('note').value.trim()}));
-$('imagery').addEventListener('change', () => {
-  const value = $('imagery').value.trim();
-  if (value && !IMAGERY_DATE.test(value)) return status('Use the image month as YYYY-MM, for example 2024-03.');
-  save(state.current, {...(state.answers[state.current] || {}), imageryDate: value});
+$('clear').addEventListener('click', () => { sync(); save(state.current, {}); });
+const saveTyped = id => {
+  const value = typedValue(id);
+  if (id === 'imagery' && value && !IMAGERY_DATE.test(value)) return status('Use the image month as YYYY-MM, for example 2024-03.');
+  sync();
+  if (saveText(state.current, textAnswer(id, value))) state.drawn[id] = $(id).value;
+};
+for (const id of ['note', 'imagery']) $(id).addEventListener('change', () => saveTyped(id));
+// A field holds unsaved typing only where its text differs from what the page last drew or saved;
+// focus resting in a field is not typing.
+const unsaved = el => el && el === document.activeElement && el.value !== state.drawn[el.id];
+// Leaving the page while still typing: save what was typed, as leaving the field would.
+window.addEventListener('pagehide', () => {
+  const id = ['note', 'imagery'].find(id => unsaved($(id)));
+  if (id && state.ready) saveTyped(id);
+});
+// Another tab saved: show its answers here too, keeping only what is being typed and not yet saved.
+window.addEventListener('storage', event => {
+  if (event.key !== STORE || !state.ready) return;
+  sync(); renderQueue();
+  const b = state.byId.get(state.current);
+  if (!b) return;
+  minimap(b); renderWarnings(b);
+  const typing = [$('note'), $('imagery')].find(unsaved), kept = typing && [typing.value, typing.selectionStart, typing.selectionEnd];
+  renderFields(b);
+  if (typing) { typing.value = kept[0]; typing.setSelectionRange(kept[1], kept[2]); }
 });
 $('minimap').addEventListener('click', markEntrance);
-for (const id of ['sector', 'status', 'search']) $(id).addEventListener('input', renderQueue);
+for (const id of ['sector', 'show', 'search']) $(id).addEventListener('input', renderQueue);
 $('export').addEventListener('click', exportAnswers);
 $('import').addEventListener('change', event => { if (event.target.files[0]) importAnswers(event.target.files[0]); event.target.value = ''; });
 
 try {
-  const [buffer, features] = await Promise.all([
-    fetch(REFERENCE).then(r => { if (!r.ok) throw Error(`${REFERENCE}: ${r.status}`); return r.arrayBuffer(); }),
-    fetch(FEATURES).then(r => { if (!r.ok) throw Error(`${FEATURES}: ${r.status}`); return r.json(); })]);
-  state.sha256 = hex(await crypto.subtle.digest('SHA-256', buffer));
-  state.reference = JSON.parse(new TextDecoder().decode(buffer));
-  for (const b of state.reference.buildings) state.byId.set(b.id, b);
-  state.order = sortBuildings(state.reference.buildings).map(b => b.id);
-  state.countyBuildings = features.features.filter(f => f.category === 'building' && f.county).length;
+  // The reference files are pinned as served; the outlines by their ids and authored geometry.
+  const sha = async data => hex(await crypto.subtle.digest('SHA-256', data));
+  const load = async (key, url) => {
+    const r = await fetch(url); if (!r.ok) throw Error(`${url}: ${r.status}`);
+    const buffer = await r.arrayBuffer();
+    if (key) state.pins[key] = await sha(buffer);
+    return JSON.parse(new TextDecoder().decode(buffer));
+  };
+  const [reference, county, features] = await Promise.all([load('reference', REFERENCE), load('countyBuildings', COUNTY), load(null, FEATURES)]);
+  state.pins.outlines = await sha(new TextEncoder().encode(outlineText(features.features)));
+  for (const b of queueEntries(reference, county, features.features)) state.byId.set(b.id, b);
+  state.order = sortBuildings([...state.byId.values()]).map(b => b.id);
+  state.countyBuildings = county.buildings.length;
   for (const f of features.features) {
     if (f.category === 'building' && f.geographicGeometry) state.shapes.set(f.id, {id: f.id, d: ringsPath(f.geographicGeometry.coordinates),
       authored: f.geometry.coordinates, authoredD: ringsPath(f.geometry.coordinates), box: bbox(f.geographicGeometry.coordinates.flat())});
@@ -288,10 +393,11 @@ try {
   }
   const stored = read(STORE);
   try { state.answers = stored ? JSON.parse(stored) : {}; } catch { state.answers = {}; }
-  const sectors = [...new Set(state.reference.buildings.flatMap(b => b.sectors))].sort();
+  const sectors = [...new Set([...state.byId.values()].flatMap(b => b.sectors))].sort();
   $('sector').append(...sectors.map(s => new Option(s, s)));
   const resume = read(CURRENT);
   select(state.byId.has(resume) ? resume : state.order.find(id => !answered(id)) || state.order[0]);
+  state.ready = true;
 } catch (error) {
   $('summary').textContent = `Could not load the house reference (${error.message}). Serve the repository with node tools/maps/house-reference/serve.mjs.`;
 }

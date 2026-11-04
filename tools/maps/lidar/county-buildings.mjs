@@ -253,7 +253,8 @@ const union = (a, b) => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[
 const hits = (a, b, pad = 0) => a[0] < b[2] + pad && b[0] < a[2] + pad && a[1] < b[3] + pad && b[1] < a[3] + pad;
 
 // Merge the facts of a structure's records: the largest sketch with a record
-// speaks for the building, except its storeys, which are the tallest record's.
+// speaks for the building, lot and address included, except its storeys, which
+// are the tallest record's.
 function mergedCounty(members) {
   const withRecord = members.filter(m => m.sketch.county.records.length).sort((a, b) => b.sketch.areaM2 - a.sketch.areaM2 || a.key.localeCompare(b.key));
   const primary = withRecord[0]?.sketch ?? members[0].sketch;
@@ -262,8 +263,9 @@ function mergedCounty(members) {
   if (tallest && tallest.sketch !== primary)
     Object.assign(suggested, {stories: tallest.sketch.suggested.stories, halfStory: tallest.sketch.suggested.halfStory, storiesSource: tallest.sketch.suggested.storiesSource});
   if (withRecord.length > 1) suggested.storiesSource += ` (tallest of ${withRecord.length} records)`;
-  return {match: {method: 'county-sketch', iou: null, sketches: members.length},
-    county: {records: withRecord.flatMap(m => m.sketch.county.records), lotExtras: primary.county.lotExtras}, suggested};
+  return {lot: {address: primary.address ?? null, placeName: primary.placeName ?? null, parcel: primary.parcel ?? null},
+    county: {match: {method: 'county-sketch', iou: null, sketches: members.length},
+      county: {records: withRecord.flatMap(m => m.sketch.county.records), lotExtras: primary.county.lotExtras}, suggested}};
 }
 
 // sketches: house-reference countyOnly; holders: Map record key -> game id;
@@ -313,10 +315,10 @@ export function placeCountyBuildings({sketches, holders, games, grid, base}) {
     // pieces (a sketch of two parts meeting at a corner, or one a game building
     // splits) becomes a building per piece; slivers under minAddM2 are dropped.
     const pieces = kept.geometry.map(poly => [poly]).sort((a, b) => area(b) - area(a));
-    const whole2 = pieces.filter(p => area(p) >= PLACE.minAddM2), county = mergedCounty(members);
+    const whole2 = pieces.filter(p => area(p) >= PLACE.minAddM2), {county, lot} = mergedCounty(members);
     whole2.forEach((piece, n) => buildings.push({id: idOf(members[0].sketch) + (n ? `-part${n + 1}` : ''), members, geometry: piece, angleDeg: kept.angleDeg,
       clippedByGameM2: kept.removedM2, ...(pieces.length > 1 ? {piece: {index: n + 1, of: whole2.length, droppedM2: r2(keptArea - whole2.reduce((s, p) => s + area(p), 0))}} : {}),
-      roofShare: r3(shareOver(samples(piece), grid, base.dx, base.dy)), county}));
+      roofShare: r3(shareOver(samples(piece), grid, base.dx, base.dy)), county, lot}));
   }
   return {buildings: buildings.sort((a, b) => a.id.localeCompare(b.id)), represented: represented.sort((a, b) => a.key.localeCompare(b.key))};
 }

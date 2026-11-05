@@ -348,6 +348,25 @@ test('a change the parts do not read leaves them unchanged', () => {
   assert.notDeepEqual(inputDigests({...town, county: {...town.county, buildings: town.county.buildings.slice(1)}}), index.inputs, 'a change the parts read shows');
 });
 
+test('a county building carries its lot address and place name, and nothing about the owner', () => {
+  const lots = new Map(town.county.buildings.map(b => [b.id, b])), county = parts.filter(p => p.source.county);
+  assert.equal(county.length, 126);
+  for (const p of county) {
+    const lot = lots.get(p.id);
+    assert.deepEqual(p.address, {text: lot.address, ...(lot.placeName ? {placeName: lot.placeName} : {}), source: `county parcel ${lot.parcel.altKey}; lot of the lead sketch`}, p.id);
+  }
+  assert(county.some(p => p.address.placeName) && county.some(p => !('placeName' in p.address)));
+  // An OSM building keeps the address it had: from OSM, else its county parcel join.
+  assert(parts.filter(p => p.source.osm).every(p => p.address === null || p.address.source === 'osm' || /; join /.test(p.address.source)));
+  // The parts read the lot's address, place name and parcel id, and no other county field.
+  const relot = change => inputDigests({...town, county: {...town.county, buildings: town.county.buildings.map((b, i) => i ? b : change(b))}});
+  for (const change of [b => ({...b, address: '1 TEST ST'}), b => ({...b, placeName: 'TEST'}), b => ({...b, parcel: {...b.parcel, altKey: '0'}})])
+    assert.notDeepEqual(relot(change), index.inputs);
+  assert.deepEqual(relot(b => ({...b, parcel: {...b.parcel, landUse: 'TEST'}})), index.inputs, 'the land use is not carried');
+  // Only those three come across, so no owner, sale or value field can (the rule house-reference.json keeps).
+  assert(parts.every(p => p.address === null || Object.keys(p.address).every(k => ['text', 'placeName', 'source'].includes(k))));
+});
+
 test('each part carries its licence and credits', () => {
   for (const p of parts) {
     assert.equal(p.rights.license, 'ODbL-1.0');

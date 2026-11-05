@@ -16,7 +16,7 @@ on a grid, such as a house set along a curved street.
 | Field | Meaning |
 | --- | --- |
 | `kind`, `version`, `id` | `house-part`, `1`, and the town's building id (an OSM way or relation, or `county-…`) |
-| `name`, `address` | The OSM name. The address is from OSM, else the county parcel joined to the building, with its join method. Either may be null. |
+| `name`, `address` | The OSM name. The address is from OSM, else the county parcel joined to the building, with its join method. A county-sketched building takes the lot of its lead sketch, the largest sketch with a record: its site address and, for 13 of them, the county's `placeName` (a business on that lot, not necessarily this building's name). `source` names the parcel. Either may be null. No owner, sale or value data is carried. |
 | `rights` | The licence (ODbL 1.0, as part of the town's derived feature database) and the credits a copy must carry: OpenStreetMap, the county where its records were used, and USGS lidar |
 | `frame` | The coordinate conventions, repeated in every file so it stands alone: units, axes, origin, cells, levels, wall centring, the rotation rule, angles and the latitude datum |
 | `size` | `[width, depth]` of the outline in metres |

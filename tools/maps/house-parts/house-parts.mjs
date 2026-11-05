@@ -357,10 +357,15 @@ export function placePart(part, pose) {
     walls: part.walls.map(w => ({...w, a: placePoint(w.a, p), b: placePoint(w.b, p)}))};
 }
 
-function addressOf(feature, reference) {
+function addressOf(feature, reference, lot) {
   const t = feature.tags || {};
   if (t['addr:housenumber'] && t['addr:street']) return {text: `${t['addr:housenumber']} ${t['addr:street']}`, source: 'osm'};
   if (reference?.address) return {text: reference.address, source: `county parcel ${reference.parcel?.altKey ?? ''}; join ${reference.match?.method ?? 'unknown'}`.replace(' ;', ';')};
+  // A county-sketched building takes the lot of its lead sketch (the largest
+  // sketch with a record): the site address and place name the county keeps
+  // for that parcel. Nothing about its owner, sales or value is carried.
+  if (lot?.address) return {text: lot.address, ...(lot.placeName ? {placeName: lot.placeName} : {}),
+    source: `county parcel ${lot.parcel?.altKey ?? ''}; lot of the lead sketch`.replace(' ;', ';')};
   return null;
 }
 
@@ -376,7 +381,7 @@ export function buildParts(town) {
   const roofs = new Map([...town.lidar.buildings.map(b => [b.id, {record: b, file: 'maps/mount-dora/reference/lidar-roofs.json'}]),
     ...town.county.buildings.map(b => [b.id, {record: b.lidar, file: 'maps/mount-dora/reference/county-buildings.json'}])]);
   const art = new Map(town.art.PLACEMENTS.filter(p => p.kind === 'building').map(p => [p.id, p]));
-  const references = new Map(town.reference.buildings.map(b => [b.id, b]));
+  const references = new Map(town.reference.buildings.map(b => [b.id, b])), lots = new Map(town.county.buildings.map(b => [b.id, b]));
   const {dataset, acquired} = town.lidar.collection;
   return buildings.map(f => {
     const record = records.get(f.id), [x0, y0, x1, y1] = record.bounds, origin = [x0, y0], np = f.nativeProxy, d = record.derivation;
@@ -402,7 +407,7 @@ export function buildParts(town) {
     const r = roof.record, rf = r.roof || {};
     const placement = art.get(f.id);
     if (!placement) throw Error('No art placement for ' + f.id);
-    const address = addressOf(f, references.get(f.id));
+    const address = addressOf(f, references.get(f.id), lots.get(f.id));
     const part = {
       kind: KIND, version: VERSION, id: f.id, name: f.tags?.name ?? null, address,
       rights: {...LICENSE, attribution: credits(usesCounty(f, address), dataset)}, frame: FRAME,

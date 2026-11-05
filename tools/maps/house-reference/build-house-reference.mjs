@@ -26,8 +26,10 @@ const r2 = v => Math.round(v * 100) / 100, r1 = v => Math.round(v * 10) / 10;
 const SQFT = .09290304;
 
 // Match thresholds. A county sketch belongs to the game building holding most
-// of it; IoU grades how well the two outlines agree.
-export const MATCH = {assignCover: .5, assignIoU: .3, goodIoU: .5};
+// of it; IoU grades how well the two outlines agree. ownParcelCover is the
+// share of a sketch that must lie on the parcel it is filed under for that
+// parcel to be its lot (ownLot); the smallest such share in the town is 18%.
+export const MATCH = {assignCover: .5, assignIoU: .3, goodIoU: .5, ownParcelCover: .01};
 
 // County code descriptions -> game vocabulary. Unknown codes fall through to null.
 export const WALLS = {
@@ -155,17 +157,18 @@ export function build() {
     hits.sort((a, b) => a.area - b.area || a.altKey.localeCompare(b.altKey));
     return {hits, lot: hits.find(p => !/CONDO/.test(p.landUse)) || hits[0] || null};
   };
-  // A county-only sketch is filed under its own parcel (its AltKey), and that
-  // parcel is its lot wherever the sketch overlaps it. The parcel under the
-  // centre gave two lakefront houses Lake Dora's submerged-land parcel and the
-  // lake's address. A condo unit's parcel is passed over, as in lotsAt, so a
-  // condo building keeps its common lot. A sketch drawn wholly off its own
-  // parcel keeps the parcel under its centre: there the drawing and the record
+  // A sketch is filed under its own parcel (its AltKey), and that parcel is its
+  // lot wherever the sketch lies on it (at least MATCH.ownParcelCover of it).
+  // The parcel under the centre gave two lakefront county-only houses Lake
+  // Dora's submerged-land parcel, and two game houses the vacant lots next
+  // door. A condo unit's parcel is passed over, as in lotsAt, so a condo
+  // building keeps its common lot. A sketch drawn wholly off its own parcel
+  // keeps the parcel under its centre: there the drawing and the record
   // disagree.
   const parcelsByKey = new Map();
   for (const p of parcels) parcelsByKey.set(p.altKey, [...(parcelsByKey.get(p.altKey) || []), p]);
   const ownLot = s => (parcelsByKey.get(s.altKey) || []).filter(p => !/CONDO/.test(p.landUse))
-    .map(p => ({p, overlap: overlapArea(s.geometry, p.geometry, .1, s.box, p.box)})).filter(x => x.overlap > 0)
+    .map(p => ({p, overlap: overlapArea(s.geometry, p.geometry, .1, s.box, p.box)})).filter(x => x.overlap >= MATCH.ownParcelCover * s.area)
     .sort((a, b) => b.overlap - a.overlap || a.p.area - b.p.area)[0]?.p ?? null;
   // Storeys, wall, roof, porches and garage from a building's records.
   const suggest = (recs, lot, method) => {
@@ -198,7 +201,12 @@ export function build() {
   const out = [];
   for (const [h, house] of houses.entries()) {
     const f = house.feature, matches = assigned[h];
-    const {hits, lot} = lotsAt(house.box, house.centre);
+    // Where every sketch the building holds is filed under one parcel, that
+    // parcel is its lot, as for a county-only sketch. Sketches spread over
+    // several parcels leave the parcel under the centre.
+    const {hits, lot: centreLot} = lotsAt(house.box, house.centre);
+    const filedUnder = new Set(matches.map(m => sketches[m.sketch].altKey));
+    const lot = (filedUnder.size === 1 && ownLot(sketches[matches[0].sketch])) || centreLot;
     let method = 'none', recs = [], match = null;
     if (matches.length) {
       recs = matches.map(m => describe(sketches[m.sketch].altKey, sketches[m.sketch].bldgNum)).filter(Boolean);

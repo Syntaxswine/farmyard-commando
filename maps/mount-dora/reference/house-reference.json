@@ -18,6 +18,7 @@
   "assignCover": 0.5,
   "assignIoU": 0.3,
   "goodIoU": 0.5,
+  "ownParcelCover": 0.01,
   "viewRadiusM": 90,
   "addressNearM": 45,
   "addressSlackM": 25
@@ -24548,12 +24549,12 @@
    "osmTags": {
     "building": "yes"
    },
-   "address": "E 1ST AVE",
+   "address": "610 E 1ST AVE",
    "placeName": null,
    "parcel": {
-    "altKey": "1132860",
-    "landUse": "VACANT RESIDENTIAL",
-    "buildings": 0
+    "altKey": "1469091",
+    "landUse": "SINGLE FAMILY",
+    "buildings": 1
    },
    "match": {
     "method": "footprint-partial",
@@ -26420,12 +26421,12 @@
    "osmTags": {
     "building": "yes"
    },
-   "address": "S CLAYTON ST",
+   "address": "221 S CLAYTON ST",
    "placeName": null,
    "parcel": {
-    "altKey": "3816701",
-    "landUse": "VACANT RESIDENTIAL",
-    "buildings": 0
+    "altKey": "1473331",
+    "landUse": "SINGLE FAMILY",
+    "buildings": 1
    },
    "match": {
     "method": "footprint-partial",
@@ -26467,7 +26468,11 @@
       }
      }
     ],
-    "lotExtras": []
+    "lotExtras": [
+     "POOL/COOL DECK",
+     "SWIMMING POOL - RESIDENTIAL",
+     "UTILITY BLDG UNFINISHED"
+    ]
    },
    "suggested": {
     "stories": 1,

@@ -41,12 +41,18 @@ floor and level `storeys` is the roof deck, as in the town's sector maps.
 
 A county-sketched building takes the lot of its lead sketch: the largest of its
 sketches with a county record, else its first. The county survey gives a sketch
-the parcel it is filed under wherever the sketch overlaps it, and otherwise the
-smallest parcel under the centre of the sketch as the county drew it. Condo
-units are passed over either way (`ownLot` and `lotsAt` in
-`tools/maps/house-reference/build-house-reference.mjs`). `placeName` is a name
-the county gives the lot, such as a business or a lodge, and not necessarily
-this building's.
+the parcel it is filed under wherever at least 1% of the sketch lies on it,
+unless that parcel is a condo unit (`ownLot` in
+`tools/maps/house-reference/build-house-reference.mjs`). Otherwise the sketch
+takes the parcel under its centre as the county drew it: the smallest there that
+is not a condo unit, or the smallest unit where only units lie there (`lotsAt`).
+Four parts at 350 LIBERTY AVE read a unit's address that way. `placeName` is a
+name the county gives the lot, such as a business or a lodge, and not
+necessarily this building's.
+
+A game building's lot comes from the same survey. It is the parcel its county
+sketches are filed under where they all share one, by the same rule, and
+otherwise the parcel under its OpenStreetMap centre.
 
 The lot is not always the building's own parcel. For 13 parts it differs from
 `evidence.county.altKey`, the parcel of the building's county record:
@@ -58,12 +64,15 @@ The lot is not always the building's own parcel. For 13 parts it differs from
   ST. The county's drawing and its record disagree, so the lot under the centre
   stands.
 
-Two lakefront houses, `county-1236797-1` and `county-1475414-2`, have their
-centres on Lake Dora's submerged-land parcel. Each overlaps its own parcel, so
-they read 401 and 402 LAKE DORA RD.
+Four houses have their centres on another parcel and read their own lots:
+- two lakefront county houses, `county-1236797-1` and `county-1475414-2`, on
+  Lake Dora's submerged-land parcel, read 401 and 402 LAKE DORA RD;
+- two game houses, `osm-way-1240419568` and `osm-way-1240419587`, on the
+  vacant lot next door, read 610 E 1ST AVE and 221 S CLAYTON ST.
 
-`tests/maps/house-parts.test.mjs` pins these 13 and the two lake addresses, so
-any change to the lot rule shows up there.
+`tests/maps/house-parts.test.mjs` pins these 13 lots by parcel id, and the four
+addresses. `tests/maps/house-reference.test.mjs` works the lot rule out for
+every building and checks the survey against it.
 
 ## Placing a part
 

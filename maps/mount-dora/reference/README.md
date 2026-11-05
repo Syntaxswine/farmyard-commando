@@ -44,6 +44,15 @@ How each building was matched (`match.method`):
 | `parcel-area` | 23 | Several buildings on the lot; picked by ground-floor area |
 | `none` | 18 | No record: the high-school campus and a few outbuildings |
 
+A building's lot (`parcel` and `address`) is the parcel its county sketches are
+filed under, where they all share one and at least 1% of the lead sketch lies on
+it (`MATCH.ownParcelCover`), unless that parcel is a condo unit. Otherwise it is
+the parcel under the building's centre: the smallest there that is not a condo
+unit, or the smallest unit where only units lie there. Two houses whose
+OpenStreetMap centres fall on the vacant lot next door so read 610 E 1ST AVE and
+221 S CLAYTON ST, not the street alone. An outline over sketches filed under
+several parcels keeps the parcel under its centre.
+
 **The county also has buildings OpenStreetMap lacks.** 247 appraiser sketches
 inside the town are claimed by no game building. They are listed under
 `countyOnly`, with their outline in town metres, `coveredByGame`, and the same
@@ -88,8 +97,9 @@ lidar's building returns (class 6) tell them apart:
   parts meeting at a corner becomes two buildings (`-part2`).
 - **Survey:** each building takes the lot and address of its largest sketch
   with a record (its first sketch, if none has one). A sketch's lot is the
-  parcel it is filed under wherever the sketch overlaps it, unless that parcel
-  is a condo unit; otherwise it is the parcel under the sketch's centre. So two
+  parcel it is filed under wherever at least 1% of the sketch lies on it,
+  unless that parcel is a condo unit; otherwise it is the parcel under the
+  sketch's centre, as for a game building ([above](#what-the-county-records-add)). So two
   lakefront houses whose centres lie on Lake Dora's submerged-land parcel keep
   their own lots and addresses. Each building gets a Street View
   camera planned as for the game buildings

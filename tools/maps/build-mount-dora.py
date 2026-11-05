@@ -40,6 +40,9 @@ def sha(data):
 
 
 def encoded(value, pretty=False):
+    # The compact form is mirrored by pyDumps and pyFloat in
+    # tools/maps/house-parts/house-parts.mjs, which must write the sectors and
+    # the wall-id hashes byte for byte as this does. Change both together.
     return (json.dumps(value, ensure_ascii=False, allow_nan=False,
                        indent=2 if pretty else None,
                        separators=None if pretty else (",", ":")) + "\n").encode("utf-8")
@@ -230,6 +233,9 @@ def polygon_spans(polygons, width, depth):
     """Even/odd scan conversion at global cell centres, with original holes."""
     # Each polygon's holes participate in one parity test. Separate polygons
     # union by painting; no per-cell traversal of the lake's thousands of edges.
+    # Mirrored by polygonSpans in tools/maps/house-parts/house-parts.mjs, which
+    # stamps the house parts back into the sectors byte for byte: change both
+    # together, or tests/maps/house-parts.test.mjs fails.
     for polygon in polygons:
         rows = defaultdict(list)
         for ring in polygon:
@@ -486,6 +492,10 @@ def clip_segment(a, b, width, depth):
 
 def deduplicated_walls(buildings):
     """Exact collinear interval union; shared party walls retain every owner."""
+    # Mirrored in tools/maps/house-parts/house-parts.mjs: the interval union,
+    # the owners and the wall id (the hash of encoded [key, left, right],
+    # Python float repr) by deduplicatedWalls, and the storey and material
+    # rules by stampSectors. Change both together.
     groups = defaultdict(list)
     for feature in buildings:
         for polygon in feature["geometry"]["coordinates"]:
@@ -531,10 +541,14 @@ def deduplicated_walls(buildings):
 
 
 def sector_id(column, row):
+    # Mirrored by sectorId in tools/maps/house-parts/house-parts.mjs.
     return chr(65 + column) + f"{row + 1:02d}"
 
 
 def split_walls(walls, extent, diagnostics):
+    # Mirrored by splitWalls in tools/maps/house-parts/house-parts.mjs: the clip
+    # to the town, cuts at sector lines, 64 m pieces, the 0.1 m sliver rule, the
+    # part numbering and the native coordinates. Change both together.
     size, width, depth = extent["sectorSizeM"], extent["widthM"], extent["depthM"]
     pieces = defaultdict(list)
     for wall in walls:
@@ -851,6 +865,10 @@ def build_project(project=PROJECT):
             runs = sorted(wall_pieces[sid], key=lambda r: r["id"])
             props = sorted(props_by_sector[sid], key=lambda p: (p["y"], p["x"], p["kind"]))
             anchors = preview_anchors(terrain, blocked, props, (ox, oy), size, width)
+            # stampSectors in tools/maps/house-parts/house-parts.mjs rebuilds this
+            # sector's building layers (floor terrain, upper floors, levels,
+            # buildingIds, wallRuns) from the house parts and must write the same
+            # bytes, so a change to them is a change to it too.
             levels = max(3, max((run["stories"] + 1 for run in runs), default=3),
                          max((layer + 1 for key_sid, layer in upper if key_sid == sid), default=3))
             mapping = {"version": 2, "width": size, "height": size, "levels": levels, "name": f"Mount Dora {sid} - native authoring sector",

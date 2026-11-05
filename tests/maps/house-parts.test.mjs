@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {root, PARTS_DIR, BLOCK, BLOCK_MAX_M, loadTown, buildParts, formatPart, roundTrip, stampSectors, splitWalls, floorCells, validatePart, placementFromPart, artMismatches, shiftTreatment,
   pyFloat, pyDumps, PyFloat, placePoint, placePart, localAxisDeg, iou, centroid, localEntrances, localEvidence, firstDifference, toBlock, blockFits, credits, usesCounty,
-  MATERIALS, sha256} from '../../tools/maps/house-parts/house-parts.mjs';
+  addressOf, MATERIALS, sha256} from '../../tools/maps/house-parts/house-parts.mjs';
 import {generate, refusals, compareFolder, runCli, inputDigests, median, REGENERATE} from '../../tools/maps/house-parts/build-house-parts.mjs';
 import {allBlocks, blockDigest, blockDigests} from '../../tools/maps/house-parts/export-block.mjs';
 import {RECEIPT, BROWSER_SAMPLES, SLOT, NEIGHBOURS, sameHouse, matchesPart, flushWest, reviewHeadless, edgeControl, keptBrowser, mergeResults, reviewPassed}
@@ -346,6 +346,52 @@ test('a change the parts do not read leaves them unchanged', () => {
     assert.deepEqual(inputDigests(changed), index.inputs);
   }
   assert.notDeepEqual(inputDigests({...town, county: {...town.county, buildings: town.county.buildings.slice(1)}}), index.inputs, 'a change the parts read shows');
+});
+
+test('a county building carries its lot address and place name, and nothing about the owner', () => {
+  const lots = new Map(town.county.buildings.map(b => [b.id, b])), county = parts.filter(p => p.source.county);
+  assert.equal(county.length, 126);
+  for (const p of county) {
+    const lot = lots.get(p.id);
+    assert.deepEqual(p.address, {text: lot.address, ...(lot.placeName ? {placeName: lot.placeName} : {}), source: `county parcel ${lot.parcel.altKey}; lot of the lead sketch`}, p.id);
+  }
+  assert(county.some(p => p.address.placeName) && county.some(p => !('placeName' in p.address)));
+  // An OSM building keeps the address it had: from OSM, else its county parcel join.
+  assert(parts.filter(p => p.source.osm).every(p => p.address === null || p.address.source === 'osm' || /; join /.test(p.address.source)));
+  // The parts read the lot's address, place name and parcel id, and no other county field.
+  const relot = change => inputDigests({...town, county: {...town.county, buildings: town.county.buildings.map((b, i) => i ? b : change(b))}});
+  for (const change of [b => ({...b, address: '1 TEST ST'}), b => ({...b, placeName: 'TEST'}), b => ({...b, parcel: {...b.parcel, altKey: '0'}})])
+    assert.notDeepEqual(relot(change), index.inputs);
+  assert.deepEqual(relot(b => ({...b, parcel: {...b.parcel, landUse: 'TEST'}})), index.inputs, 'the land use is not carried');
+  // Only those three come across, so no owner, sale or value field can (the rule house-reference.json keeps).
+  assert(parts.every(p => p.address === null || Object.keys(p.address).every(k => ['text', 'placeName', 'source'].includes(k))));
+  // The rules on lots the town does not have: OSM's address, then the parcel
+  // joined to an OSM building, then the lot. A lot without an address gives none.
+  const lot = {address: '1 LOT ST', placeName: 'LOT', parcel: {altKey: '9'}}, joined = {address: '2 JOIN ST', parcel: {altKey: '8'}, match: {method: 'contains'}};
+  assert.deepEqual(addressOf({tags: {'addr:housenumber': '3', 'addr:street': 'OSM ST'}}, joined, lot), {text: '3 OSM ST', source: 'osm'});
+  assert.deepEqual(addressOf({}, joined, lot), {text: '2 JOIN ST', source: 'county parcel 8; join contains'});
+  assert.deepEqual(addressOf({}, undefined, lot), {text: '1 LOT ST', placeName: 'LOT', source: 'county parcel 9; lot of the lead sketch'});
+  assert.equal(addressOf({}, undefined, {...lot, address: null}), null);
+  assert.deepEqual(addressOf({}, undefined, {address: '1 LOT ST', placeName: null, parcel: null}), {text: '1 LOT ST', source: 'county parcel; lot of the lead sketch'});
+});
+
+test('a county lot is the parcel under the lead sketch, which is not always the building\'s own', () => {
+  // The county survey takes the parcel under the centre of the lead sketch as the
+  // county drew it (lotsAt in tools/maps/house-reference/build-house-reference.mjs).
+  // For these 15 that is not the parcel of the building's own record. The two on
+  // Lake Dora's submerged land are wrong ("County lots" in the parts README), so
+  // a fix to the survey's lot rule changes this list.
+  const lots = new Map(town.county.buildings.map(b => [b.id, b])), differ = {};
+  for (const p of parts.filter(p => p.source.county && p.evidence.county?.altKey)) {
+    const lot = lots.get(p.id).parcel;
+    if (lot?.altKey !== p.evidence.county.altKey) (differ[lot?.landUse ?? 'no lot'] ??= []).push(p.id);
+  }
+  assert.deepEqual(differ, {
+    'GOVT SUBMERGED LAND': ['county-1236797-1', 'county-1475414-2'],
+    'CLUB/LODGE/UNION HALL': ['county-1470846-1'],
+    'RESIDENTIAL COMMON ELEMENTS/AREA': ['county-1667917-1', 'county-1667933-1', 'county-1667976-1', 'county-2528206-1', 'county-2528273-1', 'county-2528311-1',
+      'county-2528397-1', 'county-2528427-1', 'county-2528443-1', 'county-2629550-1', 'county-2629690-1', 'county-2629746-1']});
+  assert.deepEqual(differ['GOVT SUBMERGED LAND'].map(id => byId.get(id).address.text), ['LAKESHORE DR', 'LAKESHORE DR']);
 });
 
 test('each part carries its licence and credits', () => {

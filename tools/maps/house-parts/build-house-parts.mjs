@@ -36,7 +36,7 @@ export function inputDigests(town) {
     'maps/mount-dora/features.json': digest({projection: town.features.projection, buildings: buildings.map(f => ({id: f.id, osm: f.osm, county: f.county, tags: f.tags,
       geometry: f.geometry, geographicGeometry: f.geographicGeometry, nativeProxy: f.nativeProxy, nativeSectors: f.nativeSectors, authoredLayoutSHA256: f.authoredLayoutSHA256}))}),
     'maps/mount-dora/reference/lidar-roofs.json': digest({collection: town.lidar.collection, buildings: town.lidar.buildings}),
-    'maps/mount-dora/reference/county-buildings.json': digest(town.county.buildings.map(b => ({id: b.id, lidar: b.lidar}))),
+    'maps/mount-dora/reference/county-buildings.json': digest(town.county.buildings.map(b => ({id: b.id, lidar: b.lidar, address: b.address, placeName: b.placeName, altKey: b.parcel?.altKey}))),
     'maps/mount-dora/reference/house-reference.json': digest(town.reference.buildings.map(b => ({id: b.id, address: b.address, altKey: b.parcel?.altKey, match: b.match?.method}))),
     'sites/tactical-animal/dist/mission-art/mount-dora/manifest.js': digest(town.art.PLACEMENTS.filter(p => p.kind === 'building')),
   };

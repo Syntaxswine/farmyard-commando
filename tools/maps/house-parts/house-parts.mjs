@@ -110,7 +110,9 @@ function clipSegment(a, b, width, depth) {
 }
 
 // deduplicated_walls: an exact collinear interval union of every outline edge;
-// a shared party wall keeps every owner. `buildings` must be sorted by id.
+// a shared party wall keeps every owner. `buildings` must be sorted by id. A
+// part's walls carry no storeys or material, so the generator's storey and
+// material rules for a wall are mirrored in stampSectors, not here.
 export function deduplicatedWalls(buildings) {
   const groups = new Map();
   for (const building of buildings) for (const polygon of building.outline) for (const ring of polygon)
@@ -126,7 +128,7 @@ export function deduplicatedWalls(buildings) {
       if (!groups.has(key)) groups.set(key, {key: [ux, uy, constant], segments: []});
       groups.get(key).segments.push([Math.min(ta, tb), Math.max(ta, tb), building.id, a, vx, vy]);
     }
-  const styles = new Map(buildings.map(b => [b.id, b])), result = [];
+  const result = [];
   const ordered = [...groups.values()].sort((p, q) => p.key[0] - q.key[0] || p.key[1] - q.key[1] || p.key[2] - q.key[2]);
   for (const {key, segments} of ordered) {
     const stops = [...new Set(segments.flatMap(s => [round(s[0], 9), round(s[1], 9)]))].sort((p, q) => p - q), active = [];
@@ -142,8 +144,7 @@ export function deduplicatedWalls(buildings) {
     const [, , , a, vx, vy] = segments[0], base = a[0] * vx + a[1] * vy;
     for (const [left, right, owners] of active) {
       const id = 'wall-' + sha256(`[[${key.join(',')}],${pyFloat(left)},${pyFloat(right)}]\n`).slice(0, 18);
-      result.push({id, a: [a[0] + (left - base) * vx, a[1] + (left - base) * vy], b: [a[0] + (right - base) * vx, a[1] + (right - base) * vy],
-        owners, stories: Math.max(...owners.map(o => styles.get(o).storeys)), material: styles.get(owners[0]).material});
+      result.push({id, a: [a[0] + (left - base) * vx, a[1] + (left - base) * vy], b: [a[0] + (right - base) * vx, a[1] + (right - base) * vy], owners});
     }
   }
   return result;
@@ -357,13 +358,18 @@ export function placePart(part, pose) {
     walls: part.walls.map(w => ({...w, a: placePoint(w.a, p), b: placePoint(w.b, p)}))};
 }
 
-function addressOf(feature, reference, lot) {
+// A part's address: OSM's, else the county parcel joined to an OSM building,
+// else, for a county-sketched building, the lot of its lead sketch (the
+// largest sketch with a record, else its first). That lot is the parcel under
+// the sketch's centre as the county drew it (lotsAt in
+// tools/maps/house-reference/build-house-reference.mjs), which is not always
+// the building's own parcel: see "County lots" in the parts README. Only the
+// lot's site address, place name and parcel id come across, nothing about its
+// owner, sales or value.
+export function addressOf(feature, reference, lot) {
   const t = feature.tags || {};
   if (t['addr:housenumber'] && t['addr:street']) return {text: `${t['addr:housenumber']} ${t['addr:street']}`, source: 'osm'};
   if (reference?.address) return {text: reference.address, source: `county parcel ${reference.parcel?.altKey ?? ''}; join ${reference.match?.method ?? 'unknown'}`.replace(' ;', ';')};
-  // A county-sketched building takes the lot of its lead sketch (the largest
-  // sketch with a record): the site address and place name the county keeps
-  // for that parcel. Nothing about its owner, sales or value is carried.
   if (lot?.address) return {text: lot.address, ...(lot.placeName ? {placeName: lot.placeName} : {}),
     source: `county parcel ${lot.parcel?.altKey ?? ''}; lot of the lead sketch`.replace(' ;', ';')};
   return null;
@@ -375,7 +381,7 @@ export function buildParts(town) {
   if (buildings.length !== records.size || buildings.some(f => !records.has(f.id))) throw Error('authored-buildings.json and features.json disagree on buildings');
   for (let i = 1; i < buildings.length; i++) if (!(buildings[i - 1].id < buildings[i].id)) throw Error('features.json buildings are not sorted by id');
   for (const f of buildings) if (JSON.stringify(f.geometry) !== JSON.stringify(records.get(f.id).geometry)) throw Error('Feature geometry differs from its grid plan: ' + f.id);
-  const walls = deduplicatedWalls(buildings.map(f => ({id: f.id, outline: f.geometry.coordinates, storeys: f.nativeProxy.stories, material: f.nativeProxy.material})));
+  const walls = deduplicatedWalls(buildings.map(f => ({id: f.id, outline: f.geometry.coordinates})));
   const wallsOf = new Map();
   for (const w of walls) for (const o of w.owners) { if (!wallsOf.has(o)) wallsOf.set(o, []); wallsOf.get(o).push(w); }
   const roofs = new Map([...town.lidar.buildings.map(b => [b.id, {record: b, file: 'maps/mount-dora/reference/lidar-roofs.json'}]),
@@ -479,6 +485,8 @@ export function stampSectors(parts, town) {
   for (const w of walls.values()) {
     const missing = w.owners.find(o => !byId.has(o));
     if (missing) throw Error('Wall ' + w.id + ' names a part that is not here: ' + missing);
+    // deduplicated_walls' storey and material rules: the tallest owner's
+    // storeys, and the material of the first owner by id.
     w.stories = Math.max(...w.owners.map(o => byId.get(o).storeys.count));
     w.material = byId.get(w.owners[0]).material.wall;
   }

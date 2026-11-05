@@ -40,6 +40,9 @@ def sha(data):
 
 
 def encoded(value, pretty=False):
+    # The compact form is mirrored by pyDumps and pyFloat in
+    # tools/maps/house-parts/house-parts.mjs, which must write the sectors and
+    # the wall-id hashes byte for byte as this does. Change both together.
     return (json.dumps(value, ensure_ascii=False, allow_nan=False,
                        indent=2 if pretty else None,
                        separators=None if pretty else (",", ":")) + "\n").encode("utf-8")
@@ -489,9 +492,10 @@ def clip_segment(a, b, width, depth):
 
 def deduplicated_walls(buildings):
     """Exact collinear interval union; shared party walls retain every owner."""
-    # Mirrored by deduplicatedWalls in tools/maps/house-parts/house-parts.mjs,
-    # wall id included (the hash of encoded [key, left, right], Python float
-    # repr), with its owner, storey and material rules. Change both together.
+    # Mirrored in tools/maps/house-parts/house-parts.mjs: the interval union,
+    # the owners and the wall id (the hash of encoded [key, left, right],
+    # Python float repr) by deduplicatedWalls, and the storey and material
+    # rules by stampSectors. Change both together.
     groups = defaultdict(list)
     for feature in buildings:
         for polygon in feature["geometry"]["coordinates"]:
@@ -537,6 +541,7 @@ def deduplicated_walls(buildings):
 
 
 def sector_id(column, row):
+    # Mirrored by sectorId in tools/maps/house-parts/house-parts.mjs.
     return chr(65 + column) + f"{row + 1:02d}"
 
 

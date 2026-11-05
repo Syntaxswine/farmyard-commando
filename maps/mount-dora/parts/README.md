@@ -16,7 +16,7 @@ on a grid, such as a house set along a curved street.
 | Field | Meaning |
 | --- | --- |
 | `kind`, `version`, `id` | `house-part`, `1`, and the town's building id (an OSM way or relation, or `county-…`) |
-| `name`, `address` | The OSM name. The address is from OSM, else the county parcel joined to the building, with its join method. A county-sketched building takes the lot of its lead sketch, the largest sketch with a record: its site address and, for 13 of them, the county's `placeName` (a business on that lot, not necessarily this building's name). `source` names the parcel. Either may be null. No owner, sale or value data is carried. |
+| `name`, `address` | The OSM name. The address is from OSM, else the county parcel joined to the building, with its join method. A county-sketched building takes its lot instead (see [County lots](#county-lots)): the site address, the county's `placeName` for 13 of them, and the parcel id in `source`. Either may be null. No owner, sale or value data is carried. |
 | `rights` | The licence (ODbL 1.0, as part of the town's derived feature database) and the credits a copy must carry: OpenStreetMap, the county where its records were used, and USGS lidar |
 | `frame` | The coordinate conventions, repeated in every file so it stands alone: units, axes, origin, cells, levels, wall centring, the rotation rule, angles and the latitude datum |
 | `size` | `[width, depth]` of the outline in metres |
@@ -36,6 +36,31 @@ on a grid, such as a house set along a curved street.
 
 Every level from 0 to `storeys` has floor on `floorCells`. Level 0 is the ground
 floor and level `storeys` is the roof deck, as in the town's sector maps.
+
+## County lots
+
+A county-sketched building takes the lot of its lead sketch: the largest of its
+sketches with a county record, else its first. The county survey chose that lot
+as the smallest parcel under the centre of the sketch as the county drew it,
+passing over condo units (`lotsAt` in
+`tools/maps/house-reference/build-house-reference.mjs`). `placeName` is a name
+the county gives the lot, such as a business or a lodge, and not necessarily
+this building's.
+
+The lot is not always the building's own parcel. For 15 parts it differs from
+`evidence.county.altKey`, the parcel of the building's county record:
+- 12 condo buildings take their common-area parcel, whose address is a street
+  name only (N GRANDVIEW ST, N TREMAIN ST and ROSSELL ST). The units of the
+  three on ROSSELL ST are addressed on HELEN ST.
+- A 41 m² store, `county-1470846-1`, is drawn on the neighbouring lot, so it
+  reads 535 N DONNELLY ST, MASONIC TEMPLE. Its record is 525 N DONNELLY ST.
+- Two lakefront houses, `county-1236797-1` and `county-1475414-2`, have their
+  centres on Lake Dora's submerged-land parcel, so they read LAKESHORE DR. Their
+  records are 401 and 402 LAKE DORA RD. These two addresses are wrong. The fix
+  belongs in the survey's lot rule, and regenerating the parts carries it over.
+
+`tests/maps/house-parts.test.mjs` pins these 15, so any change to the lot rule
+shows up there.
 
 ## Placing a part
 

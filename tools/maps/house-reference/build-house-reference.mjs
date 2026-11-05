@@ -155,6 +155,17 @@ export function build() {
     hits.sort((a, b) => a.area - b.area || a.altKey.localeCompare(b.altKey));
     return {hits, lot: hits.find(p => !/CONDO/.test(p.landUse)) || hits[0] || null};
   };
+  // A county sketch is filed under its parcel (AltKey), and that parcel is its
+  // lot. A condo unit's parcel is not ground, so a unit's sketch takes the lot
+  // under its centre: its building's common area. The centre alone put two
+  // lakefront houses on Lake Dora's submerged-land parcel, and a store drawn
+  // over its neighbour's line on the Masonic Temple's lot.
+  const filedUnder = new Map();
+  for (const p of parcels) if (!filedUnder.has(p.altKey)) filedUnder.set(p.altKey, p);
+  const sketchLot = (sketch, centre) => {
+    const own = filedUnder.get(sketch.altKey);
+    return own && !/CONDO/.test(own.landUse) ? own : lotsAt(sketch.box, centre).lot;
+  };
   // Storeys, wall, roof, porches and garage from a building's records.
   const suggest = (recs, lot, method) => {
     const primary = recs[0] || null;
@@ -226,7 +237,7 @@ export function build() {
   const countyOnly = sketches.map((s, i) => ({s, i})).filter(({i}) => !owner.has(i))
     .filter(({s}) => { const c = centroid(s.geometry); return c[0] >= extent[0] && c[1] >= extent[1] && c[0] <= extent[2] && c[1] <= extent[3]; })
     .map(({s, i}) => {
-      const rec = describe(s.altKey, s.bldgNum), c = centroid(s.geometry), {lot} = lotsAt(s.box, c);
+      const rec = describe(s.altKey, s.bldgNum), c = centroid(s.geometry), lot = sketchLot(s, c);
       const {lotExtras, suggested} = suggest(rec ? [rec] : [], lot, 'county-only');
       return {altKey: s.altKey, bldgNum: String(Number.parseInt(s.bldgNum, 10)), centroid: c.map(r2), areaM2: r1(s.area), coveredByGame: r2(covered.get(i) || 0),
         geometry: s.geometry.map(poly => poly.map(ring => ring.map(p => p.map(r2)))),

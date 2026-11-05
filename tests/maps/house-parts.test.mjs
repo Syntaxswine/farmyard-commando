@@ -375,23 +375,24 @@ test('a county building carries its lot address and place name, and nothing abou
   assert.deepEqual(addressOf({}, undefined, {address: '1 LOT ST', placeName: null, parcel: null}), {text: '1 LOT ST', source: 'county parcel; lot of the lead sketch'});
 });
 
-test('a county lot is the parcel under the lead sketch, which is not always the building\'s own', () => {
-  // The county survey takes the parcel under the centre of the lead sketch as the
-  // county drew it (lotsAt in tools/maps/house-reference/build-house-reference.mjs).
-  // For these 15 that is not the parcel of the building's own record. The two on
-  // Lake Dora's submerged land are wrong ("County lots" in the parts README), so
-  // a fix to the survey's lot rule changes this list.
+test('a county lot is the parcel the lead sketch is filed under, or a condo building\'s common area', () => {
+  // The county survey gives a sketch the parcel it is filed under, and a condo
+  // unit's sketch its building's common area
+  // (tools/maps/house-reference/build-house-reference.mjs). So only condo
+  // buildings name a lot other than their record's parcel.
   const lots = new Map(town.county.buildings.map(b => [b.id, b])), differ = {};
   for (const p of parts.filter(p => p.source.county && p.evidence.county?.altKey)) {
     const lot = lots.get(p.id).parcel;
     if (lot?.altKey !== p.evidence.county.altKey) (differ[lot?.landUse ?? 'no lot'] ??= []).push(p.id);
   }
   assert.deepEqual(differ, {
-    'GOVT SUBMERGED LAND': ['county-1236797-1', 'county-1475414-2'],
-    'CLUB/LODGE/UNION HALL': ['county-1470846-1'],
     'RESIDENTIAL COMMON ELEMENTS/AREA': ['county-1667917-1', 'county-1667933-1', 'county-1667976-1', 'county-2528206-1', 'county-2528273-1', 'county-2528311-1',
       'county-2528397-1', 'county-2528427-1', 'county-2528443-1', 'county-2629550-1', 'county-2629690-1', 'county-2629746-1']});
-  assert.deepEqual(differ['GOVT SUBMERGED LAND'].map(id => byId.get(id).address.text), ['LAKESHORE DR', 'LAKESHORE DR']);
+  // Under the old rule, the parcel under each sketch's centre, these two read
+  // LAKESHORE DR (Lake Dora's submerged land) and the store the Masonic Temple's lot.
+  assert.deepEqual(['county-1236797-1', 'county-1475414-2', 'county-1470846-1'].map(id => byId.get(id).address),
+    [{text: '401 LAKE DORA RD', source: 'county parcel 1236797; lot of the lead sketch'}, {text: '402 LAKE DORA RD', source: 'county parcel 1475414; lot of the lead sketch'},
+      {text: '525 N DONNELLY ST', placeName: 'MEMORIES & MARVELS', source: 'county parcel 1470846; lot of the lead sketch'}]);
 });
 
 test('each part carries its licence and credits', () => {

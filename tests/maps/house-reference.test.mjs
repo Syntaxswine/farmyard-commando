@@ -129,6 +129,36 @@ test('house-reference.json is exactly what the builder produces from the committ
   assert.equal(reference.buildings.length, features.filter(f => f.category === 'building' && isOsm(f)).length);
 });
 
+test('a county sketch takes the parcel it is filed under, and a condo unit its building\'s common area', () => {
+  const toTown = g => (g.type === 'Polygon' ? [g.coordinates] : g.coordinates).map(poly => poly.map(ring => ring.map(([lon, lat]) => projection.toTown(lat, lon))));
+  const parcels = new Map();
+  for (const f of json('reference/county/parcels.geojson').features) {
+    const key = f.properties.AltKey.trim();
+    if (!parcels.has(key)) parcels.set(key, {landUse: (f.properties.LandUseDescription || '').trim(), geometry: []});
+    parcels.get(key).geometry.push(...toTown(f.geometry));
+  }
+  const kinds = {filed: 0, commonArea: 0, unitAlone: 0};
+  for (const s of reference.countyOnly) {
+    const id = `${s.altKey}/${s.bldgNum}`, filed = parcels.get(s.altKey);
+    assert.ok(filed, `${id} is filed under no parcel`);
+    if (!/CONDO/.test(filed.landUse)) { assert.equal(s.parcel?.altKey, s.altKey, id); kinds.filed++; }
+    else if (s.parcel && !/CONDO/.test(s.parcel.landUse)) {
+      // A unit's parcel is not ground: its lot is a parcel under its centre that is not a unit.
+      assert.ok(contains(parcels.get(s.parcel.altKey).geometry, s.centroid), id);
+      kinds.commonArea++;
+    } else kinds.unitAlone++;
+  }
+  assert.deepEqual(kinds, {filed: 127, commonArea: 113, unitAlone: 7});
+  // The parcel under the centre would have put these on another lot: two lakefront
+  // houses on Lake Dora's submerged land, and a store on the Masonic Temple's lot.
+  for (const id of ['1236797/1', '1475414/2', '1470846/1']) {
+    const s = reference.countyOnly.find(c => `${c.altKey}/${c.bldgNum}` === id);
+    assert.equal(contains(parcels.get(s.altKey).geometry, s.centroid), false, id);
+  }
+  assert.deepEqual(['1236797/1', '1475414/2', '1470846/1'].map(id => reference.countyOnly.find(c => `${c.altKey}/${c.bldgNum}` === id).address),
+    ['401 LAKE DORA RD', '402 LAKE DORA RD', '525 N DONNELLY ST']);
+});
+
 test('recorded footprint matches hold up, and the same test fails 30 m away (negative control)', () => {
   const sketches = new Map(json('reference/county/footprints.geojson').features.map(f => [`${f.properties.AltKey.trim()}#${Number.parseInt(f.properties.BuildingNumber, 10)}`, f]));
   const byId = new Map(features.map(f => [f.id, f]));

@@ -98343,12 +98343,12 @@
     "roofCover": "METAL",
     "yearBuilt": 1940
    },
-   "address": "LAKESHORE DR",
+   "address": "401 LAKE DORA RD",
    "placeName": null,
    "parcel": {
-    "altKey": "3883811",
-    "landUse": "GOVT SUBMERGED LAND",
-    "buildings": 0
+    "altKey": "1236797",
+    "landUse": "SINGLE FAMILY LAKEFRONT",
+    "buildings": 2
    },
    "county": {
     "records": [
@@ -98374,7 +98374,9 @@
       }
      }
     ],
-    "lotExtras": []
+    "lotExtras": [
+     "CARPORT/POLE SHED UNFINISHED"
+    ]
    },
    "suggested": {
     "stories": 1,
@@ -104171,11 +104173,11 @@
     "roofCover": null,
     "yearBuilt": 1940
    },
-   "address": "535 N DONNELLY ST",
-   "placeName": "MASONIC TEMPLE",
+   "address": "525 N DONNELLY ST",
+   "placeName": "MEMORIES & MARVELS",
    "parcel": {
-    "altKey": "1470854",
-    "landUse": "CLUB/LODGE/UNION HALL",
+    "altKey": "1470846",
+    "landUse": "STORE 1 STORY FREE STANDING",
     "buildings": 1
    },
    "county": {
@@ -104198,9 +104200,7 @@
       }
      }
     ],
-    "lotExtras": [
-     "PAVING"
-    ]
+    "lotExtras": []
    },
    "suggested": {
     "stories": 1,
@@ -105276,12 +105276,12 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1991
    },
-   "address": "LAKESHORE DR",
+   "address": "402 LAKE DORA RD",
    "placeName": null,
    "parcel": {
-    "altKey": "3883811",
-    "landUse": "GOVT SUBMERGED LAND",
-    "buildings": 0
+    "altKey": "1475414",
+    "landUse": "SINGLE FAMILY LAKEFRONT",
+    "buildings": 2
    },
    "county": {
     "records": [
@@ -105304,7 +105304,12 @@
       }
      }
     ],
-    "lotExtras": []
+    "lotExtras": [
+     "DECK - WOOD",
+     "POOL/COOL DECK",
+     "SCREEN ENCLOSED STRUCTURE",
+     "SWIMMING POOL - RESIDENTIAL"
+    ]
    },
    "suggested": {
     "stories": 1,

@@ -40,27 +40,29 @@ floor and level `storeys` is the roof deck, as in the town's sector maps.
 ## County lots
 
 A county-sketched building takes the lot of its lead sketch: the largest of its
-sketches with a county record, else its first. The county survey chose that lot
-as the smallest parcel under the centre of the sketch as the county drew it,
-passing over condo units (`lotsAt` in
-`tools/maps/house-reference/build-house-reference.mjs`). `placeName` is a name
+sketches with a county record, else its first. The county survey gives a sketch
+the parcel it is filed under, its AltKey. A condo unit's parcel is not ground,
+so a unit's sketch takes its building's common area instead: the smallest parcel
+under the centre of the sketch that is not a condo unit
+(`tools/maps/house-reference/build-house-reference.mjs`). `placeName` is a name
 the county gives the lot, such as a business or a lodge, and not necessarily
 this building's.
 
-The lot is not always the building's own parcel. For 15 parts it differs from
-`evidence.county.altKey`, the parcel of the building's county record:
-- 12 condo buildings take their common-area parcel, whose address is a street
-  name only (N GRANDVIEW ST, N TREMAIN ST and ROSSELL ST). The units of the
-  three on ROSSELL ST are addressed on HELEN ST.
-- A 41 m² store, `county-1470846-1`, is drawn on the neighbouring lot, so it
-  reads 535 N DONNELLY ST, MASONIC TEMPLE. Its record is 525 N DONNELLY ST.
-- Two lakefront houses, `county-1236797-1` and `county-1475414-2`, have their
-  centres on Lake Dora's submerged-land parcel, so they read LAKESHORE DR. Their
-  records are 401 and 402 LAKE DORA RD. These two addresses are wrong. The fix
-  belongs in the survey's lot rule, and regenerating the parts carries it over.
+So only condo buildings name a lot other than their record's parcel
+(`evidence.county.altKey`). There are 12, and their addresses are street names
+only (N GRANDVIEW ST, N TREMAIN ST and ROSSELL ST). The units of the three on
+ROSSELL ST are addressed on HELEN ST.
 
-`tests/maps/house-parts.test.mjs` pins these 15, so any change to the lot rule
-shows up there.
+Two cases where the drawing and the parcel lines disagree:
+- Two lakefront houses, `county-1236797-1` (401 LAKE DORA RD) and
+  `county-1475414-2` (402 LAKE DORA RD), are drawn partly over Lake Dora's
+  submerged-land parcel, with their centres on it.
+- A 41 m² store, `county-1470846-1`, is drawn wholly on the Masonic Temple's lot
+  next door. It reads 525 N DONNELLY ST, MEMORIES & MARVELS, the parcel it is
+  filed under. That parcel's 440 sq ft of living area matches the 41 m² sketch.
+
+`tests/maps/house-parts.test.mjs` pins the 12, and these three addresses, so a
+change to the lot rule shows up there.
 
 ## Placing a part
 

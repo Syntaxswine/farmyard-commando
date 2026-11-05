@@ -129,6 +129,31 @@ test('house-reference.json is exactly what the builder produces from the committ
   assert.equal(reference.buildings.length, features.filter(f => f.category === 'building' && isOsm(f)).length);
 });
 
+test('a county-only sketch takes its own parcel as its lot where it overlaps it', () => {
+  const parcels = json('reference/county/parcels.geojson').features, sketches = json('reference/county/footprints.geojson').features;
+  const toTown = g => (g.type === 'Polygon' ? [g.coordinates] : g.coordinates).map(p => p.map(r => r.map(([lon, lat]) => projection.toTown(lat, lon))));
+  const parcelsOf = altKey => parcels.filter(p => p.properties.AltKey.trim() === altKey);
+  const sketchOf = k => sketches.find(f => `${f.properties.AltKey.trim()}/${Number.parseInt(f.properties.BuildingNumber, 10)}` === k);
+  const only = new Map(reference.countyOnly.map(c => [`${c.altKey}/${c.bldgNum}`, c]));
+  // Both lakefront sketches have their centres on Lake Dora's submerged-land
+  // parcel, which the parcel under the centre gave them, with "LAKESHORE DR".
+  const [lake] = parcelsOf('3883811');
+  assert.equal(lake.properties.LandUseDescription.trim(), 'GOVT SUBMERGED LAND');
+  for (const k of ['1236797/1', '1475414/2']) assert.ok(contains(toTown(lake.geometry), centroid(toTown(sketchOf(k).geometry))), k);
+  assert.deepEqual(['1236797/1', '1475414/2'].map(k => [only.get(k).address, only.get(k).parcel.altKey, only.get(k).parcel.landUse]),
+    [['401 LAKE DORA RD', '1236797', 'SINGLE FAMILY LAKEFRONT'], ['402 LAKE DORA RD', '1475414', 'SINGLE FAMILY LAKEFRONT']]);
+  // The lot is another parcel only for condo units, whose building keeps its
+  // common lot, and for one store drawn wholly on the neighbouring lot.
+  const elsewhere = {};
+  for (const c of reference.countyOnly) if (c.parcel?.altKey !== c.altKey) (elsewhere[c.parcel?.landUse ?? 'no lot'] ??= []).push(`${c.altKey}/${c.bldgNum}`);
+  assert.deepEqual(Object.fromEntries(Object.entries(elsewhere).map(([use, list]) => [use, list.length])),
+    {'RESIDENTIAL COMMON ELEMENTS/AREA': 113, 'CLUB/LODGE/UNION HALL': 1});
+  for (const k of elsewhere['RESIDENTIAL COMMON ELEMENTS/AREA'])
+    assert.ok(parcelsOf(k.split('/')[0]).every(p => /CONDO/.test(p.properties.LandUseDescription)), `${k} is not a condo unit`);
+  assert.deepEqual(elsewhere['CLUB/LODGE/UNION HALL'], ['1470846/1']);
+  assert.equal(overlapArea(toTown(sketchOf('1470846/1').geometry), toTown(parcelsOf('1470846')[0].geometry)), 0);
+});
+
 test('recorded footprint matches hold up, and the same test fails 30 m away (negative control)', () => {
   const sketches = new Map(json('reference/county/footprints.geojson').features.map(f => [`${f.properties.AltKey.trim()}#${Number.parseInt(f.properties.BuildingNumber, 10)}`, f]));
   const byId = new Map(features.map(f => [f.id, f]));

@@ -155,6 +155,18 @@ export function build() {
     hits.sort((a, b) => a.area - b.area || a.altKey.localeCompare(b.altKey));
     return {hits, lot: hits.find(p => !/CONDO/.test(p.landUse)) || hits[0] || null};
   };
+  // A county-only sketch is filed under its own parcel (its AltKey), and that
+  // parcel is its lot wherever the sketch overlaps it. The parcel under the
+  // centre gave two lakefront houses Lake Dora's submerged-land parcel and the
+  // lake's address. A condo unit's parcel is passed over, as in lotsAt, so a
+  // condo building keeps its common lot. A sketch drawn wholly off its own
+  // parcel keeps the parcel under its centre: there the drawing and the record
+  // disagree.
+  const parcelsByKey = new Map();
+  for (const p of parcels) parcelsByKey.set(p.altKey, [...(parcelsByKey.get(p.altKey) || []), p]);
+  const ownLot = s => (parcelsByKey.get(s.altKey) || []).filter(p => !/CONDO/.test(p.landUse))
+    .map(p => ({p, overlap: overlapArea(s.geometry, p.geometry, .1, s.box, p.box)})).filter(x => x.overlap > 0)
+    .sort((a, b) => b.overlap - a.overlap || a.p.area - b.p.area)[0]?.p ?? null;
   // Storeys, wall, roof, porches and garage from a building's records.
   const suggest = (recs, lot, method) => {
     const primary = recs[0] || null;
@@ -226,7 +238,7 @@ export function build() {
   const countyOnly = sketches.map((s, i) => ({s, i})).filter(({i}) => !owner.has(i))
     .filter(({s}) => { const c = centroid(s.geometry); return c[0] >= extent[0] && c[1] >= extent[1] && c[0] <= extent[2] && c[1] <= extent[3]; })
     .map(({s, i}) => {
-      const rec = describe(s.altKey, s.bldgNum), c = centroid(s.geometry), {lot} = lotsAt(s.box, c);
+      const rec = describe(s.altKey, s.bldgNum), c = centroid(s.geometry), lot = ownLot(s) ?? lotsAt(s.box, c).lot;
       const {lotExtras, suggested} = suggest(rec ? [rec] : [], lot, 'county-only');
       return {altKey: s.altKey, bldgNum: String(Number.parseInt(s.bldgNum, 10)), centroid: c.map(r2), areaM2: r1(s.area), coveredByGame: r2(covered.get(i) || 0),
         geometry: s.geometry.map(poly => poly.map(ring => ring.map(p => p.map(r2)))),

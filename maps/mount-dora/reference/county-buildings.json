@@ -9,7 +9,7 @@
   },
   "houseReference": {
    "file": "maps/mount-dora/reference/house-reference.json",
-   "sha256": "ca81b523df895b40c8c6ed557c3fd9bffe70d655bb00e68dd246fd71e413594f",
+   "sha256": "f7e39dcffceeb7c487ee16fd45909053d980820b0bb0ab2b08b74daf40212170",
    "usedFor": "countyOnly sketches and the records game buildings hold"
   },
   "lidar": {
@@ -69,7 +69,7 @@
    "agree": 88
   },
   "withStreetView": 126,
-  "onAddressedStreet": 111
+  "onAddressedStreet": 113
  },
  "buildings": [
   {
@@ -445,12 +445,12 @@
     113.16,
     521.63
    ],
-   "address": "LAKESHORE DR",
+   "address": "401 LAKE DORA RD",
    "placeName": null,
    "parcel": {
-    "altKey": "3883811",
-    "landUse": "GOVT SUBMERGED LAND",
-    "buildings": 0
+    "altKey": "1236797",
+    "landUse": "SINGLE FAMILY LAKEFRONT",
+    "buildings": 2
    },
    "angleDeg": -23.084,
    "clippedByGameM2": 0,
@@ -584,7 +584,9 @@
        }
       }
      ],
-     "lotExtras": []
+     "lotExtras": [
+      "CARPORT/POLE SHED UNFINISHED"
+     ]
     },
     "suggested": {
      "stories": 1,
@@ -720,7 +722,7 @@
     "roadClass": "residential",
     "alongM": 146.2,
     "distanceM": 35.2,
-    "onAddressedStreet": false,
+    "onAddressedStreet": true,
     "url": "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=28.800855,-81.647702&heading=231&pitch=5&fov=79"
    },
    "aerialUrl": "https://www.google.com/maps/@?api=1&map_action=map&center=28.800653,-81.647981&zoom=20&basemap=satellite"
@@ -12652,12 +12654,12 @@
     92.67,
     500.61
    ],
-   "address": "LAKESHORE DR",
+   "address": "402 LAKE DORA RD",
    "placeName": null,
    "parcel": {
-    "altKey": "3883811",
-    "landUse": "GOVT SUBMERGED LAND",
-    "buildings": 0
+    "altKey": "1475414",
+    "landUse": "SINGLE FAMILY LAKEFRONT",
+    "buildings": 2
    },
    "angleDeg": -25.352,
    "clippedByGameM2": 0,
@@ -12748,7 +12750,12 @@
        }
       }
      ],
-     "lotExtras": []
+     "lotExtras": [
+      "DECK - WOOD",
+      "POOL/COOL DECK",
+      "SCREEN ENCLOSED STRUCTURE",
+      "SWIMMING POOL - RESIDENTIAL"
+     ]
     },
     "suggested": {
      "stories": 1,
@@ -12860,7 +12867,7 @@
     "roadClass": "residential",
     "alongM": 175.8,
     "distanceM": 37.5,
-    "onAddressedStreet": false,
+    "onAddressedStreet": true,
     "url": "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=28.801060,-81.647896&heading=230&pitch=5&fov=36"
    },
    "aerialUrl": "https://www.google.com/maps/@?api=1&map_action=map&center=28.800843,-81.648190&zoom=20&basemap=satellite"

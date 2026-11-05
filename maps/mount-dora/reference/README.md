@@ -87,11 +87,15 @@ lidar's building returns (class 6) tell them apart:
 - **Pieces:** a native outline is one connected footprint, so a sketch of two
   parts meeting at a corner becomes two buildings (`-part2`).
 - **Survey:** each building takes the lot and address of its largest sketch
-  with a record (its first sketch, if none has one). It gets a Street View
+  with a record (its first sketch, if none has one). A sketch's lot is the
+  parcel it is filed under wherever the sketch overlaps it, unless that parcel
+  is a condo unit; otherwise it is the parcel under the sketch's centre. So two
+  lakefront houses whose centres lie on Lake Dora's submerged-land parcel keep
+  their own lots and addresses. Each building gets a Street View
   camera planned as for the game buildings
   (`tools/maps/house-reference/viewpoint.mjs`), except that the camera's pitch
   may follow the lidar storeys where the county has none: the game buildings'
-  cameras are planned before the lidar, from county storeys alone. 111 of 126
+  cameras are planned before the lidar, from county storeys alone. 113 of 126
   stand on the addressed street, median 26 m away. All 126 are in the survey's
   queue. A piece (`-part2`) keeps the lead sketch's lot even where it lies on
   another member's; no current structure has one that does.

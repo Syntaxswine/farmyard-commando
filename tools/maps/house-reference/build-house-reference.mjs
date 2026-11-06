@@ -31,6 +31,18 @@ const SQFT = .09290304;
 // parcel to be its lot (ownLot); the smallest such share in the town is 18%.
 export const MATCH = {assignCover: .5, assignIoU: .3, goodIoU: .5, ownParcelCover: .01};
 
+// County-only sketches that take the parcel they are filed under although
+// they do not lie on it. Each is a documented exception, backed by the
+// county's own records, and the build stops if the records stop backing it
+// (exceptionDoubts). Game buildings have none: their lots keep the overlap test.
+// - 1470846/1 is the store MEMORIES & MARVELS at 525 N DONNELLY ST. Its sketch
+//   lies wholly on the Masonic Temple's lot next door, 2.9 m from its own
+//   parcel, whose outline (35 m²) is smaller than the store. Its record's
+//   ground floor is 440 sq ft, the sketch's area to the square foot. The
+//   temple's lot has one building on record, the temple, whose own sketch the
+//   temple's game building holds.
+export const LOT_EXCEPTIONS = ['1470846/1'];
+
 // County code descriptions -> game vocabulary. Unknown codes fall through to null.
 export const WALLS = {
   'WOOD/METAL FRAME W/OUTER FINISH': {construction: 'frame', material: 'wood'},
@@ -52,6 +64,23 @@ export const SUBAREAS = {
   garage: ['GAR', 'GBF', 'GCF'], carport: ['CPF', 'CPU'], upper: ['FUS', 'FHS', 'FTQ'],
   basement: ['BSF', 'BSM', 'FBS'], canopy: ['COP'],
 };
+
+// A county record's ground floor in m², from its ground-floor sub-areas.
+export const groundM2 = rec => r1(SUBAREAS.ground.reduce((s, c) => s + (rec.subAreasSqft[c] || 0), 0) * SQFT);
+
+// What stops the county's records backing a LOT_EXCEPTIONS sketch, or [] when
+// they back it. The sketch must be filed under one parcel, not a condo unit,
+// which has one building on record: this sketch's, whose ground floor is the
+// sketch's area to within 1%. `records` are describe()'s, for the whole parcel.
+export function exceptionDoubts(sketch, filed, records) {
+  if (filed.length !== 1) return [`it is filed under ${filed.length} parcel outlines`];
+  const doubts = [], bldgNum = String(Number.parseInt(sketch.bldgNum, 10)), own = records.find(r => r.bldgNum === bldgNum);
+  if (/CONDO/.test(filed[0].landUse)) doubts.push(`its parcel is a condo unit (${filed[0].landUse})`);
+  if (filed[0].buildings !== 1 || records.length !== 1) doubts.push(`its parcel has ${filed[0].buildings} buildings, ${records.length} on record`);
+  if (!own) doubts.push('it has no record');
+  else if (!(Math.abs(groundM2(own) / sketch.area - 1) <= .01)) doubts.push(`its record's ground floor is ${groundM2(own)} m², the sketch ${r1(sketch.area)} m²`);
+  return doubts;
+}
 
 export function storeys(raw, codes) {
   const value = Number.parseFloat(raw);
@@ -76,7 +105,9 @@ function readCsv(file) {
   return rows.map(r => Object.fromEntries(header.map((k, i) => [k, r[i] === 'NULL' ? '' : r[i]])));
 }
 
-export function build() {
+// `lotExceptions` stands in for LOT_EXCEPTIONS, so a test can show the build
+// stopping on an entry the county's records do not back.
+export function build({lotExceptions = LOT_EXCEPTIONS} = {}) {
   const featuresBytes = fs.readFileSync(path.join(town, 'features.json'));
   const sourceBytes = fs.readFileSync(path.join(county, 'source.json'));
   const project = JSON.parse(fs.readFileSync(path.join(town, 'project.json'), 'utf8'));
@@ -148,7 +179,6 @@ export function build() {
       stories: row.STORIES || null, livingSqft: Number.parseInt(row.LIVING_AREA, 10) || null,
       subAreasSqft: Object.fromEntries(codes.map(c => [c, sub[c]]))};
   };
-  const groundM2 = rec => r1(SUBAREAS.ground.reduce((s, c) => s + (rec.subAreasSqft[c] || 0), 0) * SQFT);
   const parcelRecords = altKey => [...records.values()].filter(r => r.ALT_KEY === altKey).map(r => describe(altKey, r.BLDG_NUM));
   // The parcels under a point, smallest first; stacked condo units share one
   // outline, so the smallest non-condo hit is the lot itself.
@@ -162,14 +192,28 @@ export function build() {
   // The parcel under the centre gave two lakefront county-only houses Lake
   // Dora's submerged-land parcel, and two game houses the vacant lots next
   // door. A condo unit's parcel is passed over, as in lotsAt, so a condo
-  // building keeps its common lot. A sketch drawn wholly off its own parcel
-  // keeps the parcel under its centre: there the drawing and the record
-  // disagree.
+  // building keeps its common lot, or takes a unit where only units lie under
+  // its centre (lotsAt's fallback). A sketch drawn wholly off its own parcel
+  // keeps the parcel under its centre, where the drawing and the filing
+  // disagree, unless the county's records settle it (LOT_EXCEPTIONS).
   const parcelsByKey = new Map();
   for (const p of parcels) parcelsByKey.set(p.altKey, [...(parcelsByKey.get(p.altKey) || []), p]);
   const ownLot = s => (parcelsByKey.get(s.altKey) || []).filter(p => !/CONDO/.test(p.landUse))
     .map(p => ({p, overlap: overlapArea(s.geometry, p.geometry, .1, s.box, p.box)})).filter(x => x.overlap >= MATCH.ownParcelCover * s.area)
     .sort((a, b) => b.overlap - a.overlap || a.p.area - b.p.area)[0]?.p ?? null;
+  // A LOT_EXCEPTIONS sketch takes the parcel it is filed under once the
+  // records back it. Each listed sketch must arrive here: one a game building
+  // holds, one not in the town, or one ownLot already places is no exception,
+  // and the build stops.
+  const exceptions = new Set(lotExceptions), excepted = [];
+  const filedLot = s => {
+    const id = `${s.altKey}/${Number.parseInt(s.bldgNum, 10)}`;
+    if (!exceptions.has(id)) return null;
+    const filed = parcelsByKey.get(s.altKey) || [], doubts = exceptionDoubts(s, filed, parcelRecords(s.altKey));
+    assert.deepEqual(doubts, [], `${id} is in LOT_EXCEPTIONS, but ${doubts.join('; ')}`);
+    excepted.push(id);
+    return filed[0];
+  };
   // Storeys, wall, roof, porches and garage from a building's records.
   const suggest = (recs, lot, method) => {
     const primary = recs[0] || null;
@@ -201,32 +245,36 @@ export function build() {
   const out = [];
   for (const [h, house] of houses.entries()) {
     const f = house.feature, matches = assigned[h];
-    // Where every sketch the building holds is filed under one parcel, that
-    // parcel is its lot, as for a county-only sketch. Sketches spread over
-    // several parcels leave the parcel under the centre.
+    // Where every sketch the building holds is filed under one parcel, and its
+    // lead sketch lies on it (ownLot), that parcel is its lot. Sketches spread
+    // over several parcels, or filed under one with no outline on the county's
+    // map, leave the parcel under the centre. LOT_EXCEPTIONS are county-only.
     const {hits, lot: centreLot} = lotsAt(house.box, house.centre);
     const filedUnder = new Set(matches.map(m => sketches[m.sketch].altKey));
     const lot = (filedUnder.size === 1 && ownLot(sketches[matches[0].sketch])) || centreLot;
     let method = 'none', recs = [], match = null;
+    // The sketches the building holds, kept however its record is found: they
+    // decide its lot even where none of them has a record.
+    const held = matches.length ? {countyBuildings: matches.map(m => ({altKey: sketches[m.sketch].altKey,
+      bldgNum: String(Number.parseInt(sketches[m.sketch].bldgNum, 10)), overlapM2: r1(m.overlap), iou: r2(m.iou)}))} : {};
     if (matches.length) {
       recs = matches.map(m => describe(sketches[m.sketch].altKey, sketches[m.sketch].bldgNum)).filter(Boolean);
       const best = matches[0];
       method = best.iou >= MATCH.goodIoU ? 'footprint' : 'footprint-partial';
-      match = {iou: r2(best.iou), coverGame: r2(matches.reduce((s, m) => s + m.overlap, 0) / house.area), coverCounty: r2(best.cover),
-        countyBuildings: matches.map(m => ({altKey: sketches[m.sketch].altKey, bldgNum: String(Number.parseInt(sketches[m.sketch].bldgNum, 10)), overlapM2: r1(m.overlap), iou: r2(m.iou)}))};
+      match = {iou: r2(best.iou), coverGame: r2(matches.reduce((s, m) => s + m.overlap, 0) / house.area), coverCounty: r2(best.cover), ...held};
     }
     if (!recs.length && hits.length) {
       const condos = hits.filter(p => /CONDO/.test(p.landUse));
       if (condos.length >= 2) {
         method = 'condo-units';
         recs = condos.flatMap(p => parcelRecords(p.altKey)).filter(Boolean);
-        match = {units: condos.length};
+        match = {units: condos.length, ...held};
       } else if (lot) {
         const candidates = parcelRecords(lot.altKey).filter(Boolean);
-        if (candidates.length === 1) { method = 'parcel-single'; recs = candidates; match = {altKey: lot.altKey}; }
+        if (candidates.length === 1) { method = 'parcel-single'; recs = candidates; match = {altKey: lot.altKey, ...held}; }
         else if (candidates.length > 1) {
           const scored = candidates.map(c => ({c, ratio: groundM2(c) / house.area})).sort((a, b) => Math.abs(Math.log(a.ratio || 1e-9)) - Math.abs(Math.log(b.ratio || 1e-9)));
-          method = 'parcel-area'; recs = [scored[0].c]; match = {altKey: lot.altKey, groundAreaRatio: r2(scored[0].ratio), candidates: candidates.length};
+          method = 'parcel-area'; recs = [scored[0].c]; match = {altKey: lot.altKey, groundAreaRatio: r2(scored[0].ratio), candidates: candidates.length, ...held};
         }
       }
     }
@@ -246,7 +294,7 @@ export function build() {
   const countyOnly = sketches.map((s, i) => ({s, i})).filter(({i}) => !owner.has(i))
     .filter(({s}) => { const c = centroid(s.geometry); return c[0] >= extent[0] && c[1] >= extent[1] && c[0] <= extent[2] && c[1] <= extent[3]; })
     .map(({s, i}) => {
-      const rec = describe(s.altKey, s.bldgNum), c = centroid(s.geometry), lot = ownLot(s) ?? lotsAt(s.box, c).lot;
+      const rec = describe(s.altKey, s.bldgNum), c = centroid(s.geometry), lot = ownLot(s) ?? filedLot(s) ?? lotsAt(s.box, c).lot;
       const {lotExtras, suggested} = suggest(rec ? [rec] : [], lot, 'county-only');
       return {altKey: s.altKey, bldgNum: String(Number.parseInt(s.bldgNum, 10)), centroid: c.map(r2), areaM2: r1(s.area), coveredByGame: r2(covered.get(i) || 0),
         geometry: s.geometry.map(poly => poly.map(ring => ring.map(p => p.map(r2)))),
@@ -257,6 +305,7 @@ export function build() {
         parcel: lot ? {altKey: lot.altKey, landUse: lot.landUse, buildings: lot.buildings} : null,
         county: {records: rec ? [rec] : [], lotExtras}, suggested};
     }).sort((a, b) => a.altKey.localeCompare(b.altKey) || a.bldgNum.localeCompare(b.bldgNum));
+  assert.deepEqual(excepted.sort(), [...exceptions].sort(), 'LOT_EXCEPTIONS lists a sketch that is no exception: a game building holds it, it is not in the town, or it already lies on its parcel');
 
   const count = fn => out.filter(fn).length;
   const metrics = {
@@ -274,7 +323,7 @@ export function build() {
     inputs: {features: featuresPin(featuresBytes),
       county: {file: 'maps/mount-dora/reference/county/source.json', sha256: hash(sourceBytes), release: source.release}},
     policy: 'County facts and planned viewpoints only. Street View is opened in Google Maps by URL for a person to look at; no imagery is requested, stored or traced by this tool.',
-    thresholds: {...MATCH, viewRadiusM: VIEW_RADIUS_M, addressNearM: ADDRESS_NEAR_M, addressSlackM: ADDRESS_SLACK_M}, vocabulary: {walls: WALLS, roofs: ROOFS, subAreas: SUBAREAS},
+    thresholds: {...MATCH, viewRadiusM: VIEW_RADIUS_M, addressNearM: ADDRESS_NEAR_M, addressSlackM: ADDRESS_SLACK_M}, lotExceptions: excepted, vocabulary: {walls: WALLS, roofs: ROOFS, subAreas: SUBAREAS},
     metrics, buildings: out, countyOnly,
   };
   return JSON.stringify(reference, null, 1) + '\n';

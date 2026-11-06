@@ -377,29 +377,30 @@ test('a county building carries its lot address and place name, and nothing abou
 
 test('a part\'s lot is the parcel its sketches are filed under where they lie on it, which is not always its record\'s', () => {
   // The county survey gives a building the parcel its county sketches are filed
-  // under where they lie on it, else the parcel under its centre (ownLot and
-  // lotsAt in tools/maps/house-reference/build-house-reference.mjs). For these
-  // 13 county parts the lot is not the parcel of the building's own record:
-  // condo buildings keep their common lot, and one store is drawn wholly on its
-  // neighbour's lot ("County lots" in the parts README). A change to the
-  // survey's lot rule changes this list.
+  // under where they lie on it, or where the county's records place them
+  // (LOT_EXCEPTIONS), else the parcel under its centre (ownLot and lotsAt in
+  // tools/maps/house-reference/build-house-reference.mjs). For these 12 county
+  // parts the lot is not the parcel of the building's own record: condo
+  // buildings keep their common lot ("County lots" in the parts README). A
+  // change to the survey's lot rule changes this list.
   const lots = new Map(town.county.buildings.map(b => [b.id, b])), differ = {};
   for (const p of parts.filter(p => p.source.county && p.evidence.county?.altKey)) {
     const lot = lots.get(p.id).parcel;
     if (lot?.altKey !== p.evidence.county.altKey) differ[p.id] = lot?.altKey ?? null;
   }
   assert.deepEqual(differ, {
-    'county-1470846-1': '1470854',
     'county-1667917-1': '3891862', 'county-1667933-1': '3891862', 'county-1667976-1': '3891862',
     'county-2528206-1': '3891860', 'county-2528273-1': '3891860', 'county-2528311-1': '3891860',
     'county-2528397-1': '3891860', 'county-2528427-1': '3891860', 'county-2528443-1': '3891860',
     'county-2629550-1': '3891857', 'county-2629690-1': '3891857', 'county-2629746-1': '3891857'});
-  // Four houses whose centres lie on another parcel read their own lots: two
-  // lakefront county houses (on Lake Dora's submerged land) and two game houses
-  // (on the vacant lot next door).
-  assert.deepEqual(['county-1236797-1', 'county-1475414-2', 'osm-way-1240419568', 'osm-way-1240419587'].map(id => byId.get(id).address), [
+  // Five houses whose centres lie on another parcel read their own lots: two
+  // lakefront county houses (on Lake Dora's submerged land), the store drawn
+  // on the Masonic Temple's lot (the survey's one documented exception), and
+  // two game houses (on the vacant lot next door).
+  assert.deepEqual(['county-1236797-1', 'county-1475414-2', 'county-1470846-1', 'osm-way-1240419568', 'osm-way-1240419587'].map(id => byId.get(id).address), [
     {text: '401 LAKE DORA RD', source: 'county parcel 1236797; lot of the lead sketch'},
     {text: '402 LAKE DORA RD', source: 'county parcel 1475414; lot of the lead sketch'},
+    {text: '525 N DONNELLY ST', placeName: 'MEMORIES & MARVELS', source: 'county parcel 1470846; lot of the lead sketch'},
     {text: '610 E 1ST AVE', source: 'county parcel 1469091; join footprint-partial'},
     {text: '221 S CLAYTON ST', source: 'county parcel 1473331; join footprint-partial'}]);
 });

@@ -1,6 +1,6 @@
 {
   "schema": "mount-dora-route-evidence/1",
-  "sourceProjectSHA256": "f4c2cb8fe1ea3eb01e2b64c43ca50a6f9b4f2c19c7e4dac1dbc9feac26ab2961",
+  "sourceProjectSHA256": "01c1573e5f4484650875697e3ad61340c89536002bc8f45cb6be28f2d9f45e37",
   "sourceDigest": "2b742d1768425de6a41a60818a0d2fd3a72b71f1969de94a50ff9041ce216193",
   "coordinateFrame": "town east/south metres; game = town - (0.5,0.5)",
   "bounds": [

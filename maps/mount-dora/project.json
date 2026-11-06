@@ -3108,15 +3108,15 @@
         "file": "reference/house-reference.json",
         "kind": "county",
         "source": "Lake County Property Appraiser tax roll and building sketches",
-        "sha256": "5ce0c21d88fb5a590ba691bf8e3d648edc8cb6e158996cfbcf2d7696f6465526",
-        "bytes": 2719858,
+        "sha256": "0cdd744117c226908243dbfa57f52ff4a88525e682078ee0ec541a6b5385163b",
+        "bytes": 2721964,
         "release": "100626"
       },
       {
         "file": "reference/lidar-roofs.json",
         "kind": "lidar",
         "source": "USGS 3DEP lidar FL_Peninsular_Lake_2018",
-        "sha256": "1f6cbb9f3b1bd25b183486425df063f62b21908a0f1f2e89df480bbe5cc5293d",
+        "sha256": "7464558840e59cd3982f619a77d8809754be6c54e114ee97a63fa19fe34912bf",
         "bytes": 1100154,
         "acquired": [
           "2018-12-06"
@@ -3126,8 +3126,8 @@
         "file": "reference/county-buildings.json",
         "kind": "countyBuildings",
         "source": "County building sketches OpenStreetMap lacks, placed on the 2018 lidar roofs",
-        "sha256": "c0701a89f87c71a14829fcc93921245d1fa1d474bbc9077b556f9676a6592302",
-        "bytes": 614434,
+        "sha256": "7786b513bca95915d643f6f1b2f861ea994423a0595e8123dd815af97d364b90",
+        "bytes": 614423,
         "buildings": 126
       }
     ],

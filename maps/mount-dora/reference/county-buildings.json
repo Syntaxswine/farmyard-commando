@@ -9,7 +9,7 @@
   },
   "houseReference": {
    "file": "maps/mount-dora/reference/house-reference.json",
-   "sha256": "5ce0c21d88fb5a590ba691bf8e3d648edc8cb6e158996cfbcf2d7696f6465526",
+   "sha256": "0cdd744117c226908243dbfa57f52ff4a88525e682078ee0ec541a6b5385163b",
    "usedFor": "countyOnly sketches and the records game buildings hold"
   },
   "lidar": {
@@ -10929,11 +10929,11 @@
     414.1,
     496.28
    ],
-   "address": "535 N DONNELLY ST",
-   "placeName": "MASONIC TEMPLE",
+   "address": "525 N DONNELLY ST",
+   "placeName": "MEMORIES & MARVELS",
    "parcel": {
-    "altKey": "1470854",
-    "landUse": "CLUB/LODGE/UNION HALL",
+    "altKey": "1470846",
+    "landUse": "STORE 1 STORY FREE STANDING",
     "buildings": 1
    },
    "angleDeg": 0.627,
@@ -11008,9 +11008,7 @@
        }
       }
      ],
-     "lotExtras": [
-      "PAVING"
-     ]
+     "lotExtras": []
     },
     "suggested": {
      "stories": 1,

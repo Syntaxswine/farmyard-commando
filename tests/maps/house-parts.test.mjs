@@ -393,7 +393,7 @@ test('a part\'s lot is the parcel its sketches are filed under where they lie on
     'county-2528206-1': '3891860', 'county-2528273-1': '3891860', 'county-2528311-1': '3891860',
     'county-2528397-1': '3891860', 'county-2528427-1': '3891860', 'county-2528443-1': '3891860',
     'county-2629550-1': '3891857', 'county-2629690-1': '3891857', 'county-2629746-1': '3891857'});
-  // Five houses whose centres lie on another parcel read their own lots: two
+  // Five buildings whose centres lie on another parcel read their own lots: two
   // lakefront county houses (on Lake Dora's submerged land), the store drawn
   // on the Masonic Temple's lot (the survey's one documented exception), and
   // two game houses (on the vacant lot next door).

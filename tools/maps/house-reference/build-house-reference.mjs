@@ -29,14 +29,18 @@ const SQFT = .09290304;
 // of it; IoU grades how well the two outlines agree. ownParcelCover is the
 // share of a sketch that must lie on the parcel it is filed under for that
 // parcel to be its lot (ownLot); the smallest such share in the town is 18%.
-export const MATCH = {assignCover: .5, assignIoU: .3, goodIoU: .5, ownParcelCover: .01};
+// exceptionAreaTolerance is how far a LOT_EXCEPTIONS sketch's area may stray
+// from its record's ground floor, as a share (exceptionDoubts).
+export const MATCH = {assignCover: .5, assignIoU: .3, goodIoU: .5, ownParcelCover: .01, exceptionAreaTolerance: .01};
 
 // County-only sketches that take the parcel they are filed under although
 // they do not lie on it. Each is a documented exception, backed by the
-// county's own records, and the build stops if the records stop backing it
-// (exceptionDoubts). Game buildings have none: their lots keep the overlap test.
+// county's own records. The build checks the filing, the one building on
+// record and the area (exceptionDoubts), and stops if they fail;
+// tests/maps/house-reference.test.mjs reads the rest of the evidence from the
+// county's files. Game buildings have none: their lots keep the overlap test.
 // - 1470846/1 is the store MEMORIES & MARVELS at 525 N DONNELLY ST. Its sketch
-//   lies wholly on the Masonic Temple's lot next door, 2.9 m from its own
+//   lies wholly on the Masonic Temple's lot next door, 2.2 m from its own
 //   parcel, whose outline (35 m²) is smaller than the store. Its record's
 //   ground floor is 440 sq ft, the sketch's area to the square foot. The
 //   temple's lot has one building on record, the temple, whose own sketch the
@@ -71,14 +75,15 @@ export const groundM2 = rec => r1(SUBAREAS.ground.reduce((s, c) => s + (rec.subA
 // What stops the county's records backing a LOT_EXCEPTIONS sketch, or [] when
 // they back it. The sketch must be filed under one parcel, not a condo unit,
 // which has one building on record: this sketch's, whose ground floor is the
-// sketch's area to within 1%. `records` are describe()'s, for the whole parcel.
+// sketch's area to within MATCH.exceptionAreaTolerance (1%). `records` are
+// describe()'s, for the whole parcel.
 export function exceptionDoubts(sketch, filed, records) {
   if (filed.length !== 1) return [`it is filed under ${filed.length} parcel outlines`];
   const doubts = [], bldgNum = String(Number.parseInt(sketch.bldgNum, 10)), own = records.find(r => r.bldgNum === bldgNum);
   if (/CONDO/.test(filed[0].landUse)) doubts.push(`its parcel is a condo unit (${filed[0].landUse})`);
   if (filed[0].buildings !== 1 || records.length !== 1) doubts.push(`its parcel has ${filed[0].buildings} buildings, ${records.length} on record`);
   if (!own) doubts.push('it has no record');
-  else if (!(Math.abs(groundM2(own) / sketch.area - 1) <= .01)) doubts.push(`its record's ground floor is ${groundM2(own)} m², the sketch ${r1(sketch.area)} m²`);
+  else if (!(Math.abs(groundM2(own) / sketch.area - 1) <= MATCH.exceptionAreaTolerance)) doubts.push(`its record's ground floor is ${groundM2(own)} m², the sketch ${r1(sketch.area)} m²`);
   return doubts;
 }
 
@@ -206,6 +211,7 @@ export function build({lotExceptions = LOT_EXCEPTIONS} = {}) {
   // holds, one not in the town, or one ownLot already places is no exception,
   // and the build stops.
   const exceptions = new Set(lotExceptions), excepted = [];
+  assert.equal(exceptions.size, lotExceptions.length, 'LOT_EXCEPTIONS lists a sketch twice');
   const filedLot = s => {
     const id = `${s.altKey}/${Number.parseInt(s.bldgNum, 10)}`;
     if (!exceptions.has(id)) return null;

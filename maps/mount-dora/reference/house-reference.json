@@ -19,6 +19,7 @@
   "assignIoU": 0.3,
   "goodIoU": 0.5,
   "ownParcelCover": 0.01,
+  "exceptionAreaTolerance": 0.01,
   "viewRadiusM": 90,
   "addressNearM": 45,
   "addressSlackM": 25

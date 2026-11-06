@@ -51,14 +51,17 @@ name the county gives the lot, such as a business or a lodge, and not
 necessarily this building's.
 
 One county sketch is a documented exception (`LOT_EXCEPTIONS`). The 41 m²
-store `county-1470846-1` is drawn wholly on the Masonic Temple's lot next door,
-so the overlap test alone gives it 535 N DONNELLY ST, MASONIC TEMPLE. The
-county files it under its own parcel, 525 N DONNELLY ST, MEMORIES & MARVELS.
-That parcel has one building on record, a one-storey store of 440 sq ft, which
-is the sketch's area to the square foot. The parcel's outline (35 m²) is too
-small to hold it. The temple's lot has one building on record, the temple
-itself, which a game building holds. So the store reads its own lot, and the
-build stops if a county refresh changes any of this evidence.
+store `county-1470846-1` is drawn wholly on the Masonic Temple's lot next door.
+None of it lies on its own parcel, so the parcel under its centre gave it
+535 N DONNELLY ST, MASONIC TEMPLE. The county files it under its own parcel,
+525 N DONNELLY ST, MEMORIES & MARVELS. That parcel has one building on record,
+a one-storey store of 440 sq ft, which is the sketch's area to the square foot.
+The parcel's outline (35 m²) is too small to hold it. The temple's lot has one
+building on record, the temple itself, which a game building holds. So the
+store reads its own lot. The build checks the filing, the one building on
+record and the area (within 1%, `MATCH.exceptionAreaTolerance`), and stops if
+a county refresh breaks them; `tests/maps/house-reference.test.mjs` reads the
+rest of this evidence from the county's files.
 
 A game building's lot comes from the same survey. It is the parcel its county
 sketches are filed under where they all share one and the lead sketch lies on
@@ -77,7 +80,7 @@ The lot is not always the building's own parcel:
   sketches filed under several parcels keep the parcel under their centre:
   708 LIBERTY AVE, 426 S CLAYTON ST and the retirement home at 609 OAK AVE.
 
-Five houses have their centres on another parcel and read their own lots:
+Five buildings have their centres on another parcel and read their own lots:
 - two lakefront county houses, `county-1236797-1` and `county-1475414-2`, on
   Lake Dora's submerged-land parcel, read 401 and 402 LAKE DORA RD;
 - the store `county-1470846-1`, above, reads 525 N DONNELLY ST;

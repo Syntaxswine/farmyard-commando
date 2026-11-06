@@ -150,7 +150,8 @@ test('a building takes the parcel its county sketches are filed under, where the
     return parcelsOf(k.split('/')[0]).some(p => !/CONDO/.test(p.landUse) && overlapArea(g, p.geometry) >= share) ? k.split('/')[0] : null; };
   // Then, for a county-only sketch alone, the documented exceptions: the store
   // at 525 N DONNELLY ST, whose sketch lies wholly on the lot next door (its
-  // evidence is checked in the next test).
+  // evidence is checked in 'the store at 525 N DONNELLY ST is the one lot
+  // exception…' below).
   const exceptions = new Map([['1470846/1', '1470846']]);
   assert.deepEqual(LOT_EXCEPTIONS, [...exceptions.keys()]);
   // Otherwise the parcel under the centre: the smallest that is not a condo
@@ -215,7 +216,8 @@ test('the lots the parcel under the centre got wrong, and the ones left on it', 
 
 test('the store at 525 N DONNELLY ST is the one lot exception, and the county records back it', () => {
   // Its sketch lies wholly on the Masonic Temple's lot, centre included, so
-  // the overlap test alone gives it the temple's address. The county files it
+  // the overlap test finds none of it on its own parcel, and the parcel under
+  // its centre would give it the temple's address. The county files it
   // under the store's own parcel, whose one building on record has the
   // sketch's ground floor; the temple's lot has one building on record, the
   // temple, which a game building holds. Read from the county files here.
@@ -250,13 +252,18 @@ test('a documented lot exception stands only while the county records back it', 
   const sketch = {bldgNum: '001', area: 440 * .09290304}, parcel = {landUse: 'STORE 1 STORY FREE STANDING', buildings: 1};
   const rec = (bldgNum, sqft) => ({bldgNum, subAreasSqft: {FLA: sqft, COP: 286}});
   assert.deepEqual(exceptionDoubts(sketch, [parcel], [rec('1', 440)]), []);
-  assert.deepEqual(exceptionDoubts(sketch, [parcel], [rec('1', 444)]), [], 'within 1%');
+  // The area bound is 1% (MATCH.exceptionAreaTolerance): 436 and 444 sq ft
+  // (0.9% and 0.8% off, after the record's rounding to 0.1 m²) pass; 434 and
+  // 446 (1.4% and 1.3%) do not.
+  for (const sqft of [436, 444]) assert.deepEqual(exceptionDoubts(sketch, [parcel], [rec('1', sqft)]), [], `${sqft} sq ft`);
   for (const [label, filed, records] of [
-    ['5% larger', [parcel], [rec('1', 462)]],
-    ['5% smaller', [parcel], [rec('1', 418)]],
+    ['446 sq ft', [parcel], [rec('1', 446)]],
+    ['434 sq ft', [parcel], [rec('1', 434)]],
     ['no record of its own', [parcel], [rec('2', 440)]],
     ['a condo unit', [{...parcel, landUse: 'CONDOMINIUM'}], [rec('1', 440)]],
-    ['two buildings on record', [{...parcel, buildings: 2}], [rec('1', 440), rec('2', 900)]],
+    ['two buildings, both on record', [{...parcel, buildings: 2}], [rec('1', 440), rec('2', 900)]],
+    ['two buildings, one on record', [{...parcel, buildings: 2}], [rec('1', 440)]],
+    ['one building, two on record', [parcel], [rec('1', 440), rec('2', 900)]],
     ['two parcel outlines', [parcel, parcel], [rec('1', 440)]],
     ['no parcel', [], [rec('1', 440)]]])
     assert.equal(exceptionDoubts(sketch, filed, records).length, 1, label);
@@ -265,11 +272,14 @@ test('a documented lot exception stands only while the county records back it', 
 test('the build stops on a lot exception the county records do not back', () => {
   // The committed list with one more entry: a condo unit's sketch, whose
   // parcel is not ground; then a lake house that already lies on its parcel,
-  // a sketch a game building holds (osm-way-1240419756), and no sketch at all.
-  // None may be listed.
+  // a sketch a game building holds, and no sketch at all. None may be listed.
+  // The game building's, 1468621/1, is the only sketch osm-way-1240419614
+  // holds, filed under an AltKey with no outline on the county's map: a game
+  // path that consulted the list would reach it and stop on another doubt.
   assert.throws(() => build({lotExceptions: [...LOT_EXCEPTIONS, '2579871/1']}), /2579871\/1 is in LOT_EXCEPTIONS, but its parcel is a condo unit/);
-  for (const extra of ['1236797/1', '1472652/1', '9999999/1'])
+  for (const extra of ['1236797/1', '1468621/1', '9999999/1'])
     assert.throws(() => build({lotExceptions: [...LOT_EXCEPTIONS, extra]}), /LOT_EXCEPTIONS lists a sketch that is no exception/, extra);
+  assert.throws(() => build({lotExceptions: [...LOT_EXCEPTIONS, ...LOT_EXCEPTIONS]}), /LOT_EXCEPTIONS lists a sketch twice/);
 });
 
 test('a county sketch takes the parcel it is filed under, and a condo unit its building\'s common area', () => {

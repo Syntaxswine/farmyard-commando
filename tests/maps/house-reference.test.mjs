@@ -272,12 +272,20 @@ test('a documented lot exception stands only while the county records back it', 
 test('the build stops on a lot exception the county records do not back', () => {
   // The committed list with one more entry: a condo unit's sketch, whose
   // parcel is not ground; then a lake house that already lies on its parcel,
-  // a sketch a game building holds, and no sketch at all. None may be listed.
-  // The game building's, 1468621/1, is the only sketch osm-way-1240419614
-  // holds, filed under an AltKey with no outline on the county's map: a game
-  // path that consulted the list would reach it and stop on another doubt.
+  // two sketches game buildings hold, and no sketch at all. None may be listed.
+  // Each game building holds only that sketch, with no outline that is not a
+  // condo unit (1468621 has none; 3765575 is a unit), so ownLot gives it
+  // nothing and a game path that consulted the list would reach it. Such a path
+  // fails here either way: run through the doubts, it stops on another doubt;
+  // without them, it takes 3765575's unit and the build runs on.
+  const {parcelsOf} = lotEvidence;
+  for (const [sketch, holder] of [['1468621/1', 'osm-way-1240419614'], ['3765575/1', 'osm-way-1240419645']]) {
+    const b = reference.buildings.find(x => x.id === holder);
+    assert.deepEqual(b.match.countyBuildings.map(m => `${m.altKey}/${m.bldgNum}`), [sketch], holder);
+    assert.ok(parcelsOf(sketch.split('/')[0]).every(p => /CONDO/.test(p.landUse)), `${sketch} has an outline that is not a condo unit`);
+  }
   assert.throws(() => build({lotExceptions: [...LOT_EXCEPTIONS, '2579871/1']}), /2579871\/1 is in LOT_EXCEPTIONS, but its parcel is a condo unit/);
-  for (const extra of ['1236797/1', '1468621/1', '9999999/1'])
+  for (const extra of ['1236797/1', '1468621/1', '3765575/1', '9999999/1'])
     assert.throws(() => build({lotExceptions: [...LOT_EXCEPTIONS, extra]}), /LOT_EXCEPTIONS lists a sketch that is no exception/, extra);
   assert.throws(() => build({lotExceptions: [...LOT_EXCEPTIONS, ...LOT_EXCEPTIONS]}), /LOT_EXCEPTIONS lists a sketch twice/);
 });

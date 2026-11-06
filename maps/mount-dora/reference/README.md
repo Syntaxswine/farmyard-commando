@@ -110,8 +110,9 @@ lidar's building returns (class 6) tell them apart:
   a 440 sq ft store, which is the sketch's area to the square foot, and its
   outline (35 m²) is too small to hold it. The build checks the filing, the
   one building on record and the area (within 1%,
-  `MATCH.exceptionAreaTolerance`), and stops if they change; the survey's
-  tests read the rest from the county's files. Each building gets a Street View
+  `MATCH.exceptionAreaTolerance`), and stops if a county refresh breaks them;
+  the survey's tests read the rest from the county's files. Each building
+  gets a Street View
   camera planned as for the game buildings
   (`tools/maps/house-reference/viewpoint.mjs`), except that the camera's pitch
   may follow the lidar storeys where the county has none: the game buildings'

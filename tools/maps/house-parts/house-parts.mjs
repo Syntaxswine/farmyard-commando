@@ -360,12 +360,14 @@ export function placePart(part, pose) {
 
 // A part's address: OSM's, else the county parcel joined to an OSM building,
 // else, for a county-sketched building, the lot of its lead sketch (the
-// largest sketch with a record, else its first). That lot is the parcel under
-// the sketch's centre as the county drew it (lotsAt in
-// tools/maps/house-reference/build-house-reference.mjs), which is not always
-// the building's own parcel: see "County lots" in the parts README. Only the
-// lot's site address, place name and parcel id come across, nothing about its
-// owner, sales or value.
+// largest sketch with a record, else its first). The county survey gives that
+// sketch the parcel it is filed under where the sketch lies on it, or where
+// the county's records place it (LOT_EXCEPTIONS), and otherwise the parcel
+// under its centre (ownLot and lotsAt in
+// tools/maps/house-reference/build-house-reference.mjs). So the lot is not
+// always the building's own parcel: see "County lots" in the parts README.
+// Only the lot's site address, place name and parcel id come across, nothing
+// about its owner, sales or value.
 export function addressOf(feature, reference, lot) {
   const t = feature.tags || {};
   if (t['addr:housenumber'] && t['addr:street']) return {text: `${t['addr:housenumber']} ${t['addr:street']}`, source: 'osm'};

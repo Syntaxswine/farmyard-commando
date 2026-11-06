@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {createProjection, headingDegrees} from '../../tools/maps/house-reference/projection.mjs';
 import {area, centroid, contains, overlapArea} from '../../tools/maps/house-reference/geometry.mjs';
-import {build, storeys, MATCH} from '../../tools/maps/house-reference/build-house-reference.mjs';
+import {build, exceptionDoubts, storeys, LOT_EXCEPTIONS, MATCH} from '../../tools/maps/house-reference/build-house-reference.mjs';
 import {isOsm} from '../../tools/maps/house-reference/features-digest.mjs';
 import {planStreetView, streetKey, viewRoads} from '../../tools/maps/house-reference/viewpoint.mjs';
 
@@ -127,6 +127,252 @@ test('house-reference.json is exactly what the builder produces from the committ
     createHash('sha256').update(text).digest('hex'), 'Stale: run node tools/maps/house-reference/build-house-reference.mjs');
   // One record per OSM building; the county buildings the generator adds come from it (county-buildings.json).
   assert.equal(reference.buildings.length, features.filter(f => f.category === 'building' && isOsm(f)).length);
+});
+
+// County parcels and sketches in town metres, for the lot tests.
+const lotEvidence = (() => {
+  const toTown = g => (g.type === 'Polygon' ? [g.coordinates] : g.coordinates).map(p => p.map(r => r.map(([lon, lat]) => projection.toTown(lat, lon))));
+  const parcels = json('reference/county/parcels.geojson').features.map(f => ({altKey: f.properties.AltKey.trim(),
+    landUse: (f.properties.LandUseDescription || '').trim(), yearBuilt: Number.parseInt(f.properties.YearBuilt, 10) || null,
+    address: (f.properties.PropertyAddress || '').trim(), name: (f.properties.PropertyName || '').trim(),
+    buildings: Number.parseInt(f.properties.NumberOfBuildings, 10) || 0, geometry: toTown(f.geometry)}))
+    .map(p => { const xy = p.geometry.flat(2); return {...p, area: area(p.geometry), box: [Math.min(...xy.map(q => q[0])), Math.min(...xy.map(q => q[1])), Math.max(...xy.map(q => q[0])), Math.max(...xy.map(q => q[1]))]}; });
+  const sketches = new Map(json('reference/county/footprints.geojson').features
+    .map(f => [`${f.properties.AltKey.trim()}/${Number.parseInt(f.properties.BuildingNumber, 10)}`, toTown(f.geometry)]));
+  // The county's building records and sub-areas, read straight from the CSVs
+  // when a test first asks, so a change to their format fails only the tests
+  // that read them.
+  let csv = null;
+  const countyCsv = () => csv ??= (() => {
+    const rows = file => {
+      const [head, ...rest] = fs.readFileSync(path.join(town, 'reference/county', file), 'utf8').trimEnd().split('\n');
+      assert.ok(!rest.some(r => r.includes('"')), `${file} has no quoted fields, so a plain split reads it`);
+      const keys = head.split(',');
+      return rest.map(r => Object.fromEntries(r.split(',').map((v, i) => [keys[i], v])));
+    };
+    return {buildings: rows('buildings.csv'), subareas: rows('subareas.csv')};
+  })();
+  // A parcel's records as exceptionDoubts takes them: building number and sub-areas in sq ft.
+  const recordsOf = altKey => { const {buildings, subareas} = countyCsv(); return buildings.filter(r => r.ALT_KEY === altKey).map(r => {
+    const bldgNum = String(Number.parseInt(r.BLDG_NUM, 10)), subAreasSqft = {};
+    for (const s of subareas.filter(s => s.REM_PID === altKey && String(Number.parseInt(s.BLD_BLDG_NUM, 10)) === bldgNum && s.SUB_CODE && s.SUB_CODE !== 'NULL'))
+      subAreasSqft[s.SUB_CODE] = (subAreasSqft[s.SUB_CODE] || 0) + (Number.parseFloat(s['Gross Area']) || 0);
+    return {bldgNum, subAreasSqft};
+  }); };
+  return {parcels, sketches, countyCsv, recordsOf, parcelsOf: altKey => parcels.filter(p => p.altKey === altKey)};
+})();
+
+test('a building takes the parcel its county sketches are filed under, where they lie on it or the county places them', () => {
+  const {parcels, sketches, parcelsOf} = lotEvidence;
+  // The rule, worked out here on its own. First the parcel a sketch is filed
+  // under, unless it is a condo unit, where at least 1% of the sketch lies on it.
+  const own = k => { const g = sketches.get(k), share = .01 * area(g);
+    return parcelsOf(k.split('/')[0]).some(p => !/CONDO/.test(p.landUse) && overlapArea(g, p.geometry) >= share) ? k.split('/')[0] : null; };
+  // Then, for a county-only sketch alone, the documented exceptions: the store
+  // at 525 N DONNELLY ST, whose sketch lies wholly on the lot next door (its
+  // evidence is checked in 'the store at 525 N DONNELLY ST is the one lot
+  // exception…' below).
+  const exceptions = new Map([['1470846/1', '1470846']]);
+  assert.deepEqual(LOT_EXCEPTIONS, [...exceptions.keys()]);
+  // Otherwise the parcel under the centre: the smallest that is not a condo
+  // unit, else the smallest.
+  const underCentre = ([x, y]) => {
+    const hits = parcels.filter(p => x >= p.box[0] && x <= p.box[2] && y >= p.box[1] && y <= p.box[3] && contains(p.geometry, [x, y]))
+      .sort((a, b) => a.area - b.area || a.altKey.localeCompare(b.altKey));
+    return (hits.find(p => !/CONDO/.test(p.landUse)) || hits[0])?.altKey ?? null;
+  };
+  const tally = {countyOnly: {own: 0, exception: 0, centre: 0}, game: {own: 0, centre: 0}};
+  for (const c of reference.countyOnly) {
+    const k = `${c.altKey}/${c.bldgNum}`, lot = own(k) ?? exceptions.get(k);
+    tally.countyOnly[own(k) ? 'own' : lot ? 'exception' : 'centre']++;
+    assert.equal(c.parcel?.altKey ?? null, lot ?? underCentre(centroid(sketches.get(k))), k);
+  }
+  assert.deepEqual(reference.lotExceptions, [...exceptions.keys()]);
+  // A game building whose sketches are all filed under one parcel takes it
+  // where its lead sketch lies on it, with no exceptions; sketches spread over
+  // several parcels leave the parcel under its centre. countyBuildings lists
+  // the sketches a building holds, whether or not they have records.
+  const outlines = new Map(features.map(f => [f.id, f.geographicGeometry?.coordinates]));
+  for (const b of reference.buildings) {
+    const held = b.match.countyBuildings || [];
+    const lot = held.length && new Set(held.map(m => m.altKey)).size === 1 ? own(`${held[0].altKey}/${held[0].bldgNum}`) : null;
+    tally.game[lot ? 'own' : 'centre']++;
+    assert.equal(b.parcel?.altKey ?? null, lot ?? underCentre(centroid(outlines.get(b.id))), b.id);
+  }
+  assert.deepEqual(tally, {countyOnly: {own: 126, exception: 1, centre: 120}, game: {own: 751, centre: 199}});
+  // 15 of those buildings hold sketches with no record, and take their record
+  // from the lot (parcel-single, parcel-area): their sketches still decide it.
+  assert.equal(reference.buildings.filter(b => b.match.method.startsWith('parcel-') && b.match.countyBuildings).length, 15);
+});
+
+test('the lots the parcel under the centre got wrong, and the ones left on it', () => {
+  const {sketches, parcelsOf} = lotEvidence;
+  const only = new Map(reference.countyOnly.map(c => [`${c.altKey}/${c.bldgNum}`, c])), game = new Map(reference.buildings.map(b => [b.id, b]));
+  const on = (altKey, point) => parcelsOf(altKey).some(p => contains(p.geometry, point));
+  // Two lakefront sketches have their centres on Lake Dora's submerged-land
+  // parcel 3883811 ("LAKESHORE DR"), and two game houses have theirs on the
+  // vacant lot next door. Each reads its own lot.
+  assert.equal(parcelsOf('3883811')[0].landUse, 'GOVT SUBMERGED LAND');
+  for (const k of ['1236797/1', '1475414/2']) assert.ok(on('3883811', centroid(sketches.get(k))), k);
+  assert.deepEqual(['1236797/1', '1475414/2'].map(k => [only.get(k).address, only.get(k).parcel.altKey]),
+    [['401 LAKE DORA RD', '1236797'], ['402 LAKE DORA RD', '1475414']]);
+  for (const [id, vacant] of [['osm-way-1240419568', '1132860'], ['osm-way-1240419587', '3816701']]) {
+    assert.equal(parcelsOf(vacant)[0].landUse, 'VACANT RESIDENTIAL');
+    assert.ok(on(vacant, centroid(features.find(f => f.id === id).geographicGeometry.coordinates)), id);
+  }
+  assert.deepEqual(['osm-way-1240419568', 'osm-way-1240419587'].map(id => [game.get(id).address, game.get(id).parcel.altKey]),
+    [['610 E 1ST AVE', '1469091'], ['221 S CLAYTON ST', '1473331']]);
+  // A county-only sketch's lot is another parcel only for condo units, whose
+  // building keeps its common lot.
+  const elsewhere = {};
+  for (const c of reference.countyOnly) if (c.parcel?.altKey !== c.altKey) (elsewhere[c.parcel?.altKey ?? 'no lot'] ??= []).push(`${c.altKey}/${c.bldgNum}`);
+  assert.deepEqual(Object.fromEntries(Object.entries(elsewhere).map(([lot, list]) => [lot, list.length]).sort()),
+    {3891857: 9, 3891858: 31, 3891860: 26, 3891862: 47});
+  for (const k of Object.values(elsewhere).flat()) {
+    const units = parcelsOf(k.split('/')[0]);
+    assert.ok(units.length && units.every(p => /CONDO/.test(p.landUse)), `${k} is not a condo unit`);
+  }
+});
+
+test('the store at 525 N DONNELLY ST is the one lot exception, and the county records back it', () => {
+  // Its sketch lies wholly on the Masonic Temple's lot, centre included, so
+  // the overlap test finds none of it on its own parcel, and the parcel under
+  // its centre would give it the temple's address. The county files it
+  // under the store's own parcel, whose one building on record has the
+  // sketch's ground floor; the temple's lot has one building on record, the
+  // temple, which a game building holds. Read from the county files here.
+  const {sketches, parcelsOf, countyCsv, recordsOf} = lotEvidence, {buildings, subareas} = countyCsv();
+  const store = sketches.get('1470846/1'), own = parcelsOf('1470846'), temple = parcelsOf('1470854');
+  assert.deepEqual(exceptionDoubts({bldgNum: '1', area: area(store)}, own, recordsOf('1470846')), []);
+  assert.deepEqual([own.length, own[0].landUse, own[0].buildings], [1, 'STORE 1 STORY FREE STANDING', 1]);
+  assert.equal(overlapArea(store, own[0].geometry), 0);
+  assert.ok(own[0].area < area(store), 'its parcel outline is smaller than the store');
+  assert.equal(temple.length, 1);
+  assert.ok(contains(temple[0].geometry, centroid(store)));
+  assert.ok(overlapArea(store, temple[0].geometry) / area(store) > .99, 'the sketch lies wholly on the temple lot, to the 0.1 m overlap raster');
+  assert.deepEqual(buildings.filter(r => r.ALT_KEY === '1470846').map(r => [r.BLDG_NUM, r.CNS_STYLE_DESC]), [['1', '1 STORY STORE']]);
+  assert.deepEqual(subareas.filter(r => r.REM_PID === '1470846' && r.SUB_CODE === 'FLA').map(r => [r.BLD_BLDG_NUM, Number(r['Gross Area'])]), [['1', 440]]);
+  assert.ok(Math.abs(area(store) / .09290304 / 440 - 1) < .001, `the sketch is ${area(store) / .09290304} sq ft`);
+  assert.deepEqual(buildings.filter(r => r.ALT_KEY === '1470854').map(r => [r.BLDG_NUM, r.CNS_STYLE_DESC]), [['1', 'CLUB LODGE UNION HALL']]);
+  const holder = reference.buildings.filter(b => b.match.countyBuildings?.some(m => m.altKey === '1470854'));
+  assert.deepEqual(holder.map(b => [b.id, b.address, b.placeName]), [['osm-way-547799531', '535 N DONNELLY ST', 'MASONIC TEMPLE']]);
+  const entry = reference.countyOnly.find(c => c.altKey === '1470846' && c.bldgNum === '1');
+  assert.deepEqual([entry.address, entry.placeName, entry.parcel, entry.county.lotExtras],
+    ['525 N DONNELLY ST', 'MEMORIES & MARVELS', {altKey: '1470846', landUse: 'STORE 1 STORY FREE STANDING', buildings: 1}, []]);
+});
+
+test('a documented lot exception stands only while the county records back it', () => {
+  // exceptionDoubts on declared records: the store's, then one change each.
+  const sketch = {bldgNum: '001', area: 440 * .09290304}, parcel = {landUse: 'STORE 1 STORY FREE STANDING', buildings: 1};
+  const rec = (bldgNum, sqft) => ({bldgNum, subAreasSqft: {FLA: sqft, COP: 286}});
+  assert.deepEqual(exceptionDoubts(sketch, [parcel], [rec('1', 440)]), []);
+  // The area bound is 1% (MATCH.exceptionAreaTolerance): 436 and 444 sq ft
+  // (0.9% and 0.8% off, after the record's rounding to 0.1 m²) pass; 434 and
+  // 446 (1.4% and 1.3%) do not.
+  for (const sqft of [436, 444]) assert.deepEqual(exceptionDoubts(sketch, [parcel], [rec('1', sqft)]), [], `${sqft} sq ft`);
+  for (const [label, filed, records] of [
+    ['446 sq ft', [parcel], [rec('1', 446)]],
+    ['434 sq ft', [parcel], [rec('1', 434)]],
+    ['no record of its own', [parcel], [rec('2', 440)]],
+    ['a condo unit', [{...parcel, landUse: 'CONDOMINIUM'}], [rec('1', 440)]],
+    ['two buildings, both on record', [{...parcel, buildings: 2}], [rec('1', 440), rec('2', 900)]],
+    ['two buildings, one on record', [{...parcel, buildings: 2}], [rec('1', 440)]],
+    ['one building, two on record', [parcel], [rec('1', 440), rec('2', 900)]],
+    ['two parcel outlines', [parcel, parcel], [rec('1', 440)]],
+    ['no parcel', [], [rec('1', 440)]]])
+    assert.equal(exceptionDoubts(sketch, filed, records).length, 1, label);
+});
+
+test('the build stops on a lot exception the county records do not back', () => {
+  // The committed list with one more entry: a condo unit's sketch, whose
+  // parcel is not ground; a lake house that already lies on its parcel; no
+  // sketch at all; and the list twice. None may be listed.
+  assert.throws(() => build({lotExceptions: [...LOT_EXCEPTIONS, '2579871/1']}), /2579871\/1 is in LOT_EXCEPTIONS, but its parcel is a condo unit/);
+  for (const extra of ['1236797/1', '9999999/1'])
+    assert.throws(() => build({lotExceptions: [...LOT_EXCEPTIONS, extra]}), /LOT_EXCEPTIONS lists a sketch that is no exception/, extra);
+  assert.throws(() => build({lotExceptions: [...LOT_EXCEPTIONS, ...LOT_EXCEPTIONS]}), /LOT_EXCEPTIONS lists a sketch twice/);
+  // Game buildings take no exceptions: only county-only sketches reach
+  // filedLot. This checks one consequence. With every sketch a game building
+  // holds listed as well, the build must stop because none of them is an
+  // exception, still holding the whole list it was given (the stop's
+  // `expected`) and having used the committed list alone (its `actual`). It
+  // cannot see a game path that treats a listed sketch differently depending
+  // on what else is listed, or on how long the list is: such a path can pass
+  // any fixed set of builds.
+  const gameHeld = reference.buildings.flatMap(b => (b.match.countyBuildings || []).map(m => `${m.altKey}/${m.bldgNum}`));
+  assert.equal(new Set(gameHeld).size, gameHeld.length, 'no sketch is held twice');
+  assert.equal(gameHeld.length, 940);
+  assert.ok(!gameHeld.some(k => LOT_EXCEPTIONS.includes(k)));
+  // Held and county-only sketch ids are disjoint, so an entry a game path took
+  // without counting it stays unused, and any build listing it stops.
+  assert.ok(!reference.countyOnly.some(c => gameHeld.includes(`${c.altKey}/${c.bldgNum}`)), 'no sketch id is both held and county-only');
+  let stop = null;
+  try { build({lotExceptions: [...LOT_EXCEPTIONS, ...gameHeld]}); } catch (e) { stop = e; }
+  assert.match(String(stop?.message), /LOT_EXCEPTIONS lists a sketch that is no exception/);
+  assert.ok(Array.isArray(stop.actual), 'the stop carries the list the build used');
+  assert.deepEqual(stop.actual, [...LOT_EXCEPTIONS].sort());
+  assert.deepEqual(stop.expected, [...LOT_EXCEPTIONS, ...gameHeld].sort());
+});
+
+test('a county sketch takes the parcel it is filed under, and a condo unit its building\'s common area', () => {
+  // From #49, the same fix made in the house-parts session. Every county-only
+  // sketch filed under a parcel that is not a condo unit reads that parcel:
+  // all by the overlap test but the store, which reads it by its exception.
+  const toTown = g => (g.type === 'Polygon' ? [g.coordinates] : g.coordinates).map(poly => poly.map(ring => ring.map(([lon, lat]) => projection.toTown(lat, lon))));
+  const parcels = new Map();
+  for (const f of json('reference/county/parcels.geojson').features) {
+    const key = f.properties.AltKey.trim();
+    if (!parcels.has(key)) parcels.set(key, {landUse: (f.properties.LandUseDescription || '').trim(), geometry: []});
+    parcels.get(key).geometry.push(...toTown(f.geometry));
+  }
+  const kinds = {filed: 0, commonArea: 0, unitAlone: 0};
+  for (const s of reference.countyOnly) {
+    const id = `${s.altKey}/${s.bldgNum}`, filed = parcels.get(s.altKey);
+    assert.ok(filed, `${id} is filed under no parcel`);
+    if (!/CONDO/.test(filed.landUse)) { assert.equal(s.parcel?.altKey, s.altKey, id); kinds.filed++; }
+    else if (s.parcel && !/CONDO/.test(s.parcel.landUse)) {
+      // A unit's parcel is not ground: its lot is a parcel under its centre that is not a unit.
+      assert.ok(contains(parcels.get(s.parcel.altKey).geometry, s.centroid), id);
+      kinds.commonArea++;
+    } else kinds.unitAlone++;
+  }
+  assert.deepEqual(kinds, {filed: 127, commonArea: 113, unitAlone: 7});
+  // The parcel under the centre would have put these on another lot: two lakefront
+  // houses on Lake Dora's submerged land, and a store on the Masonic Temple's lot.
+  for (const id of ['1236797/1', '1475414/2', '1470846/1']) {
+    const s = reference.countyOnly.find(c => `${c.altKey}/${c.bldgNum}` === id);
+    assert.equal(contains(parcels.get(s.altKey).geometry, s.centroid), false, id);
+  }
+  assert.deepEqual(['1236797/1', '1475414/2', '1470846/1'].map(id => reference.countyOnly.find(c => `${c.altKey}/${c.bldgNum}` === id).address),
+    ['401 LAKE DORA RD', '402 LAKE DORA RD', '525 N DONNELLY ST']);
+});
+
+test('the lot facts a building gets are those of its lot', () => {
+  // lotExtras, the detached-garage call and the year-built fallback all read
+  // the lot, so each must be the reported parcel's.
+  const {parcelsOf} = lotEvidence;
+  const rows = fs.readFileSync(path.join(town, 'reference/county/extra-features.csv'), 'utf8').trimEnd().split('\n');
+  assert.ok(!rows.some(r => r.includes('"')), 'no quoted fields, so a plain split reads the file');
+  const header = rows[0].split(','), pid = header.indexOf('REM_PID'), desc = header.indexOf('OXF_DESC'), extras = new Map();
+  for (const cells of rows.slice(1).map(r => r.split(','))) if (cells[desc] && cells[desc] !== 'NULL')
+    extras.set(cells[pid], new Set([...(extras.get(cells[pid]) || []), cells[desc].trim()]));
+  let detached = 0, fallback = 0;
+  for (const b of [...reference.buildings, ...reference.countyOnly]) {
+    const name = b.id ?? `${b.altKey}/${b.bldgNum}`, lotExtras = b.parcel ? [...(extras.get(b.parcel.altKey) || [])].sort() : [];
+    // The lot itself: its parcel, address and place name, as the county has them.
+    const lot = b.parcel ? parcelsOf(b.parcel.altKey)[0] : null;
+    assert.deepEqual([b.parcel, b.address, b.placeName], lot ? [{altKey: lot.altKey, landUse: lot.landUse, buildings: lot.buildings},
+      lot.address !== 'UNASSIGNED' ? lot.address : null, lot.name || null] : [null, null, null], name);
+    assert.deepEqual(b.county.lotExtras, lotExtras, name);
+    const primary = b.county.records[0], codes = Object.keys(primary?.subAreasSqft || {});
+    const garage = codes.some(c => ['GAR', 'GBF', 'GCF'].includes(c)) ? 'attached' : codes.some(c => ['CPF', 'CPU'].includes(c)) ? 'carport'
+      : lotExtras.includes('DETACHED GARAGE') ? 'detached-on-lot' : null;
+    assert.equal(b.suggested.garage, garage, name);
+    const year = primary?.yearBuilt ?? (b.parcel ? parcelsOf(b.parcel.altKey)[0].yearBuilt : null) ?? null;
+    assert.equal(b.suggested.yearBuilt, year, name);
+    detached += garage === 'detached-on-lot'; fallback += !primary?.yearBuilt && year !== null;
+  }
+  assert.ok(detached > 0 && fallback > 0, `${detached} detached garages, ${fallback} lot years: the lot reads are exercised`);
 });
 
 test('recorded footprint matches hold up, and the same test fails 30 m away (negative control)', () => {

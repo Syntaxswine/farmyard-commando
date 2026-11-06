@@ -40,9 +40,20 @@ How each building was matched (`match.method`):
 | --- | ---: | --- |
 | `footprint` | 684 | The appraiser's building sketch overlaps the game outline, IoU ≥ 0.5 |
 | `footprint-partial` | 90 | Most of a sketch lies inside the game outline, but the outlines differ |
-| `parcel-single` | 135 | No sketch (commercial or unsketched); the only building on the lot |
-| `parcel-area` | 23 | Several buildings on the lot; picked by ground-floor area |
+| `parcel-single` | 135 | No sketch with a county record: none drawn (commercial or unsketched), or the sketches it holds have none; the only building on the lot |
+| `parcel-area` | 23 | The same, with several buildings on the lot; picked by ground-floor area |
 | `none` | 18 | No record: the high-school campus and a few outbuildings |
+
+A building's lot (`parcel` and `address`) is the parcel its county sketches are
+filed under, where they all share one and at least 1% of the lead sketch lies on
+it (`MATCH.ownParcelCover`), unless that parcel is a condo unit. Otherwise it is
+the parcel under the building's centre: the smallest there that is not a condo
+unit, or the smallest unit where only units lie there. Two houses whose
+OpenStreetMap centres fall on the vacant lot next door so read 610 E 1ST AVE and
+221 S CLAYTON ST, not the street alone. An outline over sketches filed under
+several parcels keeps the parcel under its centre. `match.countyBuildings`
+lists the sketches a building holds, with or without records, since they
+decide its lot. No game building takes a lot exception (below).
 
 **The county also has buildings OpenStreetMap lacks.** 247 appraiser sketches
 inside the town are claimed by no game building. They are listed under
@@ -87,11 +98,24 @@ lidar's building returns (class 6) tell them apart:
 - **Pieces:** a native outline is one connected footprint, so a sketch of two
   parts meeting at a corner becomes two buildings (`-part2`).
 - **Survey:** each building takes the lot and address of its largest sketch
-  with a record (its first sketch, if none has one). It gets a Street View
-  camera planned as for the game buildings
+  with a record (its first sketch, if none has one). A sketch's lot is the
+  parcel it is filed under wherever at least 1% of the sketch lies on it,
+  unless that parcel is a condo unit; otherwise it is the parcel under the
+  sketch's centre, as for a game building ([above](#what-the-county-records-add)). So two
+  lakefront houses whose centres lie on Lake Dora's submerged-land parcel keep
+  their own lots and addresses. One sketch is a documented exception
+  (`LOT_EXCEPTIONS`, listed in `lotExceptions`). The store at 525 N DONNELLY
+  ST, MEMORIES & MARVELS, drawn wholly on the Masonic Temple's lot next door,
+  takes the parcel it is filed under. That parcel has one building on record,
+  a 440 sq ft store, which is the sketch's area to the square foot, and its
+  outline (35 m²) is too small to hold it. The build checks the filing, the
+  one building on record and the area (within 1%,
+  `MATCH.exceptionAreaTolerance`), and stops if a county refresh breaks them;
+  the survey's tests read the rest from the county's files. Each building
+  gets a Street View camera planned as for the game buildings
   (`tools/maps/house-reference/viewpoint.mjs`), except that the camera's pitch
   may follow the lidar storeys where the county has none: the game buildings'
-  cameras are planned before the lidar, from county storeys alone. 111 of 126
+  cameras are planned before the lidar, from county storeys alone. 113 of 126
   stand on the addressed street, median 26 m away. All 126 are in the survey's
   queue. A piece (`-part2`) keeps the lead sketch's lot even where it lies on
   another member's; no current structure has one that does.

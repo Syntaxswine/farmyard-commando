@@ -18,10 +18,15 @@
   "assignCover": 0.5,
   "assignIoU": 0.3,
   "goodIoU": 0.5,
+  "ownParcelCover": 0.01,
+  "exceptionAreaTolerance": 0.01,
   "viewRadiusM": 90,
   "addressNearM": 45,
   "addressSlackM": 25
  },
+ "lotExceptions": [
+  "1470846/1"
+ ],
  "vocabulary": {
   "walls": {
    "WOOD/METAL FRAME W/OUTER FINISH": {
@@ -2363,7 +2368,15 @@
     "method": "parcel-area",
     "altKey": "1468493",
     "groundAreaRatio": 1.1,
-    "candidates": 4
+    "candidates": 4,
+    "countyBuildings": [
+     {
+      "altKey": "1468493",
+      "bldgNum": "5",
+      "overlapM2": 100.4,
+      "iou": 0.74
+     }
+    ]
    },
    "county": {
     "records": [
@@ -6187,7 +6200,15 @@
     "method": "parcel-area",
     "altKey": "1797241",
     "groundAreaRatio": 0.66,
-    "candidates": 2
+    "candidates": 2,
+    "countyBuildings": [
+     {
+      "altKey": "1797241",
+      "bldgNum": "3",
+      "overlapM2": 75.8,
+      "iou": 0.33
+     }
+    ]
    },
    "county": {
     "records": [
@@ -6676,7 +6697,15 @@
    },
    "match": {
     "method": "parcel-single",
-    "altKey": "1532736"
+    "altKey": "1532736",
+    "countyBuildings": [
+     {
+      "altKey": "1532736",
+      "bldgNum": "2",
+      "overlapM2": 128,
+      "iou": 0.79
+     }
+    ]
    },
    "county": {
     "records": [
@@ -12971,7 +13000,15 @@
    },
    "match": {
     "method": "parcel-single",
-    "altKey": "1469864"
+    "altKey": "1469864",
+    "countyBuildings": [
+     {
+      "altKey": "1469864",
+      "bldgNum": "2",
+      "overlapM2": 214.3,
+      "iou": 0.44
+     }
+    ]
    },
    "county": {
     "records": [
@@ -14540,7 +14577,15 @@
    },
    "match": {
     "method": "parcel-single",
-    "altKey": "1472792"
+    "altKey": "1472792",
+    "countyBuildings": [
+     {
+      "altKey": "1472792",
+      "bldgNum": "2",
+      "overlapM2": 118.6,
+      "iou": 0.77
+     }
+    ]
    },
    "county": {
     "records": [
@@ -18134,7 +18179,15 @@
     "method": "parcel-area",
     "altKey": "1470048",
     "groundAreaRatio": 0.82,
-    "candidates": 2
+    "candidates": 2,
+    "countyBuildings": [
+     {
+      "altKey": "1470048",
+      "bldgNum": "3",
+      "overlapM2": 177.6,
+      "iou": 0.77
+     }
+    ]
    },
    "county": {
     "records": [
@@ -24548,12 +24601,12 @@
    "osmTags": {
     "building": "yes"
    },
-   "address": "E 1ST AVE",
+   "address": "610 E 1ST AVE",
    "placeName": null,
    "parcel": {
-    "altKey": "1132860",
-    "landUse": "VACANT RESIDENTIAL",
-    "buildings": 0
+    "altKey": "1469091",
+    "landUse": "SINGLE FAMILY",
+    "buildings": 1
    },
    "match": {
     "method": "footprint-partial",
@@ -26420,12 +26473,12 @@
    "osmTags": {
     "building": "yes"
    },
-   "address": "S CLAYTON ST",
+   "address": "221 S CLAYTON ST",
    "placeName": null,
    "parcel": {
-    "altKey": "3816701",
-    "landUse": "VACANT RESIDENTIAL",
-    "buildings": 0
+    "altKey": "1473331",
+    "landUse": "SINGLE FAMILY",
+    "buildings": 1
    },
    "match": {
     "method": "footprint-partial",
@@ -26467,7 +26520,11 @@
       }
      }
     ],
-    "lotExtras": []
+    "lotExtras": [
+     "POOL/COOL DECK",
+     "SWIMMING POOL - RESIDENTIAL",
+     "UTILITY BLDG UNFINISHED"
+    ]
    },
    "suggested": {
     "stories": 1,
@@ -29285,7 +29342,15 @@
    },
    "match": {
     "method": "parcel-single",
-    "altKey": "3923067"
+    "altKey": "3923067",
+    "countyBuildings": [
+     {
+      "altKey": "1468621",
+      "bldgNum": "1",
+      "overlapM2": 228.2,
+      "iou": 0.84
+     }
+    ]
    },
    "county": {
     "records": [
@@ -44486,7 +44551,15 @@
    },
    "match": {
     "method": "parcel-single",
-    "altKey": "3928487"
+    "altKey": "3928487",
+    "countyBuildings": [
+     {
+      "altKey": "3864660",
+      "bldgNum": "1",
+      "overlapM2": 116,
+      "iou": 0.84
+     }
+    ]
    },
    "county": {
     "records": [
@@ -56710,7 +56783,15 @@
     "method": "parcel-area",
     "altKey": "1728886",
     "groundAreaRatio": 0.82,
-    "candidates": 2
+    "candidates": 2,
+    "countyBuildings": [
+     {
+      "altKey": "1728886",
+      "bldgNum": "3",
+      "overlapM2": 265.5,
+      "iou": 0.82
+     }
+    ]
    },
    "county": {
     "records": [
@@ -61051,7 +61132,15 @@
    },
    "match": {
     "method": "parcel-single",
-    "altKey": "3915716"
+    "altKey": "3915716",
+    "countyBuildings": [
+     {
+      "altKey": "1464234",
+      "bldgNum": "1",
+      "overlapM2": 387.4,
+      "iou": 0.83
+     }
+    ]
    },
    "county": {
     "records": [
@@ -80288,7 +80377,15 @@
     "method": "parcel-area",
     "altKey": "1766231",
     "groundAreaRatio": 0.77,
-    "candidates": 3
+    "candidates": 3,
+    "countyBuildings": [
+     {
+      "altKey": "1766231",
+      "bldgNum": "4",
+      "overlapM2": 539.3,
+      "iou": 0.77
+     }
+    ]
    },
    "county": {
     "records": [
@@ -82675,7 +82772,15 @@
     "method": "parcel-area",
     "altKey": "1465583",
     "groundAreaRatio": 1.1,
-    "candidates": 2
+    "candidates": 2,
+    "countyBuildings": [
+     {
+      "altKey": "1465583",
+      "bldgNum": "3",
+      "overlapM2": 421.3,
+      "iou": 0.71
+     }
+    ]
    },
    "county": {
     "records": [
@@ -83658,7 +83763,15 @@
    },
    "match": {
     "method": "parcel-single",
-    "altKey": "1476038"
+    "altKey": "1476038",
+    "countyBuildings": [
+     {
+      "altKey": "1476038",
+      "bldgNum": "2",
+      "overlapM2": 686.6,
+      "iou": 0.7
+     }
+    ]
    },
    "county": {
     "records": [
@@ -84622,7 +84735,15 @@
    },
    "match": {
     "method": "parcel-single",
-    "altKey": "1465044"
+    "altKey": "1465044",
+    "countyBuildings": [
+     {
+      "altKey": "1465044",
+      "bldgNum": "2",
+      "overlapM2": 106.2,
+      "iou": 0.59
+     }
+    ]
    },
    "county": {
     "records": [
@@ -94382,7 +94503,15 @@
     "method": "parcel-area",
     "altKey": "2691476",
     "groundAreaRatio": 0.67,
-    "candidates": 2
+    "candidates": 2,
+    "countyBuildings": [
+     {
+      "altKey": "1465052",
+      "bldgNum": "2",
+      "overlapM2": 50.1,
+      "iou": 0.3
+     }
+    ]
    },
    "county": {
     "records": [
@@ -98343,12 +98472,12 @@
     "roofCover": "METAL",
     "yearBuilt": 1940
    },
-   "address": "LAKESHORE DR",
+   "address": "401 LAKE DORA RD",
    "placeName": null,
    "parcel": {
-    "altKey": "3883811",
-    "landUse": "GOVT SUBMERGED LAND",
-    "buildings": 0
+    "altKey": "1236797",
+    "landUse": "SINGLE FAMILY LAKEFRONT",
+    "buildings": 2
    },
    "county": {
     "records": [
@@ -98374,7 +98503,9 @@
       }
      }
     ],
-    "lotExtras": []
+    "lotExtras": [
+     "CARPORT/POLE SHED UNFINISHED"
+    ]
    },
    "suggested": {
     "stories": 1,
@@ -104171,11 +104302,11 @@
     "roofCover": null,
     "yearBuilt": 1940
    },
-   "address": "535 N DONNELLY ST",
-   "placeName": "MASONIC TEMPLE",
+   "address": "525 N DONNELLY ST",
+   "placeName": "MEMORIES & MARVELS",
    "parcel": {
-    "altKey": "1470854",
-    "landUse": "CLUB/LODGE/UNION HALL",
+    "altKey": "1470846",
+    "landUse": "STORE 1 STORY FREE STANDING",
     "buildings": 1
    },
    "county": {
@@ -104198,9 +104329,7 @@
       }
      }
     ],
-    "lotExtras": [
-     "PAVING"
-    ]
+    "lotExtras": []
    },
    "suggested": {
     "stories": 1,
@@ -105276,12 +105405,12 @@
     "roofCover": "ASPHALT SHINGLE",
     "yearBuilt": 1991
    },
-   "address": "LAKESHORE DR",
+   "address": "402 LAKE DORA RD",
    "placeName": null,
    "parcel": {
-    "altKey": "3883811",
-    "landUse": "GOVT SUBMERGED LAND",
-    "buildings": 0
+    "altKey": "1475414",
+    "landUse": "SINGLE FAMILY LAKEFRONT",
+    "buildings": 2
    },
    "county": {
     "records": [
@@ -105304,7 +105433,12 @@
       }
      }
     ],
-    "lotExtras": []
+    "lotExtras": [
+     "DECK - WOOD",
+     "POOL/COOL DECK",
+     "SCREEN ENCLOSED STRUCTURE",
+     "SWIMMING POOL - RESIDENTIAL"
+    ]
    },
    "suggested": {
     "stories": 1,

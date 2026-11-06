@@ -40,27 +40,57 @@ floor and level `storeys` is the roof deck, as in the town's sector maps.
 ## County lots
 
 A county-sketched building takes the lot of its lead sketch: the largest of its
-sketches with a county record, else its first. The county survey chose that lot
-as the smallest parcel under the centre of the sketch as the county drew it,
-passing over condo units (`lotsAt` in
-`tools/maps/house-reference/build-house-reference.mjs`). `placeName` is a name
-the county gives the lot, such as a business or a lodge, and not necessarily
-this building's.
+sketches with a county record, else its first. The county survey gives a sketch
+the parcel it is filed under wherever at least 1% of the sketch lies on it,
+unless that parcel is a condo unit (`ownLot` in
+`tools/maps/house-reference/build-house-reference.mjs`). Otherwise the sketch
+takes the parcel under its centre as the county drew it: the smallest there that
+is not a condo unit, or the smallest unit where only units lie there (`lotsAt`).
+Four parts at 350 LIBERTY AVE read a unit's address that way. `placeName` is a
+name the county gives the lot, such as a business or a lodge, and not
+necessarily this building's.
 
-The lot is not always the building's own parcel. For 15 parts it differs from
-`evidence.county.altKey`, the parcel of the building's county record:
-- 12 condo buildings take their common-area parcel, whose address is a street
-  name only (N GRANDVIEW ST, N TREMAIN ST and ROSSELL ST). The units of the
-  three on ROSSELL ST are addressed on HELEN ST.
-- A 41 m² store, `county-1470846-1`, is drawn on the neighbouring lot, so it
-  reads 535 N DONNELLY ST, MASONIC TEMPLE. Its record is 525 N DONNELLY ST.
-- Two lakefront houses, `county-1236797-1` and `county-1475414-2`, have their
-  centres on Lake Dora's submerged-land parcel, so they read LAKESHORE DR. Their
-  records are 401 and 402 LAKE DORA RD. These two addresses are wrong. The fix
-  belongs in the survey's lot rule, and regenerating the parts carries it over.
+One county sketch is a documented exception (`LOT_EXCEPTIONS`). The 41 m²
+store `county-1470846-1` is drawn wholly on the Masonic Temple's lot next door.
+None of it lies on its own parcel, so the parcel under its centre gave it
+535 N DONNELLY ST, MASONIC TEMPLE. The county files it under its own parcel,
+525 N DONNELLY ST, MEMORIES & MARVELS. That parcel has one building on record,
+a one-storey store of 440 sq ft, which is the sketch's area to the square foot.
+The parcel's outline (35 m²) is too small to hold it. The temple's lot has one
+building on record, the temple itself, which a game building holds. So the
+store reads its own lot. The build checks the filing, the one building on
+record and the area (within 1%, `MATCH.exceptionAreaTolerance`), and stops if
+a county refresh breaks them; `tests/maps/house-reference.test.mjs` reads the
+rest of this evidence from the county's files.
 
-`tests/maps/house-parts.test.mjs` pins these 15, so any change to the lot rule
-shows up there.
+A game building's lot comes from the same survey. It is the parcel its county
+sketches are filed under where they all share one and the lead sketch lies on
+it, and otherwise the parcel under its OpenStreetMap centre. Game buildings
+take no exceptions; their lots keep the overlap test.
+
+The lot is not always the building's own parcel:
+- For 12 county parts it differs from `evidence.county.altKey`, the parcel of
+  the building's county record. All 12 are condo buildings that take their
+  common-area parcel, whose address is a street name only (N GRANDVIEW ST,
+  N TREMAIN ST and ROSSELL ST). The units of the three on ROSSELL ST are
+  addressed on HELEN ST.
+- For 22 game buildings it differs from the parcel of their first county
+  record. 16 condo buildings take a common-area parcel. Three more, over
+  several units, take the unit under their centre. Three outlines over
+  sketches filed under several parcels keep the parcel under their centre:
+  708 LIBERTY AVE, 426 S CLAYTON ST and the retirement home at 609 OAK AVE.
+
+Five buildings have their centres on another parcel and read their own lots:
+- two lakefront county houses, `county-1236797-1` and `county-1475414-2`, on
+  Lake Dora's submerged-land parcel, read 401 and 402 LAKE DORA RD;
+- the store `county-1470846-1`, above, reads 525 N DONNELLY ST;
+- two game houses, `osm-way-1240419568` and `osm-way-1240419587`, on the
+  vacant lot next door, read 610 E 1ST AVE and 221 S CLAYTON ST.
+
+`tests/maps/house-parts.test.mjs` pins the 12 county lots by parcel id, and
+the five addresses. `tests/maps/house-reference.test.mjs` works the lot rule
+out for every building and checks the survey against it. It also reads the
+store's evidence from the county's files.
 
 ## Placing a part
 

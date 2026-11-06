@@ -291,22 +291,24 @@ test('the build stops on a lot exception the county records do not back', () => 
   for (const extra of ['1236797/1', '9999999/1'])
     assert.throws(() => build({lotExceptions: [...LOT_EXCEPTIONS, extra]}), /LOT_EXCEPTIONS lists a sketch that is no exception/, extra);
   assert.throws(() => build({lotExceptions: [...LOT_EXCEPTIONS, ...LOT_EXCEPTIONS]}), /LOT_EXCEPTIONS lists a sketch twice/);
-  // Game buildings take no exceptions. With every sketch a game building
-  // holds listed as well, the build must stop because none of them is one, and
-  // the list it used (the stop's `actual`) must be the committed list alone.
-  // A game path that took an entry would show in that list, and one that
-  // stopped on an entry's doubts would stop with another message. (One that
-  // took an entry without counting it would leave the entry unused, so any
-  // build listing it would stop all the same.)
+  // Game buildings take no exceptions: only county-only sketches reach
+  // filedLot. This checks one consequence. With every sketch a game building
+  // holds listed as well, the build must stop because none of them is an
+  // exception, still holding the whole list it was given (the stop's
+  // `expected`) and having used the committed list alone (its `actual`). It
+  // cannot see a game path whose behaviour depends on which entries, or how
+  // many, are listed: such a path can pass any fixed set of builds.
   const gameHeld = reference.buildings.flatMap(b => (b.match.countyBuildings || []).map(m => `${m.altKey}/${m.bldgNum}`));
   assert.equal(new Set(gameHeld).size, gameHeld.length, 'no sketch is held twice');
   assert.equal(gameHeld.length, 940);
   assert.ok(!gameHeld.some(k => LOT_EXCEPTIONS.includes(k)));
+  assert.ok(!reference.countyOnly.some(c => gameHeld.includes(`${c.altKey}/${c.bldgNum}`)), 'no sketch id is both held and county-only');
   let stop = null;
   try { build({lotExceptions: [...LOT_EXCEPTIONS, ...gameHeld]}); } catch (e) { stop = e; }
   assert.match(String(stop?.message), /LOT_EXCEPTIONS lists a sketch that is no exception/);
   assert.ok(Array.isArray(stop.actual), 'the stop carries the list the build used');
   assert.deepEqual(stop.actual, [...LOT_EXCEPTIONS].sort());
+  assert.deepEqual(stop.expected, [...LOT_EXCEPTIONS, ...gameHeld].sort());
 });
 
 test('a county sketch takes the parcel it is filed under, and a condo unit its building\'s common area', () => {

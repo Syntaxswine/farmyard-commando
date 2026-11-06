@@ -36,9 +36,11 @@ export const MATCH = {assignCover: .5, assignIoU: .3, goodIoU: .5, ownParcelCove
 // County-only sketches that take the parcel they are filed under although
 // they do not lie on it. Each is a documented exception, backed by the
 // county's own records. The build checks the filing, the one building on
-// record and the area (exceptionDoubts), and stops if they fail;
-// tests/maps/house-reference.test.mjs reads the rest of the evidence from the
-// county's files. Game buildings have none: their lots keep the overlap test.
+// record and the area (exceptionDoubts), and stops if they fail. The store's
+// test in tests/maps/house-reference.test.mjs reads from the county's files
+// that the sketch lies on the temple's lot, that its parcel's outline is
+// smaller than the store, and the temple's one record. Game buildings have
+// none: their lots keep the overlap test.
 // - 1470846/1 is the store MEMORIES & MARVELS at 525 N DONNELLY ST. Its sketch
 //   lies wholly on the Masonic Temple's lot next door, 2.2 m from its own
 //   parcel, whose outline (35 m²) is smaller than the store. Its record's

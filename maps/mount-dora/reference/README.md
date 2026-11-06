@@ -112,8 +112,7 @@ lidar's building returns (class 6) tell them apart:
   one building on record and the area (within 1%,
   `MATCH.exceptionAreaTolerance`), and stops if a county refresh breaks them;
   the survey's tests read the rest from the county's files. Each building
-  gets a Street View
-  camera planned as for the game buildings
+  gets a Street View camera planned as for the game buildings
   (`tools/maps/house-reference/viewpoint.mjs`), except that the camera's pitch
   may follow the lidar storeys where the county has none: the game buildings'
   cameras are planned before the lidar, from county storeys alone. 113 of 126
